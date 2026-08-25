@@ -1,1 +1,6 @@
-<Solution />
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/Apps/">
+    <Project Path="src/Apps/Nvm.Host.All/Nvm.Host.All.csproj" />
+  </Folder>
+</Solution>

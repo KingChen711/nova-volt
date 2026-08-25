@@ -269,23 +269,59 @@ curl -s localhost:5080/               # JSON có version
 **Mục tiêu**: có khung test và một lệnh duy nhất để chạy.
 
 **Việc làm**
+- `src/Platform/Nvm.Kernel/` — nơi ở của `SerialNumber`. Đây là project production đầu tiên; M1 sẽ thêm `ICommand`/`ICommandHandler` vào cùng project này
 - `tests/Unit/Nvm.UnitTests/` — xUnit v3 + Shouldly
-- **Một test thật**, không phải `Assert.True(true)`. Gợi ý: test một helper nhỏ có ý nghĩa, ví dụ `SerialNumber.Parse` tách được site/type/line/năm/ngày/ca/seq từ chuỗi 16 ký tự (§6.1 scope). Viết luôn cả case chuỗi sai định dạng.
-- `Makefile` với target `test`:
-  ```make
-  test: ; dotnet test --nologo --verbosity minimal
-  ```
-- Thêm project vào `.sln`
+- **Một test thật**, không phải `Assert.True(true)`: `SerialNumber.Parse` tách site/kind/line/năm/ngày/ca/seq từ chuỗi 16 ký tự (`scope.md` §6.1), kèm đủ case sai định dạng
+- `Makefile` với target `help`, `build`, `test`, `format`, `format-check`, `clean`
+- Thêm project vào solution
 
 **Kiểm chứng**
 ```bash
-make test     # 2 passed
+make test                      # 22 passed
+# rồi sửa cố ý cho một test đỏ:
+make test                      # 21 passed, 1 failed, make thoát code 2
+# hoàn nguyên:
+make test                      # 22 passed
 ```
-Sửa cố ý cho test đỏ → `make test` phải fail → hoàn nguyên.
 
 **Ghi chú**: dùng **Shouldly** chứ không FluentAssertions — FluentAssertions từ v8 đổi sang license thương mại. Chi tiết ở `scope.md` §10.1.
 
-**Bẫy Windows**: `make` không có sẵn. Hai lựa chọn — cài `make` qua `winget install GnuWin32.Make` / Chocolatey, hoặc thay bằng `build.ps1`. Nếu chọn PowerShell, sửa mọi chỗ nhắc `make` trong plan này và ghi một dòng vào README.
+#### C04.1 — xunit v3 trên .NET 10: VSTest đã chết
+
+Đây là điểm tốn thời gian nhất của C04, và là kiến thức dùng lại ở mọi milestone sau.
+
+`dotnet test` báo lỗi:
+> *Testing with VSTest target is no longer supported by Microsoft.Testing.Platform on .NET 10 SDK and later.*
+
+Bối cảnh: xunit v3 chạy trên **Microsoft.Testing.Platform (MTP)**, còn `dotnet test` xưa nay là công cụ của **VSTest**. .NET 10 bỏ cầu nối giữa hai thứ đó. Cách làm đúng:
+
+1. Bật MTP mode trong **`global.json`** (không phải `dotnet.config` — đó là ngõ cụt tôi thử trước):
+   ```json
+   { "test": { "runner": "Microsoft.Testing.Platform" } }
+   ```
+2. **Bỏ** `Microsoft.NET.Test.Sdk` và `xunit.runner.visualstudio` khỏi test project — cả hai là hạ tầng VSTest. `xunit.v3` đã nhúng sẵn MTP runner.
+3. Test project phải là `<OutputType>Exe</OutputType>`.
+4. **Cú pháp đổi**: `dotnet test MySolution.slnx` → `dotnet test --solution MySolution.slnx`.
+
+Template `dotnet new xunit` của SDK vẫn sinh ra **xunit v2**, nên project v3 phải dựng tay.
+
+#### C04.2 — `make` trên Windows
+
+`make` không có sẵn. Đã cài `winget install ezwinports.make` (GNU Make 4.4.1). winget **không tạo shim**, nên phải tự thêm vào PATH: thư mục `…\WinGet\Packages\ezwinports.make_*\bin`.
+
+> [!warning] Đừng dùng `setx PATH "%PATH%;..."`
+> `%PATH%` lúc chạy đã gồm cả machine PATH, nên lệnh đó copy toàn bộ entry hệ thống vào user PATH — nhân đôi, và sau này có thể che mất bản cập nhật của machine PATH. Dùng `[Environment]::SetEnvironmentVariable('Path', …, 'User')` với giá trị lấy từ đúng scope `User`.
+
+Trong `Makefile` phải ghi `SHELL := sh`. Không ghi thì GNU Make trên Windows đoán shell theo từng dòng — lệnh trông đơn giản thì gọi thẳng `.exe`, lệnh có ký tự đặc biệt thì gọi `sh` — nên cùng một file chạy khác nhau tuỳ dòng. Cụ thể đã gặp: `echo.` (cú pháp cmd) không chạy vì make gọi `echo.exe` của Git; rồi `(CI dung lenh nay)` làm `sh` báo syntax error vì ngoặc đơn không được quote.
+
+#### C04.3 — Hai chỗ `artifacts`
+
+`UseArtifactsOutput` coi **mỗi thư mục có `Directory.Build.props` là một gốc riêng**, nên `tests/` sinh ra `tests/artifacts/` thành chỗ thứ hai. Sửa bằng cách ghi tường minh trong `Directory.Build.props` gốc:
+```xml
+<ArtifactsPath>$(MSBuildThisFileDirectory)artifacts</ArtifactsPath>
+```
+
+Cũng phải bỏ `GenerateDocumentationFile=false` khỏi `tests/Directory.Build.props`: chính cờ đó bật IDE0005, tắt nó thì Roslyn cảnh báo ở mọi lần build.
 
 ---
 

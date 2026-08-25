@@ -15,8 +15,11 @@
     -->
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
 
-    <!-- Test không phải public API, không cần XML doc -->
-    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <!--
+      GenerateDocumentationFile GIỮ true (kế thừa từ root) dù test không cần XML doc.
+      Lý do: đây là cờ bật IDE0005 (using thừa) lúc build; tắt nó thì Roslyn
+      cảnh báo ở MỌI lần build. CS1591 (thiếu doc comment) đã tắt trong .editorconfig.
+    -->
 
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>

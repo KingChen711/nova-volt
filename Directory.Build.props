@@ -49,8 +49,14 @@
   </PropertyGroup>
 
   <PropertyGroup Label="Build">
-    <!-- Gom mọi bin/obj vào /artifacts thay vì rải khắp cây thư mục -->
+    <!--
+      Gom mọi bin/obj vào /artifacts thay vì rải khắp cây thư mục.
+      ArtifactsPath phải ghi tường minh: mặc định, MSBuild coi mỗi thư mục có
+      Directory.Build.props là một gốc riêng, nên tests/ sẽ sinh ra tests/artifacts/
+      thành chỗ thứ hai. Ghi đường dẫn tuyệt đối để chỉ có duy nhất một thư mục.
+    -->
     <UseArtifactsOutput>true</UseArtifactsOutput>
+    <ArtifactsPath>$(MSBuildThisFileDirectory)artifacts</ArtifactsPath>
     <Deterministic>true</Deterministic>
     <AccelerateBuildsInVisualStudio>true</AccelerateBuildsInVisualStudio>
     <!-- CI đặt biến CI=true → build deterministic hoàn toàn, path không lẫn máy local -->

@@ -30,8 +30,12 @@
   </ItemGroup>
 
   <ItemGroup Label="Test — C04 trở đi">
+    <!--
+      Chỉ xunit.v3. KHÔNG có Microsoft.NET.Test.Sdk, KHÔNG có xunit.runner.visualstudio:
+      cả hai là hạ tầng VSTest, mà .NET 10 đã bỏ hỗ trợ VSTest cho Microsoft.Testing.Platform.
+      xunit.v3 nhúng sẵn MTP runner; bật MTP mode ở global.json.
+    -->
     <PackageVersion Include="xunit.v3" Version="4.0.0" />
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
     <!--
       Shouldly chứ KHÔNG phải FluentAssertions.
       FluentAssertions từ v8 chuyển sang license thương mại cho mục đích thương mại.

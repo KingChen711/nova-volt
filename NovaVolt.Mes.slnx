@@ -3,4 +3,11 @@
   <Folder Name="/src/Apps/">
     <Project Path="src/Apps/Nvm.Host.All/Nvm.Host.All.csproj" />
   </Folder>
+  <Folder Name="/src/Platform/">
+    <Project Path="src/Platform/Nvm.Kernel/Nvm.Kernel.csproj" />
+  </Folder>
+  <Folder Name="/tests/" />
+  <Folder Name="/tests/Unit/">
+    <Project Path="tests/Unit/Nvm.UnitTests/Nvm.UnitTests.csproj" />
+  </Folder>
 </Solution>

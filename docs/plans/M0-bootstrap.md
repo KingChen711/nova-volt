@@ -338,18 +338,38 @@ Cũng phải bỏ `GenerateDocumentationFile=false` khỏi `tests/Directory.Buil
     dmz-net: {}
     it-net:  {}
   ```
-- Một service tạm `netcheck` (alpine, `sleep infinity`) gắn vào `it-net` để test
-- `.env.example` — mọi biến môi trường, giá trị mặc định dev, **không** có secret thật
-- `.env` vào `.gitignore`
+- **Ba** container probe (alpine, `sleep infinity`) dưới profile `probe`, không chạy trong `make up` thường:
+  - `probe-ot` trên `ot-net`
+  - `probe-dmz` trên **`ot-net` + `dmz-net`** — mô phỏng đúng vai trò EMQX ở C08: con đường hợp lệ duy nhất đi từ tầng nhà máy lên
+  - `probe-it` trên `it-net`
+- `.env.example` — **bảng port** (xem C05.2), `.env` đã gitignore từ C01
 
 **Kiểm chứng**
 ```bash
-docker compose up -d
-docker network ls | grep novavolt          # 3 network
-docker network inspect novavolt-mes_ot-net # "Internal": true
+docker compose --profile probe up -d
+docker network ls --filter name=novavolt            # 3 network
+docker network inspect novavolt-mes_ot-net --format '{{.Internal}}'   # true
 ```
+Rồi kiểm ranh giới theo **cả năm chiều**, mỗi chiều nêu rõ kỳ vọng trước khi chạy:
 
-**Ghi chú**: `internal: true` nghĩa là container trong `ot-net` **không ra được internet và không tới được network khác**. Đây chính là K11 trong `AGENTS.md`. Test kiểm chứng thật sẽ viết ở M2 khi đã có simulator.
+| Chiều | Kỳ vọng | Kết quả thực tế |
+|---|---|---|
+| IT → OT | bị chặn | `ping: bad address` |
+| DMZ → OT | thông | 0% packet loss |
+| OT → internet | bị chặn | `sendto: Network unreachable` |
+| IT → internet | thông | 0% packet loss |
+| DMZ → IT | bị chặn | `ping: bad address` |
+
+> [!warning] Bẫy khi viết script kiểm chứng
+> `docker exec ... | tail -3` làm exit code trở thành của `tail`, luôn bằng 0. Dùng `cmd && echo DAT || echo KHONG DAT` sau một pipe như vậy sẽ **luôn báo đạt**. Phải bắt exit code vào biến trước khi lọc output. Một script kiểm chứng báo sai còn tệ hơn không có script.
+
+#### C05.1 — Network mồ côi không được tạo
+
+Compose chỉ tạo network nào có service dùng tới. Khai báo `dmz-net` mà không service nào gắn vào thì nó **không xuất hiện**, và bước kiểm "3 network" sẽ trượt. Đây là lý do cần cả ba probe chứ không chỉ một.
+
+#### C05.2 — Chốt bảng port ngay ở C05
+
+`.env.example` chứa bảng port đầy đủ, tiêu thụ dần từ C06 tới C09. Đây không phải config thừa mà là **bản ghi quyết định**: R-M0-5 đã cảnh báo Keycloak và Mendix Studio Pro cùng mặc định 8080. Chốt sớm để C09 và C13 khỏi sửa chéo — **Mendix giữ 8080, Keycloak nhường sang 8081**.
 
 ---
 

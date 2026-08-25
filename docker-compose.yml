@@ -1,0 +1,56 @@
+# NovaVolt MES — hạ tầng local
+#
+# Ranh giới mạng được dựng TRƯỚC khi có service nào, để không bao giờ phải "sửa lại cho
+# đúng" sau. Đây là ràng buộc K11 trong AGENTS.md: service ở tầng IT không có route
+# xuống tầng OT. Trong nhà máy thật đây là chính sách an ninh (IEC 62443 zones &
+# conduits), không phải khuyến nghị.
+#
+# Profile:
+#   (mặc định)  service cần cho M0-M12
+#   obs         observability stack, bật từ M13 hoặc khi cần debug  (xem plan §2.2)
+#   probe       container rỗng chỉ để kiểm chứng ranh giới mạng
+#
+# Mọi service PHẢI khai báo mem_limit: máy chỉ có 15,4 GB và cần biết cái nào ngốn.
+
+name: novavolt-mes
+
+networks:
+  # Tầng nhà máy. internal: true = không ra internet, không tới network khác.
+  # Thiết bị và simulator sống ở đây (M2).
+  ot-net:
+    internal: true
+
+  # Vùng đệm. Broker và edge gateway đứng đây làm cầu nối OT <-> IT.
+  dmz-net: {}
+
+  # Hệ thống doanh nghiệp: database, bus, app, Mendix.
+  it-net: {}
+
+services:
+  # Hai container rỗng, chỉ tồn tại để chứng minh ranh giới mạng có thật.
+  # Không chạy trong `make up` thường — cần `--profile probe`.
+  probe-ot:
+    profiles: [probe]
+    image: alpine:3.21
+    container_name: nvm-probe-ot
+    command: ["sleep", "infinity"]
+    mem_limit: 32m
+    networks: [ot-net]
+
+  # Đứng hai chân trên ot-net và dmz-net — đúng vai trò EMQX sẽ đảm nhận ở C08.
+  # Đây là con đường HỢP LỆ duy nhất để dữ liệu từ tầng nhà máy đi lên.
+  probe-dmz:
+    profiles: [probe]
+    image: alpine:3.21
+    container_name: nvm-probe-dmz
+    command: ["sleep", "infinity"]
+    mem_limit: 32m
+    networks: [ot-net, dmz-net]
+
+  probe-it:
+    profiles: [probe]
+    image: alpine:3.21
+    container_name: nvm-probe-it
+    command: ["sleep", "infinity"]
+    mem_limit: 32m
+    networks: [it-net]

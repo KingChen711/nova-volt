@@ -186,19 +186,54 @@ Tạo một file `.sh` thử, `git add`, kiểm `git diff --cached` không có `
   - `TreatWarningsAsErrors: true`
   - `EnforceCodeStyleInBuild: true`
   - `AnalysisLevel: latest-recommended`
-  - `GenerateDocumentationFile: true` (để CS1591 nhắc viết doc cho public API — cân nhắc tắt nếu quá ồn)
-  - `InvariantGlobalization: true`
-- `Directory.Packages.props` — `ManagePackageVersionsCentrally: true`, khai báo trước: Serilog.AspNetCore, Microsoft.Extensions.Hosting, xunit.v3, Shouldly
-- `NovaVolt.Mes.sln`
-- `Directory.Build.props` riêng trong `tests/` — tắt `TreatWarningsAsErrors` cho test project (test hay có warning vô hại)
+  - `GenerateDocumentationFile: true` — **bắt buộc**, nếu không IDE0005 (using thừa) không được báo lúc build
+  - ~~`InvariantGlobalization: true`~~ → **BỎ**, xem §5.C02.1
+  - `UseArtifactsOutput: true` — gom mọi `bin`/`obj` vào `/artifacts`
+- `Directory.Packages.props` — `ManagePackageVersionsCentrally: true` + `CentralPackageTransitivePinningEnabled: true`
+- `NovaVolt.Mes.slnx` — SDK .NET 10 mặc định sinh định dạng `.slnx`, xem §5.C02.2
+- `Directory.Build.props` riêng trong `tests/` — tắt `TreatWarningsAsErrors` (test hay có warning vô hại). **Phải `Import` thủ công file cha**, vì MSBuild chỉ nạp `Directory.Build.props` gần nhất rồi dừng
+
+**Version package (tra ngày 2026-08-25)**
+
+| Package | Version | Dùng từ |
+|---|---|---|
+| Microsoft.Extensions.Hosting | 10.0.11 | C03 |
+| Serilog.AspNetCore | 10.0.0 | C03 |
+| Microsoft.Extensions.TimeProvider.Testing | 10.9.0 | M7 (khai báo trước — nền cho K1) |
+| xunit.v3 | 4.0.0 | C04 |
+| Microsoft.NET.Test.Sdk | 18.9.0 | C04 |
+| Shouldly | 4.3.0 | C04 |
 
 **Kiểm chứng**
 ```bash
-dotnet --version            # 10.0.300
-dotnet build                # solution rỗng, Build succeeded, 0 warnings
+dotnet --version                                   # 10.0.300
+dotnet msbuild <project> -getProperty:TargetFramework,TreatWarningsAsErrors,...
+dotnet build                                       # Build succeeded
+dotnet format NovaVolt.Mes.slnx --verify-no-changes
 ```
+Dựng một project `.probe` tạm để chứng minh props thật sự được nạp và CPM thật sự resolve, rồi xoá đi. **Solution rỗng không chứng minh được gì.**
 
-**Quyết định cần ghi**: có bật `TreatWarningsAsErrors` không. Bật thì khó chịu lúc đầu nhưng giữ code sạch suốt 6 tháng. **Khuyến nghị: bật**, và ghi vào ADR nếu sau này phải tắt.
+#### C02.1 — Vì sao BỎ `InvariantGlobalization: true`
+
+Plan ban đầu ghi bật property này. **Sai.** Đo thực tế ngày 2026-08-25 trên Windows:
+
+| | `InvariantGlobalization=true` | `=false` |
+|---|---|---|
+| `FindSystemTimeZoneById("Asia/Ho_Chi_Minh")` | ❌ `TimeZoneNotFoundException` | ✅ +07:00 |
+| `FindSystemTimeZoneById("Europe/Berlin")` | ❌ `TimeZoneNotFoundException` | ✅ hè +02:00 / đông +01:00 |
+| `new CultureInfo("de-DE")` | ❌ crash | ✅ |
+
+Trên Windows, ánh xạ ID kiểu IANA → Windows time zone đi qua ICU. Chế độ globalization-invariant không nạp ICU, nên **mọi ID IANA đều fail**. Điều đó phá `IProductionCalendar` ở **M3** — nơi `scope.md` §2.3 yêu cầu đúng hai ID đó và yêu cầu test DST cho site DE1.
+
+Mục tiêu ban đầu của property (chặn format phụ thuộc culture) được thay bằng: `CA1305`/`CA1310` ở mức `warning` trong `.editorconfig`, cộng với set `CultureInfo` mặc định tường minh lúc khởi động ở C03. Ghi **ADR-020** ở C14.
+
+#### C02.2 — `.slnx` thay vì `.sln`
+
+`dotnet new sln` trên SDK 10.0.300 mặc định sinh **`.slnx`** (XML, không có GUID). Đã kiểm: `dotnet build` và `dotnet format --verify-no-changes` đều chạy được với `.slnx` → C12 không bị ảnh hưởng.
+
+Giữ `.slnx`: ít merge conflict hơn, đọc được bằng mắt. Thêm `*.slnx text eol=crlf` vào `.gitattributes`.
+
+**Quyết định đã ghi**: bật `TreatWarningsAsErrors`. Đã kiểm chứng bằng vi phạm cố ý — IDE0161, IDE0011, IDE0005 đều thành `error` và build FAILED.
 
 ---
 
@@ -523,6 +558,7 @@ make ci                       # xanh trở lại
 - **ADR-001** — *Chọn SQL Server cho event store và write model*: bám sát stack Opcenter thật (kiến trúc tham chiếu AWS xác nhận SQL Server là primary data store); đánh đổi là mất range type và `EXCLUDE` constraint, nên read model phải ở PostgreSQL
 - **ADR-002** — *Chọn PostgreSQL + TimescaleDB cho telemetry và read model*: cần `numrange` + GiST cho trace theo mét, cần hypertable/compression/continuous aggregate; hệ quả là phải chấp nhận polyglot persistence và projection không cùng transaction với write
 - **ADR-019** — *Chọn .NET 10 LTS thay vì .NET 9*: theo §2.1 của plan này
+- **ADR-020** — *Không bật InvariantGlobalization*: theo §5.C02.1. Ghi kèm bảng đo thực tế — đây là bằng chứng, không phải phỏng đoán
 
 **Kiểm chứng**: đọc lại ADR-002 và tự hỏi *"3 tháng nữa đọc cái này, tôi có hiểu vì sao không?"*. Nếu không → viết lại phần Context.
 

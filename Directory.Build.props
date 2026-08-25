@@ -1,0 +1,67 @@
+<Project>
+
+  <!--
+    Cấu hình build dùng chung cho MỌI project trong repo.
+    File này được MSBuild nạp TRƯỚC file .csproj, nên project vẫn ghi đè được khi cần
+    (ví dụ: Roslyn analyzer ở tools/analyzers bắt buộc phải là netstandard2.0).
+
+    Đọc kèm: AGENTS.md §4 (ràng buộc cứng) · .editorconfig (mức độ severity)
+  -->
+
+  <PropertyGroup Label="Nền tảng">
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Globalization">
+    <!--
+      InvariantGlobalization CỐ Ý để false (mặc định).
+
+      Đã đo ngày 2026-08-25: bật true làm TimeZoneInfo.FindSystemTimeZoneById()
+      ném TimeZoneNotFoundException cho ID kiểu IANA trên Windows —
+      cả "Asia/Ho_Chi_Minh" lẫn "Europe/Berlin" đều fail, và new CultureInfo("de-DE") crash.
+      Điều đó phá IProductionCalendar ở M3 (scope.md §2.3) vì hai site dùng ID IANA
+      và site DE1 phải xử lý DST.
+
+      Mục tiêu ban đầu của property này — chặn format phụ thuộc culture —
+      được giải quyết bằng CA1305/CA1310 ở .editorconfig (mức warning)
+      và bằng việc set CultureInfo mặc định tường minh lúc khởi động (C03).
+      Xem ADR-020.
+    -->
+    <InvariantGlobalization>false</InvariantGlobalization>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Chất lượng code">
+    <!--
+      TreatWarningsAsErrors + EnforceCodeStyleInBuild biến vi phạm .editorconfig
+      thành LỖI BUILD. Đây là chủ đích: dự án chạy 6 tháng, một người làm,
+      không có reviewer — build phải là người gác cổng.
+      .editorconfig đã phân tầng severity để chỉ những thứ đáng mới chặn build.
+    -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <!-- IDE0005 (using thừa) chỉ được báo khi build nếu bật cờ này -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Build">
+    <!-- Gom mọi bin/obj vào /artifacts thay vì rải khắp cây thư mục -->
+    <UseArtifactsOutput>true</UseArtifactsOutput>
+    <Deterministic>true</Deterministic>
+    <AccelerateBuildsInVisualStudio>true</AccelerateBuildsInVisualStudio>
+    <!-- CI đặt biến CI=true → build deterministic hoàn toàn, path không lẫn máy local -->
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Metadata">
+    <Product>NovaVolt Battery MES</Product>
+    <Company>NovaVolt Energy (fictional)</Company>
+    <Copyright>Learning project — not for production use</Copyright>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+</Project>

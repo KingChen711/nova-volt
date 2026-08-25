@@ -1,0 +1,25 @@
+<Project>
+
+  <!--
+    Nới một số quy tắc cho test project.
+    Phải Import thủ công file cha, vì MSBuild chỉ nạp Directory.Build.props
+    GẦN NHẤT tính từ project đi lên — tìm thấy file này là nó dừng.
+  -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+  <PropertyGroup>
+    <!--
+      Test code có warning vô hại thật (biến chưa dùng trong arrange, so sánh hằng...).
+      Để TreatWarningsAsErrors ở đây sẽ khiến bạn viết test vòng vo cho vừa lòng
+      compiler, thay vì viết test đọc dễ. Warning vẫn hiện, chỉ không chặn build.
+    -->
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+
+    <!-- Test không phải public API, không cần XML doc -->
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+</Project>

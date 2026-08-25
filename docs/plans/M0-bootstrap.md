@@ -378,11 +378,11 @@ Compose chỉ tạo network nào có service dùng tới. Khai báo `dmz-net` m�
 **Mục tiêu**: store cho telemetry và read model.
 
 **Việc làm**
-- Service `timescale`, image `timescale/timescaledb-ha:pg17` *(kiểm tra tag còn tồn tại; nếu không, dùng `timescale/timescaledb:latest-pg17`)*
+- Service `timescale`, image **`timescale/timescaledb:2.29.2-pg17`** — xem C06.1 về chọn tag
 - Network: `it-net`. Port 5432 map ra ngoài để dùng psql/DBeaver
 - Named volume `pgdata`
 - `mem_limit: 1g`
-- `healthcheck: pg_isready -U nvm`
+- `healthcheck: pg_isready -h 127.0.0.1 ...` — xem C06.2, cờ `-h` là bắt buộc
 - Init script `deploy/postgres/init/01-schemas.sql`:
   ```sql
   CREATE EXTENSION IF NOT EXISTS timescaledb;
@@ -393,12 +393,36 @@ Compose chỉ tạo network nào có service dùng tới. Khai báo `dmz-net` m�
   ```
 
 **Kiểm chứng**
-```bash
-docker compose up -d timescale
-docker compose exec timescale psql -U nvm -d novavolt \
-  -c "SELECT extversion FROM pg_extension WHERE extname='timescaledb';"
-docker compose exec timescale psql -U nvm -d novavolt -c "\dn"   # 4 schema
-```
+
+| Kiểm | Kết quả |
+|---|---|
+| Extension | `timescaledb v2.29.2`, PostgreSQL 17.11 |
+| **License** | `timescale` — **không phải** `apache`. Đây là điều kiện để có compression/CAGG/retention |
+| Bốn schema | `ingest`, `rm`, `trace`, `ts` |
+| Tính năng TSL chạy thật | `create_hypertable` + `add_compression_policy` + `add_retention_policy` + continuous aggregate — tạo rồi xoá, không lỗi |
+| Volume giữ dữ liệu qua `down`/`up` | ghi 42 → down → up → đọc lại 42 |
+| Init script **không** chạy lại lần hai | 0 lần xuất hiện trong log |
+| Profile `probe` không tự chạy | `docker compose up -d` chỉ khởi động `nvm-timescale` |
+
+**Thời gian khởi động**: cold (kèm pull image) **175 s** · warm **6 s**.
+
+#### C06.1 — Đừng lấy tag `-oss`, và đừng lấy `latest-`
+
+Plan ban đầu gợi ý `timescale/timescaledb-ha:pg17`. Đổi vì hai lý do:
+
+- **`-oss` là bẫy**: bản Apache-2 **thiếu compression, continuous aggregate và retention policy** — đúng ba thứ `scope.md` §8.3 cần. Phải dùng bản Community (TSL), tức tag **không** có hậu tố `-oss`. Kiểm bằng `SHOW timescaledb.license;` → phải ra `timescale`.
+- **`latest-pg17` là tag trôi**: build hôm nay và build 6 tháng nữa cho kết quả khác nhau. Pin cứng `2.29.2-pg17`.
+
+Bỏ `-ha` vì nó là image Debian to hơn, dùng `PGDATA` phi tiêu chuẩn (`/home/postgres/pgdata`); bản Alpine thường nhẹ hơn và giữ đúng đường dẫn Postgres chuẩn — quan trọng khi Docker chỉ có 8 GB.
+
+#### C06.2 — `pg_isready` không có `-h` là healthcheck giả
+
+Trong lúc chạy init script, entrypoint của Postgres đặt `listen_addresses=''` và **chỉ mở unix socket**. `pg_isready` mặc định đi qua socket đó, nên nó báo *sẵn sàng* trong khi schema chưa tạo xong. Service phụ thuộc sẽ khởi động quá sớm và fail vì thiếu schema — lỗi khó truy vì nó phụ thuộc thời điểm.
+
+Ép qua TCP bằng `-h 127.0.0.1` thì healthcheck chỉ xanh sau khi init đã xong thật. Sẽ dùng lại đúng nguyên tắc này cho SQL Server ở C07.
+
+> [!note] Init script chỉ chạy một lần
+> `/docker-entrypoint-initdb.d` chỉ được thực thi khi volume còn rỗng. Sửa `01-schemas.sql` rồi `up` lại sẽ **không** có tác dụng — phải `docker compose down -v`. Từ M2 mọi thay đổi schema đi qua migration có version, không sửa file init nữa.
 
 ---
 

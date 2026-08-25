@@ -26,7 +26,45 @@ networks:
   # Hệ thống doanh nghiệp: database, bus, app, Mendix.
   it-net: {}
 
+volumes:
+  pgdata:
+
 services:
+  # ─────────────────────────────────────────────────────────
+  # PostgreSQL + TimescaleDB — telemetry và read model
+  #
+  # KHÔNG dùng tag đuôi `-oss`: bản Apache-2 thiếu compression, continuous
+  # aggregate và retention policy — đúng ba thứ scope.md §8.3 cần. Phải là bản
+  # Community (TSL license), tức tag không có hậu tố.
+  # Tag pin cứng, không dùng `latest-pg17`: build hôm nay và build 6 tháng nữa
+  # phải cho cùng kết quả.
+  # ─────────────────────────────────────────────────────────
+  timescale:
+    image: timescale/timescaledb:2.29.2-pg17
+    container_name: nvm-timescale
+    restart: unless-stopped
+    mem_limit: 1g
+    environment:
+      POSTGRES_DB: ${NVM_POSTGRES_DB}
+      POSTGRES_USER: ${NVM_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${NVM_POSTGRES_PASSWORD}
+    ports:
+      - "${NVM_PORT_POSTGRES}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./deploy/postgres/init:/docker-entrypoint-initdb.d:ro
+    networks: [it-net]
+    healthcheck:
+      # -h 127.0.0.1 là cố ý, KHÔNG bỏ đi. Trong lúc chạy init script, entrypoint
+      # của Postgres đặt listen_addresses='' và chỉ mở unix socket. `pg_isready`
+      # qua socket sẽ báo sẵn sàng khi schema CHƯA được tạo xong, và service phụ
+      # thuộc sẽ khởi động quá sớm. Ép qua TCP thì chỉ xanh khi init đã xong thật.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 20s
+
   # Hai container rỗng, chỉ tồn tại để chứng minh ranh giới mạng có thật.
   # Không chạy trong `make up` thường — cần `--profile probe`.
   probe-ot:

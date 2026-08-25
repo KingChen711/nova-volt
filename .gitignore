@@ -1,0 +1,85 @@
+# ─────────────────────────────────────────────────────────
+# .NET
+# ─────────────────────────────────────────────────────────
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+artifacts/
+*.user
+*.suo
+*.userprefs
+*.dbmdl
+project.lock.json
+project.fragment.lock.json
+.packages/
+*.nupkg
+*.snupkg
+
+# Test output
+TestResults/
+[Tt]est[Rr]esult*/
+coverage*.json
+coverage*.xml
+coverage*.info
+*.coverage
+*.trx
+StrykerOutput/
+BenchmarkDotNet.Artifacts/
+
+# ─────────────────────────────────────────────────────────
+# IDE
+# ─────────────────────────────────────────────────────────
+.vs/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.shared.json
+.idea/
+*.swp
+*~
+
+# ─────────────────────────────────────────────────────────
+# Bí mật — KHÔNG BAO GIỜ commit (AGENTS.md K13)
+# ─────────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+appsettings.*.Local.json
+appsettings.Local.json
+secrets.json
+*.pfx
+*.key
+*.pem
+!deploy/**/dev-*.pem
+
+# ─────────────────────────────────────────────────────────
+# Mendix
+# App Mendix sống trong Team Server repo riêng (xem mendix/README.md).
+# Nếu working copy lỡ nằm dưới mendix/, những thứ sau không được commit.
+# ─────────────────────────────────────────────────────────
+mendix/**/deployment/
+mendix/**/releases/
+mendix/**/modeler-cache/
+mendix/**/javascriptsource/**/node_modules/
+mendix/**/.mendix-cache/
+*.mpr.bak
+*.mpr.lock
+*.launch
+
+# ─────────────────────────────────────────────────────────
+# Docker / hạ tầng local
+# ─────────────────────────────────────────────────────────
+.docker-data/
+docker-compose.override.local.yml
+
+# ─────────────────────────────────────────────────────────
+# Backup (make backup ghi ra ngoài repo, nhưng phòng khi trỏ nhầm)
+# ─────────────────────────────────────────────────────────
+*.bundle
+
+# ─────────────────────────────────────────────────────────
+# OS
+# ─────────────────────────────────────────────────────────
+Thumbs.db
+desktop.ini
+.DS_Store

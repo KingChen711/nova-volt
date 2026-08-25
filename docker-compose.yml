@@ -28,6 +28,7 @@ networks:
 
 volumes:
   pgdata:
+  mssqldata:
 
 services:
   # ─────────────────────────────────────────────────────────
@@ -64,6 +65,84 @@ services:
       timeout: 3s
       retries: 20
       start_period: 20s
+
+  # ─────────────────────────────────────────────────────────
+  # SQL Server — event store và write model
+  #
+  # Chọn có chủ đích để bám sát Opcenter thật: kiến trúc tham chiếu của Siemens
+  # dùng SQL Server làm primary data store. Bản 2022 chứ không phải 2025 — MES
+  # trong nhà máy hiếm khi chạy phiên bản mới nhất.
+  #
+  # Đây là service ngốn RAM nhất (2 GB / 8 GB quota Docker) và khởi động chậm nhất,
+  # nên nó là đường găng của D1 (`make up` < 5 phút).
+  # ─────────────────────────────────────────────────────────
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-CU26-ubuntu-22.04
+    container_name: nvm-mssql
+    restart: unless-stopped
+    # SQL Server TỪ CHỐI khởi động nếu dưới 2 GB. Đừng hạ xuống để tiết kiệm.
+    mem_limit: 2g
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Developer
+      # MSSQL_SA_PASSWORD, không phải SA_PASSWORD — biến cũ đã deprecated.
+      MSSQL_SA_PASSWORD: ${NVM_MSSQL_SA_PASSWORD}
+      MSSQL_AGENT_ENABLED: "false"
+    ports:
+      - "${NVM_PORT_MSSQL}:1433"
+    volumes:
+      - mssqldata:/var/opt/mssql
+    networks: [it-net]
+    healthcheck:
+      # Chỉ hỏi "server trả lời được chưa", CỐ Ý không hỏi database NovaVolt đã có chưa.
+      # Nếu hỏi, sẽ khoá chết: mssql-init cần server healthy mới chạy được, mà server
+      # lại cần init xong mới healthy. Service phụ thuộc về sau chờ mssql-init, không
+      # chờ mssql. Xem C07.2 trong plan.
+      # -C là bắt buộc: mssql-tools18 mặc định encrypt=yes, mà cert của server là self-signed.
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -b -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 45s
+
+  # Chạy một lần rồi thoát. SQL Server không có cơ chế /docker-entrypoint-initdb.d
+  # như Postgres, nên phải tự dựng bước này.
+  # Script phải IDEMPOTENT vì nó chạy lại ở mọi lần `up`.
+  mssql-init:
+    # Profile `init` là BẮT BUỘC, không phải để cho gọn.
+    # `docker compose up --wait` coi mọi container ĐÃ THOÁT là thất bại, kể cả khi
+    # thoát 0. Đo được: up --wait chỉ với timescale+mssql -> exit 0; thêm mssql-init
+    # vào -> exit 1 dù nó thoát 0. Để nó ngoài profile mặc định thì `up --wait` sạch,
+    # còn init chạy bằng một bước riêng có mã thoát thật:
+    #     docker compose up -d --wait
+    #     docker compose run --rm mssql-init
+    # `make up` ở C11 gộp đúng hai bước này.
+    profiles: [init]
+    image: mcr.microsoft.com/mssql/server:2022-CU26-ubuntu-22.04
+    container_name: nvm-mssql-init
+    restart: "no"
+    mem_limit: 256m
+    depends_on:
+      mssql:
+        condition: service_healthy
+    environment:
+      MSSQL_SA_PASSWORD: ${NVM_MSSQL_SA_PASSWORD}
+      NVM_MSSQL_APP_PASSWORD: ${NVM_MSSQL_APP_PASSWORD}
+    volumes:
+      - ./deploy/mssql/init:/init:ro
+    networks: [it-net]
+    entrypoint: ["/bin/bash", "-c"]
+    # -b: thoát với mã lỗi khi SQL lỗi. Thiếu cờ này thì service_completed_successfully
+    # vô nghĩa vì container vẫn thoát 0 dù script hỏng.
+    #
+    # PHẢI là list một phần tử. Nếu viết `command: >` dạng scalar, Compose tách chuỗi
+    # theo khoảng trắng thành 14 tham số rời, và `bash -c` chỉ lấy tham số đầu làm
+    # script — sqlcmd sẽ chạy trần không có đối số nào.
+    command:
+      - >
+        /opt/mssql-tools18/bin/sqlcmd -S mssql -U sa -P "$$MSSQL_SA_PASSWORD" -C -b
+        -v AppPassword="$$NVM_MSSQL_APP_PASSWORD"
+        -i /init/01-database.sql
 
   # Hai container rỗng, chỉ tồn tại để chứng minh ranh giới mạng có thật.
   # Không chạy trong `make up` thường — cần `--profile probe`.

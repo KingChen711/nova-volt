@@ -431,22 +431,69 @@ Trong lúc chạy init script, entrypoint của Postgres đặt `listen_addresse
 **Mục tiêu**: store cho event store và write model — chọn có chủ đích để bám sát Opcenter thật.
 
 **Việc làm**
-- Service `mssql`, image `mcr.microsoft.com/mssql/server:2022-latest`
-- `ACCEPT_EULA=Y`, `MSSQL_PID=Developer`, `SA_PASSWORD` từ `.env`
+- Service `mssql`, image **`mcr.microsoft.com/mssql/server:2022-CU26-ubuntu-22.04`** — pin cứng theo bài học C06.1. Chọn 2022 chứ không phải 2025 RTM: MES trong nhà máy hiếm khi chạy phiên bản mới nhất
+- `ACCEPT_EULA=Y`, `MSSQL_PID=Developer`, **`MSSQL_SA_PASSWORD`** (biến `SA_PASSWORD` cũ đã deprecated)
 - Network `it-net`, port 1433, volume `mssqldata`
-- `mem_limit: 2g` (SQL Server cần tối thiểu 2 GB, dưới mức đó nó **từ chối khởi động**)
-- `healthcheck` bằng `sqlcmd -Q "SELECT 1"` — lưu ý image 2022 dùng đường dẫn `/opt/mssql-tools18/bin/sqlcmd` và cần cờ `-C` (trust cert)
-- Init script `deploy/mssql/init/01-database.sql`: tạo DB `NovaVolt`, schema `es`, login `nvm_app` + user
-- Vì SQL Server image không tự chạy init script như Postgres → thêm service phụ `mssql-init` chạy một lần rồi thoát, hoặc script `deploy/mssql/entrypoint.sh`
+- `mem_limit: 2g` — SQL Server **từ chối khởi động** nếu thấp hơn
+- `healthcheck` chỉ hỏi `SELECT 1`, xem C07.2
+- Init script `deploy/mssql/init/01-database.sql`: DB `NovaVolt`, schema `es`, login + user `nvm_app`
+- Service phụ `mssql-init` trong **profile `init`**, xem C07.1
+
+**Mật khẩu**: phải đạt độ phức tạp của SQL Server (≥8 ký tự, có hoa/thường/số/ký tự đặc biệt). Kiểu `nvm_dev_only` như Postgres sẽ bị từ chối.
 
 **Kiểm chứng**
+
+| Kiểm | Kết quả |
+|---|---|
+| Edition / version | Developer Edition, 16.0.4265.3 |
+| Database, schema, login, db user | `NovaVolt`, `es`, `nvm_app` (login + user) |
+| `nvm_app` đăng nhập, CREATE/INSERT/SELECT/DROP trong `es` | chạy được, không cần `sa` |
+| Init chạy lần hai | in `already exists` cho cả 4 đối tượng, **exit 0** |
+| Volume giữ dữ liệu qua `down`/`up` | `NovaVolt` vẫn còn |
+| Từ volume rỗng: `up --wait` rồi `run --rm mssql-init` | **16 s**, cả hai bước exit 0 |
+
+#### C07.1 — `up --wait` coi container đã thoát là thất bại
+
+Đây là phát hiện quan trọng nhất của C07, và nó ảnh hưởng trực tiếp tới D1.
+
+Đo được:
+
+| Lệnh | Exit code |
+|---|---|
+| `docker compose up -d --wait timescale mssql` | 0 |
+| `docker compose up -d --wait` *(có cả `mssql-init`)* | **1** |
+| `docker compose run --rm mssql-init` | 0 |
+
+`--wait` chờ service **running hoặc healthy**. Một container chạy xong rồi thoát — dù thoát **0** — vẫn bị tính là hỏng. Không phải lỗi script.
+
+Cách xử lý: đưa `mssql-init` vào profile `init` để `up --wait` không đụng tới, rồi chạy nó thành bước riêng có mã thoát thật:
+
 ```bash
-docker compose up -d mssql
-docker compose exec mssql /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$SA_PASSWORD" -C \
-  -Q "SELECT name FROM sys.databases WHERE name='NovaVolt'"
+docker compose up -d --wait          # service chạy dài
+docker compose run --rm mssql-init   # one-shot, exit code thật
 ```
 
-**Bẫy đã biết**: SQL Server là service ngốn RAM nhất và khởi động chậm nhất (~30–45 s). Đây gần như chắc chắn là đường găng của D1 (< 5 phút). Đo riêng thời gian của nó ở C11.
+`make up` ở **C11 phải gộp đủ hai bước này** — nếu chỉ chạy bước một thì máy sạch sẽ có SQL Server nhưng không có database `NovaVolt`, và D1 trượt theo cách rất khó đoán.
+
+> [!note] Vì sao service .NET về sau không cần `depends_on: service_completed_successfully`
+> Vì N15: app không được chết khi database chưa sẵn sàng. Health check phải lazy và app phải retry (xem C10). Nên việc `mssql-init` nằm trong profile không gây ràng buộc gì cho M1 trở đi.
+
+#### C07.2 — Healthcheck cố ý KHÔNG kiểm database
+
+Cùng tinh thần C06.2 nhưng ở dạng khác. Nếu healthcheck của `mssql` đòi `DB_ID('NovaVolt') IS NOT NULL` thì khoá chết: `mssql-init` chờ server healthy mới chạy được, mà server lại chờ init xong mới healthy.
+
+Nên healthcheck chỉ hỏi `SELECT 1`. Việc "database đã sẵn sàng chưa" do bước `mssql-init` trả lời bằng mã thoát.
+
+Cờ `-C` là bắt buộc: `mssql-tools18` mặc định `encrypt=yes`, mà chứng chỉ của server là self-signed. Image này **chỉ có** `mssql-tools18`, không còn bản `mssql-tools` cũ.
+
+#### C07.3 — Init của SQL Server chạy lại mỗi lần, nên phải idempotent
+
+Khác Postgres: không có cơ chế "chỉ chạy khi volume rỗng". Mọi câu lệnh phải bọc `IF NOT EXISTS`. Riêng `CREATE SCHEMA` bắt buộc là câu lệnh đầu batch nên phải bọc qua `EXEC('CREATE SCHEMA es;')`.
+
+`sqlcmd` cần cờ **`-b`** để thoát với mã lỗi khi SQL lỗi — thiếu nó thì container vẫn thoát 0 dù script hỏng, và mọi kiểm tra phía sau trở thành vô nghĩa.
+
+> [!warning] Git Bash nuốt đường dẫn container
+> `docker compose exec mssql /opt/mssql-tools18/bin/sqlcmd` chạy trong Git Bash sẽ bị đổi thành `D:/apps/Git/opt/...` rồi báo *no such file*. Đây là MSYS path conversion. Thêm tiền tố `MSYS_NO_PATHCONV=1`, hoặc viết `//opt/...`. Sẽ gặp lại ở C08, C09 và trong recipe của Makefile.
 
 ---
 

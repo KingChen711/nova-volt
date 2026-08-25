@@ -58,7 +58,7 @@ Kiểm tra máy ngày 2026-08-25 cho ra ba điểm lệch. Xử lý theo [`AGENT
 
 | Profile | Service | RAM ước tính |
 |---|---|---|
-| *(mặc định)* | mssql, timescale, rabbitmq, emqx, minio, keycloak | ~4,0 GB |
+| *(mặc định)* | mssql, timescale, rabbitmq, emqx, minio, keycloak | ~5,8 GB *(đo lại sau C08: 4,50 GB cho 4 service đầu)* |
 | `obs` | otel-collector, prometheus, tempo, loki, grafana | ~1,5 GB |
 
 ### 2.3 Docker daemon chưa chạy
@@ -502,17 +502,48 @@ Khác Postgres: không có cơ chế "chỉ chạy khi volume rỗng". Mọi câ
 **Mục tiêu**: Manufacturing Service Bus và MQTT broker.
 
 **Việc làm**
-- `rabbitmq:4-management` — network `it-net`, port 5672 + 15672 (management UI), volume, `mem_limit: 512m`, healthcheck `rabbitmq-diagnostics -q ping`
-- `emqx/emqx:5.8` — network **`ot-net` và `dmz-net`** (đây là điểm quan trọng: broker là cầu nối giữa OT và DMZ), port 1883 + 18083 (dashboard), `mem_limit: 512m`, healthcheck `emqx ctl status`
+- **`rabbitmq:4.3.5-management`** — network `it-net`, port 5672 + 15672, volume, `mem_limit: 512m`. Healthcheck **`check_running` + `check_local_alarms`**, không phải `ping` (xem C08.1)
+- **`emqx/emqx:5.10.4`** *(plan cũ ghi 5.8, đã lạc hậu)* — network **`ot-net` + `dmz-net`**, port 1883 + 18083, volume, **`mem_limit: 1g`** (xem C08.3), healthcheck qua **HTTP `/status`** (xem C08.2)
+- Đặt user/password cho cả hai. RabbitMQ mặc định `guest/guest` chỉ dùng được từ localhost của chính container — không dùng được cho service khác
 
 **Kiểm chứng**
-```bash
-curl -u guest:guest localhost:15672/api/overview   # JSON
-curl localhost:18083                                # EMQX dashboard
-# pub/sub thử bằng mosquitto_clients hoặc EMQX WebSocket client trên dashboard
+
+| Kiểm | Kết quả |
+|---|---|
+| RabbitMQ management API | RabbitMQ 4.3.5, Erlang 27.3.4.16 |
+| RabbitMQ từ chối `guest/guest` | HTTP 401 |
+| EMQX `/status` | HTTP 200, `Node emqx@nvm-emqx is started` |
+| MQTT publish retained từ `dmz-net` | exit 0 |
+| MQTT subscribe từ `dmz-net` | nhận lại đúng payload |
+| MQTT từ `it-net` | `Unable to connect (Lookup error)` — **bị chặn** |
+| Tổng `mem_limit` sau C08 | 4,50 GB / 8 GB quota |
+
+#### C08.1 — `rabbitmq-diagnostics ping` là healthcheck nông
+
+`ping` chỉ xác nhận Erlang node trả lời, không nói gì về việc broker còn nhận được message. Dùng `check_running && check_local_alarms`: vế sau bắt được trạng thái broker còn sống nhưng **đã chặn publisher** vì hết bộ nhớ hoặc hết đĩa — đúng kiểu hỏng âm thầm sẽ gặp ở M2 khi bơm 5.000 msg/s.
+
+#### C08.2 — `emqx ctl status` báo sai, dùng HTTP thay thế
+
+Healthcheck theo plan làm container `unhealthy` trong khi EMQX chạy hoàn toàn bình thường:
+
+```
+healthcheck : Node 'emqx@nvm-emqx' not responding to pings.   (exit 1)
+log         : EMQX Enterprise 5.10.4 is running now!
+/status     : HTTP 200, "Node emqx@nvm-emqx is started"
 ```
 
-**Ghi chú kiến trúc**: EMQX cố ý **không** nằm trên `it-net`. Service .NET muốn nghe MQTT phải qua `Nvm.EdgeGateway` ở `dmz-net` (M2). Nếu bây giờ bạn thấy bất tiện, đó là dấu hiệu ranh giới đang hoạt động đúng.
+`emqx ctl` đi qua Erlang distribution và không nối được trong image này. Đổi sang `curl -fsS http://localhost:18083/status`.
+
+Đây là lần thứ ba trong M0 cùng một nguyên tắc: **healthcheck phải thử đúng đường mà consumer thật đi**, không phải đường ống nội bộ. C06.2 là TCP thay vì unix socket; C07.2 là `SELECT 1` thay vì kiểm database; ở đây là HTTP thay vì Erlang distribution.
+
+#### C08.3 — EMQX cần 1 GB, không phải 512 MB
+
+Đo được **411 MiB ngay lúc rảnh** với `mem_limit: 512m`, tức 80%. EMQX bật cảnh báo `high_system_memory_usage` từ ngưỡng 70%, và broker trong trạng thái cảnh báo sẽ **chặn publisher** — đúng thứ giết mục tiêu 5.000 msg/s ở M2. Nâng lên 1 GB thì còn 38%.
+
+> [!warning] Lại dương tính giả trong script kiểm chứng
+> Phép thử "it-net không tới được EMQX" ban đầu dùng `mosquitto_pub -W 5`. Nhưng `-W` chỉ có ở `mosquitto_sub`, nên lệnh fail vì **sai cú pháp** và script báo "đạt". Cùng loại lỗi đã cảnh báo ở C05: phải xác nhận nó thất bại **đúng lý do**, không chỉ xác nhận nó thất bại. Kết quả đúng phải là `Unable to connect (Lookup error)`.
+
+**Ghi chú kiến trúc**: EMQX cố ý **không** nằm trên `it-net`. Service .NET muốn nghe MQTT phải qua `Nvm.EdgeGateway` ở `dmz-net` (M2). Port 1883 vẫn publish ra host được, vì EMQX có một chân trên `dmz-net` không phải mạng internal.
 
 ---
 

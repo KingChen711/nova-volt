@@ -29,6 +29,8 @@ networks:
 volumes:
   pgdata:
   mssqldata:
+  rabbitmqdata:
+  emqxdata:
 
 services:
   # ─────────────────────────────────────────────────────────
@@ -143,6 +145,79 @@ services:
         /opt/mssql-tools18/bin/sqlcmd -S mssql -U sa -P "$$MSSQL_SA_PASSWORD" -C -b
         -v AppPassword="$$NVM_MSSQL_APP_PASSWORD"
         -i /init/01-database.sql
+
+  # ─────────────────────────────────────────────────────────
+  # RabbitMQ — Manufacturing Service Bus
+  #
+  # Đây là hiện thân của "Bus-Centric Design", nguyên tắc thiết kế số 1 của
+  # Opcenter Execution Foundation. Mọi giao tiếp giữa các Functional Block đi qua
+  # đây, không gọi thẳng nhau. Lý do không phải thẩm mỹ mà là N15: MES chết thì
+  # dây chuyền vẫn phải chạy, nên không được có lời gọi đồng bộ nào từ dưới lên.
+  # ─────────────────────────────────────────────────────────
+  rabbitmq:
+    image: rabbitmq:4.3.5-management
+    container_name: nvm-rabbitmq
+    restart: unless-stopped
+    mem_limit: 512m
+    environment:
+      RABBITMQ_DEFAULT_USER: ${NVM_RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${NVM_RABBITMQ_PASSWORD}
+    ports:
+      - "${NVM_PORT_RABBITMQ}:5672"
+      - "${NVM_PORT_RABBITMQ_UI}:15672"
+    volumes:
+      - rabbitmqdata:/var/lib/rabbitmq
+    networks: [it-net]
+    healthcheck:
+      # `ping` chỉ xác nhận Erlang node trả lời, chưa nói gì về việc broker nhận
+      # được message. check_running + check_local_alarms mới là bộ kiểm chuẩn:
+      # cái sau bắt được tình trạng broker còn sống nhưng đã chặn publisher vì
+      # hết bộ nhớ hoặc hết đĩa — đúng kiểu hỏng âm thầm ở M2 khi bơm 5.000 msg/s.
+      test: ["CMD-SHELL", "rabbitmq-diagnostics -q check_running && rabbitmq-diagnostics -q check_local_alarms"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 30s
+
+  # ─────────────────────────────────────────────────────────
+  # EMQX — MQTT broker, Unified Namespace
+  #
+  # CỐ Ý không nằm trên it-net. Nó bắc cầu ot-net <-> dmz-net, đúng vai trò
+  # probe-dmz đã mô phỏng ở C05. Service .NET muốn nghe MQTT phải qua
+  # Nvm.EdgeGateway đứng ở dmz-net (M2), không được nối thẳng.
+  # Nếu thấy bất tiện, đó là dấu hiệu ranh giới đang hoạt động đúng.
+  # ─────────────────────────────────────────────────────────
+  emqx:
+    image: emqx/emqx:5.10.4
+    container_name: nvm-emqx
+    restart: unless-stopped
+    # 512m KHÔNG đủ: đo được 411 MiB ngay lúc rảnh (80%), và EMQX bật cảnh báo
+    # high_system_memory_usage ở ngưỡng 70%. Broker trong trạng thái cảnh báo sẽ
+    # chặn publisher — đúng thứ sẽ giết mục tiêu 5.000 msg/s ở M2.
+    mem_limit: 1g
+    environment:
+      # Tên node phải ổn định, nếu không EMQX coi mỗi lần khởi động là một node
+      # mới và bỏ lại dữ liệu cũ trong volume.
+      EMQX_NODE__NAME: emqx@nvm-emqx
+      EMQX_DASHBOARD__DEFAULT_USERNAME: ${NVM_EMQX_USER}
+      EMQX_DASHBOARD__DEFAULT_PASSWORD: ${NVM_EMQX_PASSWORD}
+    ports:
+      - "${NVM_PORT_MQTT}:1883"
+      - "${NVM_PORT_EMQX_UI}:18083"
+    volumes:
+      - emqxdata:/opt/emqx/data
+    networks: [ot-net, dmz-net]
+    healthcheck:
+      # KHÔNG dùng `emqx ctl status`: lệnh đó đi qua Erlang distribution và trong
+      # image này báo "not responding to pings" dù broker chạy hoàn toàn bình thường
+      # (endpoint /status trả 200, log ghi "EMQX is running now").
+      # Kiểm qua HTTP đúng nguyên tắc đã dùng ở C06.2 và C07.2: healthcheck phải
+      # thử đúng đường mà consumer thật đi, không phải đường ống nội bộ.
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://localhost:18083/status"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
 
   # Hai container rỗng, chỉ tồn tại để chứng minh ranh giới mạng có thật.
   # Không chạy trong `make up` thường — cần `--profile probe`.

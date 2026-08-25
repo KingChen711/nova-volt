@@ -198,7 +198,50 @@ Chủ repo đã nói rõ: **hỏi dồn nhiều câu thì phiền**. Nguyên t�
 - Gom câu hỏi vào một lần, đầu milestone. Không rải rác.
 - Mỗi câu hỏi phải kèm: *nếu chọn A thì sao, chọn B thì sao*.
 
-### 5.6 Lab phá hoại là bắt buộc
+### 5.6 Mendix — người dùng tự thao tác, agent hướng dẫn
+
+Ở dự án CGVibe trước đây, agent làm phần lớn việc Mendix qua Studio Pro MCP. **Dự án này
+thì không.** Người dùng muốn tự tay thao tác để học Mendix bằng cơ bắp.
+
+| Quy tắc | Chi tiết |
+|---|---|
+| **Không gọi Studio Pro MCP** | Kể cả khi nó đang bật và sẽ nhanh hơn. Mục tiêu là người dùng thành thạo, không phải app xong sớm |
+| Agent **viết ra các bước bấm**, người dùng bấm | Agent vẫn được **đọc** file trong thư mục app để chẩn đoán |
+| **Thao tác và giải thích phải TÁCH RỜI** | Xem §5.6.1 — đây là yêu cầu rõ ràng của người dùng |
+
+Chi tiết đầy đủ ở skill [`mendix-manual`](.claude/skills/mendix-manual/SKILL.md).
+
+#### 5.6.1 Bố cục bắt buộc khi hướng dẫn thao tác Mendix
+
+Người dùng đã nêu rõ: **trộn thao tác với giải thích làm các bước rất khó đọc.** Người đang
+ngồi trước Studio Pro cần bấm, không cần đọc lý do song song.
+
+```
+### Thao tác
+
+Mở:      <đường dẫn .mpr tuyệt đối>
+Branch:  <tên branch>
+Mục tiêu: <một câu>
+
+1. <một hành động>
+2. <một hành động>
+
+Báo lại: <đúng một thứ>
+
+---
+
+### Giải thích
+
+<viết tự do>
+```
+
+Luật cho khối **Thao tác**: mỗi bước một hành động · **không có chữ "vì", "để", "do"** ·
+đường dẫn menu đầy đủ · giá trị chính xác trong `code` · không nêu phương án thay thế ·
+tối đa 7 bước một khối · kết thúc bằng đúng một thứ cần báo lại.
+
+Khối **Giải thích** đặt sau, ngăn bằng `---`, được dài. Không có gì đáng giải thích thì bỏ hẳn.
+
+### 5.7 Lab phá hoại là bắt buộc
 
 Mỗi milestone trong `scope.md` có mục **Lab phá hoại** — cố tình làm sai để thấy pattern giải quyết vấn đề gì. **Không được bỏ qua để tiết kiệm thời gian.** Nếu người dùng muốn bỏ, nhắc lại một lần rồi tôn trọng quyết định.
 
@@ -213,6 +256,7 @@ Kết quả lab phải được **ghi số** vào ADR hoặc `docs/benchmarks.md
 | `AGENTS.md` | Tài liệu này — nguyên tắc làm việc |
 | `docs/scope.md` | Scope & design đầy đủ: nghiệp vụ, kiến trúc, domain, contract, 14 milestone |
 | `docs/cau-hoi-cho-dong-nghiep.md` | Câu hỏi để làm rõ dự án thật ở FPT, và bảng chỉnh trọng số scope |
+| `.claude/skills/mendix-manual/` | Skill Mendix: bố cục hướng dẫn, bẫy Studio Pro, tích hợp backend |
 | `docs/plans/M*.md` | Plan chi tiết từng milestone, chia theo commit |
 | `docs/adr/` | Architecture Decision Records — tối thiểu 18 bản |
 | `docs/oef-mapping.md` | Ánh xạ khái niệm Opcenter Execution Foundation → thành phần trong repo |
@@ -231,3 +275,4 @@ Kết quả lab phải được **ghi số** vào ADR hoặc `docs/benchmarks.md
 4. §4 là ràng buộc cứng, không lách.
 5. Một lần làm việc = một commit.
 6. Test đỏ thì nói đỏ.
+7. Mendix: **người dùng tự bấm**, agent viết các bước — và **tách thao tác khỏi giải thích** (§5.6).

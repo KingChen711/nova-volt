@@ -1,0 +1,194 @@
+{
+  "realm": "novavolt",
+  "displayName": "NovaVolt MES",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "accessTokenLifespan": 3600,
+  "roles": {
+    "realm": [
+      {
+        "name": "Operator",
+        "description": "Van hanh may, quet serial, nhap ket qua do"
+      },
+      {
+        "name": "LineLeader",
+        "description": "Truong chuyen; duoc quyen dat hold"
+      },
+      {
+        "name": "QaEngineer",
+        "description": "Ky su chat luong; dieu tra NCR"
+      },
+      {
+        "name": "QaManager",
+        "description": "Quan ly chat luong; ky duyet MRB"
+      },
+      {
+        "name": "ProductionManager",
+        "description": "Quan ly san xuat; duyet scrap"
+      },
+      {
+        "name": "ComplianceOwner",
+        "description": "Chiu trach nhiem DPP va ho so tuan thu"
+      },
+      {
+        "name": "Admin",
+        "description": "Quan tri he thong"
+      }
+    ]
+  },
+  "components": {
+    "org.keycloak.userprofile.UserProfileProvider": [
+      {
+        "name": "declarative-user-profile",
+        "providerId": "declarative-user-profile",
+        "subComponents": {},
+        "config": {
+          "kc.user.profile.config": [
+            "{\"attributes\":[{\"name\":\"username\",\"displayName\":\"${username}\",\"validations\":{\"length\":{\"min\":3,\"max\":255},\"username-prohibited-characters\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"email\",\"displayName\":\"${email}\",\"validations\":{\"email\":{},\"length\":{\"max\":255}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"firstName\",\"displayName\":\"${firstName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"lastName\",\"displayName\":\"${lastName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"site_id\",\"displayName\":\"Site\",\"validations\":{\"length\":{\"max\":10}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\"]},\"multivalued\":false}],\"unmanagedAttributePolicy\":\"ENABLED\"}"
+          ]
+        }
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "nvm-api",
+      "name": "NovaVolt .NET services",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "dev-only-not-a-secret",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "fullScopeAllowed": true,
+      "protocolMappers": [
+        {
+          "name": "site-id",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "site_id",
+            "claim.name": "site_id",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "nvm-mendix",
+      "name": "NovaVolt Mendix apps",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "dev-only-not-a-secret",
+      "serviceAccountsEnabled": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "fullScopeAllowed": true,
+      "redirectUris": [
+        "http://localhost:8080/*",
+        "http://localhost:8090/*"
+      ],
+      "webOrigins": [
+        "+"
+      ],
+      "protocolMappers": [
+        {
+          "name": "site-id",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "site_id",
+            "claim.name": "site_id",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "op.nv1",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "op.nv1@novavolt.example",
+      "firstName": "Operator",
+      "lastName": "NV1",
+      "attributes": {
+        "site_id": [
+          "NV1"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "Operator"
+      ]
+    },
+    {
+      "username": "qa.nv1",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "qa.nv1@novavolt.example",
+      "firstName": "QA Engineer",
+      "lastName": "NV1",
+      "attributes": {
+        "site_id": [
+          "NV1"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "QaEngineer"
+      ]
+    },
+    {
+      "username": "op.de1",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "op.de1@novavolt.example",
+      "firstName": "Operator",
+      "lastName": "DE1",
+      "attributes": {
+        "site_id": [
+          "DE1"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "Operator"
+      ]
+    }
+  ]
+}

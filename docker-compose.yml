@@ -31,6 +31,7 @@ volumes:
   mssqldata:
   rabbitmqdata:
   emqxdata:
+  miniodata:
 
 services:
   # ─────────────────────────────────────────────────────────
@@ -218,6 +219,102 @@ services:
       timeout: 5s
       retries: 12
       start_period: 30s
+
+  # ─────────────────────────────────────────────────────────
+  # MinIO — object storage cho evidence
+  #
+  # Ảnh vision, đường cong formation thô, log máy. Trong DB chỉ lưu key + SHA-256.
+  # Quy tắc scope.md §5.5: KHÔNG BAO GIỜ để blob trong DB giao dịch.
+  # ─────────────────────────────────────────────────────────
+  minio:
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    container_name: nvm-minio
+    restart: unless-stopped
+    mem_limit: 512m
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${NVM_MINIO_USER}
+      MINIO_ROOT_PASSWORD: ${NVM_MINIO_PASSWORD}
+    ports:
+      - "${NVM_PORT_MINIO}:9000"
+      - "${NVM_PORT_MINIO_UI}:9001"
+    volumes:
+      - miniodata:/data
+    networks: [it-net]
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  # One-shot: tạo bucket rồi thoát. Cùng profile `init` với mssql-init, cùng lý do
+  # đã ghi ở C07.1 — `up --wait` coi container đã thoát là thất bại.
+  minio-init:
+    profiles: [init]
+    image: minio/mc:RELEASE.2025-08-13T08-35-41Z
+    container_name: nvm-minio-init
+    restart: "no"
+    mem_limit: 128m
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      NVM_MINIO_USER: ${NVM_MINIO_USER}
+      NVM_MINIO_PASSWORD: ${NVM_MINIO_PASSWORD}
+    networks: [it-net]
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >
+        mc alias set nvm http://minio:9000 "$$NVM_MINIO_USER" "$$NVM_MINIO_PASSWORD" &&
+        mc mb --ignore-existing nvm/evidence &&
+        mc mb --ignore-existing nvm/vision &&
+        mc ls nvm
+
+  # ─────────────────────────────────────────────────────────
+  # Keycloak — identity provider cho cả .NET lẫn Mendix
+  #
+  # Cổng 8081 chứ không phải 8080: Mendix Studio Pro chạy app local ở 8080 và đổi
+  # nó phiền hơn. Quyết định chốt ở C05, ghi trong .env.example.
+  #
+  # start-dev dùng H2 nhúng — chỉ hợp môi trường học. Production cần DB thật.
+  # ─────────────────────────────────────────────────────────
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.7.2
+    container_name: nvm-keycloak
+    restart: unless-stopped
+    # 768m đo được 597 MiB (78%) ngay lúc rảnh, chưa có ai đăng nhập. JVM sát trần
+    # thì lần đầu Mendix đăng nhập hàng loạt ở M4 sẽ bị OOM-kill. Nâng lên 1g.
+    mem_limit: 1g
+    command: ["start-dev", "--import-realm"]
+    environment:
+      # KC 26 đổi tên biến: KEYCLOAK_ADMIN cũ đã deprecated.
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${NVM_KEYCLOAK_ADMIN}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${NVM_KEYCLOAK_PASSWORD}
+      KC_HEALTH_ENABLED: "true"
+    ports:
+      - "${NVM_PORT_KEYCLOAK}:8080"
+    volumes:
+      - ./deploy/keycloak:/opt/keycloak/data/import:ro
+    # CỐ Ý không có volume cho H2.
+    #
+    # Lý do kỹ thuật: named volume gắn vào /opt/keycloak/data/h2 được Docker tạo với
+    # chủ sở hữu root, còn Keycloak chạy bằng uid 1000, nên H2 chết với
+    # AccessDeniedException ngay lúc khởi động.
+    #
+    # Nhưng lý do THIẾT KẾ mới là cái đáng giữ: không có volume thì mỗi lần khởi động
+    # là một lần import lại realm từ file. File JSON trong git trở thành nguồn sự thật
+    # duy nhất, và mọi thay đổi bấm tay trong console đều biến mất — buộc thay đổi phải
+    # đi qua realm-novavolt.json và được commit. Đây là realm-as-code.
+    networks: [it-net]
+    healthcheck:
+      # Health của KC 26 nằm ở MANAGEMENT PORT 9000, không phải 8080. Image lại
+      # không có curl/wget, nên phải mở socket bằng bash. Xem C09.2 trong plan.
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && grep -q '\"status\": \"UP\"' <&3"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 40s
 
   # Hai container rỗng, chỉ tồn tại để chứng minh ranh giới mạng có thật.
   # Không chạy trong `make up` thường — cần `--profile probe`.

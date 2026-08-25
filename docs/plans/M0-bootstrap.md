@@ -552,27 +552,89 @@ log         : EMQX Enterprise 5.10.4 is running now!
 **Mục tiêu**: object storage cho evidence, và identity provider cho cả .NET lẫn Mendix.
 
 **Việc làm**
-- `minio/minio` — network `it-net`, port 9000 + 9001 (console), volume, `mem_limit: 512m`
-- Service phụ `minio-init` dùng `minio/mc` tạo bucket `evidence`, `vision`, rồi thoát
-- `quay.io/keycloak/keycloak:26.x` — `start-dev`, network `it-net`, port 8080, `mem_limit: 768m`
-- `deploy/keycloak/realm-novavolt.json` — realm export chứa:
-  - Realm `novavolt`
-  - Client `nvm-api` (confidential, service account) và `nvm-mendix` (public hoặc confidential tuỳ module OIDC của Mendix)
-  - Realm role: `Operator`, `LineLeader`, `QaEngineer`, `QaManager`, `ProductionManager`, `ComplianceOwner`, `Admin`
-  - User attribute `site_id`, thêm vào token qua protocol mapper
-  - 3 user test: `op.nv1` (Operator, site NV1), `qa.nv1` (QaEngineer, NV1), `op.de1` (Operator, **site DE1** — để test cross-site isolation ở M10)
-- Import realm bằng `--import-realm` + mount file vào `/opt/keycloak/data/import/`
+- **`minio/minio:RELEASE.2025-09-07T16-13-09Z`** — `it-net`, port 9000 + 9001, volume, `mem_limit: 512m`. Healthcheck `mc ready local` (image có sẵn `mc`)
+- `minio-init` dùng `minio/mc` tạo bucket `evidence`, `vision` — **profile `init`**, cùng lý do C07.1
+- **`quay.io/keycloak/keycloak:26.7.2`** — `start-dev --import-realm`, `it-net`, port **8081**, **`mem_limit: 1g`** (xem C09.4)
+- `deploy/keycloak/realm-novavolt.json` + `deploy/keycloak/README.md` (chú thích để ở README, xem C09.1)
+- **Không có volume cho H2** — xem C09.3
 
 **Kiểm chứng**
-```bash
-# Lấy token và đọc claim
-curl -s -d "client_id=nvm-mendix" -d "username=op.nv1" -d "password=..." \
-     -d "grant_type=password" \
-     localhost:8080/realms/novavolt/protocol/openid-connect/token | jq -r .access_token
-# Decode payload → phải thấy realm_access.roles chứa Operator, và site_id = NV1
+
+| Kiểm | Kết quả |
+|---|---|
+| Import realm | `Realm 'novavolt' imported` · `Import finished successfully` |
+| Token `op.nv1` | `site_id=NV1`, `roles=['Operator']` |
+| Token `qa.nv1` | `site_id=NV1`, `roles=['QaEngineer']` |
+| Token `op.de1` | `site_id=DE1`, `roles=['Operator']` |
+| MinIO bucket | `evidence/`, `vision/` — chạy lại lần hai exit 0 |
+| Endpoint | MinIO API 200 · console 200 · Keycloak discovery 200 |
+| **Toàn bộ M0 từ `down`** | **58 s** (6 service 53 s + init 5 s) — ngưỡng D1 là 300 s |
+| Tổng `mem_limit` | **6,00 GB / 8 GB quota** |
+
+#### C09.1 — Không được chú thích trong realm JSON
+
+Keycloak deserialize bằng Jackson **strict**: một trường lạ làm import **chết hẳn**, không
+phải bỏ qua. Thêm `"_comment": "…"` cho dễ đọc cho ra:
+
+```
+ERROR: Failed to run import
+ERROR: Unrecognized field "_comment_roles" … not marked as ignorable
 ```
 
-**Đây là commit tốn thời gian nhất của M0** (75'). Realm export dễ sai ở protocol mapper. Nếu bí, tạo realm bằng UI trước rồi export ra file, đừng viết JSON bằng tay.
+Triệu chứng bên ngoài là container restart liên tục và healthcheck unhealthy — **không hề
+gợi ý** rằng nguyên nhân là một dòng chú thích. Chú thích chuyển hết sang
+`deploy/keycloak/README.md`.
+
+#### C09.2 — `site_id` bị nuốt âm thầm nếu không khai báo User Profile
+
+Từ bản 24, Keycloak bật **User Profile** mặc định và **loại bỏ mọi attribute không được
+khai báo**. Chỉ viết `"attributes": {"site_id": ["NV1"]}` trên user thì:
+
+- import **thành công**, không cảnh báo;
+- user hiện bình thường trong console;
+- token **không bao giờ** có claim `site_id`.
+
+Phải thêm khối `components → org.keycloak.userprofile.UserProfileProvider` khai báo
+`site_id` và đặt `unmanagedAttributePolicy: ENABLED`. Giá trị của `kc.user.profile.config`
+là **chuỗi JSON lồng trong JSON** — kiểm cú pháp lớp trong bằng script trước khi khởi động.
+
+> [!important] Đây là lý do phải giải mã token chứ không tin log
+> `Import finished successfully` vẫn in ra khi `site_id` đã bị nuốt. Chỉ có việc lấy token
+> thật và đọc payload mới phát hiện được.
+
+#### C09.3 — Không gắn volume cho H2, và đó là quyết định thiết kế
+
+Lý do kỹ thuật: named volume gắn vào `/opt/keycloak/data/h2` được Docker tạo với chủ sở hữu
+`root`, còn Keycloak chạy bằng uid 1000 → H2 chết với `AccessDeniedException` ngay lúc khởi
+động.
+
+Nhưng lý do đáng giữ là **realm-as-code**: không có volume thì mỗi lần khởi động là một lần
+import lại từ file, `realm-novavolt.json` trở thành nguồn sự thật duy nhất, và mọi thay đổi
+bấm tay trong Admin Console biến mất khi restart — buộc thay đổi phải đi qua file và được commit.
+
+#### C09.4 — Ngân sách RAM đã chạm mức cần chú ý
+
+| Service | `mem_limit` | Dùng thật lúc rảnh |
+|---|---|---|
+| mssql | 2,0 GB | 883 MiB |
+| timescale | 1,0 GB | 25 MiB |
+| emqx | 1,0 GB | 349 MiB |
+| **keycloak** | **1,0 GB** | 625 MiB |
+| rabbitmq | 0,5 GB | 126 MiB |
+| minio | 0,5 GB | 79 MiB |
+| **Tổng** | **6,00 GB** | ~2,1 GB |
+
+Keycloak ban đầu để 768m, đo được 597 MiB (78%) khi **chưa ai đăng nhập** — JVM sát trần thì
+đợt đăng nhập hàng loạt đầu tiên từ Mendix ở M4 sẽ bị OOM-kill. Nâng lên 1 GB.
+
+> [!warning] Ảnh hưởng tới M13
+> Profile mặc định đã chiếm 6,00 GB / 8 GB. Bật thêm profile `obs` (~1,5 GB) sẽ lên ~7,5 GB —
+> quá sát. Tới M13 phải chọn: nâng quota Docker lên 10–12 GB, hoặc tắt bớt service khi debug
+> observability. Ghi lại để không bất ngờ.
+
+**Ghi chú**: Keycloak 26 dùng `KC_BOOTSTRAP_ADMIN_USERNAME`/`PASSWORD`, biến `KEYCLOAK_ADMIN`
+cũ đã deprecated. Health endpoint nằm ở **management port 9000 trong container**, không phải
+8080, và image **không có `curl` lẫn `wget`** — healthcheck phải mở socket bằng bash `/dev/tcp`.
 
 ---
 

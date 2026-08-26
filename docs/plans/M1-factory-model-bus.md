@@ -34,6 +34,7 @@ Milestone chỉ được đóng khi **cả 5** mệnh đề đúng, có bằng c
 - `tests/Architecture` có ≥ 5 rule chạy được (K8, K9, K2 được ép bằng máy chứ không bằng trí nhớ).
 - **5** ADR mới: `ADR-004`, `ADR-008`, `ADR-010`, `ADR-021`, `ADR-022`. Mỗi ADR viết **trong chính commit ra quyết định**, không dồn về cuối.
 - `docs/event-catalog.md` tồn tại với các event M1 thật sự phát ra.
+- `docs/glossary.md` phủ **mọi** thuật ngữ nghiệp vụ đã dùng trong M1 — kiểm bằng cách đọc lại báo cáo của 19 commit và tìm từ chưa có mục (`AGENTS.md` §5.8.2).
 
 **Không** thuộc M1: event store, outbox, projection, Functional Block đầy đủ (`Entities/`+`Migrations/`), OData/Public Object Model, EF Core, Testcontainers. M1 dựng **đường ống** và **quy ước**, không dựng nghiệp vụ.
 
@@ -183,6 +184,11 @@ Giai đoạn A và D gần như không cần hạ tầng — làm được cả 
 > [!important] Nhắc lại từ AGENTS.md §1.1
 > Agent **không tự commit**. Xong mỗi C, dừng lại, báo cáo, bạn tự đọc `git diff` rồi commit. Commit message ở cột trên là **đề xuất**.
 
+> [!important] Nhắc lại từ AGENTS.md §5.8 — áp dụng từ C03 trở đi
+> Mỗi commit **mở đầu** bằng khối **Nghiệp vụ** (khái niệm mới · vì sao có mặt · nếu làm sai thì hỏng gì trên dây chuyền), **rồi mới** code. Thuật ngữ chưa có trong [`docs/glossary.md`](../glossary.md) thì thêm vào trong chính commit đó.
+>
+> C01 và C02 làm trước khi có quy tắc này. Từ vựng của hai commit đó đã được bổ sung ngược vào glossary, nhưng thứ tự thì không sửa lại được — đọc `glossary.md` §8 (messaging) và §4 (truy vết) nếu cần đọc lại `Nvm.Contracts` cho thông.
+
 > [!note] ADR viết tại chỗ quyết định, không dồn về cuối
 > M0 gom cả 4 ADR vào C14. Lần này khác: `ADR-010` viết trong **C04**, `ADR-004`/`ADR-021` trong **C09**, `ADR-008` trong **C12**, `ADR-022` trong **C13**.
 >
@@ -219,16 +225,35 @@ Kiểm bằng mắt: `Nvm.Contracts.csproj` **không có** `<PackageReference>` 
 **Việc làm**
 - `CloudEventEnvelope<TData>` — record đúng theo `scope.md` §7.4: `SpecVersion` (hằng `"1.0"`), `Id`, `Type`, `Source`, `Subject`, `Time`, `DataContentType`, `DataSchema`, `CorrelationId`, `CausationId`, `PartitionKey`, `Data`.
 - `EventTypeName` — dựng và **phân tích ngược** chuỗi `com.novavolt.{context}.{event}.v{n}`. Phải parse được, không chỉ format được: `_error` queue ở C11 sẽ cần đọc `type` từ một message không deserialize nổi.
-- `RoutingKey` — `nvm.{site}.{context}.{event}.v{n}` (`scope.md` §7.4). Ràng buộc: site và context viết thường trong routing key nhưng `SiteId` trong `data` giữ đúng hoa (`NV1`) — đây là chỗ hai quy ước gặp nhau, ghi rõ trong XML doc.
+- `RoutingKey` — `nvm.{site}.{context}.{event}.v{n}` (`scope.md` §7.4). **Site giữ nguyên chữ hoa** trong routing key — xem C02.1, dòng này đã bị sửa vì bản đầu của plan ghi ngược với scope.
 - `EventSource` — `urn:novavolt:{site}:{app}`.
 
 **Kiểm chứng**
 ```bash
 make test    # test mới của C02 xanh
 ```
-Bộ test tối thiểu: format rồi parse ngược ra đúng giá trị ban đầu (round-trip) cho cả `EventTypeName` và `RoutingKey`; chuỗi thiếu `.vN` bị từ chối; version không phải số bị từ chối; site viết thường trong routing key nhưng không bị hạ hoa trong `data`.
+Bộ test tối thiểu: format rồi parse ngược ra đúng giá trị ban đầu (round-trip) cho cả `EventTypeName` và `RoutingKey`; chuỗi thiếu `.vN` bị từ chối; version không phải số bị từ chối; **routing key viết `nvm.nv1.…` bị từ chối** (C02.1); `EventSource` hạ hoa site trong URN nhưng trả lại đúng `NV1` khi parse.
 
 **Bẫy**: đừng dùng `string.ToLower()`. `CA1310` đang ở mức `warning` (= lỗi build). Dùng `ToLowerInvariant()`, và nhớ lý do ở `ADR-020`: repo này **không** bật `InvariantGlobalization`, nên culture mặc định là thật và `ToLower()` trên máy Thổ Nhĩ Kỳ cho `ı` thay vì `i`.
+
+#### C02.1 — Site viết HOA trong routing key, viết thường trong URN
+
+Bản đầu của plan ghi *"site và context viết thường trong routing key"*. **Sai** — ngược với `scope.md` §7.4. Ba ví dụ trong scope, đọc kỹ:
+
+| Trường | Ví dụ trong §7.4 | Site viết thế nào |
+|---|---|---|
+| Routing key | `nvm.NV1.traceability.unit-serialized.v1` | **HOA** |
+| `source` | `urn:novavolt:nv1:app-execution` | thường |
+| `subject` | `urn:trace-unit:cell:NV1CL16238A00123` | HOA *(nằm trong serial)* |
+
+Không phải scope tự mâu thuẫn. Quy tắc là: **từ vựng cố định viết thường** (`novavolt`, `app-execution`, `trace-unit`, `cell`, `traceability`), **định danh giữ nguyên dạng chuẩn của nó** — và dạng chuẩn của `SiteId` là chữ hoa ở khắp mọi nơi khác (`NV1CL16238A00123`, `NOVAVOLT/NV1/FORMATION/...`, claim `site_id=NV1` từ Keycloak). Hạ hoa nó trong routing key sẽ tạo ra **chỗ duy nhất** trong hệ thống mà site viết thường — đó mới là điểm không nhất quán.
+
+`source` là ngoại lệ có lý do riêng: URN thì thành phần cố định viết thường theo thông lệ, và `nv1` ở đó đóng vai một token trong namespace chứ không phải một giá trị dữ liệu.
+
+> [!warning] Vì sao chuyện hoa-thường này không phải chuyện vặt
+> Routing key của AMQP **phân biệt hoa thường**. Publisher gửi `nvm.NV1.…` còn consumer bind `nvm.nv1.#` thì **không khớp** — và RabbitMQ không báo lỗi, không cảnh báo. Message đi vào exchange rồi biến mất. Đây là kiểu hỏng tệ nhất: im lặng hoàn toàn, và chỉ lộ ra khi có người hỏi *"sao báo cáo thiếu dữ liệu?"* ba tuần sau.
+>
+> Cách chặn: `RoutingKey` là **cách duy nhất** dựng chuỗi đó, và nó **từ chối** site viết thường ngay lúc parse. Không ai gõ tay routing key nữa. Ở C10, binding pattern của consumer cũng phải sinh từ `RoutingKey`, không nối chuỗi bằng tay.
 
 ---
 

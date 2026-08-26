@@ -10,6 +10,24 @@
 
 Đây là **learning project**. Mục tiêu là *người chủ repo hiểu sâu*, không phải *code chạy sớm*. Một giải pháp thông minh mà chủ repo không giải thích được là một giải pháp **thất bại**.
 
+### 0.1 Chủ repo KHÔNG tự gõ code .NET — điều này đổi định nghĩa "xong"
+
+Xác nhận 2026-08-26. Phần lớn code .NET do agent viết từ plan chi tiết. Hệ quả phải nắm trước khi làm bất cứ việc gì:
+
+> **Sản phẩm của một commit không phải code. Sản phẩm là hiểu biết của chủ repo. Code là sản phẩm phụ.**
+
+Ở một dự án bình thường, người ta hiểu code vì đã vật lộn với nó. Ở đây đường đó không tồn tại — nên hiểu biết phải được **giao một cách có chủ đích**, không phó mặc cho việc chủ repo tự đọc diff rồi tự suy ra.
+
+Nền tảng chuyên môn của chủ repo, để agent nhắm đúng chỗ:
+
+| Mảng | Mức | Nghĩa là |
+|---|---|---|
+| .NET, C#, SQL, system design, distributed systems | **vững** | Không giải thích `record`, DI, index, CQRS là gì. Giải thích **vì sao chọn cách này ở đây** |
+| **Nghiệp vụ sản xuất pin / MES / traceability** | **mới** | Đây là chỗ cần giảng. Không giả định biết `formation`, `OCV`, `lot`, `MRB`, `work order` nghĩa là gì |
+| Opcenter EF, Mendix | đang học | Giải thích khái niệm, đối chiếu với thứ đang tự dựng |
+
+Quy tắc thi hành ở **§5.8**. Không có ngoại lệ vì "commit này thuần kỹ thuật" — nếu thật sự không chạm nghiệp vụ nào thì nói đúng một câu như vậy, đừng bịa ra nội dung cho đủ mục.
+
 ---
 
 ## 1. Quy tắc tuyệt đối — không có ngoại lệ
@@ -277,12 +295,65 @@ Kết quả lab phải được **ghi số** vào ADR hoặc `docs/benchmarks.md
 
 ---
 
+### 5.8 Nghiệp vụ phải được giao TRƯỚC code, không phải khi được hỏi
+
+Xuất phát từ §0.1. Ba quy tắc, và cả ba đều kiểm được bằng mắt.
+
+#### 5.8.1 Briefing trước, code sau
+
+Mỗi commit chạm nghiệp vụ **bắt đầu** bằng một khối ngắn, **trước** khi gõ dòng code đầu tiên:
+
+```
+### Nghiệp vụ của commit này
+
+Khái niệm mới:  <từ> — <nghĩa trong nhà máy, 1-2 câu>
+Vì sao có mặt:  <ràng buộc nghiệp vụ nào đẻ ra thiết kế này>
+Nếu làm sai:    <hỏng ra sao trên dây chuyền, không phải hỏng ra sao trong code>
+
+---
+
+### Kỹ thuật
+```
+
+Tối đa ~15 dòng. Dài hơn là đang viết luận văn, ngắn hơn là đang cho có.
+
+Vế **"nếu làm sai"** là vế quan trọng nhất và cũng là vế hay bị bỏ nhất. *"Enum gộp ba loại state"* nghe như chuyện gu code. *"Một thao tác chuyển kho sẽ vô tình release hàng lỗi, và auditor sẽ bắt được"* là cùng một chuyện, nói bằng ngôn ngữ hậu quả — và đó mới là thứ ở lại trong đầu.
+
+Trước → sau, không phải ngược lại: đọc giải thích **rồi** đọc diff thì chủ repo đang kiểm chứng một thứ mình đã hiểu. Đọc diff trước rồi mới nghe giải thích thì chỉ còn gật đầu.
+
+#### 5.8.2 Không dùng thuật ngữ chưa có trong `docs/glossary.md`
+
+Mọi từ nghiệp vụ xuất hiện trong báo cáo, ADR, plan hoặc comment code **phải** đã có trong [`docs/glossary.md`](docs/glossary.md). Chưa có → **thêm vào trong chính commit đó**, trước khi dùng.
+
+Glossary là tài liệu sống, cùng hạng với `benchmarks.md` và `oef-mapping.md`. Nó không phải nơi chép lại Wikipedia: mỗi mục nói từ đó nghĩa gì **trong nhà máy NovaVolt**, và nếu có chỗ dễ nhầm thì nói luôn (`EOL` có hai nghĩa; "state" có ba loại).
+
+Lý do có quy tắc này chứ không chỉ "nhớ giải thích": giải thích một từ ba lần ở ba chỗ khác nhau thì ba lần đó sẽ dần lệch nhau, và không lần nào tra lại được.
+
+#### 5.8.3 Tách nghiệp vụ khỏi kỹ thuật trong báo cáo
+
+Cùng nguyên tắc §5.6.1 đã đặt cho Mendix, khác trục. Khối **Nghiệp vụ** và khối **Kỹ thuật** ngăn nhau bằng `---`. Không rải thuật ngữ nhà máy vào giữa đoạn nói về `TryParse`, và không rải tên class vào giữa đoạn nói về formation.
+
+#### 5.8.4 Giới hạn của cách làm này — nói ra thay vì giả vờ không có
+
+Đọc giải thích tạo ra **nhận ra**, không tạo ra **nhớ lại**. Chủ repo sẽ gật đầu khi đọc và vẫn tắc khi phải tự nói lại. Đây là rủi ro thật của mô hình "agent gõ, người đọc", và không có quy tắc viết lách nào xoá được nó.
+
+Ba đối trọng, đều đã có sẵn trong repo — agent phải **dùng**, không được bỏ qua cho nhanh:
+
+| Đối trọng | Ở đâu | Cách dùng |
+|---|---|---|
+| Đọc diff trước khi commit | §1.1 | Đã có. Briefing §5.8.1 làm cho việc đọc đó có nghĩa |
+| **Đoán trước khi đo** | §5.7 | Trước mỗi lab phá hoại, agent hỏi chủ repo **đoán con số**, rồi mới chạy. Đoán sai là lúc học được nhiều nhất |
+| **Nói lại bằng lời** | DoD của milestone | Cuối mỗi milestone, agent nêu 2–3 câu hỏi "vì sao", chủ repo tự trả lời **không đọc lại tài liệu**. Tắc câu nào thì phần đó chưa xong — hạ trạng thái, đừng đánh dấu `xong` |
+
+Cả ba đều nhẹ. Bỏ cả ba thì dự án 6 tháng này sản xuất ra một repo đẹp và không ai hiểu nó.
+
 ## 6. Bản đồ tài liệu
 
 | File | Nội dung |
 |---|---|
 | `AGENTS.md` | Tài liệu này — nguyên tắc làm việc |
 | `docs/scope.md` | Scope & design đầy đủ: nghiệp vụ, kiến trúc, domain, contract, 14 milestone |
+| **`docs/glossary.md`** | **Từ điển nghiệp vụ. Thuật ngữ chưa có ở đây thì không được dùng (§5.8.2)** |
 | `docs/cau-hoi-cho-dong-nghiep.md` | Câu hỏi để làm rõ dự án thật ở FPT, và bảng chỉnh trọng số scope |
 | `.claude/skills/mendix-manual/` | Skill Mendix: bố cục hướng dẫn, bẫy Studio Pro, tích hợp backend |
 | `docs/plans/M*.md` | Plan chi tiết từng milestone, chia theo commit |
@@ -297,6 +368,7 @@ Kết quả lab phải được **ghi số** vào ADR hoặc `docs/benchmarks.md
 
 ## 7. Tóm tắt cho agent đang vội
 
+0. **Chủ repo không tự gõ code** (§0.1). Sản phẩm của commit là **hiểu biết**, code là sản phẩm phụ. Nghiệp vụ giao **trước** code, không đợi được hỏi (§5.8). Thuật ngữ chưa có trong `docs/glossary.md` thì thêm vào trước khi dùng.
 1. **Không tự commit.** Chuẩn bị xong thì dừng và đề xuất message.
 2. Docs là bản đồ, không phải đường ray — **được phép làm trái, nhưng phải nói ra và cập nhật docs**.
 3. Audit thì kiểm cả plan, không chỉ kiểm code. Plan sai thì đề xuất sửa plan.

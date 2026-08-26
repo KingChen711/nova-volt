@@ -21,6 +21,7 @@ namespace Nvm.Contracts.CloudEvents;
 /// SiteId in the codebase without anyone remembering which string came from a URN.
 /// </para>
 /// </remarks>
+[System.Text.Json.Serialization.JsonConverter(typeof(EventSourceJsonConverter))]
 public sealed record EventSource
 {
     /// <summary>URN prefix shared by every source in the system.</summary>

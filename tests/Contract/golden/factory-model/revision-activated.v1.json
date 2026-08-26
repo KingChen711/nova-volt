@@ -1,0 +1,25 @@
+{
+  "specversion": "1.0",
+  "id": "0198f3a1-7c2e-5b4d-9e11-3a7f2c9b0d44",
+  "type": "com.novavolt.factory-model.revision-activated.v1",
+  "source": "urn:novavolt:nv1:app-execution",
+  "subject": "urn:factory-model:NV1",
+  "time": "2026-08-25T03:15:42.128+00:00",
+  "datacontenttype": "application/json",
+  "correlationid": "FMR-NV1-0012",
+  "partitionkey": "NV1",
+  "data": {
+    "eventId": "0198f3a1-7c2e-5b4d-9e11-3a7f2c9b0d44",
+    "occurredAt": "2026-08-25T03:15:42.128+00:00",
+    "siteId": "NV1",
+    "revision": 12,
+    "nodeCount": 148,
+    "equipmentPathsAdded": [
+      "NOVAVOLT/NV1/FORMATION/F1/FORM-01/FORM-01-CH-0143",
+      "NOVAVOLT/NV1/FORMATION/F1/FORM-01/FORM-01-CH-0144"
+    ],
+    "equipmentPathsRemoved": [
+      "NOVAVOLT/NV1/ASSEMBLY/L2/STACK-07"
+    ]
+  }
+}

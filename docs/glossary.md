@@ -101,6 +101,11 @@ Routing đầy đủ ở [`scope.md`](scope.md) §2.2.
 | **Production day** | Ngày dương lịch mà **ca A của chu kỳ đó bắt đầu**. Ca C từ 22:00 ngày 25 tới 06:00 ngày 26 vẫn thuộc `production_day = 25` |
 | **Site** | Một nhà máy. `NV1` Hải Phòng (không DST), `DE1` Leipzig (**có DST**, cố ý) |
 | **Multiplant** | Một hệ thống chạy nhiều site cùng lúc, dữ liệu không được rò rỉ chéo |
+| **Retention** | Giữ dữ liệu bao lâu rồi mới được xoá. Ở đây: event store và genealogy **15 năm** (thực chất là không xoá), telemetry thô **400 ngày**, rollup 1 phút 15 năm |
+| **Legal hold** | Cờ chặn **mọi** retention policy. Đang có tranh chấp pháp lý thì không được xoá gì, kể cả dữ liệu đã quá hạn |
+| **Audit** | Đợt kiểm tra của bên thứ ba hoặc của khách hàng, đối chiếu hồ sơ với thực tế. Câu hỏi điển hình: *"lúc 14:20 ngày 12/3, máy này chạy tham số nào?"* |
+| **IATF 16949 / ISO 9001** | Hai chứng nhận hệ thống chất lượng NovaVolt đang giữ. Mất chứng nhận = mất khách hàng ô tô |
+| **Hồ sơ pháp lý** | Dữ liệu mà luật hoặc chứng nhận buộc phải giữ nguyên vẹn. Khác log ứng dụng ở chỗ: **không được sửa, không được xoá**, sai thì ghi bút toán bù trừ (`AGENTS.md` K4, K5) |
 
 ## 6. ISA-95 và cây nhà máy
 
@@ -111,6 +116,7 @@ Routing đầy đủ ở [`scope.md`](scope.md) §2.2.
 | **Line** | Chuyền trong một area: `L1`, `L2` (cell), `M1` (module), `P1` (pack) |
 | **WorkCell** | Trạm/máy trong một chuyền, ví dụ `FORM-01` |
 | **Equipment path** | Chuỗi đầy đủ `NOVAVOLT/NV1/FORMATION/F1/FORM-01/FORM-01-CH-0142`. Dùng làm MQTT topic, nhãn metric, khoá phân quyền, XPath trong Mendix — **quyết định một lần, dùng khắp nơi** |
+| **Revision** *(của factory model)* | Một phiên bản của cây nhà máy. Thêm kênh sạc, tháo work cell, đổi tên line → revision mới, **không sửa tại chỗ**. Cần thiết vì hồ sơ traceability năm ngoái trỏ tới equipment path có thể **không còn tồn tại** hôm nay — và đó không phải dữ liệu hỏng |
 | **MES** | *Manufacturing Execution System* — hệ thống điều hành sản xuất, đứng giữa ERP và tầng thiết bị |
 | **OT / IT** | *Operational Technology* (tầng thiết bị nhà máy) và *Information Technology* (tầng doanh nghiệp). Ranh giới giữa hai tầng là ranh giới **an ninh** |
 | **DMZ** | Vùng đệm giữa OT và IT |
@@ -148,6 +154,7 @@ Routing đầy đủ ở [`scope.md`](scope.md) §2.2.
 | **Idempotency** | Xử lý cùng một message hai lần cho kết quả như xử lý một lần |
 | **At-least-once** | Message **sẽ** đến nhiều hơn một lần. Đây là mặc định của thế giới thật, không phải sự cố |
 | **Dedup** | Nhận ra và bỏ qua bản trùng |
+| **Event versioning** | Mỗi event mang số version ngay từ v1. Thêm field optional → **không** tăng version; đổi ý nghĩa / xoá field / đổi kiểu → **tăng**, và viết upcaster |
 | **Upcaster** | Hàm chuyển event **v1 → v2**. Đọc event năm 2026 bằng code năm 2036 bằng cách chạy chuỗi upcaster |
 | **Golden file** | File JSON **thật** của một version, giữ nguyên đời đời. Test đọc nó và assert code hôm nay vẫn hiểu. **Không bao giờ sửa file cũ** |
 | **Outbox** | Bảng trung gian để ghi DB và publish message trong **cùng một transaction**. Lời giải cho bẫy dual-write |

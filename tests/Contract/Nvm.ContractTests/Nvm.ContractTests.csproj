@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- xunit v3 test projects are executables; the runner is compiled into the assembly. -->
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Nvm.ContractTests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="Shouldly" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../../src/Platform/Nvm.Contracts/Nvm.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      Golden file nằm ở tests/Contract/golden/ theo scope.md §10.5 — ngoài project, vì chúng là
+      dữ liệu của cả tầng Contract chứ không riêng project test này. LinkBase giữ nguyên cây thư
+      mục khi copy sang output, nên đường dẫn trong test khớp đường dẫn trong repo.
+    -->
+    <Content Include="../golden/**/*.json" LinkBase="golden" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+    <Using Include="Shouldly" />
+  </ItemGroup>
+
+</Project>

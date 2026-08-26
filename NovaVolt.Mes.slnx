@@ -8,6 +8,9 @@
     <Project Path="src/Platform/Nvm.Kernel/Nvm.Kernel.csproj" />
   </Folder>
   <Folder Name="/tests/" />
+  <Folder Name="/tests/Contract/">
+    <Project Path="tests/Contract/Nvm.ContractTests/Nvm.ContractTests.csproj" />
+  </Folder>
   <Folder Name="/tests/Unit/">
     <Project Path="tests/Unit/Nvm.UnitTests/Nvm.UnitTests.csproj" />
   </Folder>

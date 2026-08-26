@@ -22,6 +22,7 @@ namespace Nvm.Contracts.CloudEvents;
 /// the header is how an operator finds out what it was supposed to be.
 /// </para>
 /// </remarks>
+[System.Text.Json.Serialization.JsonConverter(typeof(EventTypeNameJsonConverter))]
 public sealed record EventTypeName
 {
     /// <summary>Reverse-DNS prefix shared by every event type in the system.</summary>

@@ -1,0 +1,65 @@
+# CI cho NovaVolt MES
+#
+# Các bước ở đây PHẢI khớp với target `ci` trong Makefile. Hai bên lệch nhau thì
+# CI không còn là thứ dự đoán được, và người ta sẽ học cách bỏ qua nó.
+#
+# Repo chưa có remote (xem docs/plans/M0-bootstrap.md §3, Q1), nên workflow này
+# chưa từng chạy. Nó được viết sẵn để lúc `git remote add` là dùng được ngay,
+# không phải viết lại.
+#
+# Integration test bằng Testcontainers đến ở M5 — lúc đó tách thành job riêng,
+# vì chúng cần Docker và chậm hơn hẳn.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Least privilege: workflow này chỉ đọc code, không ghi gì lên repo.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build, format, test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Không ghi cứng version ở đây: global.json đã pin SDK, và để hai chỗ
+      # cùng khai báo là tạo cơ hội cho chúng lệch nhau.
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Restore
+        run: dotnet restore NovaVolt.Mes.slnx
+
+      # Chạy TRƯỚC build: một lỗi thụt lề không đáng phải chờ hết một lần
+      # build Release mới lộ ra.
+      - name: Format check
+        run: dotnet format NovaVolt.Mes.slnx --verify-no-changes --no-restore
+
+      - name: Build
+        run: dotnet build NovaVolt.Mes.slnx -c Release --no-restore --nologo
+
+      # .NET 10 bỏ VSTest cho Microsoft.Testing.Platform. MTP mode bật trong
+      # global.json và đổi cú pháp: phải là --solution.
+      - name: Test
+        run: dotnet test --solution NovaVolt.Mes.slnx -c Release --no-build

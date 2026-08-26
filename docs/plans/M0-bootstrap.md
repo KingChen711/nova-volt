@@ -788,31 +788,74 @@ không phải bỏ bớt service. Theo `AGENTS.md` §3.2.
 **Mục tiêu**: có người gác cổng chạy được **ngay hôm nay**, và sẵn sàng chuyển lên GitHub khi cần.
 
 **Việc làm**
-- Target `make ci` — đúng thứ tự và đúng cờ mà CI sẽ dùng, không phải một biến thể khác:
-  ```make
-  ci: ; dotnet restore \
-      && dotnet format --verify-no-changes \
-      && dotnet build -c Release --no-restore \
-      && dotnet test  -c Release --no-build --nologo
-  ```
-- `.githooks/pre-commit` — **chỉ** chạy `dotnet format --verify-no-changes` (< 5 s). Cố ý **không** chạy build/test trong hook: hook chậm thì bạn sẽ tìm cách `--no-verify`, và thế là mất luôn tác dụng
-- Kích hoạt hook: `git config core.hooksPath .githooks` — ghi vào README, vì hook **không** tự cài khi clone
-- `.github/workflows/ci.yml` viết sẵn, trigger `push` + `pull_request`, các bước khớp `make ci`: `actions/checkout` → `actions/setup-dotnet` (đọc `global.json`) → cache NuGet → 4 bước như trên. `permissions: contents: read`
+- Target **`make ci`** — `restore → format → build -c Release → test -c Release --no-build`
+- Target **`make hooks`** — đặt `core.hooksPath`, xem C12.2
+- `.githooks/pre-commit` — **chỉ** kiểm format, và **bỏ qua hẳn** khi commit không đụng `.cs` (xem C12.3)
+- `.github/workflows/ci.yml` viết sẵn, các bước khớp `make ci`, `permissions: contents: read`, cache NuGet, đọc SDK từ `global.json`
 - Chưa thêm Testcontainers — integration test đến ở M5, khi đó tách job riêng
 
-**Kiểm chứng — đây là D4 (phiên bản không cần remote)**
+**Kiểm chứng — đây là D4**
+
+| # | Bước | Kết quả |
+|---|---|---|
+| 1 | `make ci` | xanh, exit **0** |
+| 2 | Phá thụt lề 1 file → `make ci` | **ĐỎ ở bước format**, exit 2, hai lỗi `WHITESPACE` |
+| 3 | `git commit` | **hook CHẶN**, exit 1, in hướng dẫn `make format` |
+| 4 | `make format` | file trở lại **giống hệt bản gốc** (`diff -q` sạch) |
+| 5 | `make ci` | xanh trở lại, exit 0 |
+| 6 | Commit chỉ có `.md` | hook **bỏ qua**, commit đi thẳng |
+
+Bước 2 xác nhận thứ tự đúng: đỏ ở **format**, chưa tới build — một lỗi thụt lề không phải chờ
+hết một lần build Release mới lộ ra.
+
+#### C12.1 — `make ci` và `ci.yml` phải khớp từng cờ
+
+Hai bên lệch nhau thì CI không còn là thứ dự đoán được, và người ta học cách bỏ qua nó. Cụ thể
+những chỗ dễ trôi: `-c Release`, `--no-restore`, `--no-build`, và **`--solution`** (bắt buộc ở
+MTP mode, xem C04.1).
+
+`ci.yml` **không** ghi cứng version .NET — nó đọc `global.json` qua `global-json-file`. Khai báo
+version ở hai chỗ là tạo sẵn cơ hội cho chúng lệch nhau.
+
+#### C12.2 — Hook không tự cài khi clone
+
+Git **cố ý** bỏ qua hook đi kèm repo vì lý do bảo mật — một repo lạ không được phép chạy script
+trên máy bạn lúc clone. `core.hooksPath` là đường chính thức để trỏ sang thư mục được version hoá,
+nhưng nó là **git config local**, phải chạy một lần trên mỗi máy:
+
 ```bash
-make ci                       # xanh
-# Cố tình phá format 1 file (thụt lề sai), rồi:
-make ci                       # ĐỎ ở bước format
-git add . && git commit -m "test"   # pre-commit hook CHẶN
-make format                   # sửa lại
-make ci                       # xanh trở lại
+make hooks
 ```
 
-**Bẫy**: `dotnet format --verify-no-changes` gần như chắc chắn đỏ ở lần chạy đầu, vì `.editorconfig` ở C01 chặt hơn code do template sinh ra. Chạy `make format` một lần rồi hẵng bật hook.
+Ghi vào README ở C16, nếu không thì dev thứ hai sẽ tưởng hook đang chạy trong khi nó không.
 
-**Khi có remote sau này**: không phải viết lại gì — `ci.yml` đã sẵn, chỉ cần `git remote add` và push.
+#### C12.3 — Hook chỉ kiểm format, và bỏ qua khi không có `.cs`
+
+Hai quyết định, cùng một lý do: **hook chậm là hook bị vô hiệu hoá**.
+
+- **Không build, không test trong hook.** Build Release + test mất ~10 s. Sau vài lần chờ, người
+  ta sẽ gõ `--no-verify` cho nhanh — và mất luôn cả phần kiểm format vốn rất rẻ. Build/test là
+  việc của `make ci`.
+- **Bỏ qua hẳn khi commit không đụng `.cs`.** Sửa tài liệu không có lý do gì phải chờ
+  `dotnet format`. Đã kiểm: commit một file `.md` đi thẳng, không dừng.
+
+Hook cũng in sẵn lối thoát `git commit --no-verify` — giấu nó đi không làm ai an toàn hơn, chỉ
+làm người bị chặn mất thêm thời gian tra cứu.
+
+#### C12.4 — Hook thiếu bit executable bị bỏ qua IM LẶNG
+
+Git ghi file mới vào index với mode `100644`. Trên Windows không sao — Git for Windows chạy hook
+qua `sh` bất kể mode. Nhưng trên **Linux/macOS, một hook không có bit executable bị bỏ qua mà
+không báo gì**: không lỗi, không cảnh báo, chỉ là hook không bao giờ chạy.
+
+```bash
+git update-index --chmod=+x .githooks/pre-commit    # 100644 -> 100755
+```
+
+Kiểm bằng `git ls-files -s .githooks/pre-commit` — phải thấy `100755`. Đây là loại lỗi chỉ lộ ra
+khi có người thứ hai clone repo trên máy khác, và lúc đó rất khó đoán vì "trên máy tôi vẫn chạy".
+
+**Khi có remote sau này**: không phải viết lại gì — `git remote add` rồi push là `ci.yml` chạy.
 
 ---
 

@@ -1,0 +1,38 @@
+#!/bin/sh
+#
+# pre-commit — chỉ kiểm format, cố ý KHÔNG build và KHÔNG chạy test.
+#
+# Lý do: hook chậm là hook bị vô hiệu hoá. Build Release + test mất khoảng 10 giây,
+# và sau vài lần chờ thì người ta sẽ gõ `--no-verify` cho nhanh — lúc đó hook mất
+# sạch tác dụng, kể cả phần kiểm format vốn rất rẻ.
+# Build và test là việc của `make ci`, chạy trước khi push hoặc khi cần chắc chắn.
+#
+# Bật hook: make hooks   (đặt core.hooksPath = .githooks)
+# Git KHÔNG tự cài hook khi clone, nên bước này phải làm thủ công một lần.
+
+set -e
+
+# Không có gì được staged thì không có gì để kiểm.
+if git diff --cached --quiet; then
+    exit 0
+fi
+
+# Không đụng tới .cs nào thì bỏ qua — commit tài liệu không cần chờ dotnet format.
+if ! git diff --cached --name-only --diff-filter=ACM | grep -q '\.cs$'; then
+    exit 0
+fi
+
+printf 'pre-commit: kiem format...\n'
+
+if ! dotnet format NovaVolt.Mes.slnx --verify-no-changes --no-restore --verbosity quiet; then
+    printf '\n'
+    printf 'COMMIT BI CHAN: code khong dung .editorconfig\n'
+    printf '\n'
+    printf '  Sua tu dong:   make format\n'
+    printf '  Roi stage lai: git add -A\n'
+    printf '\n'
+    printf '  Bo qua (chi khi that su can):  git commit --no-verify\n'
+    exit 1
+fi
+
+printf 'pre-commit: format ok\n'

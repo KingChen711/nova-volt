@@ -1,7 +1,7 @@
 # NovaVolt MES — task runner
 #
 # Mọi lệnh hay dùng gom vào đây để không ai phải nhớ cờ dòng lệnh.
-# Target `ci` được thêm ở C12, cùng với pre-commit hook và ci.yml.
+# `make ci` chạy đúng chuỗi mà GitHub Actions sẽ chạy — một bộ kiểm tra, hai nơi.
 
 # GNU Make trên Windows chọn shell theo kinh nghiệm: lệnh trông đơn giản thì gọi thẳng
 # .exe, lệnh có ký tự đặc biệt thì mới gọi sh. Hệ quả là cùng một Makefile chạy khác nhau
@@ -22,7 +22,7 @@ ALL_PROFILES := --profile probe --profile init --profile obs
 BACKUP_DIR := $(shell grep -E '^NVM_BACKUP_DIR=' .env 2>/dev/null | cut -d= -f2-)
 
 .DEFAULT_GOAL := help
-.PHONY: help up up-obs down down-v reset ps logs build test format format-check clean backup
+.PHONY: help up up-obs down down-v reset ps logs build test ci hooks format format-check clean backup
 
 help:
 	@echo "NovaVolt MES"
@@ -39,6 +39,8 @@ help:
 	@echo "  Code"
 	@echo "    make build         Build solution"
 	@echo "    make test          Chay unit test"
+	@echo "    make ci            Chay dung chuoi kiem tra cua CI"
+	@echo "    make hooks         Bat pre-commit hook cho repo nay"
 	@echo "    make format        Tu dong sua format theo .editorconfig"
 	@echo "    make format-check  Kiem format, khong sua"
 	@echo "    make clean         Xoa thu muc artifacts"
@@ -98,6 +100,24 @@ build:
 # MTP mode duoc bat trong global.json va doi cu phap: phai la --solution.
 test:
 	dotnet test --solution $(SOLUTION)
+
+# Dung THU TU va DUNG CO ma GitHub Actions se dung, khong phai mot bien the khac.
+# Neu hai ben lech nhau thi CI khong con la thu du doan duoc, va nguoi ta se hoc
+# cach bo qua no.
+#
+# restore -> format -> build -> test la co y: format chay TRUOC build de mot loi
+# thut le khong phai cho het mot lan build Release moi lo ra.
+ci:
+	dotnet restore $(SOLUTION)
+	dotnet format $(SOLUTION) --verify-no-changes --no-restore
+	dotnet build $(SOLUTION) -c Release --no-restore --nologo
+	dotnet test --solution $(SOLUTION) -c Release --no-build
+
+# Hook KHONG tu cai khi clone — Git bo qua .git/hooks tu repo vi ly do bao mat.
+# core.hooksPath la cach chinh thuc de tro sang thu muc duoc version hoa.
+hooks:
+	git config core.hooksPath .githooks
+	@echo "pre-commit hook da bat (core.hooksPath = .githooks)"
 
 format:
 	dotnet format $(SOLUTION)

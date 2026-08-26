@@ -33,6 +33,20 @@ Keycloak với `start-dev --import-realm`.
 
 Muốn thử nghiệm trong console thì cứ thử, nhưng **chốt lại vào file này** trước khi restart.
 
+> [!warning] `docker compose restart` KHÔNG nạp lại realm
+> "Mỗi lần khởi động là một lần import lại" chỉ đúng với **container mới**. H2 nằm trong lớp
+> ghi của container, không nằm trong volume — nên `restart` giữ nguyên database cũ và Keycloak
+> **bỏ qua** import vì realm đã tồn tại. Không có cảnh báo nào; realm chỉ đơn giản là cũ.
+>
+> Sau khi sửa `realm-novavolt.json`, phải **tạo lại container**:
+>
+> ```bash
+> docker compose up -d --force-recreate keycloak
+> ```
+>
+> Đã gặp thật: thêm mapper `mendix-roles`, `restart`, lấy token — claim không có. Cùng file đó,
+> `--force-recreate`, lấy token — claim có.
+
 ---
 
 ## Nội dung
@@ -49,7 +63,8 @@ Muốn thử nghiệm trong console thì cứ thử, nhưng **chốt lại vào 
 | `ComplianceOwner` | Hồ sơ DPP và tuân thủ |
 | `Admin` | Quản trị hệ thống |
 
-Mendix ánh xạ realm role sang **module role**. Lưu ý bẫy ở
+Mendix ánh xạ realm role sang **user role** trùng tên — xem mục
+[`mendix_roles`](#mendix_roles--vì-sao-realm_accessroles-không-dùng-được) bên dưới. Lưu ý bẫy ở
 [`studio-pro-traps.md`](../../.claude/skills/mendix-manual/references/studio-pro-traps.md) §4:
 Published REST hiển thị module role nhưng runtime phân quyền theo user role.
 
@@ -75,6 +90,34 @@ Secret là `dev-only-not-a-secret` — cố ý đặt tên như vậy để khô
 
 `op.de1` tồn tại riêng để kiểm **cross-site isolation** ở M10: user thuộc NV1 không được
 thấy bất kỳ dòng dữ liệu DE1 nào, ở mọi endpoint.
+
+---
+
+## `mendix_roles` — vì sao `realm_access.roles` không dùng được
+
+Keycloak đặt realm role vào access token ở **`realm_access.roles`**, tức là một mảng **lồng
+trong một object**. Module OIDC SSO của Mendix đọc claim bằng
+`JSONObjectUtils.getStringList(claims, name)` — hàm này chỉ lấy được **mảng chuỗi ở cấp cao
+nhất** của payload. Đưa `realm_access` vào thì nó ném `ParseException`; đưa
+`realm_access.roles` thì không có claim nào tên như vậy.
+
+Nên client `nvm-mendix` có thêm mapper `mendix-roles` (`oidc-usermodel-realm-role-mapper`,
+`multivalued: "true"`) sinh ra claim **phẳng**:
+
+```json
+"mendix_roles": ["Operator"]
+```
+
+Microflow `NvmShared.CustomATP_KeycloakRealmRoles` trong app Mendix đọc đúng claim này rồi
+so tên với user role trong app. **Tên phải trùng chính xác, phân biệt hoa thường** — realm
+role `Operator` chỉ khớp user role Mendix tên `Operator`. Role nào trong token mà app không
+có thì bị bỏ qua, không báo lỗi.
+
+`usermodel.realmRoleMapping.rolePrefix` để **rỗng** có chủ ý: thêm tiền tố là phá vỡ phép so
+tên đó.
+
+Mapper cũ `site-id` vẫn giữ nguyên và độc lập — nó đi đường khác (attribute mapping của JIT
+provisioning), không qua microflow này.
 
 ---
 
@@ -110,7 +153,9 @@ curl -s -d "client_id=nvm-mendix" -d "client_secret=dev-only-not-a-secret" \
      http://localhost:8081/realms/novavolt/protocol/openid-connect/token
 ```
 
-Trong payload phải thấy `realm_access.roles` chứa role đúng, và `site_id` đúng giá trị.
+Trong payload phải thấy **cả ba**: `realm_access.roles` (Keycloak sinh mặc định),
+`mendix_roles` (mảng phẳng cho Mendix), và `site_id` đúng giá trị. Thiếu `mendix_roles` thì
+Mendix vẫn đăng nhập được nhưng mọi người dùng chỉ nhận user role mặc định.
 
 ---
 

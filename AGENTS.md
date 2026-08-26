@@ -205,8 +205,10 @@ thì không.** Người dùng muốn tự tay thao tác để học Mendix bằn
 
 | Quy tắc | Chi tiết |
 |---|---|
-| **Không gọi Studio Pro MCP** | Kể cả khi nó đang bật và sẽ nhanh hơn. Mục tiêu là người dùng thành thạo, không phải app xong sớm |
-| Agent **viết ra các bước bấm**, người dùng bấm | Agent vẫn được **đọc** file trong thư mục app để chẩn đoán |
+| Agent **viết ra các bước bấm**, người dùng bấm | Đây là mặc định |
+| **MCP tầng đọc: luôn được** | `ped_read_document`, `ped_check_errors`, `list_modules`… Dùng để kiểm chứng thay vì hỏi |
+| **MCP tầng ghi: chỉ khi người dùng nói rõ trong lượt đó** | Cùng nguyên tắc với §1.1 về commit — không suy rộng sang lượt sau |
+| Sau khi ghi bằng MCP | Nói rõ đã tạo/sửa document nào và vì sao |
 | **Thao tác và giải thích phải TÁCH RỜI** | Xem §5.6.1 — đây là yêu cầu rõ ràng của người dùng |
 
 Chi tiết đầy đủ ở skill [`mendix-manual`](.claude/skills/mendix-manual/SKILL.md).
@@ -240,6 +242,32 @@ Luật cho khối **Thao tác**: mỗi bước một hành động · **không c
 tối đa 7 bước một khối · kết thúc bằng đúng một thứ cần báo lại.
 
 Khối **Giải thích** đặt sau, ngăn bằng `---`, được dài. Không có gì đáng giải thích thì bỏ hẳn.
+
+#### 5.6.2 Phát hiện skill sai thì sửa skill NGAY trong phiên
+
+Skill `mendix-manual` chỉ có giá trị nếu nó tích luỹ được thứ **đã kiểm chứng**. Mỗi lần thực
+tế trong Studio Pro khác với thứ agent nói, đó là một lỗ hổng phải vá ngay — không ghi chú
+"để sau", không đợi cuối milestone.
+
+**Bắt buộc sửa `references/studio-pro-traps.md` §0 khi gặp bất kỳ điều nào sau:**
+
+| Dấu hiệu | Ghi lại gì |
+|---|---|
+| Tên menu, nút, trường agent đưa ra **không tồn tại** | Tên thật, kèm đường dẫn đầy đủ |
+| Phiên bản module/Studio Pro khác docs hoặc khác plan | Số version thật và hệ quả |
+| Một bước sinh ra lỗi mà agent không lường trước | Mã lỗi, nguyên nhân, cách sửa đã chạy được |
+| Danh sách dependency thiếu hoặc thừa | Danh sách đúng, kèm điều kiện version |
+| Giả thuyết agent nêu ra được xác nhận hoặc bác bỏ | Kết luận dứt khoát, xoá chữ "giả thuyết" |
+
+**Quy tắc ghi**: chỉ ghi thứ đã **thấy tận mắt** trong phiên — ảnh chụp của người dùng, output
+lệnh, hoặc lỗi thật. Không ghi phỏng đoán. Nếu chưa xác nhận thì đánh dấu rõ *đang kiểm* và
+quay lại chốt khi có kết quả.
+
+**Nguồn nào được dùng làm giá trị chính xác** — xem bảng trong `SKILL.md` §1. Tóm tắt: ảnh chụp
+và §0 thì tin được; blog, Medium, forum, trí nhớ về bản cũ thì không.
+
+Sai một tên menu làm người dùng đi tìm thứ không tồn tại. Sai hai lần thì họ mất tin vào cả
+khối thao tác — và lúc đó skill trở thành gánh nặng thay vì công cụ.
 
 ### 5.7 Lab phá hoại là bắt buộc
 
@@ -275,4 +303,5 @@ Kết quả lab phải được **ghi số** vào ADR hoặc `docs/benchmarks.md
 4. §4 là ràng buộc cứng, không lách.
 5. Một lần làm việc = một commit.
 6. Test đỏ thì nói đỏ.
-7. Mendix: **người dùng tự bấm**, agent viết các bước — và **tách thao tác khỏi giải thích** (§5.6).
+7. Mendix: **người dùng tự bấm** là mặc định; MCP đọc thì tự do, MCP ghi thì phải được nhờ (§5.6). Luôn **tách thao tác khỏi giải thích** (§5.6.1).
+8. Skill Mendix nói sai thì **sửa skill ngay trong phiên**, không để sau (§5.6.2).

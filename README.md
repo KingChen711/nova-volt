@@ -30,7 +30,9 @@ novavolt-mes/
 ├─ docs/
 │  ├─ scope.md            Scope & design đầy đủ (nghiệp vụ, kiến trúc, 14 milestone)
 │  ├─ plans/              Plan chi tiết từng milestone, chia theo commit
-│  └─ adr/                Architecture Decision Records
+│  ├─ adr/                Architecture Decision Records
+│  ├─ oef-mapping.md      Khái niệm Opcenter → thành phần trong repo, kèm trạng thái
+│  └─ benchmarks.md       Sổ ghi số đo — mọi con số trong repo phải có một dòng ở đây
 │
 ├─ src/
 │  ├─ Platform/           Horizontal layers: Contracts, Bus, EventStore, Kernel, Time, POM

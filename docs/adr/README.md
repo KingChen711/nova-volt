@@ -1,0 +1,66 @@
+# Architecture Decision Records
+
+Mỗi file ghi **một** quyết định kiến trúc: bối cảnh lúc quyết, quyết định gì, phải chịu những gì,
+và đã loại phương án nào vì lý do gì.
+
+Lý do tồn tại rất cụ thể: tới tháng thứ tư bạn sẽ không nhớ vì sao chọn SQL Server, và sẽ mất một
+buổi để suy luận lại — hoặc tệ hơn, sẽ đổi nó vì quên mất ràng buộc đã dẫn tới lựa chọn đó.
+
+## Cách dùng
+
+- Bắt đầu từ [`_template.md`](_template.md).
+- Đặt tên file `ADR-NNN-<slug>.md`, số **không tái sử dụng** kể cả khi ADR bị bỏ.
+- Thêm ADR mới thì **cập nhật bảng dưới đây trong cùng commit**. Bảng lệch là bảng vô dụng.
+- ADR **không sửa nội dung** sau khi `Accepted`. Đổi ý thì viết ADR mới và đánh dấu cái cũ
+  `Superseded by ADR-NNN`. ADR là ảnh chụp thời điểm; sửa nó là xoá mất thứ đáng giá nhất — cái
+  bạn đã tin lúc đó.
+- Bằng chứng phải **tái lập được**: số đo, output lệnh, trích code. Không dùng ảnh chụp màn hình
+  (`docs/plans/M0-bootstrap.md` §C13).
+
+### Khi nào viết ADR
+
+Khi câu trả lời cho *"vì sao không làm cách kia?"* dài hơn một câu, **và** quyết định đó khó đảo
+ngược sau này. Chọn tên biến không cần ADR. Chọn store thì cần.
+
+Nếu một quyết định được nhắc tới trong `scope.md` hoặc plan bằng cụm *"ghi ADR-NNN"*, đó là
+nghĩa vụ chứ không phải gợi ý.
+
+## Đánh số
+
+`scope.md` §5.7 đã **giữ chỗ trước** ADR-001 … ADR-018 cho các quyết định lớn xuyên suốt 14
+milestone. ADR-019 trở đi cấp phát theo thứ tự phát sinh. Đừng lấy số trong khoảng đã giữ chỗ cho
+việc khác.
+
+## Index
+
+| # | Quyết định | Trạng thái | Ra ở |
+|---|---|---|---|
+| [001](ADR-001-sql-server-event-store.md) | SQL Server cho event store, write model, outbox | **Accepted** 2026-08-26 | M0 · C14 |
+| [002](ADR-002-postgresql-timescaledb-read-model.md) | PostgreSQL + TimescaleDB cho telemetry và read model | **Accepted** 2026-08-26 | M0 · C14 |
+| 003 | Hand-rolled event store thay vì Marten | Chưa viết | M5 |
+| 004 | RabbitMQ thay vì Kafka | Chưa viết | M6 |
+| 005 | Genealogy là DAG có thời gian | Chưa viết | M5 |
+| 006 | Closure table thay vì recursive CTE | Chưa viết | M6 |
+| 007 | Định dạng serial number | Chưa viết | M4 |
+| 008 | CloudEvents envelope | Chưa viết | M6 |
+| 009 | Ngữ nghĩa EPCIS cho genealogy edge | Chưa viết | M5 |
+| 010 | Idempotency key = UUIDv5 từ natural key | Chưa viết | M6 |
+| 011 | Ba loại timestamp | Chưa viết | M3 |
+| 012 | Production day & shift | Chưa viết | M3 |
+| 013 | OData cho Public Object Model | Chưa viết | M4 |
+| 014 | Mendix là lớp UI duy nhất | Chưa viết | M4 |
+| 015 | Saga dùng Quartz store thay vì delayed exchange | Chưa viết | M9 |
+| 016 | OR-Tools CP-SAT cho matching | Chưa viết | M11 |
+| 017 | Hold cascade là job có checkpoint | Chưa viết | M9 |
+| 018 | Package versioning theo Functional Block | Chưa viết | M12 |
+| [019](ADR-019-dotnet-10-lts.md) | Dùng .NET 10 LTS thay vì .NET 9 | **Accepted** 2026-08-26 | M0 · C14 |
+| [020](ADR-020-no-invariant-globalization.md) | Không bật `InvariantGlobalization` | **Accepted** 2026-08-26 | M0 · C14 |
+
+Cột **Ra ở** là milestone dự kiến, không phải cam kết. Quyết định đến sớm hơn thì viết sớm hơn.
+
+## Quan hệ giữa các ADR đã có
+
+ADR-001 và ADR-002 là **một cặp**, đọc riêng sẽ hiểu sai. ADR-001 chọn SQL Server vì mục tiêu học
+Opcenter; chính lựa chọn đó lấy đi `numrange` và `EXCLUDE` constraint, và đó là lý do ADR-002 tồn
+tại. Polyglot persistence ở dự án này **không** phải một quyết định độc lập — nó là hệ quả bắt
+buộc của ADR-001.

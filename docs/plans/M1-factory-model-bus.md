@@ -1,7 +1,7 @@
 ---
 title: "M1 — Factory Model & Manufacturing Service Bus"
 milestone: M1
-duration: "1,5 tuần (~17 giờ)"
+duration: "1,5 tuần (18 giờ ước lượng)"
 status: planned
 created: 2026-08-26
 depends_on: [M0]
@@ -32,7 +32,7 @@ Milestone chỉ được đóng khi **cả 5** mệnh đề đúng, có bằng c
 
 - `make test` vẫn xanh, và số test tăng thật (M0 kết thúc ở 22).
 - `tests/Architecture` có ≥ 5 rule chạy được (K8, K9, K2 được ép bằng máy chứ không bằng trí nhớ).
-- **4** ADR mới: `ADR-004`, `ADR-008`, `ADR-021`, `ADR-022`.
+- **5** ADR mới: `ADR-004`, `ADR-008`, `ADR-010`, `ADR-021`, `ADR-022`. Mỗi ADR viết **trong chính commit ra quyết định**, không dồn về cuối.
 - `docs/event-catalog.md` tồn tại với các event M1 thật sự phát ra.
 
 **Không** thuộc M1: event store, outbox, projection, Functional Block đầy đủ (`Entities/`+`Migrations/`), OData/Public Object Model, EF Core, Testcontainers. M1 dựng **đường ống** và **quy ước**, không dựng nghiệp vụ.
@@ -67,13 +67,14 @@ Kiểm tra ngày 2026-08-26. Xử lý theo [`AGENTS.md` §2.3](../../AGENTS.md).
 | **Quyết định** | Pin `Microsoft.CodeAnalysis.CSharp` = **`5.6.0`**, `PrivateAssets="all"`. Quy tắc chung: version của gói này phải **≤** Roslyn trong SDK thấp nhất mà repo hỗ trợ. |
 | **Việc phải làm** | Ghi thẳng quy tắc đó thành comment trong `Directory.Packages.props` ở C15, kèm lệnh đo lại. `global.json` đã pin SDK nên hai con số này gắn với nhau. |
 
-### 2.3 `oef-mapping.md` và index ADR xếp ADR-004/ADR-008 vào M6 — `scope.md` §9 nói M1
+### 2.3 Ba ADR bị xếp vào M6 — quyết định thật ra ở M1
 
 | | |
 |---|---|
-| **Thực tế** | `docs/oef-mapping.md` ghi dòng *Event-Driven Architecture → `Nvm.Contracts` → M6, kèm ADR-008*. `docs/adr/README.md` xếp `ADR-004` (RabbitMQ vs Kafka) và `ADR-008` (CloudEvents envelope) vào M6. Nhưng `scope.md` §9/M1 liệt kê `Nvm.Contracts` và toàn bộ bus topology là việc của **M1**. |
-| **Vấn đề** | Không phải mâu thuẫn thiết kế, chỉ là hai file viết ở hai thời điểm. Nhưng để nguyên thì tới M6 sẽ có người đi tìm một quyết định đã ra từ 4 tháng trước. |
-| **Quyết định** | `scope.md` §9 thắng. `ADR-004` và `ADR-008` viết ở **M1** (C09 và C12). Cập nhật cột *Ra ở* trong `docs/adr/README.md` và cột *Ghi chú* trong `oef-mapping.md` ngay tại C18. |
+| **Thực tế** | `docs/adr/README.md` xếp `ADR-004` (RabbitMQ vs Kafka), `ADR-008` (CloudEvents envelope) và `ADR-010` (idempotency key = UUIDv5) vào M6. `docs/oef-mapping.md` cũng ghi *Event-Driven Architecture → `Nvm.Contracts` → M6*. Nhưng `scope.md` §9/M1 liệt kê `Nvm.Contracts`, bus topology **và** `IdempotencyKey` là việc của **M1**. |
+| **Vấn đề** | Không phải mâu thuẫn thiết kế, chỉ là các file viết ở những thời điểm khác nhau. Nhưng để nguyên thì tới M6 sẽ có người đi tìm một quyết định đã ra từ 4 tháng trước — và ADR viết muộn là ADR mất phần *Alternatives*, thứ đáng giá nhất trong đó. |
+| **Quyết định** | Viết cả ba ở **M1**, tại đúng commit ra quyết định: `ADR-010` ở **C04** (lúc viết `IdempotencyKey`), `ADR-004` ở **C09** (lúc pin thư viện bus), `ADR-008` ở **C12** (lúc chốt hình dạng message trên dây). Cập nhật cột *Ra ở* trong `docs/adr/README.md` và cột *Ghi chú* trong `oef-mapping.md` ngay tại C18. |
+| **Ghi chú** | `ADR-010` là ví dụ rõ nhất cho quy tắc này. Quyết định "v5 chứ không v7" chỉ có sức thuyết phục khi đi kèm output đã chạy (C04.1) — viết lại sau 4 tháng thì output đã mất, và ADR biến thành một câu khẳng định không có gì đỡ. |
 | **Ảnh hưởng DoD** | D5 phát biểu lại: `scope.md` viết *"`oef-mapping.md` có 6 dòng đầu tiên"*, nhưng M0/C15 đã tạo **cả 22 dòng**. Tiêu chí thật của M1 không phải *có dòng* mà là *trạng thái đúng*, và ≥ 2 dòng đạt `xong` theo đúng định nghĩa hai vế của file đó (dựng được **và** giải thích được). |
 
 ### 2.4 N13 đã được đo ở M0 — M1 kiểm regression thay vì đo lại
@@ -158,7 +159,7 @@ Nhưng lý do chính để đổi **không phải** tiết kiệm giờ. Nó là
 | C01 | `feat(contracts): add domain event marker and event version attribute` | A — Contract & Kernel | 45' | — |
 | C02 | `feat(contracts): add cloudevents envelope and event type naming` | A | 60' | C01 |
 | C03 | `test(contracts): add golden file and source-generated json context` | A | 45' | C02 |
-| C04 | `feat(kernel): add icommand, icommandhandler and dispatcher` | A | 45' | — |
+| C04 | `feat(kernel): add icommand, icommandhandler and dispatcher` | A | 60' | — |
 | C05 | `feat(kernel): add validation, idempotency and audit behaviors` | A | 60' | C04 |
 | C06 | `feat(factory-model): add isa-95 node model and invariants` | B — Factory Model | 60' | C01 |
 | C07 | `feat(factory-model): add seed for NV1 and DE1 with equipment path index` | B | 75' | C06 |
@@ -175,13 +176,17 @@ Nhưng lý do chính để đổi **không phải** tiết kiệm giờ. Nó là
 | C18 | `docs: add event catalog and update oef mapping` | E — Đóng M1 | 60' | tất cả |
 | C19 | `docs: close m1 with benchmarks and checklist` | E | 30' | tất cả |
 
-**Tổng: ~17 giờ.** Giai đoạn A và D gần như không cần hạ tầng — làm được cả lúc Docker tắt. Giai đoạn C bắt buộc `make up`.
+**Tổng: 1080 phút = 18 giờ**, khớp đúng tổng cột *Ước lượng* — không làm tròn xuống cho dễ nhìn. Với 10–12 giờ/tuần thì M1 rơi vào **1,5–1,8 tuần**; nếu tới ngày thứ 7 mà chưa qua C11 thì cắt theo R-M1-8.
+
+Giai đoạn A và D gần như không cần hạ tầng — làm được cả lúc Docker tắt. Giai đoạn C bắt buộc `make up`.
 
 > [!important] Nhắc lại từ AGENTS.md §1.1
 > Agent **không tự commit**. Xong mỗi C, dừng lại, báo cáo, bạn tự đọc `git diff` rồi commit. Commit message ở cột trên là **đề xuất**.
 
 > [!note] ADR viết tại chỗ quyết định, không dồn về cuối
-> M0 gom cả 4 ADR vào C14. Lần này khác: `ADR-004`/`ADR-021` viết trong C09, `ADR-008` trong C12, `ADR-022` trong C13. Lý do: ADR là ảnh chụp thời điểm (`docs/adr/README.md`), viết sau vài ngày thì phần *Context* đã bị trí nhớ làm gọn lại, và những phương án bị loại — thứ đáng giá nhất — là phần rơi rụng đầu tiên.
+> M0 gom cả 4 ADR vào C14. Lần này khác: `ADR-010` viết trong **C04**, `ADR-004`/`ADR-021` trong **C09**, `ADR-008` trong **C12**, `ADR-022` trong **C13**.
+>
+> Lý do: ADR là ảnh chụp thời điểm (`docs/adr/README.md`), viết sau vài ngày thì phần *Context* đã bị trí nhớ làm gọn lại, và những phương án bị loại — thứ đáng giá nhất — là phần rơi rụng đầu tiên. Còn phần *bằng chứng* thì rơi rụng sớm hơn nữa: output của lệnh đã chạy chỉ còn nằm trong terminal, và terminal thì đóng mất.
 
 ---
 
@@ -254,18 +259,82 @@ Rồi kiểm rằng test **thật sự bắt được**: đổi một tên field
 **Việc làm**
 - Trong `src/Platform/Nvm.Kernel/` (project đã có từ M0/C04):
   - `ICommand` và `ICommand<TResult>`.
-  - `IdempotencyKey` — value object bọc `Guid`, kèm `CreateVersion5(Guid namespaceId, string name)` theo đúng đoạn code `scope.md` §7.2. **UUIDv5, không phải v7**: v7 có thành phần thời gian nên hai lần gọi cho hai giá trị khác nhau — vô dụng cho dedup. `CA5351` (SHA-1) đã được tắt có chủ đích trong `.editorconfig` đúng cho việc này.
+  - `IdempotencyKey` — value object bọc `Guid`, kèm `CreateVersion5(Guid namespaceId, string name)` theo đúng đoạn code `scope.md` §7.2. **UUIDv5, không phải v7** — xem C04.1. `CA5351` (SHA-1) đã được tắt có chủ đích trong `.editorconfig` đúng cho việc này.
   - `ICommandHandler<TCommand>` và `ICommandHandler<TCommand, TResult>`.
   - `ICommandDispatcher` + bản cài đặt dựng pipeline từ DI.
 - `AddNvmKernel(this IServiceCollection)` — đăng ký dispatcher, quét handler trong một assembly.
+- **`ADR-010` — Idempotency key = UUIDv5 từ natural key.** *Context*: bus và thiết bị đều at-least-once, nên khoá dedup phải **suy ra được từ dữ liệu** chứ không phải sinh ra. *Decision*: v5. *Alternatives*: v7 (không deterministic — vô dụng ở đây), v4 (như v7), v3 (cùng cơ chế nhưng MD5). *Consequences*: phải tự viết ~20 dòng vì BCL không có v5; phải tắt `CA5351`; và **cái bẫy SQL Server ở C04.2 mà M6 sẽ đâm vào nếu không đọc**. Kèm ba khối output ở C04.1/C04.2 làm bằng chứng tái lập được.
 
 **Kiểm chứng**
 ```bash
 make test
 ```
-Test bắt buộc: cùng một natural key → `IdempotencyKey` **giống hệt nhau** qua hai lần chạy process khác nhau (deterministic); đổi một ký tự trong natural key → key khác; dispatcher tìm đúng handler; không có handler → ném exception có thông báo nêu tên command.
+Test bắt buộc: cùng một natural key → `IdempotencyKey` **giống hệt nhau** qua hai lần chạy process khác nhau (deterministic); đổi một ký tự trong natural key → key khác; hai natural key khác nhau không đụng nhau; version nibble của Guid sinh ra đúng bằng `5` và variant đúng RFC 4122.
+
+Vế cuối đáng có test riêng: nếu quên hai dòng set bit version/variant thì hàm **vẫn chạy, vẫn deterministic, vẫn dedup đúng** — nhưng sinh ra một chuỗi 128 bit không phải UUID hợp lệ. Nó chỉ lộ ra khi một hệ thống khác (Postgres `uuid`, thư viện CloudEvents, công cụ của auditor) từ chối đọc, và lúc đó dữ liệu đã nằm trong store.
+
+Và cho dispatcher: tìm đúng handler; không có handler → ném exception có thông báo nêu tên command.
 
 **Ghi chú**: `Nvm.Kernel` sẽ phải reference `Microsoft.Extensions.DependencyInjection.Abstractions`. Đây **không** vi phạm K9 — K9 cấm domain layer chạm EF Core / Npgsql / MassTransit, không cấm DI abstraction. Ranh giới này được ghi thành rule NetArchTest ở C17 để khỏi tranh luận lại sau.
+
+#### C04.1 — Số version của UUID là mã thuật toán, không phải thế hệ chất lượng
+
+Đây là chỗ trực giác đánh lừa: *"v7 mới hơn v5, chắc tốt hơn"*. Sai, và sai theo cách dẫn tới một bug im lặng.
+
+| Version | Thuật toán | Cùng input → cùng output? | Sinh ra để giải |
+|---|---|---|---|
+| v3 | MD5(namespace + name) | **có** | ID suy ra được từ dữ liệu |
+| v4 | ngẫu nhiên | không | ID duy nhất, không cần gì thêm |
+| v5 | SHA-1(namespace + name) | **có** | như v3, hash tốt hơn |
+| v7 | timestamp Unix + ngẫu nhiên | không | ID **sort được theo thời gian** |
+
+Chỉ v3 và v5 có cột giữa là "có", và cột giữa **là toàn bộ** lý do dedup tồn tại. Đo trên máy ngày 2026-08-26:
+
+```
+== v7: goi 2 lan, cung mot thoi diem ==
+  #1 01a03e70-6be0-794f-8991-c6f26cb2ec16
+  #2 01a03e70-6be0-7008-9b56-ef5c173df26b
+  bang nhau? False
+
+== v5: goi 2 lan tu CUNG mot natural key ==
+  #1 9df0deb6-2bef-522b-bf31-e4479213c66a
+  #2 9df0deb6-2bef-522b-bf31-e4479213c66a
+  bang nhau? True
+
+== v5: doi 1 ky tu trong natural key (OCV -> ACIR) ==
+  2fe37705-045f-5e6c-87fd-20bb08b15713
+  bang cai tren? False
+```
+
+Đặt vào nhà máy: máy formation gửi kết quả đo OCV, không nhận được ack, gửi lại sau 800 ms. Với v7 → hai `EventId` khác nhau → **2 bản ghi cho 1 phép đo** → yield sai. Với v5 → cùng một Guid, kể cả khi lần thứ hai đi qua process khác, máy khác, hay 3 ngày sau lúc gateway flush buffer.
+
+v7 chứa timestamp *của lúc gọi hàm* — mà lúc gọi hàm chính là thứ khác nhau giữa hai lần gửi. Nó **về bản chất** không làm được việc này.
+
+Quy tắc rút ra, dùng cho mọi lần chọn ID về sau: **so sánh trong cùng một mục đích thì có tốt/xấu (v3 → v5, v1 → v6); khác mục đích thì không có.** Câu hỏi đúng không phải *"loại nào mới nhất"* mà *"ID này cần tính chất gì"*.
+
+> [!note] BCL cho cái mới, không cho cái cần
+> Kiểm ngày 2026-08-26 trên .NET 10: `Guid` **chỉ có** `CreateVersion7` (2 overload), **không có** `CreateVersion5`. Nên v5 phải tự viết. Đoạn code trong `scope.md` §7.2 đã chạy được, dùng thẳng.
+
+#### C04.2 — UUIDv7 trên SQL Server KHÔNG hề sequential
+
+Phát hiện này không dùng ở M1, nhưng **M6 sẽ đâm vào nó** nên ghi lại ngay bây giờ.
+
+Chỗ v7 là lựa chọn đúng: khoá thay thế cho row **không có** natural key — dòng outbox (M6), bản ghi NCR mới (M9). Lý do là index locality: GUID ngẫu nhiên làm clustered key khiến mỗi insert rơi vào một chỗ ngẫu nhiên giữa bảng → page split → phân mảnh → ghi chậm dần. v7 có timestamp ở 48 bit **đầu** nên tăng dần, luôn chèn vào cuối.
+
+Nhưng SQL Server so sánh kiểu `uniqueidentifier` **không theo thứ tự byte thông thường**. Chạy trên container `nvm-mssql` ngày 2026-08-26:
+
+```sql
+ORDER BY id  -->
+  01000000-0000-0000-0000-000000000000     byte dau  = 01
+  FF000000-0000-0000-0000-000000000000     byte dau  = FF
+  00000000-0000-0000-0000-000000000001     byte cuoi = 01   <- dung CUOI
+```
+
+`FF00…0000` đứng **trước** `0000…0001`: SQL Server so **6 byte cuối trước**, byte đầu gần như không có tiếng nói. Mà v7 giấu timestamp ở 6 byte **đầu**.
+
+> **Hệ quả**: v7 lưu vào cột `uniqueidentifier` vẫn chèn ngẫu nhiên y hệt v4. Bạn tưởng đã tránh được page split, thực tế thì không — và **không có gì báo cho bạn biết**.
+
+Ba cách xử lý khi tới M6, chọn một và ghi vào ADR của outbox: lưu `binary(16)`; hoán vị byte trước khi lưu; hoặc dùng `NEWSEQUENTIALID()` cho khoá clustered và giữ v7 làm khoá nghiệp vụ.
 
 ---
 
@@ -827,7 +896,7 @@ Trả lời lúng túng câu nào → dòng tương ứng **chưa** phải `xong
 | C01 | domain event marker + event version attribute | ☐ | | |
 | C02 | cloudevents envelope + event type naming | ☐ | | |
 | C03 | golden file + source-generated json context | ☐ | | |
-| C04 | icommand, icommandhandler, dispatcher | ☐ | | |
+| C04 | icommand, icommandhandler, dispatcher | ☐ | | ADR-010 |
 | C05 | validation, idempotency, audit behaviors | ☐ | | |
 | C06 | isa-95 node model + invariants | ☐ | | |
 | C07 | seed NV1 + DE1 với equipment path index | ☐ | | |
@@ -858,7 +927,7 @@ Trả lời lúng túng câu nào → dòng tương ứng **chưa** phải `xong
 
 - [ ] `make test` xanh, số test > 22
 - [ ] `tests/Architecture` có ≥ 5 rule, mỗi rule đã được chứng minh là đỏ được
-- [ ] `ADR-004`, `ADR-008`, `ADR-021`, `ADR-022` viết xong
+- [ ] `ADR-004`, `ADR-008`, `ADR-010`, `ADR-021`, `ADR-022` viết xong — mỗi cái trong commit ra quyết định, không dồn về C18/C19
 - [ ] `docs/event-catalog.md` tồn tại, chỉ ghi event **đã cài đặt thật**
 - [ ] `docs/benchmarks.md` có ≥ 5 dòng số thật cho M1
 - [x] `scope.md` §9/M1 và §9/M6 đã cập nhật theo §3.3 và C11.1 *(làm trước, 2026-08-26)*

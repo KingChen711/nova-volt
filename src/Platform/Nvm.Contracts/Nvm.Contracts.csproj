@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Project ĐÁY của cây phụ thuộc. Mọi thứ khác được phép reference nó;
+    nó không được phép reference thứ gì.
+
+    KHÔNG thêm <PackageReference> vào file này. Không MassTransit, không EF Core,
+    không thư viện CloudEvents. Lý do: contract là thứ tồn tại lâu nhất trong repo —
+    event ghi hôm nay phải đọc được vào năm 2036 (AGENTS.md K6). Mỗi package thêm
+    vào đây là một lời hứa rằng thư viện đó còn sống và còn tương thích khi ấy.
+
+    Ràng buộc này được ép bằng máy ở C17, rule A1 (NetArchTest).
+    Nếu thấy mình cần một package ở đây, gần như chắc chắn thứ đang viết
+    thuộc về Nvm.Bus hoặc Nvm.Kernel.
+  -->
+
+  <PropertyGroup>
+    <RootNamespace>Nvm.Contracts</RootNamespace>
+  </PropertyGroup>
+
+</Project>

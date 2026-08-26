@@ -215,6 +215,5 @@ có thể đến từ claim `mendix_roles`. `Site: NV1` chứng minh attribute m
 
 ## Còn thiếu ở M0
 
-- Ảnh chứng minh D3: `docs/evidence/M0-D3-mendix-login.png`.
 - Commit công việc model lên Team Server (làm từ Studio Pro, không phải `git` ở terminal).
 - `AGENTS.md` phạm vi app (ràng buộc K10/K11 cho Maia trong Studio Pro) — cân nhắc ở M4.

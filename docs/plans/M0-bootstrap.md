@@ -22,9 +22,9 @@ Milestone chỉ được đóng khi **cả 5** mệnh đề đúng, có bằng c
 
 | # | Tiêu chí | Cách chứng minh |
 |---|---|---|
-| ★ D1 | Máy sạch → `make up` → tất cả health check xanh trong **< 5 phút** | `make up` in ra thời gian; chụp lại |
+| ★ D1 | Máy sạch → `make up` → tất cả health check xanh trong **< 5 phút** | `make up` in ra thời gian → ghi vào `docs/benchmarks.md` |
 | D2 | `make test` chạy được và xanh | Output test runner |
-| D3 | Mendix app đăng nhập bằng Keycloak, hiện tên + role của user | Ảnh chụp màn hình |
+| D3 | Mendix app đăng nhập bằng Keycloak, hiện tên + role của user | Hai lệnh `curl` tái lập được (xem C13) + dòng ghi ngày trong `mendix/README.md` |
 | D4 | `make ci` xanh, và pre-commit hook chặn được code sai format | Output terminal |
 | D5 | Tắt SQL Server → `/health/ready` chuyển `Unhealthy` trong < 10 s, app **không** crash | Log + curl (Lab phá hoại) |
 
@@ -880,11 +880,44 @@ khi có người thứ hai clone repo trên máy khác, và lúc đó rất khó
 - `mendix/README.md`: tên app, URL Team Server, phiên bản Studio Pro, các module Marketplace đã dùng + version, cách chạy local, ghi chú "không commit `.mpr` dirty"
 
 **Kiểm chứng — đây là D3**
-1. `Run Locally` trong Studio Pro
-2. Mở trình duyệt → bị chuyển sang trang login Keycloak
-3. Đăng nhập bằng `op.nv1`
-4. Quay lại app, thấy tên user + role `Operator` + `site_id = NV1`
-5. Chụp màn hình lưu vào `docs/evidence/M0-D3-mendix-login.png`
+
+Hai lệnh chạy được không cần trình duyệt, không cần phiên đăng nhập — đây là phần **tái lập
+được** của bằng chứng:
+
+```bash
+# 1. App đẩy đúng authorization request sang Keycloak.
+#    Ra 302 nghĩa là cấu hình IdP đang Active VÀ Default.
+curl -s -i http://localhost:8080/oauth/v2/login | grep -i "^location"
+#    Location phải chứa: client_id=nvm-mendix · response_mode=form_post
+#    redirect_uri=http://localhost:8080/oauth/v2/callback · code_challenge_method=S256
+
+# 2. Keycloak phát đúng claim. Giải mã payload, đừng tin log.
+curl -s -d "client_id=nvm-mendix" -d "client_secret=dev-only-not-a-secret"      -d "username=op.nv1" -d "password=dev" -d "grant_type=password"      -d "scope=openid profile email"      http://localhost:8081/realms/novavolt/protocol/openid-connect/token
+#    Payload phải có: mendix_roles=["Operator"] · site_id="NV1"
+```
+
+Phần còn lại cần người thật vì có ô mật khẩu: `Run Locally` → mở
+`http://localhost:8080/oauth/v2/login` → đăng nhập `op.nv1` → trang chủ hiện **FullName ·
+Email · Site · danh sách role**. `site_id` đúng chứng minh attribute mapping chạy; role
+`Operator` đứng cạnh role mặc định `User` chứng minh microflow ATP chạy.
+
+Ghi kết quả quan sát đó thành **một dòng có ngày** trong `mendix/README.md` §Trạng thái D3.
+**Không dùng ảnh chụp màn hình** — xem ghi chú bên dưới.
+
+> [!important] Bỏ bằng chứng dạng ảnh — quyết định 2026-08-26
+> Bản đầu của plan yêu cầu `docs/evidence/M0-D3-mendix-login.png`. Bỏ hẳn, và bỏ luôn thư mục
+> `docs/evidence/`.
+>
+> Lý do: `AGENTS.md` §3.2 đã định nghĩa bằng chứng là *"số đo, output test, hoặc đoạn code cụ
+> thể"* — không có ảnh. Plan tự thêm ảnh vào là **đi lệch khỏi AGENTS.md**, mà AGENTS.md đứng
+> trên mọi plan. Ảnh chụp còn thua ở ba điểm thực dụng: không diff được, không chạy lại được
+> trong `make ci`, và hỏng lặng lẽ khi UI đổi.
+>
+> Thay bằng: lệnh tái lập được cho phần máy kiểm được, cộng một dòng có ngày cho phần chỉ mắt
+> người thấy. Áp dụng cho **mọi milestone sau**, không riêng M0.
+>
+> **Không liên quan tới bucket `evidence` của MinIO ở C09.** Cái đó là evidence *nghiệp vụ*
+> (raw curve, ảnh vision, WORM) — nằm trong scope sản phẩm, giữ nguyên.
 
 **Bẫy đã biết**: Keycloak chạy trong Docker ở `localhost:8080`, còn Mendix chạy ở `localhost:8080` mặc định → **đụng port**. Đổi Mendix sang `8090`, hoặc đổi Keycloak sang `8081`. Quyết định sớm, vì đổi sau phải sửa cả realm config.
 
@@ -966,7 +999,7 @@ khi có người thứ hai clone repo trên máy khác, và lúc đó rất khó
 | C10 | readiness checks for all dependencies | ☐ | | |
 | C11 | complete makefile (up/down/backup) | ☐ | | |
 | C12 | local ci pipeline and github workflow | ☐ | | |
-| C13 | NvmShopFloor app with keycloak sso | ☐ | | |
+| C13 | NvmShopFloor app with keycloak sso | ☑ | 2026-08-26 | `8d4ccfa`. D3 đã chạy đầu-cuối |
 | C14 | adr template and first three records | ☐ | | |
 | C15 | oef-mapping and benchmarks skeleton | ☐ | | |
 | C16 | finalize readme quickstart | ☐ | | |
@@ -977,7 +1010,7 @@ khi có người thứ hai clone repo trên máy khác, và lúc đó rất khó
 |---|---|---|---|
 | ★ D1 | `make up` < 5 phút từ máy sạch | ☐ | `benchmarks.md` |
 | D2 | `make test` xanh | ☐ | |
-| D3 | Mendix login qua Keycloak, hiện tên + role | ☐ | `docs/evidence/M0-D3-mendix-login.png` |
+| D3 | Mendix login qua Keycloak, hiện tên + role | ☑ 2026-08-26 | 2 lệnh `curl` ở C13 + `mendix/README.md` §Trạng thái D3 |
 | D4 | `make ci` xanh + hook chặn được | ☐ | output terminal |
 | D5 | Tắt SQL Server → Unhealthy < 10 s, app không crash | ☐ | `benchmarks.md` |
 

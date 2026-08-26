@@ -30,8 +30,7 @@ novavolt-mes/
 ├─ docs/
 │  ├─ scope.md            Scope & design đầy đủ (nghiệp vụ, kiến trúc, 14 milestone)
 │  ├─ plans/              Plan chi tiết từng milestone, chia theo commit
-│  ├─ adr/                Architecture Decision Records
-│  └─ evidence/           Ảnh chụp, log làm bằng chứng cho Definition of Done
+│  └─ adr/                Architecture Decision Records
 │
 ├─ src/
 │  ├─ Platform/           Horizontal layers: Contracts, Bus, EventStore, Kernel, Time, POM

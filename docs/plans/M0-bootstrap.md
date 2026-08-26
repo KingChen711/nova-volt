@@ -716,34 +716,70 @@ trước** rule chung vì rule khớp đầu tiên thắng.
 **Mục tiêu**: một lệnh duy nhất, và một con số cho D1.
 
 **Việc làm**
-- Target: `up`, `up-obs`, `down`, `down-v` (xoá volume), `logs`, `ps`, `test`, `format`, `clean`, `reset`, `backup`
-- `backup` — git bundle sang OneDrive, xem §3.2. Chạy cuối mỗi buổi làm việc:
-  ```make
-  backup: ; git bundle create "$(BACKUP_DIR)/novavolt-mes.bundle" --all \
-           && echo "Backed up to $(BACKUP_DIR)"
-  ```
-  `BACKUP_DIR` đọc từ `.env`, mặc định trỏ vào thư mục OneDrive
-- `up` phải **chờ tất cả healthy rồi mới trả về**, và in ra thời gian đã trôi:
-  ```make
-  up:
-  	@start=$$(date +%s); \
-  	docker compose up -d --wait; \
-  	echo "All healthy in $$(($$(date +%s)-start))s"
-  ```
-  (`docker compose up --wait` chờ healthcheck — dùng nó thay vì viết vòng lặp thủ công)
-- `up-obs` = `docker compose --profile obs up -d --wait`
-- `format` = `dotnet format` ; `format-check` = `dotnet format --verify-no-changes`
+- Target: `help`, `up`, `up-obs`, `down`, `down-v`, `reset`, `ps`, `logs`, `build`, `test`, `format`, `format-check`, `clean`, `backup`
+- **`up` phải gộp HAI bước** — xem C11.1. Đây là điểm dễ sai nhất
+- `backup` — git bundle sang OneDrive, **kèm `git bundle verify`** (xem C11.3). `BACKUP_DIR` đọc từ `.env`
+- Guard `.env` — thiếu file thì báo rõ, không để `docker compose` kêu về biến không resolve được
+- Target `ci` **không** thuộc C11, nó là của C12 cùng hook và `ci.yml`
 
 **Kiểm chứng — đây là D1** ★
-```bash
-make down-v          # xoá sạch volume
-docker system prune  # tuỳ chọn: mô phỏng máy sạch hơn nữa
-make up              # phải in ra "All healthy in <300s"
+
+| Lần | Điều kiện | Thời gian | `make` exit |
+|---|---|---|---|
+| 1 | sau `make down-v` (volume rỗng, image đã cache) | **48 s** | 0 |
+| 2 | sau `make down` (giữ volume) | **36 s** | 0 |
+| 3 | sau `make down` (giữ volume) | **42 s** | 0 |
+
+Ngưỡng D1 là 300 s → **đạt với biên rất rộng**.
+
+Bằng chứng bước init thật sự chạy sau `down-v`: database `NovaVolt` tồn tại và PostgreSQL có
+đủ 4 schema. Nếu thiếu bước hai thì hai kiểm tra này sẽ trượt trong khi `make up` vẫn in
+"All healthy".
+
+Guard `.env`: đổi tên `.env` đi rồi chạy `make up` → in hướng dẫn `cp .env.example .env` và
+thoát mã 2.
+
+#### C11.1 — `make up` là hai lệnh, không phải một
+
+Đây là chỗ C07.1 đã cảnh báo và rất dễ quên:
+
+```make
+up: .env
+	@start=$$(date +%s); \
+	$(COMPOSE) up -d --wait || exit 1; \
+	$(COMPOSE) run --rm mssql-init || exit 1; \
+	$(COMPOSE) run --rm minio-init || exit 1; \
+	echo "All healthy in $$(($$(date +%s)-start))s"
 ```
 
-Chạy **3 lần** và ghi cả ba con số vào `docs/benchmarks.md` (lần đầu chậm hơn vì pull image — ghi rõ lần nào là cold).
+Chỉ chạy bước một thì máy sạch sẽ có SQL Server **nhưng không có database `NovaVolt`**, và
+MinIO không có bucket — trong khi `make up` vẫn in "All healthy". Hỏng theo kiểu tệ nhất: im
+lặng, và chỉ lộ ra ở milestone sau.
 
-**Nếu quá 5 phút**: nghi phạm số một là SQL Server. Cách xử lý theo thứ tự — tăng `mem_limit` lên 2,5 g; giảm `healthcheck.interval`; nới `start_period`. Nếu vẫn không đạt, **đó là lúc đề xuất sửa DoD**, không phải lúc gian lận bằng cách bỏ bớt service. Theo quy trình `AGENTS.md` §3.2.
+`|| exit 1` sau mỗi bước là bắt buộc: các dòng nối bằng `\` chạy trong **cùng một shell**, nên
+lệnh giữa chừng fail sẽ không tự dừng.
+
+#### C11.2 — Đọc riêng một biến, đừng `include .env`
+
+`include .env` nạp **mọi** biến vào make, kể cả mật khẩu. Tệ hơn: một khoá trùng tên với biến
+đặc biệt của make (`SHELL`, `MAKEFLAGS`…) sẽ phá cả file mà không báo lý do. Dùng:
+
+```make
+BACKUP_DIR := $(shell grep -E '^NVM_BACKUP_DIR=' .env 2>/dev/null | cut -d= -f2-)
+```
+
+`down` cũng phải nêu **đủ profile** (`--profile probe --profile init --profile obs`), nếu không
+container của profile không active sẽ bị bỏ lại.
+
+#### C11.3 — Backup chưa verify thì không phải backup
+
+`make backup` chạy `git bundle create` **rồi `git bundle verify`**. Một file bundle hỏng trông
+y hệt một file bundle tốt cho tới ngày cần khôi phục. Kiểm chứng: bundle 153 KB, verify OK,
+`git bundle list-heads` trả về đúng HEAD hiện tại.
+
+**Nếu quá 5 phút**: nghi phạm số một là SQL Server. Xử lý theo thứ tự — tăng `mem_limit` lên
+2,5 g; giảm `healthcheck.interval`; nới `start_period`. Vẫn không đạt thì **đề xuất sửa DoD**,
+không phải bỏ bớt service. Theo `AGENTS.md` §3.2.
 
 ---
 

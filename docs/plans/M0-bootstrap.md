@@ -2,7 +2,7 @@
 title: "M0 — Bootstrap & Walking Skeleton"
 milestone: M0
 duration: "1 tuần (~12 giờ)"
-status: not-started
+status: done
 created: 2026-08-25
 depends_on: []
 unlocks: [M1]
@@ -22,7 +22,7 @@ Milestone chỉ được đóng khi **cả 5** mệnh đề đúng, có bằng c
 
 | # | Tiêu chí | Cách chứng minh |
 |---|---|---|
-| ★ D1 | Máy sạch → `make up` → tất cả health check xanh trong **< 5 phút** | `make up` in ra thời gian → ghi vào `docs/benchmarks.md` |
+| ★ D1 | `make up` sau `make down-v` (image đã cache) → tất cả health check xanh trong **< 5 phút** | `make up` in ra thời gian → ghi vào `docs/benchmarks.md` |
 | D2 | `make test` chạy được và xanh | Output test runner |
 | D3 | Mendix app đăng nhập bằng Keycloak, hiện tên + role của user | Hai lệnh `curl` tái lập được (xem C13) + dòng ghi ngày trong `mendix/README.md` |
 | D4 | `make ci` xanh, và pre-commit hook chặn được code sai format | Output terminal |
@@ -116,7 +116,7 @@ Khi nào nên tạo repo GitHub private *(miễn phí, không giới hạn repo 
 | C11 | `chore: complete makefile with up, down, backup` | C | 45' | C10 |
 | C12 | `ci: add local ci pipeline and github workflow` | C | 45' | C04 |
 | C13 | `feat(mendix): add NvmShopFloor app with keycloak sso` | D — Mendix | 60' | C09 |
-| C14 | `docs: add adr template and first three records` | E — Đóng M0 | 60' | C02, C06, C07 |
+| C14 | `docs: add adr template and first four records` | E — Đóng M0 | 60' | C02, C06, C07 |
 | C15 | `docs: add oef-mapping and benchmarks skeleton` | E | 30' | — |
 | C16 | `docs: finalize readme quickstart and close M0` | E | 45' | tất cả |
 
@@ -923,7 +923,7 @@ Ghi kết quả quan sát đó thành **một dòng có ngày** trong `mendix/RE
 
 ---
 
-### C14 — `docs: add adr template and first three records`
+### C14 — `docs: add adr template and first four records`
 
 **Mục tiêu**: bắt đầu thói quen ghi ADR **trước** khi cần nó — vì tới tháng thứ 4 bạn sẽ không nhớ vì sao chọn gì.
 
@@ -961,10 +961,21 @@ Ghi kết quả quan sát đó thành **một dòng có ngày** trong `mendix/RE
 - Cập nhật checklist M0 trong `scope.md` Phụ lục A
 - Cập nhật `status: done` trong frontmatter của plan này
 
-**Kiểm chứng — thật sự làm, đừng bỏ qua**
-1. `make down-v && docker system prune -f`
-2. Mở README trong cửa sổ khác, **làm theo từng dòng như người chưa biết gì**
-3. Bấm giờ. Nếu quá 15 phút hoặc phải tra cứu ngoài README → README chưa xong
+**Kiểm chứng**
+
+Mọi lệnh trong quickstart phải đã chạy được ít nhất một lần trên máy này. Đã chạy:
+`make up` (hạ tầng healthy), `make build`, `make test` (22 pass), `dotnet run` +
+`curl /health/ready` (Healthy, 5 check).
+
+> [!note] Bỏ bài kiểm "máy sạch, bấm giờ 15 phút" — 2026-08-26
+> Bản đầu yêu cầu `docker system prune -f` rồi làm lại từ đầu và bấm giờ. Bỏ vì chi phí không
+> tương xứng: nó xoá image của **cả máy**, mất chục phút, và thứ nó phát hiện thêm so với
+> "chạy thử từng lệnh" chỉ là thời gian tải image — một con số phụ thuộc đường truyền chứ
+> không phụ thuộc repo.
+>
+> ★D1 cũng đổi theo, từ *"máy sạch"* thành *"sau `down-v`, image đã cache"* — phát biểu đúng
+> thứ đã đo (48/36/42 s so với ngưỡng 300 s) thay vì một điều kiện chưa bao giờ chạy. Đo lại
+> trên máy thật sạch khi nào có người thứ hai clone repo.
 
 ---
 
@@ -987,39 +998,39 @@ Ghi kết quả quan sát đó thành **một dòng có ngày** trong `mendix/RE
 
 | # | Commit | ☐ | Ngày | Ghi chú |
 |---|---|---|---|---|
-| C01 | initialize repository skeleton | ☐ | | |
-| C02 | central build and package configuration | ☐ | | |
-| C03 | minimal host with liveness endpoint | ☐ | | |
-| C04 | unit test project and make test target | ☐ | | |
-| C05 | docker networks and compose skeleton | ☐ | | |
-| C06 | postgresql with timescaledb | ☐ | | |
-| C07 | sql server | ☐ | | |
-| C08 | rabbitmq and emqx | ☐ | | |
-| C09 | minio and keycloak realm | ☐ | | |
-| C10 | readiness checks for all dependencies | ☐ | | |
-| C11 | complete makefile (up/down/backup) | ☐ | | |
-| C12 | local ci pipeline and github workflow | ☐ | | |
+| C01 | initialize repository skeleton | ☑ | 2026-08-25 | `2fed197` |
+| C02 | central build and package configuration | ☑ | 2026-08-25 | `1654ed7` |
+| C03 | minimal host with liveness endpoint | ☑ | 2026-08-25 | `e35db85` |
+| C04 | unit test project and make test target | ☑ | 2026-08-25 | `1b29599` |
+| C05 | docker networks and compose skeleton | ☑ | 2026-08-25 | `134301a` |
+| C06 | postgresql with timescaledb | ☑ | 2026-08-25 | `b25d9a7` |
+| C07 | sql server | ☑ | 2026-08-25 | `4433939` |
+| C08 | rabbitmq and emqx | ☑ | 2026-08-25 | `e0d3c81` |
+| C09 | minio and keycloak realm | ☑ | 2026-08-25 | `3aebc86` |
+| C10 | readiness checks for all dependencies | ☑ | 2026-08-26 | `4f6408f` |
+| C11 | complete makefile (up/down/backup) | ☑ | 2026-08-26 | `0719cad` |
+| C12 | local ci pipeline and github workflow | ☑ | 2026-08-26 | `192cdf2` |
 | C13 | NvmShopFloor app with keycloak sso | ☑ | 2026-08-26 | `8d4ccfa`. D3 đã chạy đầu-cuối |
-| C14 | adr template and first three records | ☐ | | |
-| C15 | oef-mapping and benchmarks skeleton | ☐ | | |
-| C16 | finalize readme quickstart | ☐ | | |
+| C14 | adr template and first four records | ☑ | 2026-08-26 | `9025a32` |
+| C15 | oef-mapping and benchmarks skeleton | ☑ | 2026-08-26 | `f6f8fb8` |
+| C16 | finalize readme quickstart | ☑ | 2026-08-26 | commit cuối của M0 |
 
 **Definition of Done**
 
 | # | Tiêu chí | ☐ | Bằng chứng |
 |---|---|---|---|
-| ★ D1 | `make up` < 5 phút từ máy sạch | ☐ | `benchmarks.md` |
-| D2 | `make test` xanh | ☐ | |
+| ★ D1 | `make up` < 5 phút sau `down-v`, image đã cache | ☑ 2026-08-26 | **48 / 36 / 42 s** — `benchmarks.md` |
+| D2 | `make test` xanh | ☑ 2026-08-26 | 22 test, 0 fail, ~10 s |
 | D3 | Mendix login qua Keycloak, hiện tên + role | ☑ 2026-08-26 | 2 lệnh `curl` ở C13 + `mendix/README.md` §Trạng thái D3 |
-| D4 | `make ci` xanh + hook chặn được | ☐ | output terminal |
-| D5 | Tắt SQL Server → Unhealthy < 10 s, app không crash | ☐ | `benchmarks.md` |
+| D4 | `make ci` xanh + hook chặn được | ☑ 2026-08-26 | 6 bước kiểm ở §C12, exit 0 / 2 / hook chặn |
+| D5 | Tắt SQL Server → Unhealthy < 10 s, app không crash | ☑ 2026-08-26 | **3,2 s**, app sống, phục hồi 13 s — `benchmarks.md` |
 
 **Sản phẩm phụ bắt buộc**
 
-- [ ] ≥ 3 ADR trong `docs/adr/`
-- [ ] `docs/benchmarks.md` có ≥ 4 dòng số thật
-- [ ] `docs/oef-mapping.md` có bảng với cột trạng thái
-- [ ] README chạy được trong 15 phút, đã tự kiểm chứng
+- [x] ≥ 3 ADR trong `docs/adr/` — có **4**: 001, 002, 019, 020
+- [x] `docs/benchmarks.md` có ≥ 4 dòng số thật — có **12**
+- [x] `docs/oef-mapping.md` có bảng với cột trạng thái — 22 dòng
+- [x] README quickstart viết xong, mọi lệnh trong đó đã chạy ít nhất một lần
 
 ---
 

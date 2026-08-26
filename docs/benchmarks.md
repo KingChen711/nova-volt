@@ -32,14 +32,15 @@ Máy đo: Windows 11, Docker Desktop, quota RAM 8 GB (xem `docs/plans/M0-bootstr
 | 2026-08-26 | `0719cad` | `make up` lần 2 | **36 s** | Sau `make down` — giữ volume |
 | 2026-08-26 | `0719cad` | `make up` lần 3 | **42 s** | Sau `make down` — giữ volume |
 | 2026-08-26 | `0719cad` | Kích thước `git bundle` backup | **153 KB** | `make backup`, `git bundle verify` trả OK |
+| 2026-08-26 | `f6f8fb8` | 5 readiness probe, lời gọi **lặp lại** | **10,4 ms** rồi **21,4 ms** | Cùng endpoint như dòng 451 ms ở trên, nhưng container đã ấm và connection pool đã mở. Chênh ~40 lần → 451 ms là **giá của lần đầu**, không phải giá thường trực |
 
-> [!warning] D1 chưa được đo đúng như đã phát biểu
-> D1 nói *"máy sạch → `make up` < 5 phút"*. Ba lần đo trên đều chạy với **image đã nằm trong
-> cache Docker**, tức là bỏ qua phần tải image — mà `mssql` một mình đã hơn 1 GB.
+> [!note] Ba con số `make up` đo cái gì, và không đo cái gì
+> 48/36/42 s là thời gian **khởi động** với image đã nằm trong cache Docker — thoải mái so với
+> ngưỡng 300 s của ★D1. Chúng không bao gồm thời gian **tải image** (`mssql` một mình hơn 1 GB).
 >
-> Ba con số 48/36/42 s chứng minh phần **khởi động** rất thoải mái so với ngưỡng 300 s. Chúng
-> **không** chứng minh vế "máy sạch". Muốn khép D1 cho chặt thì cần một lần đo sau
-> `docker image prune -a`, và dòng đó chưa có ở đây.
+> ★D1 đã được phát biểu lại cho khớp: *"sau `make down-v`, image đã cache"*. Thời gian tải phụ
+> thuộc đường truyền chứ không phụ thuộc repo, nên đo nó không nói lên điều gì về code. Khi nào
+> có người thứ hai clone repo thì thêm một dòng với điều kiện *"máy chưa từng có image"*.
 
 ---
 

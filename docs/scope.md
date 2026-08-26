@@ -2693,7 +2693,7 @@ Câu bám theo, nếu không khí đang mở: *"Thế phần nào hay trục tr�
 
 | M | Milestone | Tuần | Bắt đầu | Xong | DoD ★ đạt? | ADR | Màn hình Mendix | Ghi chú |
 |---|---|---|---|---|---|---|---|---|
-| M0 | Bootstrap & Walking Skeleton | 1,0 | | | ☐ | ☐ | ☐ | |
+| M0 | Bootstrap & Walking Skeleton | 1,0 | 2026-08-25 | 2026-08-26 | ☑ | ☑ | ☑ | 16 commit. Cả 5 DoD đạt. 4 ADR |
 | M1 | Factory Model & Service Bus | 1,5 | | | ☐ | ☐ | — | |
 | M2 | Simulator, Ingestion & Idempotency | 2,5 | | | ☐ | ☐ | — | |
 | M3 | Telemetry & Production Calendar | 1,0 | | | ☐ | ☐ | — | |

@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Reflection;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Nvm.Host.Infrastructure;
 using Serilog;
 using Serilog.Events;
 
@@ -32,16 +32,21 @@ try
         .Enrich.FromLogContext()
         .WriteTo.Console(outputTemplate: logTemplate, formatProvider: CultureInfo.InvariantCulture));
 
+    // One source of truth for ports and credentials: the same .env docker-compose reads.
+    // Development only — see DotEnvLoader.
+    if (builder.Environment.IsDevelopment())
+    {
+        var envFile = DotEnvLoader.Load(builder.Environment.ContentRootPath);
+        Log.Information("Loaded environment from {EnvFile}", envFile ?? "(none found)");
+    }
+
+    builder.Configuration.AddEnvironmentVariables();
+
     // The only sanctioned clock in the codebase. AGENTS.md K1 forbids DateTime.UtcNow
     // so that day-long sagas stay testable with FakeTimeProvider.
     builder.Services.AddSingleton(TimeProvider.System);
 
-    builder.Services
-        .AddHealthChecks()
-        .AddCheck(
-            "self",
-            () => HealthCheckResult.Healthy("Process is running."),
-            tags: ["live"]);
+    builder.Services.AddDependencyHealthChecks();
 
     var app = builder.Build();
 
@@ -74,13 +79,13 @@ try
     app.MapHealthChecks("/health/live", new HealthCheckOptions
     {
         Predicate = registration => registration.Tags.Contains("live"),
+        ResponseWriter = HealthReportWriter.Write,
     });
 
-    // No readiness checks are registered yet; C10 adds one per dependency.
-    // An empty predicate set reports Healthy, which is correct: nothing to wait for.
     app.MapHealthChecks("/health/ready", new HealthCheckOptions
     {
         Predicate = registration => registration.Tags.Contains("ready"),
+        ResponseWriter = HealthReportWriter.Write,
     });
 
     app.Run();

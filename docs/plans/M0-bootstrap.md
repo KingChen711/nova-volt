@@ -643,28 +643,71 @@ cũ đã deprecated. Health endpoint nằm ở **management port 9000 trong cont
 **Mục tiêu**: `/health/ready` phản ánh **đúng** tình trạng thật của toàn hệ thống.
 
 **Việc làm**
-- Thêm package: `AspNetCore.HealthChecks.SqlServer`, `.NpgSql`, `.Rabbitmq`, `.Uris` (cho Keycloak), `.Aws.S3` hoặc custom cho MinIO
-- Health check cho EMQX: custom, thử TCP connect port 1883 (hoặc gọi API dashboard)
-- Mỗi check gắn tag `ready` + tên riêng, `timeout: 3s`
-- `/health/ready` trả JSON chi tiết: tên check, status, duration, exception message (chỉ ở Development)
-- Connection string đọc từ `.env` qua environment variable, **không** hardcode
+- Package: `AspNetCore.HealthChecks.SqlServer`, `.NpgSql`, `.Uris` (dùng chung cho Keycloak, MinIO **và** RabbitMQ) — **ba** package, không phải bốn
+- **Năm** check, không phải sáu — xem C10.1 về EMQX
+- Mỗi check có tên riêng, tag `ready`, `timeout: 3s`
+- `/health/ready` và `/health/live` trả JSON chi tiết: tên, status, duration, error (**chỉ ở Development**)
+- Cấu hình đọc từ **`.env`** qua `DotEnvLoader` — xem C10.2
 
-**Kiểm chứng** — đây cũng là **Lab phá hoại của M0**:
-```bash
-curl -s localhost:5080/health/ready | jq          # tất cả Healthy
-docker compose stop mssql
-# đợi < 10 s
-curl -s localhost:5080/health/ready | jq          # sqlserver = Unhealthy, các check khác vẫn Healthy
-curl -s localhost:5080/health/live                # VẪN Healthy — process không chết
-docker compose start mssql
-# đợi ~40 s
-curl -s localhost:5080/health/ready | jq          # trở lại Healthy, không cần restart app
-```
+**Kiểm chứng — đây là D5**
 
-**Đây là D5.** Ghi lại thời gian phát hiện và thời gian tự phục hồi vào `docs/benchmarks.md`.
+| Kiểm | Kết quả |
+|---|---|
+| 5 probe lúc bình thường | tất cả `Healthy`, tổng 451 ms |
+| Tắt SQL Server → phát hiện | **3,2 s** *(ngưỡng: < 10 s)* |
+| 4 check còn lại | vẫn `Healthy` — không lan |
+| `/health/live` | vẫn `Healthy` |
+| Process | sống, `GET /` → 200 |
+| Bật lại SQL Server → phục hồi | **13 s**, `Application started` chỉ xuất hiện 1 lần → **không restart** |
+| **Khởi động app KHI SQL Server đang tắt** | app lên sau **2 s**, `live=Healthy`, `ready=Unhealthy[sqlserver]` |
 
-> [!warning] Đừng để app crash khi dependency chết
-> Nếu `Program.cs` mở connection lúc startup và ném exception, app sẽ không lên nổi khi DB chưa sẵn sàng — vi phạm tinh thần N15. Health check phải **lazy**, kiểm tra lúc được gọi, không phải lúc khởi động.
+Dòng cuối là bằng chứng mạnh nhất cho **N15**: app không chết vì dependency chết.
+
+#### C10.1 — Bỏ EMQX khỏi readiness, không phải quên
+
+Plan ghi thêm check TCP tới EMQX port 1883. **Không làm**, vì mâu thuẫn với ranh giới đã dựng
+ở C05/C08: EMQX nằm trên `ot-net` + `dmz-net`, không có gì ở tầng IT nói chuyện với nó.
+Service duy nhất cần nó là `Nvm.EdgeGateway`, và nó chỉ xuất hiện ở **M2**.
+
+Readiness cho một dependency mà process không dùng nghĩa là: EMQX chết thì app bị rút khỏi
+load balancer **vô cớ**. Nguyên tắc: *readiness chỉ gồm dependency mà thiếu nó thì app không
+phục vụ được request.* Thêm EMQX ở M2, cùng lúc EdgeGateway ra đời.
+
+#### C10.2 — Một nguồn sự thật cho cấu hình
+
+Cách chuẩn .NET là `appsettings.Development.json`. Ở đây nó tạo ra **hai file cùng chứa sáu
+mật khẩu** phải giữ đồng bộ bằng tay — và chúng sẽ trôi.
+
+Thay bằng `DotEnvLoader`: ~30 dòng, **chỉ chạy ở Development**, đọc `.env` ở thư mục cha gần
+nhất, và **biến môi trường đã có luôn thắng** nên `NVM_X=... dotnet run` vẫn override được.
+`.env` là thứ docker-compose đã đọc, nên cả hai bên dùng chung một nguồn.
+
+#### C10.3 — RabbitMQ kiểm qua endpoint alarms, không phải cổng AMQP
+
+Dùng `/api/health/checks/alarms` của management API, cùng lý do C08.1: broker đã chặn
+publisher vì alarm bộ nhớ/đĩa **vẫn** trả `200` ở `/api/overview` và **vẫn** mở cổng 5672.
+
+Cách này cũng tránh được cái bẫy nguy hiểm hơn: thư viện health check của RabbitMQ muốn có
+sẵn một `IConnection` trong DI, mà tạo connection lúc đăng ký service nghĩa là **app không
+khởi động nổi khi broker đang tắt** — đúng thứ N15 cấm.
+
+#### C10.4 — `dotnet build` KHÔNG ép quy tắc naming, chỉ `dotnet format` mới ép
+
+Phát hiện khi `make format-check` đỏ với `IDE1006` trong khi `make build` xanh. Kiểm lại bằng
+một file vi phạm cố ý:
+
+| Lệnh | Kết quả |
+|---|---|
+| `dotnet build` | **Build succeeded** — bỏ lọt |
+| `dotnet format --verify-no-changes` | `error IDE1006: Naming rule violation` |
+
+Nghĩa là `EnforceCodeStyleInBuild` (bật ở C02) phủ các rule `IDExxxx` về style **nhưng không
+phủ naming rule**. Người gác cổng thật cho naming là `make ci`/`make format-check`, không phải
+build. Đáng nhớ vì nó làm hỏng giả định "build xanh là code đúng quy ước".
+
+Nguyên nhân gốc của lỗi: quy tắc `_camelCase` ở C01 áp cho **mọi** private field, kể cả
+`private static readonly` — thứ mà C# quy ước viết PascalCase. Đã thêm rule riêng, **đặt
+trước** rule chung vì rule khớp đầu tiên thắng.
 
 ---
 

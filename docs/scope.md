@@ -393,7 +393,7 @@ Không có "nhanh", "ổn định", "realtime". Chỉ có số. Mỗi dòng ph�
 | N10 | Matching algorithm | 100k cell → kết quả < 30 s | Benchmark | M8 |
 | N11 | Projection rebuild | Rebuild toàn bộ read model từ event store < 10 phút | Rebuild test | M6 |
 | N12 | Mendix page load | p95 < 1,5 s trên màn hình Operator Station | Mendix trace + browser | M4 |
-| N13 | Startup | Toàn hệ thống từ `docker compose up` → healthy < 5 phút | Health check loop | M1 |
+| N13 | Startup | Toàn hệ thống từ `docker compose up` → healthy < 5 phút | Health check loop | ~~M1~~ → **M0** *(đã đo: 48 / 36 / 42 s, `benchmarks.md`)* |
 | N14 | Test suite | Toàn bộ < 10 phút | CI timing | M13 |
 | N15 | Availability của dây chuyền | **MES down không được làm dừng dây chuyền** | Simulator vẫn chạy khi backend tắt | M2 |
 
@@ -1745,6 +1745,8 @@ SELECT add_continuous_aggregate_policy('ts.process_signal_1m',
 
 ### M0 — Bootstrap & Walking Skeleton · 1 tuần
 
+> Plan chi tiết: [`docs/plans/M0-bootstrap.md`](plans/M0-bootstrap.md) — **đã đóng** 2026-08-26, 16 commit.
+
 **Mục tiêu**: có một đường đi xuyên suốt từ hạ tầng tới UI, dù nó chưa làm gì cả.
 
 **Việc làm**
@@ -1756,13 +1758,15 @@ SELECT add_continuous_aggregate_policy('ts.process_signal_1m',
 - GitHub Actions: build + test + `dotnet format --verify-no-changes`.
 - `docs/adr/ADR-001` và `ADR-002` (chọn store).
 
-**Definition of Done**
-- [ ] Máy sạch → `make up` → tất cả health check xanh trong **< 5 phút** (N13).
-- [ ] `make test` chạy được (dù mới có 1 test).
-- [ ] Mendix app đăng nhập bằng Keycloak thành công, hiện `Xin chào {tên}`.
-- [ ] CI xanh trên PR đầu tiên.
+**Definition of Done** — cả 5 đã đạt 2026-08-26, bằng chứng trong plan M0 §7 và `benchmarks.md`
 
-**Lab phá hoại**: tắt SQL Server → `/health` phải chuyển `Unhealthy` trong < 10 s, và app **không** crash.
+- [x] `make up` sau `down-v` (**image đã cache**) → tất cả health check xanh trong **< 5 phút** (N13). Đo: **48 / 36 / 42 s**. *Điều kiện đổi từ "máy sạch" — xem plan M0 §C16: bài kiểm "máy sạch, bấm giờ" đã bị bỏ vì nó đo tốc độ đường truyền chứ không đo repo.*
+- [x] `make test` chạy được — 22 test, 0 fail.
+- [x] Mendix app đăng nhập bằng Keycloak thành công, hiện tên + role + `site_id`.
+- [x] **`make ci` xanh + pre-commit hook chặn được code sai format.** *Đổi từ "CI xanh trên PR đầu tiên": chưa tạo GitHub remote, nên người gác cổng là `make ci` chạy local, `ci.yml` viết sẵn khớp từng bước — plan M0 §3.1.*
+- [x] Tắt SQL Server → `/health/ready` chuyển `Unhealthy` trong **3,2 s**, app không crash, không restart.
+
+**Lab phá hoại**: tắt SQL Server → `/health/ready` phải chuyển `Unhealthy` trong < 10 s, và app **không** crash. *(`/health` được tách thành `/health/live` và `/health/ready` ngay từ C03 — gộp hai cái là lỗi kinh điển làm Kubernetes restart pod chỉ vì DB tạm chậm.)*
 
 **Học được**: health check phân tầng (liveness vs readiness), docker network isolation, OIDC flow.
 
@@ -1770,23 +1774,32 @@ SELECT add_continuous_aggregate_policy('ts.process_signal_1m',
 
 ### M1 — Factory Model & Manufacturing Service Bus · 1,5 tuần
 
+> Plan chi tiết: [`docs/plans/M1-factory-model-bus.md`](plans/M1-factory-model-bus.md) — 19 commit, kèm các quyết định đã chốt ở §3.
+
 **Mục tiêu**: dựng "Bus-Centric Design" của OEF bằng tay, và cây ISA-95 làm nền cho mọi thứ.
 
 **Việc làm**
-- FB `FactoryModel`: `Enterprise → Site → Area → Line → WorkCell → Equipment`, seed NV1 và DE1.
-- `Nvm.Bus`: MassTransit + RabbitMQ. Topology: exchange theo context, routing key `nvm.{site}.{context}.{event}.v{n}`.
-- Retry policy (exponential + jitter), DLQ per queue, `_error` và `_skipped` queue.
-- `Nvm.Contracts`: CloudEvents envelope, `IDomainEvent`, `[EventVersion]`, serializer System.Text.Json với source generator.
-- `Nvm.Kernel`: `ICommand`, `ICommandHandler<T>`, pipeline behaviors (Validation → Idempotency → Audit → Transaction).
-- Roslyn analyzer `NVM001` (cấm `DateTime.UtcNow`), `NVM002` (cấm `DateTime` trong contract).
+- FB `FactoryModel`: `Enterprise → Site → Area → Line → WorkCell → Equipment`, seed NV1 và DE1. Nguồn ở M1 là **file seed**, chưa phải database — persistence vào M5 cùng bố cục Functional Block đầy đủ (plan M1 §3.1).
+- `Nvm.Bus`: MassTransit **8.x** + RabbitMQ. Topology: exchange theo context, routing key `nvm.{site}.{context}.{event}.v{n}`. Pin v8 vì v9 đã chuyển sang license thương mại (plan M1 §2.1, `ADR-021`).
+- Retry policy exponential — **jitter phải tự cộng**: MassTransit v8 chỉ có `Immediate` / `Interval` / `Intervals` / `Exponential` / `Incremental`, không có tuỳ chọn jitter (plan M1 §C11.1). DLQ per queue, `_error` và `_skipped` queue.
+- `Nvm.Contracts`: CloudEvents envelope, `IDomainEvent`, `[EventVersion]`, serializer System.Text.Json với source generator. Trên dây, thuộc tính CloudEvents đi ở **transport header** (`ce_*`); envelope đầy đủ §7.4 là contract của event store, không phải của dây (plan M1 §3.2, `ADR-008`).
+- `Nvm.Kernel`: `ICommand`, `ICommandHandler<T>`, pipeline behaviors (Validation → Idempotency → Audit → ~~Transaction~~). **Transaction behavior hoãn sang M5** — nó cần một `IUnitOfWork` thật, mà M1 chưa có store nào.
+- Roslyn analyzer `NVM001` (cấm `DateTime.UtcNow`), `NVM002` (cấm `DateTime` trong contract), `NVM003` (ép `[EventVersion]`).
 
 **Definition of Done**
 - [ ] Publish 1 event từ service A → 2 consumer nhận độc lập, mỗi consumer có queue riêng.
 - [ ] Consumer ném exception 5 lần → message vào DLQ, **không** mất.
 - [ ] Analyzer báo lỗi build khi cố tình viết `DateTime.UtcNow`.
-- [ ] `docs/oef-mapping.md` có 6 dòng đầu tiên (bus, FB, App, POM, Project Studio, Solution Studio).
+- [ ] `docs/oef-mapping.md`: 6 dòng OEF của M1 có **trạng thái đúng**, trong đó *Bus-Centric Design* và *Manufacturing Service Bus* đạt `xong`. *(Bảng 22 dòng đã được tạo ở M0/C15, nên tiêu chí của M1 là trạng thái chứ không phải sự tồn tại.)*
 
-**Lab phá hoại**: tắt RabbitMQ giữa lúc publish → producer phải buffer/retry, không mất event, không crash.
+**Lab phá hoại**: tắt RabbitMQ giữa lúc publish → app **không crash**, `/health/live` vẫn xanh, publish thất bại bị **bắt và đếm**, và **số event mất được ghi thành con số** vào `benchmarks.md` + `ADR-022`.
+
+> [!important] Vì sao KHÔNG đòi "không mất event" — sửa ngày 2026-08-26
+> Bản đầu của mục này viết *"producer phải buffer/retry, không mất event"*. Mệnh đề đó **không thể đạt ở M1**: chưa có transactional outbox (M6), nên khi broker tắt thì event chỉ tồn tại trong bộ nhớ process và mất là chắc chắn. Retry in-memory chỉ cứu được các lần thử trong vòng đời process đó.
+>
+> Thay bằng ba vế đo được ở trên. **Con số message mất chính là động lực của outbox ở M6** — và một con số đo được thuyết phục hơn một câu trong tài liệu. M6 nhận thêm tiêu chí chạy lại đúng kịch bản này với outbox và đưa số về 0.
+>
+> Lý do đầy đủ: [`docs/plans/M1-factory-model-bus.md`](plans/M1-factory-model-bus.md) §3.3.
 
 **Học được** (OEF O1): vì sao "bus-centric" không phải là trang trí — nó là cách duy nhất để N15 (MES down không dừng dây chuyền) khả thi.
 
@@ -1930,6 +1943,7 @@ SELECT add_continuous_aggregate_policy('ts.process_signal_1m',
 - [ ] Xoá toàn bộ read model + reset checkpoint → rebuild < 10 phút, kết quả **identical** với trước (T4, N11).
 - [ ] `EXCLUDE` constraint chặn được insert segment chồng lấn.
 - [ ] Bảng so sánh recursive CTE vs closure table đã điền số thật vào ADR-006.
+- [ ] Chạy lại **đúng kịch bản lab phá hoại của M1** (tắt RabbitMQ giữa lúc publish) với outbox đã bật → số event mất về **0**, đối chiếu trực tiếp với con số đã ghi ở `ADR-022`. Đây là chỗ outbox chứng minh nó đáng giá.
 
 **Lab phá hoại**
 1. Bỏ outbox, ghi DB rồi publish trực tiếp. Kill process giữa hai lệnh. Đếm message mất trên 100 lần thử.

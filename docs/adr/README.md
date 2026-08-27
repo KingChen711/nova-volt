@@ -38,7 +38,7 @@ việc khác.
 | [001](ADR-001-sql-server-event-store.md) | SQL Server cho event store, write model, outbox | **Accepted** 2026-08-26 | M0 · C14 |
 | [002](ADR-002-postgresql-timescaledb-read-model.md) | PostgreSQL + TimescaleDB cho telemetry và read model | **Accepted** 2026-08-26 | M0 · C14 |
 | 003 | Hand-rolled event store thay vì Marten | Chưa viết | M5 |
-| 004 | RabbitMQ thay vì Kafka | Chưa viết | M6 |
+| [004](ADR-004-rabbitmq-not-kafka.md) | RabbitMQ làm Manufacturing Service Bus, không dùng Kafka | **Accepted** 2026-08-26 | M1 · C09 |
 | 005 | Genealogy là DAG có thời gian | Chưa viết | M5 |
 | 006 | Closure table thay vì recursive CTE | Chưa viết | M6 |
 | 007 | Định dạng serial number | Chưa viết | M4 |
@@ -55,6 +55,7 @@ việc khác.
 | 018 | Package versioning theo Functional Block | Chưa viết | M12 |
 | [019](ADR-019-dotnet-10-lts.md) | Dùng .NET 10 LTS thay vì .NET 9 | **Accepted** 2026-08-26 | M0 · C14 |
 | [020](ADR-020-no-invariant-globalization.md) | Không bật `InvariantGlobalization` | **Accepted** 2026-08-26 | M0 · C14 |
+| [021](ADR-021-masstransit-8-not-9.md) | Pin MassTransit 8, không nâng lên 9 | **Accepted** 2026-08-26 | M1 · C09 |
 
 Cột **Ra ở** là milestone dự kiến, không phải cam kết. Quyết định đến sớm hơn thì viết sớm hơn.
 

@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Manufacturing Service Bus — khái niệm trung tâm của "Bus-Centric Design" (OEF bài 1 và 6).
+
+    Ở C09 project này CỐ Ý chưa có file .cs nào. Commit này chốt thư viện và ghi ADR;
+    topology (exchange, routing key, queue) là C10, retry/DLQ là C11.
+    Giá trị kiểm chứng của C09 nằm ở chỗ khác: `dotnet restore` phải resolve sạch với
+    CentralPackageTransitivePinningEnabled đang bật — đó là nơi xung đột version lộ ra.
+
+    Version pin ở Directory.Packages.props, kèm lý do. ADR-004 (RabbitMQ vs Kafka),
+    ADR-021 (MassTransit 8 vs 9).
+  -->
+
+  <PropertyGroup>
+    <RootNamespace>Nvm.Bus</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Envelope và tên event đi trên bus. Bus KHÔNG reference FB nào (K8). -->
+    <ProjectReference Include="../Nvm.Contracts/Nvm.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- MassTransit.RabbitMQ kéo theo MassTransit; khai cả hai version ở CPM để không có
+         bản nào bị nâng ngầm qua đường transitive. -->
+    <PackageReference Include="MassTransit.RabbitMQ" />
+  </ItemGroup>
+
+</Project>

@@ -35,6 +35,29 @@
     <PackageVersion Include="AspNetCore.HealthChecks.Uris" Version="9.0.0" />
   </ItemGroup>
 
+  <ItemGroup Label="Manufacturing Service Bus — C09 trở đi">
+    <!--
+      PIN CỨNG v8. KHÔNG nâng lên 9.x.
+
+      MassTransit 9 đã chuyển sang license THƯƠNG MẠI. Kiểm 2026-08-26:
+        masstransit 9.2.0  → <licenseUrl>https://massient.com/license</licenseUrl>
+        masstransit 8.5.10 → <license type="expression">Apache-2.0</license>
+      §3 của license đó nói rõ: v8 trở về trước vẫn free/open source nhưng KHÔNG được hỗ trợ
+      theo thoả thuận; thoả thuận chỉ áp dụng cho v9 trở lên.
+
+      8.5.10 có nhóm targetFramework net10.0 và kéo RabbitMQ.Client 7.2.1 — tương thích
+      RabbitMQ 4.3.5 đang chạy trong compose. Xem ADR-021.
+
+      Quyết định này được ép bằng test (MassTransitPinTests), không chỉ bằng comment này:
+      nâng major sẽ làm test đỏ và trỏ thẳng về ADR-021.
+
+      Bài học lặp lại lần thứ hai trong repo (lần đầu: FluentAssertions v8 ở M0/C04):
+      KIỂM LICENSE trước khi pin version, không chỉ kiểm nó có chạy không.
+    -->
+    <PackageVersion Include="MassTransit" Version="8.5.10" />
+    <PackageVersion Include="MassTransit.RabbitMQ" Version="8.5.10" />
+  </ItemGroup>
+
   <ItemGroup Label="Dependency injection — C04 trở đi">
     <!--
       CHỈ Abstractions, không phải gói DI đầy đủ. Nvm.Kernel cần IServiceCollection để đăng ký

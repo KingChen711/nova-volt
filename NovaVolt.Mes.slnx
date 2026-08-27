@@ -7,6 +7,7 @@
     <Project Path="src/FunctionalBlocks/FactoryModel/Nvm.FactoryModel.csproj" />
   </Folder>
   <Folder Name="/src/Platform/">
+    <Project Path="src/Platform/Nvm.Bus/Nvm.Bus.csproj" />
     <Project Path="src/Platform/Nvm.Contracts/Nvm.Contracts.csproj" />
     <Project Path="src/Platform/Nvm.Kernel/Nvm.Kernel.csproj" />
   </Folder>

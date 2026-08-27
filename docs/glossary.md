@@ -150,6 +150,11 @@ Routing đầy đủ ở [`scope.md`](scope.md) §2.2.
 | **Binding** | Quy tắc consumer đăng ký, ví dụ `nvm.NV1.#`. Producer **không biết** ai đang nghe — đó là "bus-centric" |
 | **Queue** | Hộp thư của một consumer. 2 consumer + 2 queue = cả hai cùng nhận (fan-out); 2 consumer + 1 queue = tranh nhau |
 | **Dead letter** / `_error` | Nơi message rơi vào sau khi thử lại đủ số lần vẫn hỏng. **Không mất**, chỉ đứng riêng |
+| `_skipped` | Message tới đúng queue nhưng **không consumer nào nhận kiểu đó**. Đầy lên = binding sai hoặc consumer chưa deploy |
+| **Retry** | Chạy lại consumer khi nó ném exception. Ở đây retry nằm **trong cùng một lần delivery** — message không quay lại broker, nên consumer bị chiếm suốt cả chuỗi |
+| **Jitter** | Cộng nhiễu ngẫu nhiên vào khoảng cách retry. Không có nó, mọi consumer hỏng vì **một nguyên nhân chung** sẽ thử lại đồng pha, và đợt sóng retry đổ về đúng lúc hệ thống yếu nhất |
+| **Kill switch** / circuit breaker | Tạm dừng một endpoint khi tỉ lệ lỗi vượt ngưỡng. Giữ message **nằm trong queue** thay vì đốt hết ngân sách retry rồi rơi vào `_error`. Chưa bật — xem `Nvm.Bus/README.md` |
+| **Scheduled redelivery** | Trả message về broker để thử lại sau **hàng phút/giờ**, khác retry trong-delivery. Cần plugin RabbitMQ mà image không có |
 | **Correlation id** | Nhóm mọi event thuộc cùng một luồng nghiệp vụ. Ở đây thường là **work order** |
 | **Causation id** | Cái **trực tiếp gây ra** event này, thường là operation run hoặc command. *Correlation nhóm lại, causation xâu chuỗi* |
 | **Partition key** | Nhóm message phải **giữ đúng thứ tự** với nhau. Hai event cùng một cell không được vượt mặt nhau; hai cell khác nhau thì được |

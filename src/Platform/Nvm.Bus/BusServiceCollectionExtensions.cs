@@ -37,6 +37,12 @@ public static class BusServiceCollectionExtensions
 
             registerConsumers?.Invoke(bus);
 
+            // Applied to every receive endpoint, including ones a Functional Block adds later. Put on
+            // one endpoint at a time, this is the sort of thing that gets copied four times and
+            // forgotten on the fifth.
+            bus.AddConfigureEndpointsCallback((_, _, endpoint) =>
+                endpoint.UseMessageRetry(retry => retry.Intervals(NvmRetryPolicy.Intervals(Random.Shared))));
+
             bus.UsingRabbitMq((context, configurator) =>
             {
                 configurator.Host(options.Host, options.Port, options.VirtualHost, host =>

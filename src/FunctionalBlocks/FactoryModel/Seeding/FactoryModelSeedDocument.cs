@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace Nvm.FactoryModel.Seeding;
 
-/// <summary>The shape of <c>deploy/seed/factory-model.json</c> as it sits on disk.</summary>
+/// <summary>The shape of a <c>deploy/seed/factory-model.r*.json</c> document as it sits on disk.</summary>
 /// <param name="Revision">Which revision of the plant this file describes. Starts at 1.</param>
 /// <param name="GeneratedAt">When the file was produced, with an explicit offset.</param>
 /// <param name="Enterprise">The root of the tree.</param>

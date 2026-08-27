@@ -11,7 +11,7 @@ namespace Nvm.UnitTests.FactoryModel;
 public sealed class ActiveFactoryModelConcurrencyTests
 {
     private static readonly string SeedPath =
-        Path.Combine(AppContext.BaseDirectory, "seed", FactoryModelSeed.FileName);
+        Path.Combine(AppContext.BaseDirectory, "seed", FactoryModelSeed.FileNameFor(1));
 
     private static FactorySite Site() =>
         FactoryModelSeed.Load(SeedPath).FindSite("NV1")

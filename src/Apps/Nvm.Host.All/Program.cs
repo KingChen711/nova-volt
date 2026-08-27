@@ -71,7 +71,7 @@ try
     // rather than scanning everything loaded: a Functional Block that never announced itself should
     // not be wired up because it happened to be in the output directory.
     builder.Services.AddNvmKernel(typeof(ActivateFactoryModelRevisionCommand).Assembly);
-    builder.Services.AddNvmFactoryModel(SeedFileLocator.Locate(builder.Environment.ContentRootPath));
+    builder.Services.AddNvmFactoryModel(SeedDirectoryLocator.Locate(builder.Environment.ContentRootPath));
 
     builder.Services.AddDependencyHealthChecks();
 

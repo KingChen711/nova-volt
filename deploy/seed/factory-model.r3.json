@@ -1,0 +1,167 @@
+{
+  "revision": 3,
+  "generatedAt": "2026-09-16T09:00:00+00:00",
+  "enterprise": {
+    "code": "NOVAVOLT",
+    "name": "NovaVolt Energy",
+    "children": [
+      {
+        "code": "NV1",
+        "name": "Hai Phong Gigafactory",
+        "timeZoneId": "Asia/Ho_Chi_Minh",
+        "children": [
+          {
+            "code": "ELECTRODE",
+            "name": "Electrode manufacturing",
+            "children": [
+              {
+                "code": "E1",
+                "name": "Electrode line 1",
+                "children": [
+                  { "code": "COAT-01", "name": "Coater 1" },
+                  { "code": "CAL-01", "name": "Calender 1" }
+                ]
+              }
+            ]
+          },
+          {
+            "code": "ASSEMBLY",
+            "name": "Cell assembly",
+            "children": [
+              {
+                "code": "L1",
+                "name": "Cell line 1",
+                "children": [
+                  { "code": "STACK-01", "name": "Stacker 1" },
+                  { "code": "STACK-02", "name": "Stacker 2" }
+                ]
+              },
+              {
+                "code": "L2",
+                "name": "Cell line 2",
+                "children": [
+                  { "code": "STACK-03", "name": "Stacker 3" },
+                  { "code": "STACK-04", "name": "Stacker 4" }
+                ]
+              }
+            ]
+          },
+          {
+            "code": "FORMATION",
+            "name": "Formation",
+            "children": [
+              {
+                "code": "F1",
+                "name": "Formation line 1",
+                "children": [
+                  {
+                    "code": "FORM-01",
+                    "name": "Formation cycler 1",
+                    "children": [
+                      { "code": "FORM-01-CH-0001", "name": "Channel 1" },
+                      { "code": "FORM-01-CH-0002", "name": "Channel 2" },
+                      { "code": "FORM-01-CH-0003", "name": "Channel 3" },
+                      { "code": "FORM-01-CH-0004", "name": "Channel 4" },
+                      { "code": "FORM-01-CH-0005", "name": "Channel 5" },
+                      { "code": "FORM-01-CH-0006", "name": "Channel 6" },
+                      { "code": "FORM-01-CH-0007", "name": "Channel 7" },
+                      { "code": "FORM-01-CH-0008", "name": "Channel 8" }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "code": "AGING",
+            "name": "Aging",
+            "children": [
+              {
+                "code": "A1",
+                "name": "Aging area 1",
+                "children": [
+                  { "code": "AGE-RACK-01", "name": "Aging rack 1" }
+                ]
+              }
+            ]
+          },
+          {
+            "code": "MODULE",
+            "name": "Module assembly",
+            "children": [
+              {
+                "code": "M1",
+                "name": "Module line 1",
+                "children": [
+                  { "code": "MLOAD-01", "name": "Module loader 1" }
+                ]
+              }
+            ]
+          },
+          {
+            "code": "PACK",
+            "name": "Pack assembly",
+            "children": [
+              {
+                "code": "P1",
+                "name": "Pack line 1",
+                "children": [
+                  { "code": "PLOAD-01", "name": "Pack loader 1" },
+                  { "code": "EOL-01", "name": "End-of-line tester 1" }
+                ]
+              }
+            ]
+          },
+          {
+            "code": "WAREHOUSE",
+            "name": "Finished goods warehouse",
+            "children": [
+              { "code": "W1", "name": "Warehouse zone 1" }
+            ]
+          }
+        ]
+      },
+      {
+        "code": "DE1",
+        "name": "Leipzig Pack Plant",
+        "timeZoneId": "Europe/Berlin",
+        "children": [
+          {
+            "code": "MODULE",
+            "name": "Module assembly",
+            "children": [
+              {
+                "code": "M1",
+                "name": "Module line 1",
+                "children": [
+                  { "code": "MLOAD-01", "name": "Module loader 1" }
+                ]
+              }
+            ]
+          },
+          {
+            "code": "PACK",
+            "name": "Pack assembly",
+            "children": [
+              {
+                "code": "P1",
+                "name": "Pack line 1",
+                "children": [
+                  { "code": "PLOAD-01", "name": "Pack loader 1" },
+                  { "code": "EOL-01", "name": "End-of-line tester 1" }
+                ]
+              }
+            ]
+          },
+          {
+            "code": "WAREHOUSE",
+            "name": "Finished goods warehouse",
+            "children": [
+              { "code": "W1", "name": "Warehouse zone 1" }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

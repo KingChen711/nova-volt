@@ -70,6 +70,11 @@ Máy đo: Windows 11, Docker Desktop, quota RAM 8 GB (xem `docs/plans/M0-bootstr
 | 2026-08-27 | `2a927a9` | ★ **Test đỏ khi bỏ compare-and-swap của activation** | **2 / 292** | Lab phá hoại B của R2. `SixteenActivationsAtOnce_ExactlyOneWins`: **16/16** caller cùng thắng thay vì 1. **Không test nào ở mức handler đỏ** — ghi cho R3 |
 | 2026-08-27 | `2a927a9` | 13 test concurrency chạy **10 vòng** trên cây đã sửa | **130 / 130 xanh** | 10 lần chạy riêng, thời gian từng lần: 0,650 / 0,480 / 0,462 / 0,477 / 0,465 / 0,456 / 0,479 / 0,504 / 0,502 / 0,473 s. Cộng dồn **4.400** lượt dispatch tranh một khoá và **160** lượt activation tranh một plant |
 | 2026-08-27 | `2a927a9` | `make ci` sau R2 | **292 / 292 xanh** | 279 test ở C18 + 13 test concurrency của R2 |
+| 2026-08-27 | `7934ac1` | ★ **Test đỏ khi bỏ diff so với revision đang hiệu lực** | **3 / 308** | Lab phá hoại của R3: `before` thành tập rỗng, tức hoàn nguyên thế giới một-tài-liệu. Cả ba là test diff, cùng triệu chứng *toàn bộ cây báo là added*. **12 test activation cũ vẫn xanh**. Cây làm việc R3, chưa commit. `ADR-024` |
+| 2026-08-27 | `7934ac1` | Diff khi NV1 chuyển revision 1 → 2 | **+4 / −0** | 4 kênh sạc `FORM-01-CH-0005…0008`. NodeCount của NV1: 31 → 35 |
+| 2026-08-27 | `7934ac1` | Diff khi NV1 chuyển revision 2 → 3 | **+1 / −1** | added `ASSEMBLY/L2/STACK-04`, removed `FORMATION/F1/FORM-02`. Lần đầu tiên `EquipmentPathsRemoved` khác rỗng |
+| 2026-08-27 | `7934ac1` | Diff khi DE1 nhảy revision 1 → 3, bỏ qua 2 | **+1 / −0** | `PACK/P1/EOL-01`. Chứng minh diff tính so với thứ **đang có hiệu lực**, không phải với tài liệu đứng cạnh trên kệ |
+| 2026-08-27 | `7934ac1` | `make ci` sau R3 | **309 / 309 xanh** | 292 sau R2 + **17** test của R3: 8 cho chuyển revision / thua CAS / restart, 9 cho catalog |
 
 > [!warning] `bus` và `rabbitmq` không thay thế được cho nhau — và đây là lý do
 > Hai probe bắt hai loại hỏng **khác nhau**, và mỗi cái mù với loại kia:
@@ -133,7 +138,7 @@ có một dòng chi tiết ở bảng phía trên.
 | Throughput bus (msg/s) | M1 publish 200 event cách nhau 100 ms — đó là kịch bản đo **mất mát**, không phải đo tải. Đo thật ở **M2** cùng N1 (≥ 5.000 msg/s) |
 | Chi phí SHA-1 của `IdempotencyKey` | `ADR-010` §Evidence ghi rõ đây là **phán đoán chưa đo**. Đo ở M2 khi có tải thật |
 | Ngưỡng kill switch | Chưa bật, vì chỉnh circuit breaker trên dữ liệu bằng 0 là đoán (`Nvm.Bus/README.md`). Bật và chỉnh ở M2 |
-| Thời gian `make ci` | Vẫn như M0: số giây chỉ có nghĩa khi test đủ nhiều. 292 test chạy ~5 s — bắt đầu ghi từ M2 |
+| Thời gian `make ci` | Vẫn như M0: số giây chỉ có nghĩa khi test đủ nhiều. 309 test chạy ~5 s — bắt đầu ghi từ M2 |
 | Thời gian projection / truy vấn | Chưa có read model. Bắt đầu ở M6 |
 
 ---

@@ -3,7 +3,7 @@ using MassTransit;
 using Nvm.Contracts.Events.FactoryModel;
 using Nvm.FactoryModel;
 using Nvm.FactoryModel.Commands;
-using Nvm.FactoryModel.Entities;
+using Nvm.FactoryModel.Storage;
 using Nvm.Kernel.Commands;
 using Nvm.Kernel.Commands.Validation;
 
@@ -137,7 +137,7 @@ internal static partial class DevBusEndpoints
         int count,
         int? delayMs,
         int? timeoutMs,
-        FactoryModelSnapshot model,
+        IFactoryModelCatalog catalog,
         IPublishEndpoint publishEndpoint,
         TimeProvider clock,
         ILoggerFactory loggerFactory,
@@ -147,6 +147,10 @@ internal static partial class DevBusEndpoints
         {
             return Results.BadRequest(new { error = "count must be at least 1." });
         }
+
+        // The newest document on the shelf. This endpoint is a publisher for the chaos lab, not an
+        // activation, so "which revision" only has to be a real one.
+        var model = catalog.Find(catalog.LatestRevision)!;
 
         if (model.FindSite(site) is null)
         {

@@ -6,11 +6,12 @@ namespace Nvm.UnitTests.FactoryModel;
 
 public sealed class FactoryModelSeedTests
 {
-    // The real file the system reads, not a trimmed fixture. Editing deploy/seed/factory-model.json
-    // turns the counting tests below red, and that is the point: a change to the plant should be a
-    // deliberate act with a number attached, not something that slips through.
+    // Revision 1 specifically, and the real file rather than a trimmed fixture. The counts below
+    // belong to that document and to no other: revisions 2 and 3 exist next to it and have different
+    // numbers on purpose. Editing r1 turns these red, and that is the point — a change to a published
+    // revision should be impossible to make by accident, because it is not a thing a plant may do.
     private static readonly FactoryModelSnapshot Snapshot =
-        FactoryModelSeed.Load(Path.Combine(AppContext.BaseDirectory, "seed", FactoryModelSeed.FileName));
+        FactoryModelSeed.Load(Path.Combine(AppContext.BaseDirectory, "seed", FactoryModelSeed.FileNameFor(1)));
 
     [Fact]
     public void Seed_HasARevisionAndAGenerationTimestamp()

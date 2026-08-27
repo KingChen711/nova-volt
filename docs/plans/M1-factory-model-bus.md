@@ -92,7 +92,7 @@ Xác nhận ngày 2026-08-26. Chủ repo uỷ quyền cho agent quyết cả ba,
 
 | # | Vấn đề | Quyết định | Hệ quả lên plan |
 |---|---|---|---|
-| Q1 | FactoryModel lưu ở đâu | **Seed file**, chưa database | C07 nạp `deploy/seed/factory-model.json`. Persistence vào M5 cùng bố cục FB đầy đủ |
+| Q1 | FactoryModel lưu ở đâu | **Seed file**, chưa database | C07 nạp `deploy/seed/factory-model.r*.json` — **một file cho mỗi revision** (sửa ở R3, `ADR-024`). Persistence vào M5 cùng bố cục FB đầy đủ |
 | Q2 | CloudEvents nằm ở đâu trên dây | **Attribute ở transport header**, body giữ envelope MassTransit | C12 viết filter + `ADR-008`. Envelope đầy đủ §7.4 là contract của event store (M6), không phải của dây |
 | Q3 | Lab phá hoại M1 | **Phát biểu lại DoD**: đếm số event mất thay vì đòi bằng 0 | D4 ở §1 đã sửa. `ADR-022` bắt buộc. `scope.md` §9/M1 và §9/M6 **đã sửa** 2026-08-26 |
 
@@ -100,7 +100,7 @@ Xác nhận ngày 2026-08-26. Chủ repo uỷ quyền cho agent quyết cả ba,
 
 Cây ISA-95 **là** master data trong DB ở mọi MES thật, kể cả Opcenter. Nhưng nó **vào** DB bằng đường nào mới là câu hỏi đáng học: trong nhà máy thật, factory model hiếm khi được gõ tay vào MES. Nó đến từ **bản vẽ kỹ thuật và hệ thống engineering**, dưới dạng một file import — đúng thứ `scope.md` §9/M11 gọi là *ERP B2MML & Master Data Reconciliation*.
 
-Nên `factory-model.json` ở M1 **không phải** phiên bản rút gọn của "cái thật". Nó là **bước đầu tiên của đường import thật**, và M5 chỉ thêm cho nó một chỗ ở trong SQL Server.
+Nên `factory-model.r<n>.json` ở M1 **không phải** phiên bản rút gọn của "cái thật". Nó là **bước đầu tiên của đường import thật**, và M5 chỉ thêm cho nó một chỗ ở trong SQL Server.
 
 Hai lý do phụ, đều thực dụng:
 
@@ -446,7 +446,7 @@ Hai bậc in đậm là hai bậc quan trọng nhất với dự án này, vì h
 **Mục tiêu**: có dữ liệu thật của hai site, và tra cứu được trong O(1).
 
 **Việc làm**
-- `deploy/seed/factory-model.json` — nguồn sự thật, có `revision` (số nguyên tăng dần) và `generatedAt`:
+- `deploy/seed/factory-model.r<n>.json` — nguồn sự thật, **một file cho mỗi revision**, mỗi file có `revision` (số nguyên tăng dần) và `generatedAt`. Bản đầu là `r1`; `r2` và `r3` đến ở R3 (`ADR-024`):
   - **NV1** (Hải Phòng, `Asia/Ho_Chi_Minh`): 7 area `ELECTRODE`, `ASSEMBLY`, `FORMATION`, `AGING`, `MODULE`, `PACK`, `WAREHOUSE`; line `L1`, `L2` (cell), `M1` (module), `P1` (pack).
   - **DE1** (Leipzig, `Europe/Berlin`) — **cố ý có DST**, xem `scope.md` §2.3. Ở M1 chỉ cần `TimeZoneId` là chuỗi trong seed; `IProductionCalendar` là M3.
   - Ít nhất một WorkCell có Equipment thật để `EquipmentPath` 6 đoạn không phải giả định: `FORM-01` với vài kênh `FORM-01-CH-0001…`.
@@ -484,7 +484,7 @@ Nên hai điều phải đúng ngay từ M1:
 
 **Việc làm**
 - `ActivateFactoryModelRevisionCommand : ICommand` — `SiteId`, `Revision`, `IdempotencyKey`.
-- Handler: nạp snapshot, kiểm `revision` mới **lớn hơn** revision đang hoạt động, đổi trạng thái, trả về event.
+- Handler: tra tài liệu ứng viên theo `revision` trong `IFactoryModelCatalog`, kiểm `revision` mới **lớn hơn** revision đang hoạt động, đổi trạng thái, trả về event kèm diff so với tài liệu đang có hiệu lực.
 - `[EventVersion(1)] FactoryModelRevisionActivated : IDomainEvent` — `SiteId`, `Revision`, `NodeCount`, `ActivatedAt`, `EquipmentPathsAdded`, `EquipmentPathsRemoved`.
 - **Chưa publish lên bus ở commit này** — handler trả event, chưa có ai nhận. Bus vào ở C13.
 
@@ -493,6 +493,24 @@ Nên hai điều phải đúng ngay từ M1:
 make test
 ```
 Test bắt buộc: activate revision 3 khi đang ở 2 → thành công; activate lại revision 2 → bị từ chối với lý do rõ ràng; gửi **hai lần cùng một `IdempotencyKey`** → handler chạy 1 lần (K7 chạy thật trong một luồng thật, không phải trong test giả của C05); event có `[EventVersion(1)]` và mọi field thời gian là `DateTimeOffset`.
+
+> [!warning] Sửa ở R3 (2026-08-27) — phép kiểm này từng **không viết được**
+> Bản gốc của C08 nạp **một** `FactoryModelSnapshot` singleton từ **một** file, nên handler chặn ngay
+> ở `_available.Revision != command.Revision`. Revision 2 không tồn tại ở đâu trong hệ thống, và
+> *"activate revision 3 khi đang ở 2"* không phải bị quên — nó bất khả thi. Hệ quả đo được:
+> `EquipmentPathsRemoved` chưa bao giờ khác rỗng, và **staged rollout** mà `oef-mapping.md` đang
+> tuyên bố thì không đi qua được handler.
+>
+> **Chủ repo chọn hướng B** trong hai hướng audit nêu (`docs/audit-m0-m1.md` R3), dạng **catalog**:
+> một revision là **một tài liệu bất biến**, seed thành `factory-model.r1/r2/r3.json`, và
+> `IFactoryModelCatalog` giữ cả kệ. Handler tra ứng viên theo revision rồi diff với tài liệu **đang
+> có hiệu lực tại chính plant đó**. Lý do đầy đủ và các phương án bị loại: `ADR-024`.
+>
+> **Giờ chạy thật**: NV1 đi 1 → 2 → 3, bước cuối báo đúng 1 path đến (`STACK-04`) và 1 path đi
+> (`FORM-02`); DE1 bỏ qua r2, nhảy 1 → 3, chỉ báo `EOL-01`; NV1 ở revision 3 trong khi DE1 ở 1.
+>
+> **Vẫn còn nợ**: active revision nằm trong RAM và **mất khi restart** — có test ghim đúng giới hạn
+> đó thay vì để trong comment. Đóng lại ở M5.
 
 **Vì sao chọn đúng event này làm event demo của M1**: nó là event **thật**, có ích ở M2 (consumer nào cache `equipment_path` sẽ cần biết khi cây đổi), chứ không phải một `TestEvent` sinh ra để chứng minh bus chạy rồi xoá. So sánh với ba container `probe` ở M0/C05 — cũng là scaffolding, nhưng ở đó việc kiểm ranh giới mạng không có cách nào khác; ở đây thì có.
 

@@ -5,7 +5,6 @@ using Nvm.Contracts.Events;
 using Nvm.Contracts.Events.FactoryModel;
 using Nvm.FactoryModel;
 using Nvm.FactoryModel.Commands;
-using Nvm.FactoryModel.Seeding;
 using Nvm.FactoryModel.Storage;
 using Nvm.Kernel;
 using Nvm.Kernel.Commands;
@@ -18,15 +17,40 @@ public sealed class ActivateFactoryModelRevisionTests
 {
     private static readonly DateTimeOffset ShiftAStart = new(2026, 8, 25, 6, 0, 0, TimeSpan.FromHours(7));
 
-    private static readonly string SeedPath =
-        Path.Combine(AppContext.BaseDirectory, "seed", FactoryModelSeed.FileName);
+    // What each published revision did to the plant, so the assertions below read as the change they
+    // are checking rather than as strings. r2 widened Formation cycler 1 from four charging channels
+    // to eight; r3 took cycler 2 out for a long overhaul, put a fourth stacker on cell line 2, and —
+    // at Leipzig only — added an end-of-line tester.
+    private const string Cycler2 = "NOVAVOLT/NV1/FORMATION/F1/FORM-02";
+    private const string Stacker4 = "NOVAVOLT/NV1/ASSEMBLY/L2/STACK-04";
+    private const string LeipzigEolTester = "NOVAVOLT/DE1/PACK/P1/EOL-01";
+
+    private static readonly string SeedDirectory = Path.Combine(AppContext.BaseDirectory, "seed");
 
     private static ServiceProvider BuildContainer(FakeTimeProvider clock) =>
         new ServiceCollection()
             .AddSingleton<TimeProvider>(clock)
-            .AddNvmFactoryModel(SeedPath)
+            .AddNvmFactoryModel(SeedDirectory)
             .AddNvmKernel(typeof(ActivateFactoryModelRevisionCommand).Assembly)
             .BuildServiceProvider();
+
+    /// <summary>Walks a plant up through the given revisions and hands back the last event.</summary>
+    private static async Task<FactoryModelRevisionActivated> RollForwardAsync(
+        ICommandDispatcher dispatcher,
+        string siteId,
+        params int[] revisions)
+    {
+        FactoryModelRevisionActivated? last = null;
+
+        foreach (var revision in revisions)
+        {
+            last = await dispatcher.DispatchAsync(
+                Activate(siteId, revision),
+                TestContext.Current.CancellationToken);
+        }
+
+        return last!;
+    }
 
     private static ActivateFactoryModelRevisionCommand Activate(string siteId, int revision) =>
         new(ActivateFactoryModelRevisionCommand.KeyFor(siteId, revision), siteId, revision);
@@ -88,10 +112,12 @@ public sealed class ActivateFactoryModelRevisionTests
     }
 
     [Fact]
-    public async Task Activating_ARevisionTheDocumentDoesNotHold_IsRefused()
+    public async Task Activating_ARevisionTheCatalogDoesNotHold_IsRefusedAndNamesWhatExists()
     {
-        // The revision is a guard, not a selector: the caller says which revision it read. Activating a
-        // document nobody looked at is how a decommissioned work cell reappears on the shop floor.
+        // The revision is a guard, not a selector: the caller says which revision it read. Refusing an
+        // unpublished number is how a decommissioned work cell is kept off the shop floor — and the
+        // refusal names the shelf, because "revision 99 does not exist" leaves the operator guessing
+        // whether they mistyped or the rollout was never published.
         await using var container = BuildContainer(new FakeTimeProvider(ShiftAStart));
         using var scope = container.CreateScope();
         var dispatcher = scope.ServiceProvider.GetRequiredService<ICommandDispatcher>();
@@ -99,7 +125,8 @@ public sealed class ActivateFactoryModelRevisionTests
         var thrown = await Should.ThrowAsync<FactoryModelActivationException>(
             () => dispatcher.DispatchAsync(Activate("NV1", 99), TestContext.Current.CancellationToken));
 
-        thrown.Message.ShouldContain("revision 1");
+        thrown.Message.ShouldContain("revision 99");
+        thrown.Message.ShouldContain("1, 2, 3");
     }
 
     [Fact]
@@ -211,5 +238,206 @@ public sealed class ActivateFactoryModelRevisionTests
 
         ActivateFactoryModelRevisionCommand.KeyFor("NV1", 1)
             .ShouldNotBe(ActivateFactoryModelRevisionCommand.KeyFor("NV1", 2));
+    }
+
+    // ── Moving a plant from one revision to the next ────────────────────────────────────────────
+    // Everything above activates revision 1 on a plant running nothing, where every path is new and
+    // nothing is ever removed. That is the easy half, and until now it was the only half.
+
+    [Fact]
+    public async Task Activating_RevisionTwoWhileOnOne_ReportsTheNewChannelsAndRemovesNothing()
+    {
+        // Formation cycler 1 went from four charging channels to eight. Widening capacity takes
+        // nothing away, so the removed list has to stay empty: a diff that reported churn on a pure
+        // addition would send every consumer rebuilding a cache for equipment that never moved.
+        await using var container = BuildContainer(new FakeTimeProvider(ShiftAStart));
+        using var scope = container.CreateScope();
+        var dispatcher = scope.ServiceProvider.GetRequiredService<ICommandDispatcher>();
+
+        var activated = await RollForwardAsync(dispatcher, "NV1", 1, 2);
+
+        activated.Revision.ShouldBe(2);
+        activated.NodeCount.ShouldBe(35);
+        activated.EquipmentPathsRemoved.ShouldBeEmpty();
+        activated.EquipmentPathsAdded.ShouldBe([
+            "NOVAVOLT/NV1/FORMATION/F1/FORM-01/FORM-01-CH-0005",
+            "NOVAVOLT/NV1/FORMATION/F1/FORM-01/FORM-01-CH-0006",
+            "NOVAVOLT/NV1/FORMATION/F1/FORM-01/FORM-01-CH-0007",
+            "NOVAVOLT/NV1/FORMATION/F1/FORM-01/FORM-01-CH-0008"]);
+    }
+
+    [Fact]
+    public async Task Activating_RevisionThreeWhileOnTwo_ReportsBothWhatArrivedAndWhatLeft()
+    {
+        // The case the plan asked for at C08 and the code could not perform. Cycler 2 went out for a
+        // long overhaul and a fourth stacker went in, so exactly one path leaves and one arrives —
+        // and the one that leaves is the half of the contract that had never run once.
+        await using var container = BuildContainer(new FakeTimeProvider(ShiftAStart));
+        using var scope = container.CreateScope();
+        var dispatcher = scope.ServiceProvider.GetRequiredService<ICommandDispatcher>();
+        var active = container.GetRequiredService<IActiveFactoryModel>();
+
+        await RollForwardAsync(dispatcher, "NV1", 1, 2);
+        active.Current("NV1").ShouldNotBeNull().Revision.ShouldBe(2);
+
+        var activated = await dispatcher.DispatchAsync(
+            Activate("NV1", 3),
+            TestContext.Current.CancellationToken);
+
+        activated.Revision.ShouldBe(3);
+        activated.NodeCount.ShouldBe(35);
+        activated.EquipmentPathsAdded.ShouldBe([Stacker4]);
+        activated.EquipmentPathsRemoved.ShouldBe([Cycler2]);
+        active.Current("NV1").ShouldNotBeNull().Revision.ShouldBe(3);
+    }
+
+    [Fact]
+    public async Task Activating_ARevisionBehindTheOneInForce_IsRefused()
+    {
+        // Rolling back is not an activation. A plant that has told the world it moved to 3 cannot
+        // quietly return to 2: the stream would then carry two contradictory claims and no consumer
+        // could work out which tree is on the floor.
+        //
+        // A fresh idempotency key on purpose. Reusing the key from the earlier step would be replayed
+        // as a duplicate and hand back the old event, which is correct behaviour and would test
+        // nothing about the refusal.
+        await using var container = BuildContainer(new FakeTimeProvider(ShiftAStart));
+        using var scope = container.CreateScope();
+        var dispatcher = scope.ServiceProvider.GetRequiredService<ICommandDispatcher>();
+        await RollForwardAsync(dispatcher, "NV1", 1, 2, 3);
+
+        var rollback = new ActivateFactoryModelRevisionCommand(
+            IdempotencyKey.FromNaturalKey("factory-model", "rollback-attempt", "NV1"),
+            "NV1",
+            2);
+
+        var thrown = await Should.ThrowAsync<FactoryModelActivationException>(
+            () => dispatcher.DispatchAsync(rollback, TestContext.Current.CancellationToken));
+
+        thrown.Message.ShouldContain("would not move it forward");
+    }
+
+    [Fact]
+    public async Task TwoPlants_SitOnDifferentRevisions_WhichIsWhatAStagedRolloutIs()
+    {
+        // Hai Phong on 3 while Leipzig is still on 1. Not drift waiting to be corrected — a rollout
+        // reaches one plant at a time, and a model that could not express this would force both plants
+        // to move together, which is the one thing a factory never does.
+        await using var container = BuildContainer(new FakeTimeProvider(ShiftAStart));
+        using var scope = container.CreateScope();
+        var dispatcher = scope.ServiceProvider.GetRequiredService<ICommandDispatcher>();
+        var active = container.GetRequiredService<IActiveFactoryModel>();
+
+        await RollForwardAsync(dispatcher, "NV1", 1, 2, 3);
+        await dispatcher.DispatchAsync(Activate("DE1", 1), TestContext.Current.CancellationToken);
+
+        active.Current("NV1").ShouldNotBeNull().Revision.ShouldBe(3);
+        active.Current("DE1").ShouldNotBeNull().Revision.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task Activating_ASkippedRevision_DiffsAgainstWhatIsInForce_NotTheDocumentBeforeIt()
+    {
+        // Leipzig never took revision 2 — nothing in it concerned Leipzig. Going straight from 1 to 3
+        // has to diff against what the plant is actually running, not against whichever document
+        // happens to sit next to 3 on the shelf. Getting this wrong would report the Hai Phong
+        // channels as arriving at Leipzig.
+        await using var container = BuildContainer(new FakeTimeProvider(ShiftAStart));
+        using var scope = container.CreateScope();
+        var dispatcher = scope.ServiceProvider.GetRequiredService<ICommandDispatcher>();
+
+        var activated = await RollForwardAsync(dispatcher, "DE1", 1, 3);
+
+        activated.NodeCount.ShouldBe(10);
+        activated.EquipmentPathsAdded.ShouldBe([LeipzigEolTester]);
+        activated.EquipmentPathsRemoved.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task TheSameRollout_RunTwice_ProducesTheSameEventBothTimes()
+    {
+        // Deterministic, because these events end up in an audit trail and in a golden file. A payload
+        // whose order came from hash iteration would differ between two runs of the same change, and
+        // nothing would be comparable to anything ever again.
+        var first = await RunRolloutAsync();
+        var second = await RunRolloutAsync();
+
+        second.EventId.ShouldBe(first.EventId);
+        second.NodeCount.ShouldBe(first.NodeCount);
+        second.EquipmentPathsAdded.ShouldBe(first.EquipmentPathsAdded);
+        second.EquipmentPathsRemoved.ShouldBe(first.EquipmentPathsRemoved);
+
+        async Task<FactoryModelRevisionActivated> RunRolloutAsync()
+        {
+            await using var container = BuildContainer(new FakeTimeProvider(ShiftAStart));
+            using var scope = container.CreateScope();
+
+            return await RollForwardAsync(
+                scope.ServiceProvider.GetRequiredService<ICommandDispatcher>(),
+                "NV1",
+                1,
+                2,
+                3);
+        }
+    }
+
+    [Fact]
+    public async Task ActiveRevision_IsLostOnRestart_WhileTheCatalogIsNot()
+    {
+        // The boundary M1 stops at, asserted rather than described in a comment nobody re-checks. The
+        // documents are files, so a restart reads all three back; which revision each plant had in
+        // force lived in RAM and is gone. A plant that comes back believing it runs nothing will
+        // report its whole tree as added on the next activation. Closing that needs a database (M5).
+        await using (var beforeRestart = BuildContainer(new FakeTimeProvider(ShiftAStart)))
+        {
+            using var scope = beforeRestart.CreateScope();
+            await RollForwardAsync(
+                scope.ServiceProvider.GetRequiredService<ICommandDispatcher>(),
+                "NV1",
+                1,
+                2,
+                3);
+
+            beforeRestart.GetRequiredService<IActiveFactoryModel>()
+                .Current("NV1").ShouldNotBeNull().Revision.ShouldBe(3);
+        }
+
+        await using var afterRestart = BuildContainer(new FakeTimeProvider(ShiftAStart));
+
+        afterRestart.GetRequiredService<IActiveFactoryModel>().Current("NV1").ShouldBeNull();
+        afterRestart.GetRequiredService<IFactoryModelCatalog>().Revisions.ShouldBe([1, 2, 3]);
+    }
+
+    [Fact]
+    public async Task Activating_WhenThePlantMovedUnderneath_IsRefusedRatherThanOverwriting()
+    {
+        // The compare-and-swap losing, seen from the handler rather than from the store. A scheduled
+        // rollout and an engineer at the console read the same current revision; whichever writes
+        // second has to be told it lost, because "the plant is on revision 3" is one fact and a work
+        // cell is either on the floor or it is not.
+        //
+        // Forced with a stand-in rather than a real race, so this branch runs on every build instead
+        // of on the builds where the scheduler happens to interleave the right way.
+        await using var container = new ServiceCollection()
+            .AddSingleton<TimeProvider>(new FakeTimeProvider(ShiftAStart))
+            .AddSingleton<IActiveFactoryModel>(new AlwaysLosesTheRace())
+            .AddNvmFactoryModel(SeedDirectory)
+            .AddNvmKernel(typeof(ActivateFactoryModelRevisionCommand).Assembly)
+            .BuildServiceProvider();
+        using var scope = container.CreateScope();
+        var dispatcher = scope.ServiceProvider.GetRequiredService<ICommandDispatcher>();
+
+        var thrown = await Should.ThrowAsync<FactoryModelActivationException>(
+            () => dispatcher.DispatchAsync(Activate("NV1", 1), TestContext.Current.CancellationToken));
+
+        thrown.Message.ShouldContain("moved to another revision");
+    }
+
+    /// <summary>A plant that somebody else always moves first.</summary>
+    private sealed class AlwaysLosesTheRace : IActiveFactoryModel
+    {
+        public ActiveFactoryModelRevision? Current(string siteId) => null;
+
+        public bool TryActivate(ActiveFactoryModelRevision revision, int? expectedCurrentRevision) => false;
     }
 }

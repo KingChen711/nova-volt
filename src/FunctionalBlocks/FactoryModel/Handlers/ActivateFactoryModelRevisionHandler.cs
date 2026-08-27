@@ -7,21 +7,29 @@ using Nvm.Kernel.Commands;
 namespace Nvm.FactoryModel.Handlers;
 
 /// <summary>Puts a revision in force at a plant, and says what changed.</summary>
-/// <param name="available">The model document currently on disk.</param>
+/// <param name="catalog">Every revision that exists, in force or not.</param>
 /// <param name="active">What each plant is running.</param>
 /// <param name="clock">The only clock (AGENTS.md K1).</param>
 /// <remarks>
+/// <para>
 /// Holds the rules that need state, and nothing else. Shape checks happen a stage earlier in
 /// <see cref="ActivateFactoryModelRevisionValidator"/>; deduplication and the audit entry are wrapped
 /// around this call by the pipeline. What is left is the part only this Functional Block knows.
+/// </para>
+/// <para>
+/// <b>Two documents, not one.</b> Moving a plant from revision 2 to revision 3 means reading both:
+/// what it is running now and what it is being asked to run. The event carries the difference, so the
+/// handler cannot work from a single "current document" — that shape can only ever announce a first
+/// activation, and every path would look added forever.
+/// </para>
 /// </remarks>
 public sealed class ActivateFactoryModelRevisionHandler(
-    FactoryModelSnapshot available,
+    IFactoryModelCatalog catalog,
     IActiveFactoryModel active,
     TimeProvider clock)
     : ICommandHandler<ActivateFactoryModelRevisionCommand, FactoryModelRevisionActivated>
 {
-    private readonly FactoryModelSnapshot _available = available;
+    private readonly IFactoryModelCatalog _catalog = catalog;
     private readonly IActiveFactoryModel _active = active;
     private readonly TimeProvider _clock = clock;
 
@@ -34,19 +42,18 @@ public sealed class ActivateFactoryModelRevisionHandler(
         ArgumentNullException.ThrowIfNull(command);
         cancellationToken.ThrowIfCancellationRequested();
 
-        var candidate = _available.FindSite(command.SiteId)
+        // The caller names the revision it read, and the catalog either holds that document or it does
+        // not. Documents are never rewritten, so a revision that resolves here is the same tree the
+        // caller looked at — which is what the old "does the file still say what you think" check was
+        // reaching for, without being able to prove it.
+        var document = _catalog.Find(command.Revision)
             ?? throw new FactoryModelActivationException(
-                $"The model document does not describe plant '{command.SiteId}'.");
+                $"The catalog does not hold revision {command.Revision}. "
+                + $"It holds: {string.Join(", ", _catalog.Revisions)}.");
 
-        // The caller names the revision it read. If the file has been replaced since, refusing is the
-        // whole point: activating a document nobody looked at is how a decommissioned work cell turns
-        // up on the shop floor again.
-        if (_available.Revision != command.Revision)
-        {
-            throw new FactoryModelActivationException(
-                $"Revision {command.Revision} was requested for '{command.SiteId}', "
-                + $"but the model document on disk is revision {_available.Revision}.");
-        }
+        var candidate = document.FindSite(command.SiteId)
+            ?? throw new FactoryModelActivationException(
+                $"Revision {command.Revision} does not describe plant '{command.SiteId}'.");
 
         var current = _active.Current(command.SiteId);
 

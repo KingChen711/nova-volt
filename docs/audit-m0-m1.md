@@ -43,7 +43,7 @@ context là mất sạch, và không agent nào sau đó biết còn nợ gì. *
 |---|---|---|---|---|
 | **R1** | IT đi vòng tới OT qua port host | **K11** | **xong** — `2a927a9` | ✅ đo lại 3 lần |
 | **R2** | Idempotency không chặn duplicate đồng thời | **K7** | **xong** — commit R2 | ✅ lab phá hoại: bỏ cơ chế → **6/292** và **2/292** test đỏ, đúng chỗ, đúng lý do |
-| **R3** | Activation revision 2 → 3 chưa được chứng minh | plan C08 | chưa | ☐ |
+| **R3** | Activation revision 2 → 3 chưa được chứng minh | plan C08 | **xong** — commit R3 | ✅ xác minh lại cả 4 phát hiện; lab: bỏ diff → **3/308** test đỏ |
 | **R4** | `IReadOnlyList` bị nhầm là immutable | — | chưa | ☐ |
 | **R5** | Tài liệu nói M1 xong trong khi D5 còn mở | §1.3 | chưa | ☐ |
 
@@ -125,9 +125,9 @@ key, và bản gửi lại đã sửa bị nuốt như duplicate.
 
 ---
 
-## R3 — Activation revision 2 → 3 chưa được chứng minh · **chưa**
+## R3 — Activation revision 2 → 3 chưa được chứng minh · **xong** (hướng B)
 
-**Phát hiện của audit** *(chưa tự kiểm — phải xác minh lại trước khi tin)*:
+**Phát hiện của audit** *(đã tự kiểm 2026-08-27 — cả 4 đều đúng, và phát hiện 4 nặng hơn bản viết)*:
 
 - Plan C08 **bắt buộc** có test *"kích hoạt revision 3 khi đang ở 2"*.
 - Test hiện có chỉ bao gồm activation đầu tiên và kích hoạt lại revision 1.
@@ -135,25 +135,48 @@ key, và bản gửi lại đã sửa bị nuốt như duplicate.
 - Vì thế code **chưa chứng minh** staged rollout, cũng chưa chứng minh `EquipmentPathsAdded` /
   `EquipmentPathsRemoved` tính đúng giữa hai revision.
 
-**Phải trình bày hai hướng và chờ chủ repo chọn — không được tự chọn**:
+**Xác minh lại phát hiện 4 cho thấy nó nặng hơn**: không phải *"chưa chứng minh"* mà là **không thể
+chứng minh**. Handler chặn ở `_available.Revision != command.Revision`, và `_available` là **một**
+snapshot singleton nạp từ **một** file `revision: 1`. Revision 2 không tồn tại ở đâu trong hệ thống,
+nên staged rollout — thứ `oef-mapping.md` đang tuyên bố — cũng bất khả thi qua handler.
+
+**Hai hướng đã trình bày. Chủ repo giao lại quyền quyết định** kèm tiêu chí *sát thực tế,
+production-ready, học được nghiệp vụ lẫn kỹ thuật* → **chọn hướng B, dạng catalog** (`ADR-024`):
 
 | | Hướng | Nghĩa là |
 |---|---|---|
 | **A** | M1 chỉ minh hoạ activation đầu tiên | Sửa plan/comment để **thôi tuyên bố** staged rollout đã chạy; dời transition thật sang milestone có persistence |
 | **B** | M1 hỗ trợ transition thật | Thêm nguồn/catalog nhiều revision hoặc reload có kiểm soát, rồi test 2 → 3 và diff thêm/bớt |
 
-**Không được giữ nguyên trạng**: plan yêu cầu một việc, code/test chứng minh một việc khác.
+### Đã làm — 2026-08-27
 
-**Acceptance nếu chọn B**: active revision 2, candidate 3 · revision 3 kích hoạt thành công ·
-added/removed đúng và **deterministic** · revision bằng hoặc thấp hơn bị từ chối · hai site ở hai
-revision khác nhau được · có test cho restart/persistence theo boundary đã chọn · `make ci` xanh.
+Seed thành **kệ tài liệu**: `factory-model.r1/r2/r3.json`, một file cho mỗi revision, không sửa file
+cũ. `IFactoryModelCatalog` giữ cả kệ; `IActiveFactoryModel` vẫn chỉ nói plant nào đang mở quyển nào.
+Handler tra ứng viên theo revision rồi diff với tài liệu **đang có hiệu lực tại chính plant đó**.
 
-> Ghi chú: R2 đã thêm `ActiveFactoryModelConcurrencyTests` có phủ *"hai plant ở hai revision khác nhau"*
-> ở mức store. Đó **không** thay thế được yêu cầu 2 → 3 đi qua handler.
->
-> Và lab B của R2 đã **đo được** khoảng trống đó: bỏ hẳn compare-and-swap thì 2 test đỏ, cả hai ở mức
-> store, **không một test nào ở mức handler đỏ**. Nhánh `FactoryModelActivationException` hiện chưa
-> được test nào đi qua — thêm nó vào acceptance của R3, dù chọn hướng A hay B.
+Nghiệp vụ của ba revision: `r2` nâng `FORM-01` từ 4 lên 8 kênh sạc · `r3` tháo `FORM-02` đi đại tu,
+thêm `STACK-04` vào `L2`, và thêm `EOL-01` cho `DE1`.
+
+**Acceptance của hướng B — từng mục**:
+
+| Yêu cầu | Kết quả |
+|---|---|
+| active revision 2, candidate 3 → thành công | ✅ `Activating_RevisionThreeWhileOnTwo_...` |
+| added/removed đúng | ✅ r2 → r3: added `ASSEMBLY/L2/STACK-04`, removed `FORMATION/F1/FORM-02` |
+| added/removed **deterministic** | ✅ chạy cùng một đợt rollout hai lần trong hai container, so từng phần tử |
+| revision bằng hoặc thấp hơn bị từ chối | ✅ bằng (có sẵn) và thấp hơn (mới, dùng `IdempotencyKey` khác để không bị nuốt như duplicate) |
+| hai site ở hai revision khác nhau | ✅ NV1 ở 3, DE1 ở 1, **qua handler** chứ không phải qua store |
+| test cho restart/persistence theo boundary | ✅ catalog đọc lại được, active revision **mất** — giới hạn được ghim bằng test |
+| nhánh **thua CAS đi qua handler** *(thêm từ lab B của R2)* | ✅ `Activating_WhenThePlantMovedUnderneath_...`, ép bằng stand-in để chạy mọi build |
+| `make ci` xanh | ✅ **309/309** (292 → +17) |
+
+**Thêm một mục ngoài acceptance**: diff phải so với thứ **đang có hiệu lực**, không phải với tài liệu
+đứng cạnh trên kệ. DE1 bỏ qua r2 rồi nhảy 1 → 3 chỉ báo `EOL-01`, không kéo theo kênh sạc của NV1.
+
+**Lab phá hoại**: thay `before` bằng tập rỗng — tức hoàn nguyên đúng thế giới một-tài-liệu — cho
+**3 đỏ / 308**, đúng ba test diff, cả ba với cùng triệu chứng *toàn bộ cây báo là added*. **12 test
+activation cũ vẫn xanh**: cùng bài học với R2, bộ test cũ không bỏ sót lỗi mà **không thể** thấy nó.
+Handler hoàn nguyên bằng bản sao + `sha256sum -c`, khớp bit-for-bit.
 
 ---
 

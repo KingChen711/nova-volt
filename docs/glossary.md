@@ -144,7 +144,11 @@ Routing đầy đủ ở [`scope.md`](scope.md) §2.2.
 | **Bounded context** | Vùng mà mỗi từ có **đúng một nghĩa**. Ranh giới là **ngôn ngữ**, không phải kỹ thuật — xem §7 ở trên để thấy vì sao |
 | **Functional Block (FB)** | Đơn vị đóng gói của Opcenter EF: một bounded context có entity, command, handler, schema DB riêng |
 | **CloudEvents** | Chuẩn CNCF quy định **tên và ý nghĩa** các trường bao ngoài một sự kiện (`id`, `type`, `source`, `time`, `subject`…) |
-| **Envelope** | Lớp bao ngoài sự kiện. Bên trong (`data`) là nội dung nghiệp vụ; bên ngoài là siêu dữ liệu để định tuyến, dedup, audit |
+| **Envelope** | Lớp bao ngoài sự kiện. Bên trong (`data`) là nội dung nghiệp vụ; bên ngoài là siêu dữ liệu để định tuyến, dedup, audit. **Hai loại, đừng nhập một**: envelope của *framework* (MassTransit tự bọc để định tuyến/retry — thay thư viện là mất) và envelope *nghiệp vụ* (CloudEvents §7.4 — sống trong event store, không được đổi). Xem `ADR-008` |
+| **Transport header** | Siêu dữ liệu đi kèm message ở tầng giao thức, **ngoài** body. Đọc được kể cả khi body không deserialize nổi — đó là lý do thuộc tính CloudEvents nằm ở đây |
+| **`source`** *(CloudEvents)* | *"Ai nói điều này"* — `urn:novavolt:{site}:{app}`. Thứ đầu tiên người ta nhìn khi hai service bất đồng về cùng một đơn vị |
+| **`subject`** *(CloudEvents)* | Sự kiện **nói về cái gì** — ví dụ `urn:trace-unit:cell:NV1CL16238A00123` |
+| **`dataschema`** *(CloudEvents)* | URL tới định nghĩa schema của `data`, để bên thứ ba xác thực payload |
 | **Exchange** | "Bưu cục" của RabbitMQ. Producer gửi **vào exchange**, không gửi thẳng vào queue |
 | **Routing key** | Địa chỉ ghi trên message: `nvm.NV1.traceability.unit-serialized.v1`. **Phân biệt hoa thường** |
 | **Binding** | Quy tắc consumer đăng ký, ví dụ `nvm.NV1.#`. Producer **không biết** ai đang nghe — đó là "bus-centric" |

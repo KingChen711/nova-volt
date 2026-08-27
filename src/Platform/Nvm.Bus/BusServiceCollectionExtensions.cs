@@ -1,6 +1,7 @@
 using System.Reflection;
 using MassTransit;
 using Microsoft.Extensions.DependencyInjection;
+using Nvm.Bus.CloudEvents;
 using Nvm.Bus.Topology;
 using Nvm.Contracts.CloudEvents;
 using Nvm.Contracts.Events;
@@ -51,6 +52,7 @@ public static class BusServiceCollectionExtensions
                     host.Password(options.Password);
                 });
 
+                configurator.UseNvmCloudEvents(options.ApplicationName);
                 ApplyEventTopology(configurator);
 
                 configurator.ConfigureEndpoints(context);
@@ -82,18 +84,11 @@ public static class BusServiceCollectionExtensions
         var apply = typeof(BusServiceCollectionExtensions)
             .GetMethod(nameof(ApplyTopologyFor), BindingFlags.NonPublic | BindingFlags.Static)!;
 
-        foreach (var eventType in DeclaredEvents())
+        foreach (var eventType in DeclaredEventTypes.All())
         {
             apply.MakeGenericMethod(eventType).Invoke(null, [configurator]);
         }
     }
-
-    private static IEnumerable<Type> DeclaredEvents() =>
-        typeof(IDomainEvent).Assembly
-            .GetTypes()
-            .Where(type => type is { IsAbstract: false, IsInterface: false }
-                && type.IsAssignableTo(typeof(IDomainEvent))
-                && type.GetCustomAttribute<EventContractAttribute>() is not null);
 
     private static void ApplyTopologyFor<TEvent>(IRabbitMqBusFactoryConfigurator configurator)
         where TEvent : class, IDomainEvent

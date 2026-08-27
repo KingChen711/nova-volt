@@ -28,6 +28,17 @@ public sealed class NvmBusOptions
     /// <summary>Broker password.</summary>
     public string Password { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Which deployable this process is, in kebab-case — <c>app-execution</c>, <c>ingestion</c>.
+    /// </summary>
+    /// <remarks>
+    /// The second half of every CloudEvents source URN this process publishes:
+    /// <c>urn:novavolt:nv1:app-execution</c>. Source answers "who says so", and it is the first thing
+    /// anyone looks at when two services disagree about the same unit — so it has to name a
+    /// deployable, not a machine or a class.
+    /// </remarks>
+    public string ApplicationName { get; set; } = string.Empty;
+
     /// <summary>Throws when the options cannot describe a reachable broker.</summary>
     /// <exception cref="InvalidOperationException">A required value is missing.</exception>
     public void Validate()
@@ -45,6 +56,13 @@ public sealed class NvmBusOptions
             throw new InvalidOperationException(
                 "Bus credentials are required. In development they come from .env "
                 + "(NVM_RABBITMQ_USER, NVM_RABBITMQ_PASSWORD) — the same file docker-compose reads.");
+        }
+
+        if (string.IsNullOrWhiteSpace(ApplicationName))
+        {
+            throw new InvalidOperationException(
+                "Bus application name is required: it becomes the CloudEvents source of every event "
+                + "this process publishes.");
         }
     }
 }

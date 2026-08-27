@@ -42,7 +42,7 @@ việc khác.
 | 005 | Genealogy là DAG có thời gian | Chưa viết | M5 |
 | 006 | Closure table thay vì recursive CTE | Chưa viết | M6 |
 | 007 | Định dạng serial number | Chưa viết | M4 |
-| 008 | CloudEvents envelope | Chưa viết | M6 |
+| [008](ADR-008-cloudevents-envelope.md) | CloudEvents đi ở transport header, không thay envelope MassTransit | **Accepted** 2026-08-26 | M1 · C12 |
 | 009 | Ngữ nghĩa EPCIS cho genealogy edge | Chưa viết | M5 |
 | [010](ADR-010-idempotency-key-uuid-v5.md) | Idempotency key = UUIDv5 từ natural key | **Accepted** 2026-08-26 | M1 · C04 |
 | 011 | Ba loại timestamp | Chưa viết | M3 |

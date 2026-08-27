@@ -58,6 +58,9 @@ try
         bus.Port = ushort.Parse(DotEnvLoader.Required("NVM_PORT_RABBITMQ"), CultureInfo.InvariantCulture);
         bus.Username = DotEnvLoader.Required("NVM_RABBITMQ_USER");
         bus.Password = DotEnvLoader.Required("NVM_RABBITMQ_PASSWORD");
+        // Names this deployable in every CloudEvents source it publishes:
+        // urn:novavolt:nv1:host-all. Dev mode runs every App in one process (scope.md §5.3).
+        bus.ApplicationName = "host-all";
     });
 
     builder.Services.AddDependencyHealthChecks();

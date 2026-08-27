@@ -22,6 +22,9 @@
   <Folder Name="/tests/Analyzers/">
     <Project Path="tests/Analyzers/Nvm.AnalyzerTests/Nvm.AnalyzerTests.csproj" />
   </Folder>
+  <Folder Name="/tests/Architecture/">
+    <Project Path="tests/Architecture/Nvm.ArchitectureTests/Nvm.ArchitectureTests.csproj" />
+  </Folder>
   <Folder Name="/tests/Contract/">
     <Project Path="tests/Contract/Nvm.ContractTests/Nvm.ContractTests.csproj" />
   </Folder>

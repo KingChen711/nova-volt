@@ -112,6 +112,20 @@
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="5.6.0" />
   </ItemGroup>
 
+  <ItemGroup Label="Architecture test — C17 trở đi">
+    <!--
+      NetArchTest.Rules đọc IL của assembly ĐÃ BUILD qua Mono.Cecil, nên nó bắt được thứ mà
+      analyzer không bắt được: `#pragma warning disable` giấu được diagnostic lúc biên dịch,
+      nhưng không xoá được dependency khỏi metadata.
+
+      1.3.2 là bản cuối (2021), netstandard2.0. Cũ nhưng không phải bỏ hoang theo nghĩa xấu:
+      nó đọc ECMA-335, thứ không đổi giữa các bản .NET. Đã kiểm chạy được với assembly net10.0
+      ngày 2026-08-27 — nếu bản .NET nào đó về sau làm nó vỡ thì cả sáu rule chuyển sang
+      reflection thuần, mỗi rule mất vài dòng.
+    -->
+    <PackageVersion Include="NetArchTest.Rules" Version="1.3.2" />
+  </ItemGroup>
+
   <ItemGroup Label="Test — C04 trở đi">
     <!--
       Chỉ xunit.v3. KHÔNG có Microsoft.NET.Test.Sdk, KHÔNG có xunit.runner.visualstudio:

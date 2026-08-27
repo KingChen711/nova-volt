@@ -180,6 +180,8 @@ Routing đầy đủ ở [`scope.md`](scope.md) §2.2.
 | **Upcaster** | Hàm chuyển event **v1 → v2**. Đọc event năm 2026 bằng code năm 2036 bằng cách chạy chuỗi upcaster |
 | **Analyzer** *(Roslyn)* | Đoạn code chạy **bên trong compiler** lúc build, soi cây cú pháp và báo lỗi theo quy ước riêng của dự án. Khác linter ở chỗ nó **chặn build**, không chỉ nhắc |
 | **Diagnostic** | Một phát hiện của analyzer, có id (`NVM001`), thông báo và mức độ. Mức độ khai ở `.editorconfig`, không phải trong code analyzer |
+| **Architecture test** | Test duyệt **metadata của assembly đã build** để kiểm ranh giới giữa các thành phần. Bắt được thứ analyzer không bắt: `#pragma warning disable` bịt được analyzer, nhưng không xoá được dependency khỏi metadata |
+| **Đối chứng dương** *(positive control)* | Một test áp đúng phép kiểm của rule lên thứ **phải** bị bắt. Không có nó, một rule nhìn nhầm chỗ sẽ báo "không có vi phạm" và xanh vĩnh viễn |
 | **Wire contract** | Type có payload đi **trên dây** hoặc vào event store — nên hình dạng của nó bị ràng buộc bởi thứ đọc nó 10 năm sau, không phải bởi thứ viết nó hôm nay. Ở đây: mọi thứ trong `Nvm.Contracts` cộng mọi `IDomainEvent`. Xem `NVM002` |
 | **Golden file** | File JSON **thật** của một version, giữ nguyên đời đời. Test đọc nó và assert code hôm nay vẫn hiểu. **Không bao giờ sửa file cũ** |
 | **Outbox** | Bảng trung gian để ghi DB và publish message trong **cùng một transaction**. Lời giải cho bẫy dual-write |

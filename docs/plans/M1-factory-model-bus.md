@@ -935,7 +935,58 @@ make test
 ```
 Rồi cho mỗi rule ăn một vi phạm cố ý để xác nhận nó đỏ. **Không kiểm bước này thì rule chỉ là bốn dòng code luôn xanh.**
 
+| Rule | Vi phạm cố ý | Kết quả |
+|---|---|---|
+| A1 | `Nvm.Contracts` dùng `IServiceCollection` (package ngoài BCL) | ✅ đỏ |
+| A2 | `Nvm.Kernel` dùng `MassTransit.IBus` | ✅ đỏ |
+| A3 | `Nvm.FactoryModel` reference `Nvm.Bus` | ✅ đỏ |
+| A6 | (cùng vi phạm với A3) | ✅ đỏ, **test riêng** |
+| A4 | Thêm `IReadOnlyList<DateTime>` vào event thật, **sau `#pragma warning disable NVM002`** | ✅ đỏ — xem C17.2 |
+| A5 | Bỏ `[EventVersion(1)]`, **sau `#pragma warning disable NVM003`** | ✅ đỏ |
+| — | Hoàn nguyên tất cả | ✅ **279** test xanh |
+
 **Ghi chú**: A4 chồng lấn với `NVM002` (C16), có chủ đích. Analyzer chạy lúc build và có thể bị `#pragma warning disable`; architecture test chạy lúc test và duyệt IL của assembly đã build, nên `#pragma` không giấu được. Hai lớp bắt hai loại lách khác nhau.
+
+#### C17.1 — `GetReferencedAssemblies()` KHÔNG phải danh sách `ProjectReference`
+
+Control của A3 ban đầu viết là *"áp allowlist của FB lên `Nvm.Bus`, phải có thứ bị loại"* — vì `Nvm.Bus` có `ProjectReference` tới `Nvm.Hosting`. **Chạy thử: rỗng.**
+
+Lý do: thứ duy nhất `Nvm.Bus` lấy từ `Nvm.Hosting` là `HealthTags.Ready`, một **`const`**. Const được nội tuyến lúc biên dịch, giá trị đi thẳng vào IL, và assembly kia **biến mất khỏi metadata**. `Nvm.Bus.GetReferencedAssemblies()` chỉ liệt kê `Nvm.Contracts`.
+
+Đây là một phát hiện chứ không phải một lỗi cần sửa, và ranh giới đáng ghi rõ:
+
+| Câu hỏi | Trả lời bằng |
+|---|---|
+| A có **gọi được** vào B không? | `GetReferencedAssemblies()` — đúng thứ K8/K9 quan tâm |
+| Build của A có **phụ thuộc** B không? | file `.csproj` |
+
+Rule của C17 hỏi câu thứ nhất, nên cách đọc hiện tại là đúng: một dependency mà compiler đã xoá thì không gọi được. Nếu đổi sang đọc `.csproj` thì một FB mượn đúng một hằng số sẽ bị báo vi phạm.
+
+Control được đổi sang áp allowlist lên **chính assembly test** — nó reference `Nvm.Bus` và `Nvm.FactoryModel` và dùng thật cả hai.
+
+#### C17.2 — Đã chạy thử `#pragma`, và đó là bằng chứng đáng giá nhất của C17
+
+Ghi chú của plan nói analyzer *có thể* bị `#pragma warning disable`. Không suy luận, chạy thật:
+
+```
+#pragma warning disable NVM002   ở đầu FactoryModelRevisionActivated.cs
++ thêm  public IReadOnlyList<DateTime> Sneaky { get; init; } = [];
+
+dotnet build Nvm.Contracts  → số lỗi NVM002: 0        ← analyzer đã bị bịt miệng
+dotnet test                 → A4_NoEventCarriesADateTimeAnywhereInItsShape: ĐỎ
+```
+
+Lặp lại y hệt với `NVM003` + bỏ `[EventVersion(1)]`: build 0 lỗi, `A5_EveryEventDeclaresItsWireNameAndVersion` đỏ.
+
+Một dòng `#pragma` là tất cả những gì cần để tắt một analyzer, và nó nằm trong chính file đang vi phạm — chỗ mà người review sẽ đọc lướt qua. Lớp thứ hai đọc metadata của assembly **đã sinh ra**, nơi `#pragma` không để lại dấu vết nào: property hoặc mang kiểu `DateTime`, hoặc không.
+
+#### C17.3 — Mỗi rule có một "đối chứng dương" nằm lại trong bộ test
+
+Vi phạm cố ý ở bảng trên chạy một lần rồi hoàn nguyên. Thứ **ở lại** là 6 test `*_Control_*`: mỗi cái áp đúng phép kiểm của rule lên một đối tượng **phải** bị bắt.
+
+Lý do: một rule kiểm nhầm chỗ — danh sách type rỗng, tiền tố namespace gõ sai, `GetReferencedAssemblies` trả về rỗng — sẽ báo *"không tìm thấy vi phạm nào"* và xanh mãi mãi. Đúng bài học C15.1 (analyzer im lặng), chuyển sang tầng test.
+
+Ví dụ rõ nhất là `ThereAreEventsToCheckAtAll`: nếu bộ lọc event hỏng thì **mọi** assertion "tất cả event đều ổn" ở A4 và A5 đều đúng một cách vô nghĩa.
 
 ---
 

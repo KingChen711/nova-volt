@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Ranh giới ở scope.md §5.4 phải ĐỎ ĐƯỢC, không chỉ là một sơ đồ trong tài liệu.
+
+    Project này reference MỌI assembly production để duyệt metadata của chúng. Đó là lý do
+    duy nhất — không có dòng nào ở đây GỌI code trong các assembly đó.
+  -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Nvm.ArchitectureTests</RootNamespace>
+    <!--
+      Analyzer TẮT ở project này, có chủ đích. Nó chứa những type CỐ TÌNH sai để chứng minh
+      rule đỏ được — mà NVM002/NVM003 sẽ chặn ngay lúc biên dịch.
+
+      Đó cũng chính là điều C17 muốn cho thấy: analyzer tắt được, architecture test thì không.
+      Type sai ở đây là type mà analyzer chưa từng nhìn thấy, và rule vẫn bắt được nó.
+    -->
+    <UseNvmAnalyzers>false</UseNvmAnalyzers>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="Shouldly" />
+    <PackageReference Include="NetArchTest.Rules" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../../src/Platform/Nvm.Contracts/Nvm.Contracts.csproj" />
+    <ProjectReference Include="../../../src/Platform/Nvm.Kernel/Nvm.Kernel.csproj" />
+    <ProjectReference Include="../../../src/Platform/Nvm.Bus/Nvm.Bus.csproj" />
+    <ProjectReference Include="../../../src/Platform/Nvm.Hosting/Nvm.Hosting.csproj" />
+    <ProjectReference Include="../../../src/FunctionalBlocks/FactoryModel/Nvm.FactoryModel.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+    <Using Include="Shouldly" />
+  </ItemGroup>
+
+</Project>

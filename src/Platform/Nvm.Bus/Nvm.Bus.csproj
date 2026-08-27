@@ -25,6 +25,7 @@
     <!-- MassTransit.RabbitMQ kéo theo MassTransit; khai cả hai version ở CPM để không có
          bản nào bị nâng ngầm qua đường transitive. -->
     <PackageReference Include="MassTransit.RabbitMQ" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
   </ItemGroup>
 
 </Project>

@@ -549,11 +549,26 @@ Bản mới nhất trên NuGet **không** đồng nghĩa với bản dùng đư�
 **Kiểm chứng**
 ```bash
 make up
-# chạy host, rồi (cú pháp đã kiểm trong container — xem C12.1):
-docker exec nvm-rabbitmq rabbitmq-diagnostics -q list_queues name type messages
-docker exec nvm-rabbitmq rabbitmqctl -q list_exchanges name type
+dotnet run --project src/Apps/Nvm.Host.All
+docker exec nvm-rabbitmq rabbitmqctl -q list_connections user peer_host state
 ```
-Kỳ vọng nêu trước khi chạy: queue đúng tên theo quy ước (không phải tên class), cột `type` là `quorum`, exchange có đúng tên context.
+Kỳ vọng: một connection của user `nvm` ở trạng thái `running`, và log host in `Bus started: rabbitmq://localhost/`.
+
+#### C10.3 — Không kiểm được exchange/queue ở C10, và lý do đáng biết
+
+Bản đầu của plan ghi kiểm chứng C10 là `list_queues` + `list_exchanges`. **Chạy thử: cả hai đều rỗng.**
+
+RabbitMQ khai báo topology **lười**: exchange chỉ ra đời khi có publisher gửi lần đầu, queue chỉ ra đời khi có consumer đăng ký. C10 chưa có cái nào — publisher là C13, consumer cũng C13. Cấu hình topology đúng đến mấy cũng chưa để lại dấu vết nào trên broker.
+
+Nên C10 chia làm ba loại bằng chứng, và đó là cách chia đúng cho mọi commit "quy ước":
+
+| Kiểm cái gì | Bằng cách nào | Ở đâu |
+|---|---|---|
+| **Quy ước** — tên exchange, binding pattern, tên queue, từ chối site chữ thường | unit test, không cần hạ tầng | C10 |
+| **Kết nối** — đọc `.env` đúng, credential đúng, MassTransit 8 nói chuyện được với RabbitMQ 4.3.5 | `list_connections` | C10 |
+| **Topology thật trên broker** — exchange `nvm.factory-model` kiểu `topic`, queue `quorum` | `list_exchanges` / `list_queues` | **C13** |
+
+Dời hàng thứ ba xuống C13, nơi nó **thật sự chạy được**. Giữ ở C10 chỉ tạo ra một bước kiểm luôn rỗng — và một bước kiểm không bao giờ đỏ được thì không kiểm gì (cùng bài học với golden file ở C03).
 
 #### C10.1 — RabbitMQ 4.x đã bỏ classic mirrored queue
 

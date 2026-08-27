@@ -13,4 +13,8 @@
     <PackageReference Include="AspNetCore.HealthChecks.Uris" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="../../Platform/Nvm.Bus/Nvm.Bus.csproj" />
+  </ItemGroup>
+
 </Project>

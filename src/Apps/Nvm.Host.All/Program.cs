@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Reflection;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Nvm.Bus;
 using Nvm.Host.Infrastructure;
 using Serilog;
 using Serilog.Events;
@@ -45,6 +46,19 @@ try
     // The only sanctioned clock in the codebase. AGENTS.md K1 forbids DateTime.UtcNow
     // so that day-long sagas stay testable with FakeTimeProvider.
     builder.Services.AddSingleton(TimeProvider.System);
+
+    // Manufacturing Service Bus. Credentials come from the same .env docker-compose reads —
+    // one source of truth, no second file holding the same password (M0/C10.2).
+    // No consumers here yet: this host publishes, and the probe worker consumes.
+    builder.Services.AddNvmBus(bus =>
+    {
+        // Host stays at its default of localhost, the same assumption every other dependency in
+        // this host makes (see HealthCheckRegistration). .env is the port and credential table;
+        // it does not carry host names.
+        bus.Port = ushort.Parse(DotEnvLoader.Required("NVM_PORT_RABBITMQ"), CultureInfo.InvariantCulture);
+        bus.Username = DotEnvLoader.Required("NVM_RABBITMQ_USER");
+        bus.Password = DotEnvLoader.Required("NVM_RABBITMQ_PASSWORD");
+    });
 
     builder.Services.AddDependencyHealthChecks();
 

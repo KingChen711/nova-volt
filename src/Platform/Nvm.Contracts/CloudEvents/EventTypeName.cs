@@ -1,5 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Reflection;
+using Nvm.Contracts.Events;
 
 namespace Nvm.Contracts.CloudEvents;
 
@@ -89,6 +91,33 @@ public sealed record EventTypeName
 
         type = new EventTypeName(value, context, name, version);
         return true;
+    }
+
+    /// <summary>Reads the wire name declared on an event type by its attributes.</summary>
+    /// <param name="eventType">A type carrying <c>EventContract</c> and <c>EventVersion</c>.</param>
+    /// <exception cref="InvalidOperationException">An attribute is missing, or the pair is malformed.</exception>
+    /// <remarks>
+    /// The one place that joins the two attributes into the single string that travels. Everything
+    /// that needs to know what an event is called on the wire — the exchange it publishes to, the
+    /// routing key, the CloudEvents <c>type</c> — asks here, so there is no second derivation to drift.
+    /// </remarks>
+    public static EventTypeName Of(Type eventType)
+    {
+        ArgumentNullException.ThrowIfNull(eventType);
+
+        var contract = eventType.GetCustomAttribute<EventContractAttribute>()
+            ?? throw new InvalidOperationException(
+                $"Event '{eventType.Name}' has no [EventContract]. Every event states its wire name.");
+
+        var version = eventType.GetCustomAttribute<EventVersionAttribute>()
+            ?? throw new InvalidOperationException(
+                $"Event '{eventType.Name}' has no [EventVersion]. Every event is versioned from v1.");
+
+        return TryCreate(contract.Context, contract.Name, version.Version, out var type)
+            ? type
+            : throw new InvalidOperationException(
+                $"Event '{eventType.Name}' declares an invalid wire name: "
+                + $"context '{contract.Context}', name '{contract.Name}', version {version.Version}.");
     }
 
     /// <summary>Reads a type name back from the wire, throwing when the string is malformed.</summary>

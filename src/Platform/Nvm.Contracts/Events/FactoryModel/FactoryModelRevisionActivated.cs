@@ -26,6 +26,7 @@ namespace Nvm.Contracts.Events.FactoryModel;
 /// corruption will start rejecting valid history the first time a machine is decommissioned.
 /// </para>
 /// </remarks>
+[EventContract("factory-model", "revision-activated")]
 [EventVersion(1)]
 public sealed record FactoryModelRevisionActivated(
     Guid EventId,

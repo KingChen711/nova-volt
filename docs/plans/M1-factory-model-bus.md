@@ -806,13 +806,34 @@ Dòng cuối không phải chi tiết vụn: `Degraded` trả HTTP **200**, nên
 
 | # | Bước | Kỳ vọng | Kết quả |
 |---|---|---|---|
-| 1 | `make build` trên code hiện tại | xanh — repo đã dùng `TimeProvider` từ M0/C03 | *chưa đo* |
-| 2 | Thêm `var x = DateTime.UtcNow;` vào một file bất kỳ | `dotnet build` **FAILED**, `error NVM001` | *chưa đo* |
-| 3 | Đổi thành `DateTimeOffset.Now` | vẫn FAILED | *chưa đo* |
-| 4 | Hoàn nguyên | xanh trở lại | *chưa đo* |
-| 5 | `make ci` | xanh | *chưa đo* |
+| 1 | `make build` trên code hiện tại | xanh — repo đã dùng `TimeProvider` từ M0/C03 | ✅ xanh, **0** vi phạm sẵn có |
+| 2 | Thêm `var x = DateTime.UtcNow;` vào một file bất kỳ | `dotnet build` **FAILED**, `error NVM001` | ✅ `error NVM001` tại đúng dòng, build FAILED |
+| 3 | Đổi thành `DateTimeOffset.Now` | vẫn FAILED | ✅ FAILED |
+| 3b | Đổi thành `using Clock = System.DateTime; Clock.UtcNow` | vẫn FAILED, và thông báo nêu `DateTime` chứ không nêu `Clock` | ✅ FAILED, thông báo đúng |
+| 3c | Đổi thành `DateTime.Today` | vẫn FAILED | ✅ FAILED |
+| — | **Đối chứng**: `clock.GetUtcNow()` với `TimeProvider` được inject | **xanh** | ✅ xanh |
+| 4 | Hoàn nguyên | xanh trở lại | ✅ xanh |
+| 5 | `make ci` | xanh | ✅ xanh, 247 test |
 
 Bước 3 tồn tại vì một analyzer chỉ bắt đúng một chuỗi ký tự là analyzer dễ lách nhất.
+
+Ba bước không có trong plan gốc, thêm vì cùng lý do đó:
+
+- **3b** kiểm chính lập luận "khớp theo symbol chứ không theo chữ". Không có nó thì câu đó chỉ là một comment.
+- **3c** vì `DateTime.Today` là cùng một lỗi (đọc đồng hồ máy) và plan không liệt kê. Đã thêm vào danh sách cấm.
+- **Đối chứng** vì một analyzer báo lỗi *mọi* property reference cũng qua được cả bốn bước trên.
+
+#### C15.4 — `dotnet --version` trong comment XML làm hỏng CPM, im lặng
+
+Khi ghi lệnh đo lại Roslyn version vào comment của `Directory.Packages.props`, chuỗi `--` trong
+`dotnet --version` làm file **không well-formed** (XML cấm `--` bên trong comment).
+
+Triệu chứng **không** phải "XML sai": MSBuild bỏ qua file, Central Package Management tắt theo, và
+mọi project báo `NU1015: PackageReference không có version` — tám project cùng lúc, không project nào
+nhắc tới `Directory.Packages.props`. Mất một lượt build mới lần ra.
+
+Ghi lại vì loại comment "lệnh để đo lại" đang được khuyến khích khắp repo này, và bất kỳ lệnh nào có
+cờ dài (`--verify-no-changes`, `--no-restore`, `--nologo`) đều dính.
 
 #### C15.1 — Analyzer im lặng là chế độ hỏng mặc định
 

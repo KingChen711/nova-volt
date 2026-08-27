@@ -178,6 +178,8 @@ Routing đầy đủ ở [`scope.md`](scope.md) §2.2.
 | **Dedup** | Nhận ra và bỏ qua bản trùng |
 | **Event versioning** | Mỗi event mang số version ngay từ v1. Thêm field optional → **không** tăng version; đổi ý nghĩa / xoá field / đổi kiểu → **tăng**, và viết upcaster |
 | **Upcaster** | Hàm chuyển event **v1 → v2**. Đọc event năm 2026 bằng code năm 2036 bằng cách chạy chuỗi upcaster |
+| **Analyzer** *(Roslyn)* | Đoạn code chạy **bên trong compiler** lúc build, soi cây cú pháp và báo lỗi theo quy ước riêng của dự án. Khác linter ở chỗ nó **chặn build**, không chỉ nhắc |
+| **Diagnostic** | Một phát hiện của analyzer, có id (`NVM001`), thông báo và mức độ. Mức độ khai ở `.editorconfig`, không phải trong code analyzer |
 | **Golden file** | File JSON **thật** của một version, giữ nguyên đời đời. Test đọc nó và assert code hôm nay vẫn hiểu. **Không bao giờ sửa file cũ** |
 | **Outbox** | Bảng trung gian để ghi DB và publish message trong **cùng một transaction**. Lời giải cho bẫy dual-write |
 | **Dual-write** | Ghi hai hệ thống không cùng transaction. Process chết giữa chừng → mất dữ liệu hoặc mất message |

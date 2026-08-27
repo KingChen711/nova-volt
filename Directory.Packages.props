@@ -76,6 +76,42 @@
     <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.9.0" />
   </ItemGroup>
 
+  <ItemGroup Label="Roslyn analyzer — C15 trở đi">
+    <!--
+      PIN THEO SDK, KHÔNG PIN THEO "MỚI NHẤT".
+
+      Analyzer được COMPILER nạp chứ không phải app nạp. Build analyzer dựa trên Roslyn mới
+      hơn compiler đang chạy thì compiler không tạo được instance, ném AD0001 / CS8032 —
+      và triệu chứng bên ngoài là ANALYZER IM LẶNG, build vẫn xanh. Không phải một lỗi rõ ràng.
+
+      Quy tắc: version của Microsoft.CodeAnalysis.* phải <= Roslyn trong SDK THẤP NHẤT mà
+      repo hỗ trợ. global.json pin SDK 10.0.300, nên hai con số này gắn với nhau — đổi
+      global.json thì phải đo lại dòng dưới đây.
+
+      Đo ngày 2026-08-27, SDK 10.0.300 ship Roslyn 5.6.0:
+
+        Doc ProductVersion cua file nay trong SDK dang dung (dotnet SDK path):
+        <dotnet-root>\sdk\<version>\Roslyn\bincore\Microsoft.CodeAnalysis.CSharp.dll
+        → 5.6.0-2.26230.102
+
+      Bản stable mới nhất trên NuGet lúc đó là 5.9.0. KHÔNG nâng lên.
+    -->
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.6.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="5.6.0" />
+    <!--
+      Hạ tầng test cho analyzer. CỐ Ý dùng gói KHÔNG có hậu tố .XUnit.
+
+      Microsoft.CodeAnalysis.CSharp.Analyzer.Testing.XUnit kéo theo
+      Microsoft.CodeAnalysis.Testing.Verifiers.XUnit — hạ tầng xunit v2, trong khi repo này
+      chỉ có xunit v3 (M0/C04.1). Gói không hậu tố dùng DefaultVerifier và không phụ thuộc
+      xunit ở bất kỳ version nào (đã kiểm nuspec 1.1.4: chỉ Analyzer.Testing +
+      CSharp.Workspaces + System.Formats.Asn1).
+    -->
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Analyzer.Testing" Version="1.1.4" />
+    <!-- Analyzer.Testing khai CSharp.Workspaces >= 1.0.1; pin cùng Roslyn của SDK. -->
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="5.6.0" />
+  </ItemGroup>
+
   <ItemGroup Label="Test — C04 trở đi">
     <!--
       Chỉ xunit.v3. KHÔNG có Microsoft.NET.Test.Sdk, KHÔNG có xunit.runner.visualstudio:

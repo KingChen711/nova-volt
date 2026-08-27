@@ -1,0 +1,30 @@
+<Project>
+
+  <!--
+    Nối analyzer riêng của dự án vào MỌI project.
+
+    VÌ SAO LÀ .targets CHỨ KHÔNG PHẢI .props — đây là toàn bộ lý do file này tồn tại:
+
+    MSBuild nạp Directory.Build.props TRƯỚC nội dung .csproj, và Directory.Build.targets SAU.
+    Nếu ItemGroup dưới đây nằm trong .props thì lúc điều kiện được đánh giá,
+    <IsAnalyzerProject> khai trong Nvm.Analyzers.csproj CHƯA TỒN TẠI — điều kiện luôn đúng,
+    analyzer tham chiếu chính nó, và MSBuild báo vòng phụ thuộc.
+
+    Cái bẫy ở chỗ nó KHÔNG phải lỗi cú pháp: file trông đúng, điều kiện trông đúng, và chỉ
+    thứ tự nạp làm nó sai. Cùng họ với M0/C04.3. Xem C15.2 trong docs/plans/M1-factory-model-bus.md.
+  -->
+
+  <ItemGroup Condition="'$(IsAnalyzerProject)' != 'true' AND '$(UseNvmAnalyzers)' != 'false'">
+    <!--
+      OutputItemType="Analyzer" là dòng làm nên chuyện. Thiếu nó, đây chỉ là một reference
+      thư viện bình thường: biên dịch được, không phân tích gì, build vẫn xanh.
+
+      ReferenceOutputAssembly="false" vì không project nào GỌI code trong analyzer — compiler
+      nạp nó, chứ app thì không.
+    -->
+    <ProjectReference Include="$(MSBuildThisFileDirectory)tools/analyzers/Nvm.Analyzers/Nvm.Analyzers.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+</Project>

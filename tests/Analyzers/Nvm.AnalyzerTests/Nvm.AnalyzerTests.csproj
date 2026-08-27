@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Test cho analyzer, tách riêng khỏi tests/Unit vì hai lý do:
+
+    1. Nó cần THAM CHIẾU THƯỜNG tới Nvm.Analyzers (để lấy typeof(Nvm001DateTimeNowAnalyzer)),
+       trong khi Directory.Build.targets nối project đó vào mọi project dưới dạng Analyzer.
+       Hai ProjectReference cùng đích = NU1504. UseNvmAnalyzers=false gỡ cái tự động ra.
+    2. Nó biên dịch đoạn code trong CHUỖI, không phải code của repo — khác hẳn loại test còn lại.
+
+    Hệ quả của (1): code trong chính project này KHÔNG bị NVM001 soi. Chấp nhận được vì
+    mọi "vi phạm" ở đây nằm trong string literal, không phải trong code được biên dịch.
+  -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Nvm.AnalyzerTests</RootNamespace>
+    <UseNvmAnalyzers>false</UseNvmAnalyzers>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="Shouldly" />
+    <!--
+      Gói KHÔNG có hậu tố .XUnit — bản .XUnit kéo theo hạ tầng xunit v2 và đụng v3 của repo.
+      Xem Directory.Packages.props, nhóm "Roslyn analyzer".
+    -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Analyzer.Testing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../../tools/analyzers/Nvm.Analyzers/Nvm.Analyzers.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+    <Using Include="Shouldly" />
+  </ItemGroup>
+
+</Project>

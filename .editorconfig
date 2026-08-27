@@ -134,6 +134,12 @@ dotnet_diagnostic.CA1848.severity = none        # LoggerMessage delegate — t�
 dotnet_diagnostic.CA1707.severity = none        # underscore trong tên: test method dùng Method_Scenario_Result
 dotnet_diagnostic.CS1591.severity = none        # thiếu XML doc cho public member — bật lại nếu muốn ép viết doc
 
+#### Analyzer riêng của dự án (tools/analyzers) ####
+# Mức severity phải khai Ở ĐÂY, không chỉ trong DiagnosticDescriptor.
+# Một diagnostic mặc định Info sẽ KHÔNG chặn build kể cả khi TreatWarningsAsErrors đang bật,
+# và triệu chứng là build xanh — đúng cái bẫy "analyzer im lặng" ở C15.1.
+dotnet_diagnostic.NVM001.severity = error       # đọc đồng hồ máy (DateTime.Now/UtcNow/Today...) — K1
+
 #### format ####
 csharp_new_line_before_open_brace = all
 csharp_new_line_before_else = true

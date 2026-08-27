@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Roslyn analyzer — ép K1/K2/K6 bằng compiler thay vì bằng trí nhớ.
+
+    Analyzer do COMPILER nạp, không phải app nạp. Hai hệ quả chi phối cả file này:
+      1. TargetFramework PHẢI là netstandard2.0 — compiler chạy trên .NET Framework hoặc
+         .NET Core tuỳ host (MSBuild, VS, Rider), và netstandard2.0 là mẫu số chung.
+         Đây chính là trường hợp ngoại lệ đã ghi trong comment đầu Directory.Build.props.
+      2. Version Microsoft.CodeAnalysis.CSharp phải <= Roslyn trong SDK. Xem
+         Directory.Packages.props, nhóm "Roslyn analyzer".
+
+    IsAnalyzerProject=true để Directory.Build.targets KHÔNG nối analyzer vào chính nó
+    (MSBuild sẽ báo vòng phụ thuộc). Xem C15.2 trong docs/plans/M1-factory-model-bus.md.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <RootNamespace>Nvm.Analyzers</RootNamespace>
+    <IsAnalyzerProject>true</IsAnalyzerProject>
+
+    <!-- Bật bộ RS* dành riêng cho analyzer: thread-safety, release tracking, API bị cấm
+         trong analyzer. Cùng với TreatWarningsAsErrors, chúng chặn build. -->
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- PrivateAssets="all": analyzer KHÔNG được đẩy Roslyn sang project tiêu thụ nó.
+         Nếu rò ra, project đích sẽ có hai bản Roslyn và một trong hai bị bỏ qua âm thầm. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all" />
+  </ItemGroup>
+
+  <!--
+    KHÔNG khai <AdditionalFiles> cho AnalyzerReleases.*.md ở đây. SDK đã tự đưa chúng vào, và
+    khai thêm một lần nữa làm `dotnet format` báo "Duplicate source file" — một cảnh báo
+    không chặn build nên rất dễ sống cùng nó mãi mãi.
+
+    Hai file đó là sổ đăng ký ID: một diagnostic đã phát hành thì ý nghĩa không được đổi,
+    đúng cùng lý do golden file không được sửa (K6). RS2008 ép phải có chúng.
+  -->
+
+</Project>

@@ -361,7 +361,7 @@ Cả ba đều nhẹ. Bỏ cả ba thì dự án 6 tháng này sản xuất ra m
 | `docs/oef-mapping.md` | Ánh xạ khái niệm Opcenter Execution Foundation → thành phần trong repo |
 | `docs/benchmarks.md` | Số đo hiệu năng theo thời gian, kèm ngày và commit hash |
 | `docs/runbook.md` | 10 sự cố thường gặp và cách xử lý |
-| `docs/event-catalog.md` | Danh mục domain event và schema |
+| `docs/event-catalog.md` | Danh mục domain event: version, đã cài đặt chưa, có golden file chưa |
 | `docs/package-versioning.md` | SemVer từng Functional Block, compatibility matrix |
 
 ---

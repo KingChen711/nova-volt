@@ -1307,7 +1307,7 @@ Mọi message trên Manufacturing Service Bus dùng envelope CloudEvents 1.0. L�
 > | | Hình dạng | Trạng thái |
 > |---|---|---|
 > | **Trên bus** | Thuộc tính CloudEvents đi ở **transport header** cạnh envelope của MassTransit: **6 header bắt buộc** `ce_specversion`, `ce_id`, `ce_type`, `ce_source`, `ce_time`, `ce_datacontenttype`. Năm thuộc tính tuỳ chọn trong JSON trên — `subject`, `dataschema`, `correlationid`, `causationid`, `partitionkey` — **vắng mặt**, không ghi rỗng, vì chưa có nguồn cấp | **Đang chạy** từ M1/C12. Vì sao không đổi hẳn body thành CloudEvents thuần: `ADR-008` |
-> | **Trong event store và bản export** | Envelope **đầy đủ** đúng như JSON trên, gồm cả `data` | M5/M6. Đây là contract 15 năm và là thứ auditor đọc |
+> | **Trong event store và bản export** | Envelope **đầy đủ** đúng như JSON trên, gồm cả `data` | Event store ở **M5**; bản export DPP ở **M12**. Đây là contract 15 năm và là thứ auditor đọc |
 >
 > Đọc JSON trên như *"hình dạng đầy đủ của contract"*, không phải *"byte đang nằm trong queue"*.
 
@@ -2729,7 +2729,7 @@ Câu bám theo, nếu không khí đang mở: *"Thế phần nào hay trục tr�
 | M | Milestone | Tuần | Bắt đầu | Xong | DoD ★ đạt? | ADR | Màn hình Mendix | Ghi chú |
 |---|---|---|---|---|---|---|---|---|
 | M0 | Bootstrap & Walking Skeleton | 1,0 | 2026-08-25 | 2026-08-26 | ☑ | ☑ | ☑ | 16 commit. Cả 5 DoD đạt. 4 ADR |
-| M1 | Factory Model & Service Bus | 1,5 | 2026-08-26 | *(chưa)* | ☐ | ☑ | — | **đang làm**. ★D1–D4 đạt; **D5 còn mở** (vế *"giải thích được"*), **C19 chưa xong** → milestone **chưa đóng**. **K7 đầy đủ còn mở tới M5**: idempotency hiện chỉ đúng trong một process (`ADR-023`). 8 ADR: 004, 008, 010, 021, 022, 023, 024, 025. 320 test. ★ Lab phá hoại: **18/200 event mất** khi broker chết 30 s |
+| M1 | Factory Model & Service Bus | 1,5 | 2026-08-26 | *(chưa)* | ☐ | ☑ | — | **đang làm**. ★D1–D4 đạt; **D5 còn mở** (vế *"giải thích được"*), **C19 chưa xong** → milestone **chưa đóng**. **K7 đầy đủ còn mở tới M5**: idempotency hiện chỉ đúng trong một process (`ADR-023`). 8 ADR: 004, 008, 010, 021, 022, 023, 024, 025. 325 test. ★ Lab phá hoại: **18/200 event mất** khi broker chết 30 s |
 | M2 | Simulator, Ingestion & Idempotency | 2,5 | | | ☐ | ☐ | — | |
 | M3 | Telemetry & Production Calendar | 1,0 | | | ☐ | ☐ | — | |
 | M4 | Mendix — Operator Station v1 | 2,0 | | | ☐ | ☐ | ☐ | |

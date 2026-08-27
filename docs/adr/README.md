@@ -68,8 +68,11 @@ Cột **Ra ở** là milestone dự kiến, không phải cam kết. Quyết đ�
 ADR-022 và ADR-023 cũng là **một cặp**, và cùng một nguyên nhân gốc: ở M1 **chưa có database nào**,
 nên không có transaction để nối hai việc lại. ADR-022 là cái giá phải trả ở đường ra (ghi trạng thái
 rồi publish — mất 18/200 event khi broker chết); ADR-023 là cái giá ở đường vào (giành chỗ cho một
-khoá dedup mà không commit được cùng effect nó bảo vệ). Cả hai đóng lại ở cùng một chỗ — M5/M6, khi
-event store xuất hiện — và đọc riêng một cái sẽ tưởng đó là hai vấn đề khác nhau.
+khoá dedup mà không commit được cùng effect nó bảo vệ). Đọc riêng một cái sẽ tưởng đó là hai vấn đề
+khác nhau. Chúng **không** đóng lại cùng lúc: ADR-023 đóng ở **M5**, khi event store và transaction
+boundary bền vững xuất hiện; ADR-022 đóng ở **M6**, khi transactional outbox nối database với
+RabbitMQ. M5 làm cho việc ghi trở nên nguyên tử; M6 mới làm cho việc gửi trở nên nguyên tử với việc
+ghi đó.
 
 ADR-001 và ADR-002 là **một cặp**, đọc riêng sẽ hiểu sai. ADR-001 chọn SQL Server vì mục tiêu học
 Opcenter; chính lựa chọn đó lấy đi `numrange` và `EXCLUDE` constraint, và đó là lý do ADR-002 tồn

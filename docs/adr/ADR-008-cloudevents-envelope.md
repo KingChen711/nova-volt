@@ -118,21 +118,38 @@ Bỏ đúng một dòng stamp `ce_datacontenttype` khỏi filter:
 failed  EveryOutgoingEvent_CarriesTheMandatoryCloudEventsAttributes
 failed  CloudEventId_IsTheEventIdAndThereforeTheCommandsIdempotencyKey
 failed  Source_NamesThePlantTheEventCameFromNotTheProcessesDefault
-  "Message carries 'ce_specversion' but not 'ce_datacontenttype'.
-   CloudEvents attributes are written as a set."
 ```
 
-Sáu header là **một bộ**, và phía đọc ép đúng như vậy: có `ce_specversion` mà thiếu bất kỳ header bắt
-buộc nào thì `CloudEvent()` ném thay vì trả về một bộ attribute nửa vời. Không header nào cả thì trả
-`null` — vắng mặt là một sự thật về message, không phải một lỗi.
+**3. Phía đọc ép "một bộ" bằng ba nhánh, không bằng một sentinel.** Ngữ nghĩa đầy đủ:
 
-**3. Kiểm trên broker thật bằng `make bus-dlq`.** Message đi qua RabbitMQ, consumer ném đúng **5**
+| Số header có mặt | `CloudEvent()` trả gì |
+|---|---|
+| **0 / 6** | `null` — vắng mặt là một sự thật về message, không phải lỗi |
+| **1–5 / 6** | ném `InvalidOperationException`, nêu **đủ tên** các header thiếu |
+| **6 / 6** | bộ attribute |
+
+Nhánh giữa phải đọc **cả sáu giá trị trước** rồi mới phán. Chọn một header làm sentinel — và
+`ce_specversion` là lựa chọn cám dỗ nhất — biến chính header đó thành trọng tài phân biệt *"không có
+attribute nào"* với *"một bộ hỏng"*: message thiếu đúng sentinel sẽ đọc ra `null`, tức là **được coi
+là hợp lệ**, trong khi năm header còn lại đang nằm trên nó nói điều ngược lại.
+
+Đo bằng lab: khôi phục lối tắt sentinel, chạy lại 11 test của `CloudEventHeaderTests`:
+
+```
+failed AMessageMissingAnyOneMandatoryAttribute...(omitted: "ce_specversion")
+total: 11 · failed: 1 · succeeded: 10
+```
+
+**Đúng một ca đỏ, và đó là ca của chính sentinel.** Năm ca thiếu-header còn lại vẫn xanh — vì một
+sentinel chỉ giấu được sự vắng mặt của **chính nó**. Đó là lý do test phải là một ca cho **mỗi**
+header chứ không phải một test cho header đáng ngờ nhất: bộ sáu không có thành viên đặc quyền, nên
+phép kiểm cũng không được có.
+
+**4. Kiểm trên broker thật bằng `make bus-dlq`.** Message đi qua RabbitMQ, consumer ném đúng **5**
 lần, message vào `nvm.factory-model.failing-probe_error` và queue chính còn **0**
 (`benchmarks.md` 2026-08-27). Đọc message trong `_error` bằng `rabbitmqadmin get messages
---ack-mode reject_requeue_true` cho thấy header `ce_*` **còn nguyên** bên cạnh `MT-Fault-*` — đúng
-tình huống ADR này tồn tại vì nó: payload không ai deserialize nổi, header vẫn nói được message tự
-nhận là gì, từ site nào.
+--ack-mode reject_requeue_true` cho thấy **cả sáu** header `ce_*` còn nguyên bên cạnh `MT-Fault-*`,
+và lab **đếm rồi assert đúng 6** — trượt thì `bus-dlq` trả exit code khác 0.
 
-> Lab hiện lọc hiển thị **ba** trong sáu header (`ce_id`, `ce_type`, `ce_source`) cho gọn màn hình.
-> Ba cái đó đủ trả lời *"nó là event gì, của ai"*, nhưng bộ đầy đủ mới là thứ ADR này quyết định —
-> nới bộ lọc ra sáu là việc nên làm ở lần chạm `bus-lab.sh` kế tiếp.
+Đây đúng là tình huống ADR này tồn tại vì nó: payload không ai deserialize nổi, header vẫn nói được
+message tự nhận là gì, từ site nào, lúc nào, và payload được mã hoá bằng gì.

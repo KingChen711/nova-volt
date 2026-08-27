@@ -110,9 +110,10 @@ giây. Chờ hàng phút là việc của redelivery theo lịch, thứ hệ th�
 **community plugin, không đi kèm image chính thức** `rabbitmq:*-management` — phải tải `.ez` và
 `rabbitmq-plugins enable` thủ công.
 
-Không cài, vì [`ADR-015`](../../../docs/adr/README.md) (`scope.md` §5.7) đã chốt sẵn hướng khác cho
-nhu cầu chờ dài: **Quartz store**, ở M7 cùng Formation/Aging saga. Cài plugin bây giờ là dựng một cơ
-chế mà một ADR đã quyết định không dùng.
+Không cài, vì [`scope.md` §5.7](../../../docs/scope.md) đã nêu hướng dự kiến khác cho nhu cầu chờ
+dài: **Quartz store**, ở M7 cùng Formation/Aging saga. Cài plugin bây giờ là dựng một cơ chế mà
+hướng đã chọn không dùng tới. `ADR-015` chốt chính thức việc này ở M7 và **chưa được viết** — đừng
+trích nó như một quyết định đã có.
 
 **Hệ quả phải biết**: một lỗi kéo dài hơn ~3 giây sẽ đẩy message vào `_error` thay vì được thử lại
 sau. Ở M1 chấp nhận được vì chưa có consumer nào phụ thuộc database. Đọc lại dòng này ở M5.

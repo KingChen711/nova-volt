@@ -79,6 +79,8 @@ Máy đo: Windows 11, Docker Desktop, quota RAM 8 GB (xem `docs/plans/M0-bootstr
 | 2026-08-27 | `0015a05` | Cây và flat index lệch nhau sau khi cây bị sửa | **42 so với 41** | Cùng lần chạy khai thác. `Find` trả `null` cho node đang nằm trong cây — không có exception nào |
 | 2026-08-27 | `0015a05` | Đối chứng dương: nới **một** kiểu về `IReadOnlyList` | **1 / 10 đỏ** | Nới `IFactoryModelCatalog.Revisions`. Đúng một test đỏ, nêu đích danh member; test mutation lúc chạy vẫn xanh |
 | 2026-08-27 | `0015a05` | `make ci` sau R4 | **319 / 319 xanh** | 309 sau R3 + **10** test immutability (5 fact + 5 ca reflection) |
+| 2026-08-27 | `585a0f6` | ★ **Test đỏ khi đọc CloudEvents bằng sentinel `ce_specversion`** | **1 / 11** | Lab phá hoại của `CloudEventContextExtensions`: khôi phục lối tắt *"thiếu `ce_specversion` thì trả `null`"*. Đúng ca `omitted: "ce_specversion"` đỏ; 5 ca thiếu-header còn lại vẫn xanh — một sentinel chỉ giấu được **chính nó**. `ADR-008` |
+| 2026-08-27 | `585a0f6` | `make ci` sau khi ép đủ bộ 6 header ở phía đọc | **325 / 325 xanh** | 320 + **5** ca theory thiếu-header (mỗi header một ca, thay cho 1 test chỉ soi `ce_datacontenttype`) |
 
 > [!warning] `bus` và `rabbitmq` không thay thế được cho nhau — và đây là lý do
 > Hai probe bắt hai loại hỏng **khác nhau**, và mỗi cái mù với loại kia:
@@ -147,7 +149,7 @@ có một dòng chi tiết ở bảng phía trên.
 | Throughput bus (msg/s) | M1 publish 200 event cách nhau 100 ms — đó là kịch bản đo **mất mát**, không phải đo tải. Đo thật ở **M2** cùng N1 (≥ 5.000 msg/s) |
 | Chi phí SHA-1 của `IdempotencyKey` | `ADR-010` §Evidence ghi rõ đây là **phán đoán chưa đo**. Đo ở M2 khi có tải thật |
 | Ngưỡng kill switch | Chưa bật, vì chỉnh circuit breaker trên dữ liệu bằng 0 là đoán (`Nvm.Bus/README.md`). Bật và chỉnh ở M2 |
-| Thời gian `make ci` | Vẫn như M0: số giây chỉ có nghĩa khi test đủ nhiều. 319 test chạy ~5 s — bắt đầu ghi từ M2 |
+| Thời gian `make ci` | Vẫn như M0: số giây chỉ có nghĩa khi test đủ nhiều. 325 test chạy ~5 s — bắt đầu ghi từ M2 |
 | Thời gian projection / truy vấn | Chưa có read model. Bắt đầu ở M6 |
 
 ---

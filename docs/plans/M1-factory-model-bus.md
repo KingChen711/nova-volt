@@ -503,7 +503,7 @@ Nên hai điều phải đúng ngay từ M1:
 ```bash
 make test
 ```
-Test bắt buộc: activate revision 3 khi đang ở 2 → thành công; activate lại revision 2 → bị từ chối với lý do rõ ràng; gửi **hai lần cùng một `IdempotencyKey`** → handler chạy 1 lần (K7 chạy thật trong một luồng thật, không phải trong test giả của C05); event có `[EventVersion(1)]` và mọi field thời gian là `DateTimeOffset`.
+Test bắt buộc: activate revision 3 khi đang ở 2 → thành công; activate lại revision 2 → bị từ chối với lý do rõ ràng; gửi **hai lần cùng một `IdempotencyKey`** → handler chạy 1 lần (dedup **process-local** chạy qua dispatcher thật, không phải qua test giả của C05 — K7 đầy đủ vẫn chờ store bền vững ở M5); event có `[EventVersion(1)]` và mọi field thời gian là `DateTimeOffset`.
 
 > [!important] Một revision là **một tài liệu**, và kệ giữ cả ba
 > `IFactoryModelCatalog` giữ `factory-model.r1.json`, `r2.json`, `r3.json` — mỗi file một tài liệu
@@ -650,7 +650,7 @@ Hai cách, chọn cách thứ hai:
 
 `UseDelayedRedelivery` của MassTransit cần plugin `rabbitmq_delayed_message_exchange`. Plugin đó là **community plugin, không đi kèm image chính thức** `rabbitmq:*-management` — phải tải `.ez` và `rabbitmq-plugins enable` thủ công.
 
-Quyết định: **không cài**. M1 chỉ dùng retry in-memory. Redelivery theo lịch (phút, giờ, ngày) là nhu cầu của saga, và `ADR-015` trong `scope.md` §5.7 đã chốt sẵn hướng đi khác — **Quartz store** — cho M7. Cài plugin bây giờ là dựng một cơ chế mà ADR đã quyết định không dùng.
+Quyết định: **không cài**. M1 chỉ dùng retry in-memory. Redelivery theo lịch (phút, giờ, ngày) là nhu cầu của saga, và `scope.md` §5.7 đã nêu **hướng dự kiến** khác — **Quartz store** — cho M7. Cài plugin bây giờ là dựng một cơ chế mà hướng đã chọn không dùng tới. `ADR-015` chốt chính thức việc này **ở M7**; hiện nó chưa được viết, nên đừng trích nó như một quyết định đã có.
 
 Hệ quả cần biết: retry in-memory **giữ message trong bộ nhớ consumer trong lúc chờ**. Với 5 lần thử và khoảng cách tính bằng giây thì không sao. Đừng nâng khoảng cách lên phút — masstransit.io cảnh báo đúng chỗ này: consumer có concurrency 5 mà retry interval 1 giờ thì 5 message hỏng làm nghẽn endpoint suốt 1 giờ.
 
@@ -1149,7 +1149,7 @@ Trả lời lúng túng câu nào → dòng tương ứng **chưa** phải `xong
 
 **Sản phẩm phụ bắt buộc**
 
-- [x] `make test` xanh — **320** test (M0 kết thúc ở 22)
+- [x] `make test` xanh — **325** test (M0 kết thúc ở 22)
 - [x] `tests/Architecture` có ≥ 5 rule — có **17**, mỗi rule đã được chứng minh là đỏ được
 - [x] `ADR-004`, `ADR-008`, `ADR-010`, `ADR-021`, `ADR-022`, `ADR-023`, `ADR-024`, `ADR-025` viết xong — mỗi cái trong commit ra quyết định, không dồn về C18/C19
 - [x] `docs/event-catalog.md` tồn tại — 35 event, **1** đã cài đặt, và đó là con số đúng

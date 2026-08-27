@@ -16,9 +16,10 @@ chúng lại**.
 
 Ràng buộc thật lúc quyết định:
 
-- **Chưa có chỗ nào để ghi event xuống trước khi publish.** Event store là M5/M6 (`scope.md` §5.5,
-  ADR-001), và schema của nó chưa chốt. Không có bảng thì không có transaction, không có transaction
-  thì không có outbox.
+- **Chưa có chỗ nào để ghi event xuống trước khi publish.** Event store bắt đầu ở **M5**
+  (`scope.md` §9/M5, ADR-001) và schema của nó chưa chốt; transactional outbox nối bảng đó với
+  RabbitMQ là việc của **M6**. Không có bảng thì không có transaction, không có transaction thì
+  không có outbox — nên hai mốc này nối tiếp nhau chứ không thay nhau.
 - **N3 nói "0 message mất sau outage 2 phút"** và được gán cho M13. **N15** — MES chết không được
   làm dừng dây chuyền — được gán cho M2. Cả hai đều chưa tới hạn ở M1.
 - `scope.md` §9/M1 lúc đầu viết lab phá hoại của M1 là *"tắt RabbitMQ giữa lúc publish → producer

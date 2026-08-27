@@ -42,7 +42,18 @@ public static class BusServiceCollectionExtensions
             // one endpoint at a time, this is the sort of thing that gets copied four times and
             // forgotten on the fifth.
             bus.AddConfigureEndpointsCallback((_, _, endpoint) =>
-                endpoint.UseMessageRetry(retry => retry.Intervals(NvmRetryPolicy.Intervals(Random.Shared))));
+            {
+                endpoint.UseMessageRetry(retry => retry.Intervals(NvmRetryPolicy.Intervals(Random.Shared)));
+
+                // RabbitMQ 4 removed classic queue mirroring; quorum queues are what replaced it. On a
+                // single development node both kinds behave identically, so choosing wrong here stays
+                // invisible until a second node exists — and by then it cannot be corrected in place.
+                // Changing a queue's type means deleting it, along with whatever is still inside.
+                if (endpoint is IRabbitMqReceiveEndpointConfigurator rabbit)
+                {
+                    rabbit.SetQuorumQueue();
+                }
+            });
 
             bus.UsingRabbitMq((context, configurator) =>
             {
@@ -52,14 +63,37 @@ public static class BusServiceCollectionExtensions
                     host.Password(options.Password);
                 });
 
-                configurator.UseNvmCloudEvents(options.ApplicationName);
+                // Topology first, and the order is not cosmetic. MassTransit locks a message's entity
+                // name the moment anything reads it, and installing the publish and send filters reads
+                // it — so calling UseNvmCloudEvents first makes the SetEntityName below throw
+                // "entity name was already evaluated" and the process never starts.
                 ApplyEventTopology(configurator);
+                configurator.UseNvmCloudEvents(options.ApplicationName);
 
                 configurator.ConfigureEndpoints(context);
             });
         });
 
         return services;
+    }
+
+    /// <summary>Registers a consumer together with the queue and bindings this system gives it.</summary>
+    /// <typeparam name="TConsumer">The consumer to place on the bus.</typeparam>
+    /// <param name="bus">The registration being built inside <see cref="AddNvmBus"/>.</param>
+    /// <remarks>
+    /// The only sanctioned way to add a consumer. Plain <c>AddConsumer&lt;T&gt;</c> also compiles and
+    /// also starts, and produces a queue bound to the context exchange with an empty routing key —
+    /// which on a topic exchange means the consumer receives nothing, with no error anywhere to say
+    /// so. See <see cref="Topology.NvmConsumerDefinition{TConsumer}"/>.
+    /// </remarks>
+    public static IBusRegistrationConfigurator AddNvmConsumer<TConsumer>(this IBusRegistrationConfigurator bus)
+        where TConsumer : class, IConsumer
+    {
+        ArgumentNullException.ThrowIfNull(bus);
+
+        bus.AddConsumer<TConsumer, NvmConsumerDefinition<TConsumer>>();
+
+        return bus;
     }
 
     /// <summary>

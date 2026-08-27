@@ -153,6 +153,9 @@ Routing đầy đủ ở [`scope.md`](scope.md) §2.2.
 | **Routing key** | Địa chỉ ghi trên message: `nvm.NV1.traceability.unit-serialized.v1`. **Phân biệt hoa thường** |
 | **Binding** | Quy tắc consumer đăng ký, ví dụ `nvm.NV1.#`. Producer **không biết** ai đang nghe — đó là "bus-centric" |
 | **Queue** | Hộp thư của một consumer. 2 consumer + 2 queue = cả hai cùng nhận (fan-out); 2 consumer + 1 queue = tranh nhau |
+| **Fan-out** | Một message tới **mọi** consumer đang quan tâm, mỗi consumer một queue riêng. Publisher không biết có bao nhiêu bên nghe, và thêm bên thứ ba không đụng gì tới publisher |
+| **Competing consumer** | Nhiều consumer **chung một queue** để chia tải: mỗi message chỉ một trong số đó nhận. Hợp lệ, nhưng nhầm nó thành fan-out thì audit trail mất một nửa số dòng mà không có lỗi ở đâu |
+| **Quorum queue** | Loại queue bền của RabbitMQ 4, thay cho classic mirrored queue đã bị gỡ. Trên một node dev hai loại chạy như nhau — chọn sai chỉ lộ ra khi có node thứ hai, và lúc đó đổi loại nghĩa là **xoá queue** cùng những gì còn trong nó |
 | **Dead letter** / `_error` | Nơi message rơi vào sau khi thử lại đủ số lần vẫn hỏng. **Không mất**, chỉ đứng riêng |
 | `_skipped` | Message tới đúng queue nhưng **không consumer nào nhận kiểu đó**. Đầy lên = binding sai hoặc consumer chưa deploy |
 | **Retry** | Chạy lại consumer khi nó ném exception. Ở đây retry nằm **trong cùng một lần delivery** — message không quay lại broker, nên consumer bị chiếm suốt cả chuỗi |

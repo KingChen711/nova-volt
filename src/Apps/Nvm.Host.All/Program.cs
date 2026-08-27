@@ -2,7 +2,11 @@ using System.Globalization;
 using System.Reflection;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Nvm.Bus;
+using Nvm.FactoryModel;
+using Nvm.FactoryModel.Commands;
 using Nvm.Host.Infrastructure;
+using Nvm.Hosting;
+using Nvm.Kernel;
 using Serilog;
 using Serilog.Events;
 
@@ -63,6 +67,12 @@ try
         bus.ApplicationName = "host-all";
     });
 
+    // Command pipeline plus the first Functional Block. The kernel is told which assemblies to scan
+    // rather than scanning everything loaded: a Functional Block that never announced itself should
+    // not be wired up because it happened to be in the output directory.
+    builder.Services.AddNvmKernel(typeof(ActivateFactoryModelRevisionCommand).Assembly);
+    builder.Services.AddNvmFactoryModel(SeedFileLocator.Locate(builder.Environment.ContentRootPath));
+
     builder.Services.AddDependencyHealthChecks();
 
     var app = builder.Build();
@@ -104,6 +114,14 @@ try
         Predicate = registration => registration.Tags.Contains("ready"),
         ResponseWriter = HealthReportWriter.Write,
     });
+
+    // Same rule as DotEnvLoader: a laptop convenience that must not exist anywhere else. These
+    // endpoints publish events on request, which is a tool in development and an unguarded write path
+    // into the plant's event stream in any other environment.
+    if (app.Environment.IsDevelopment())
+    {
+        app.MapDevBusEndpoints();
+    }
 
     app.Run();
     return 0;

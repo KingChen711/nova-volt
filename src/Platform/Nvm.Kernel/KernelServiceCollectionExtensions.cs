@@ -23,7 +23,12 @@ public static class KernelServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(handlerAssemblies);
 
-        services.TryAddSingleton<ICommandDispatcher, CommandDispatcher>();
+        // Scoped, not singleton. The dispatcher resolves handlers and behaviours out of the
+        // IServiceProvider it was given, and those are scoped — a singleton dispatcher holds the root
+        // provider, which refuses to hand out a scoped service and says so only at the first real
+        // dispatch. A caller that has no scope of its own (a background service, a saga in M7) creates
+        // one, which is the same thing every request already does.
+        services.TryAddScoped<ICommandDispatcher, CommandDispatcher>();
 
         // TryAdd: a host that already registered the clock keeps its own. Registering it here anyway
         // means the kernel works on its own, and that no code is ever tempted to reach for

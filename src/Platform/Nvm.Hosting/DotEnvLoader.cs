@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace Nvm.Host.Infrastructure;
+namespace Nvm.Hosting;
 
 /// <summary>
 /// Loads the repository root <c>.env</c> into the process environment during development.
@@ -16,8 +16,14 @@ namespace Nvm.Host.Infrastructure;
 /// Development only. In any other environment the process environment is authoritative and this
 /// loader does nothing, so a deployed app can never pick up a developer's file.
 /// </para>
+/// <para>
+/// It sits in Platform rather than inside one App because every deployable needs it: the moment a
+/// second process appeared — the bus probe worker — the alternative was a second copy of the same
+/// forty lines, and two copies of a file-format parser drift the first time one of them learns
+/// about quoted values.
+/// </para>
 /// </remarks>
-internal static class DotEnvLoader
+public static class DotEnvLoader
 {
     /// <summary>Loads <c>.env</c> from the nearest ancestor directory that contains one.</summary>
     /// <param name="contentRootPath">Directory to start searching upward from.</param>

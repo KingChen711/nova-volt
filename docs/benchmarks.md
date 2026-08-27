@@ -44,6 +44,33 @@ Máy đo: Windows 11, Docker Desktop, quota RAM 8 GB (xem `docs/plans/M0-bootstr
 
 ---
 
+## M1 — Factory Model & Manufacturing Service Bus
+
+| Ngày | Commit | Chỉ số | Giá trị | Điều kiện đo |
+|---|---|---|---|---|
+| 2026-08-27 | `0094509`+C13 | ★ **Event mất khi broker chết 30 s** | **18 / 200** | `make bus-chaos`. Publish 200 event cách nhau 100 ms, timeout 2 s mỗi lần; `stop rabbitmq` ở giây thứ 5, `start` sau 30 s. **Chưa có outbox** — xem `ADR-022` |
+| 2026-08-27 | `0094509`+C13 | Cửa sổ mất, theo số thứ tự event | **48 → 65** | Cùng lần chạy. Một khối liền, không rải rác |
+| 2026-08-27 | `0094509`+C13 | Publish thành công / consumer nhận được | **182 / 182** | Cùng lần chạy. Hai số **bằng nhau**: số mất đúng bằng số publish thất bại, không có vùng xám |
+| 2026-08-27 | `0094509`+C13 | Thời gian chạy hết 200 event | **59,0 s** | Cùng lần chạy. Chạy trơn mất ~20 s; 39 s chênh là 18 lần × 2 s timeout |
+| 2026-08-27 | `0094509`+C13 | Số lần app restart trong lúc broker chết | **0** | `Application started` xuất hiện đúng 1 lần trong `host.log`. `/health/live` = `Healthy` suốt |
+| 2026-08-27 | `0094509`+C13 | Số check `ready` đỏ khi RabbitMQ tắt | **1 / 6** | Chỉ check `rabbitmq`. `sqlserver`, `postgres`, `keycloak`, `minio`, `masstransit-bus` vẫn xanh — lỗi không lan |
+| 2026-08-27 | `0094509`+C13 | Số lần thử của consumer lỗi | **5** | `make bus-dlq`. Khoảng cách đo được: 245 / 480 / 920 / 1933 ms — exponential có jitter, khớp `NvmRetryPolicy` |
+| 2026-08-27 | `0094509`+C13 | Message trong `_error` sau 5 lần thử | **1** | Cùng lần chạy. Queue chính còn **0** — không mất, chỉ đứng riêng |
+
+> [!important] Con số 18 nói lên cái gì, và không nói lên cái gì
+> Nó **không** phải chỉ số chất lượng của RabbitMQ hay của MassTransit. Cả hai làm đúng việc của
+> mình: broker chết thì không nhận được gì, và client báo lỗi thay vì nuốt.
+>
+> Nó là giá của việc **ghi hai nơi mà không có transaction nào nối chúng lại** — bẫy dual-write ở
+> `scope.md` §5.5. Con số này tồn tại để trả lời câu hỏi mà M6 sẽ bị hỏi: *outbox thêm một bảng, một
+> worker và một transaction, đổi lại được gì?* Đổi lại 18 event, trong 30 giây, ở một hệ thống chưa
+> có tải.
+>
+> Cột `Commit` ghi `0094509`+C13 vì phép đo chạy trên cây làm việc của C13 trước khi commit. Thay
+> bằng hash thật của C13 ngay sau khi commit.
+
+---
+
 ## Mục tiêu SLO — còn phải đo
 
 Khung lấy từ `docs/scope.md` Phụ lục A. Điền khi tới milestone tương ứng; mỗi ô điền xong phải

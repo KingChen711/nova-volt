@@ -9,7 +9,11 @@
   <Folder Name="/src/Platform/">
     <Project Path="src/Platform/Nvm.Bus/Nvm.Bus.csproj" />
     <Project Path="src/Platform/Nvm.Contracts/Nvm.Contracts.csproj" />
+    <Project Path="src/Platform/Nvm.Hosting/Nvm.Hosting.csproj" />
     <Project Path="src/Platform/Nvm.Kernel/Nvm.Kernel.csproj" />
+  </Folder>
+  <Folder Name="/src/Workers/">
+    <Project Path="src/Workers/Nvm.BusProbe/Nvm.BusProbe.csproj" />
   </Folder>
   <Folder Name="/tests/" />
   <Folder Name="/tests/Contract/">

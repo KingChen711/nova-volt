@@ -56,6 +56,7 @@ việc khác.
 | [019](ADR-019-dotnet-10-lts.md) | Dùng .NET 10 LTS thay vì .NET 9 | **Accepted** 2026-08-26 | M0 · C14 |
 | [020](ADR-020-no-invariant-globalization.md) | Không bật `InvariantGlobalization` | **Accepted** 2026-08-26 | M0 · C14 |
 | [021](ADR-021-masstransit-8-not-9.md) | Pin MassTransit 8, không nâng lên 9 | **Accepted** 2026-08-26 | M1 · C09 |
+| [022](ADR-022-publish-truc-tiep-khong-outbox-o-m1.md) | Publish thẳng lên bus ở M1, chấp nhận mất event; outbox ở M6 | **Accepted** 2026-08-27 | M1 · C13 |
 
 Cột **Ra ở** là milestone dự kiến, không phải cam kết. Quyết định đến sớm hơn thì viết sớm hơn.
 

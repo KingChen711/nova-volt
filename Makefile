@@ -22,7 +22,7 @@ ALL_PROFILES := --profile probe --profile init --profile obs
 BACKUP_DIR := $(shell grep -E '^NVM_BACKUP_DIR=' .env 2>/dev/null | cut -d= -f2-)
 
 .DEFAULT_GOAL := help
-.PHONY: help up up-obs down down-v reset ps logs build test ci hooks format format-check clean backup
+.PHONY: help up up-obs down down-v reset ps logs build test ci hooks format format-check clean backup bus-fanout bus-dlq bus-chaos
 
 help:
 	@echo "NovaVolt MES"
@@ -44,6 +44,11 @@ help:
 	@echo "    make format        Tu dong sua format theo .editorconfig"
 	@echo "    make format-check  Kiem format, khong sua"
 	@echo "    make clean         Xoa thu muc artifacts"
+	@echo ""
+	@echo "  Bus (can 'make up' truoc)"
+	@echo "    make bus-fanout    D1: 1 publish -> 2 queue doc lap cung nhan"
+	@echo "    make bus-dlq       D2: consumer loi 5 lan -> message vao _error"
+	@echo "    make bus-chaos     D4: tat broker giua luc publish, DEM so event mat"
 	@echo ""
 	@echo "  Khac"
 	@echo "    make backup        git bundle toan bo repo sang NVM_BACKUP_DIR"
@@ -138,3 +143,25 @@ backup:
 	@git bundle create "$(BACKUP_DIR)/novavolt-mes.bundle" --all
 	@git bundle verify "$(BACKUP_DIR)/novavolt-mes.bundle" >/dev/null
 	@echo "Backup OK: $(BACKUP_DIR)/novavolt-mes.bundle"
+
+# ─────────────────────────────────────────────────────────
+# Bus — bang chung cua M1/C13
+#
+# Ba muc tieu nay KHONG nam trong `make ci`: chung can RabbitMQ dang chay va moi
+# lan chay mat tu 30 giay den hon mot phut. Chung la lab, khong phai test.
+#
+# Kich ban nam trong src/Workers/Nvm.BusProbe/bus-lab.sh, canh worker ma no dieu
+# khien — de khi M2 xoa worker thi khong con mot script mo coi trong tools/.
+# ─────────────────────────────────────────────────────────
+BUS_LAB := src/Workers/Nvm.BusProbe/bus-lab.sh
+
+bus-fanout: .env
+	@sh $(BUS_LAB) fanout
+
+bus-dlq: .env
+	@sh $(BUS_LAB) dlq
+
+# Lab pha hoai. AGENTS.md §5.8.4: DOAN con so truoc khi chay, roi moi doi chieu.
+# Con so cuoi cung phai duoc chep vao docs/benchmarks.md va ADR-022.
+bus-chaos: .env
+	@sh $(BUS_LAB) chaos

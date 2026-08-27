@@ -127,6 +127,10 @@ dotnet_diagnostic.CA5351.severity = error
 
 #### thứ gây ồn mà không đáng ####
 dotnet_diagnostic.CA1848.severity = none        # LoggerMessage delegate — tối ưu sớm, chưa cần
+# CA1873 (.NET 10, bật sẵn ở latest-recommended) ép đúng thứ CA1848 đang tha: một lời gọi
+# LogInformation mang tham số sẽ box tham số vào mảng TRƯỚC khi hỏi level có bật không.
+# Giữ nguyên mức error. Cách thoát là [LoggerMessage] source generator — xem
+# Nvm.BusProbe/Consumers/*.cs và Nvm.Host.All/Infrastructure/DevBusEndpoints.cs.
 dotnet_diagnostic.CA1707.severity = none        # underscore trong tên: test method dùng Method_Scenario_Result
 dotnet_diagnostic.CS1591.severity = none        # thiếu XML doc cho public member — bật lại nếu muốn ép viết doc
 

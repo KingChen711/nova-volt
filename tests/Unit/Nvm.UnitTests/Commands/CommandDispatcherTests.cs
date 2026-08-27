@@ -77,6 +77,32 @@ public sealed class CommandDispatcherTests
             () => dispatcher.DispatchAsync(new CancellableProbe(KeyFor(nameof(CancellableProbe))), cancelled.Token));
     }
 
+    [Fact]
+    public async Task DispatchAsync_ContainerWithScopeValidation_StillReachesTheHandler()
+    {
+        // ValidateScopes is what a real ASP.NET Core host turns on in Development, and BuildContainer
+        // above does not. That gap hid a wiring fault for two commits: a singleton dispatcher holds
+        // the root provider, and the root provider refuses to hand out a scoped handler. Every test
+        // here passed, and the first dispatch inside the host threw
+        // "Cannot resolve scoped service ... from root provider".
+        //
+        // ValidateScopes only. ValidateOnBuild would also be realistic but it walks every registration
+        // in this assembly, including handlers other tests register their own fixtures for — it fails
+        // here for a reason that has nothing to do with what is being asserted.
+        await using var container = new ServiceCollection()
+            .AddNvmKernel(typeof(CommandDispatcherTests).Assembly)
+            .BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
+
+        using var scope = container.CreateScope();
+        var dispatcher = scope.ServiceProvider.GetRequiredService<ICommandDispatcher>();
+
+        var result = await dispatcher.DispatchAsync(
+            new ActivateProbe(KeyFor(nameof(ActivateProbe)), 3),
+            TestContext.Current.CancellationToken);
+
+        result.ShouldBe("activated:3");
+    }
+
     public sealed record ActivateProbe(IdempotencyKey IdempotencyKey, int Revision) : ICommand<string>;
 
     public sealed record CountProbe(IdempotencyKey IdempotencyKey) : ICommand<int>;

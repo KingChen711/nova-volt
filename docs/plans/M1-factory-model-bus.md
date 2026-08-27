@@ -674,9 +674,10 @@ docker exec nvm-rabbitmq rabbitmqctl -q list_exchanges name type
 
 | Kiểm | Kỳ vọng | Kết quả |
 |---|---|---|
-| `make bus-fanout` | log của `Nvm.BusProbe` có **2 dòng** cho **1** lần publish | *chưa đo* |
-| `list_queues name messages` | **2** queue riêng, tên theo quy ước C10 | *chưa đo* |
-| Tắt 1 consumer rồi publish | queue của consumer đang tắt **tăng** `messages`, consumer còn lại vẫn nhận | *chưa đo* |
+| `make bus-fanout` | log của `Nvm.BusProbe` có **2 dòng** cho **1** lần publish | ✅ **2 dòng** — `cache-updater received revision 1` và `audit-trail recorded revision 1`, cùng `ce_id` |
+| `list_queues name type messages` | **2** queue riêng, tên theo quy ước C10 | ✅ `nvm.factory-model.cache-updater` và `nvm.factory-model.audit-trail`, cả hai **quorum** |
+| `list_exchanges name type` | exchange `nvm.factory-model` kiểu `topic` (hàng thứ ba của bảng C10.3) | ✅ `nvm.factory-model  topic` |
+| Tắt 1 consumer rồi publish | queue của consumer đang tắt **tăng** `messages`, consumer còn lại vẫn nhận | ✅ `audit-trail` = **1**, `cache-updater` = **0** và vẫn in dòng nhận |
 
 Dòng thứ ba là phép kiểm quan trọng nhất: nó chứng minh hai queue **độc lập thật**, chứ không phải hai consumer tình cờ cùng chạy.
 
@@ -684,10 +685,14 @@ Dòng thứ ba là phép kiểm quan trọng nhất: nó chứng minh hai queue 
 
 | Kiểm | Kỳ vọng | Kết quả |
 |---|---|---|
-| `make bus-dlq` | log có **đúng 5** lần thử | *chưa đo* |
-| `<queue>_error` | có **1** message | *chưa đo* |
-| queue chính | **0** message | *chưa đo* |
-| Nội dung message trong `_error` | payload nguyên vẹn + header `MT-Fault-*` nêu exception | *chưa đo* |
+| `make bus-dlq` | log có **đúng 5** lần thử | ✅ **5**, đánh số 1→5. Khoảng cách 245 / 480 / 920 / 1933 ms — exponential có jitter |
+| `<queue>_error` | có **1** message | ✅ `nvm.factory-model.failing-probe_error  quorum  1` |
+| queue chính | **0** message | ✅ `nvm.factory-model.failing-probe  quorum  0` |
+| Nội dung message trong `_error` | payload nguyên vẹn + header `MT-Fault-*` nêu exception | ✅ `MT-Fault-ExceptionType`, `MT-Fault-Message` (*"attempt 5 of 5"*), `MT-Fault-RetryCount: 4`, và **cả 6 header `ce_*` còn nguyên** |
+
+> `MT-Fault-RetryCount` = **4**, không phải 5: nó đếm lần thử **lại**. Đúng cái off-by-one mà
+> `NvmRetryPolicy.MaxAttempts` đã đặt tên để tránh — và là lý do log của consumer, không phải header
+> của broker, mới là bằng chứng cho "5 lần".
 
 #### C13.1 — Đếm số lần thử, đừng đếm số dòng log
 
@@ -710,13 +715,20 @@ Kịch bản, chạy bằng `make bus-chaos`:
 3. Chờ 30 s, `docker compose start rabbitmq`.
 4. Đếm số event mà consumer **thực sự nhận được**, đối chiếu với N.
 
+Đã chạy **2026-08-27**, `CHAOS_COUNT=200`, `CHAOS_DELAY_MS=100`, timeout publish 2 s,
+`CHAOS_STOP_AFTER=5`, `CHAOS_DOWNTIME=30`.
+
 | Kiểm | Kỳ vọng | Kết quả |
 |---|---|---|
-| App có crash không | **không**, `/health/live` = `Healthy` suốt | *chưa đo* |
-| `/health/ready` trong lúc broker tắt | `Unhealthy` ở đúng check của bus, các check khác không lan | *chưa đo* |
-| Publish thất bại | bị **bắt và đếm**, có log nêu rõ số | *chưa đo* |
-| Số event mất | **> 0** — và con số này là kết quả chính của lab | *chưa đo* |
-| Sau khi broker lên lại | publish tiếp tục thành công **không cần restart app** | *chưa đo* |
+| App có crash không | **không**, `/health/live` = `Healthy` suốt | ✅ `Healthy` suốt; `Application started` xuất hiện **đúng 1 lần** |
+| `/health/ready` trong lúc broker tắt | `Unhealthy` ở đúng check của bus, các check khác không lan | ✅ chỉ `rabbitmq` đỏ; 5 check còn lại xanh |
+| Publish thất bại | bị **bắt và đếm**, có log nêu rõ số | ✅ `failed: 18`, `firstFailure: 48`, `lastFailure: 65`, mỗi lần một dòng `LogWarning` |
+| Số event mất | **> 0** — và con số này là kết quả chính của lab | ✅ **18 / 200**. `published` = `nhận được` = **182** |
+| Sau khi broker lên lại | publish tiếp tục thành công **không cần restart app** | ✅ 135 event sau `lastFailure` đều thành công, không restart |
+
+Đoán trước khi chạy (`AGENTS.md` §5.8.4): chủ repo đoán **11–25**. Đo được **18** — đoán đúng khoảng,
+và lý do đoán đúng cũng đúng: cửa sổ mất bị chặn bởi **timeout 2 s mỗi lần publish**, không bởi nhịp
+100 ms. 30 giây broker chết chỉ đủ cho 18 lần thử, chứ không phải 300.
 
 Con số ở dòng 4 vào `benchmarks.md` và `ADR-022`. **Không được làm tròn về 0, không được bỏ qua vì "chưa có outbox".** Đó chính là điều lab muốn cho thấy: bus một mình không đủ để đạt N3, và outbox ở M6 tồn tại vì con số này chứ không vì nó là một pattern nổi tiếng.
 

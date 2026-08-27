@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Net.Http.Headers;
 using System.Text;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Nvm.Hosting;
 
 namespace Nvm.Host.Infrastructure;
 

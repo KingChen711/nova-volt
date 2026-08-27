@@ -16,6 +16,49 @@ RabbitMQ + MassTransit 8. Xem [`ADR-004`](../../../docs/adr/ADR-004-rabbitmq-not
 Không có gì trong bảng này là configurable. Topology khác nhau giữa các môi trường là topology
 không ai suy luận được.
 
+Queue là **quorum** (`SetQuorumQueue()` áp cho mọi receive endpoint). RabbitMQ 4 đã gỡ classic
+mirrored queue; trên một node dev thì hai loại chạy như nhau, nên chọn sai chỉ lộ ra khi có node
+thứ hai — và lúc đó đổi loại queue nghĩa là **xoá queue** cùng những gì còn nằm trong nó.
+
+## Thêm một consumer
+
+```csharp
+[BusEndpoint("factory-model", "cache-updater")]     // tên queue: nvm.factory-model.cache-updater
+public sealed class FactoryModelCacheProbe : IConsumer<FactoryModelRevisionActivated>
+```
+
+```csharp
+services.AddNvmBus(options, consumers => consumers.AddNvmConsumer<FactoryModelCacheProbe>());
+```
+
+**Luôn dùng `AddNvmConsumer`, không dùng `AddConsumer` trần.** `AddConsumer` cũng biên dịch được,
+cũng khởi động được, và tạo ra một queue bind vào exchange với routing key **rỗng** — trên exchange
+kiểu `topic` thì rỗng không khớp gì cả. Kết quả là một service chạy tốt, xanh trên mọi dashboard, và
+không xử lý một message nào. Không có lỗi ở đâu để phát hiện ra.
+
+`AddNvmConsumer` gắn `NvmConsumerDefinition<T>`, thứ:
+
+1. đọc các `IConsumer<T>` của class để biết nó nhận event nào (`NvmSubscription.Of`),
+2. tắt consume topology mặc định của MassTransit — nếu để bật, MassTransit tự khai báo exchange
+   `nvm.factory-model` bằng **kiểu mặc định của nó**, đụng với `topic` mà publisher đã khai, và
+   RabbitMQ trả `PRECONDITION_FAILED` ngay lúc khởi động,
+3. bind exchange của context với pattern lấy từ `NvmTopology`, không nối chuỗi tại chỗ.
+
+Consumer nào không nhận event nào có `[EventContract]` thì bị **từ chối lúc khởi động**.
+
+### Hai consumer = hai queue, không phải một
+
+Đây là điểm hay bị nhầm nhất và cũng là điều D1 của M1 kiểm:
+
+| | Nhận được gì |
+|---|---|
+| 2 consumer, 2 queue (mặc định ở đây) | **cả hai** cùng nhận mỗi message — fan-out |
+| 2 consumer, 1 queue | mỗi message tới **một** trong hai — competing consumer |
+
+Cả hai đều hợp lệ, cho hai mục đích khác nhau: fan-out cho "nhiều bên cùng cần biết", competing
+consumer cho "chia tải một việc". Nhầm chiều thứ hai thành thứ nhất thì audit trail mất một nửa số
+dòng và không ai thấy lỗi ở đâu.
+
 ## Message hỏng đi đâu
 
 MassTransit tự tạo hai queue phụ cho mỗi receive endpoint:

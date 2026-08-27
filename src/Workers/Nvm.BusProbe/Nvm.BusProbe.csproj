@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <!--
+    Worker CỐ Ý tách process với Nvm.Host.All. D1 đòi "2 consumer ở process khác nhận độc lập";
+    chạy chung một process thì không phân biệt được fan-out thật với hai handler cùng nằm trong
+    một container DI.
+
+    Đây là scaffolding, giống ba container `probe` ở M0/C05: M2 có Nvm.Ingestion và
+    Nvm.EdgeGateway thật, lúc đó XOÁ project này (xem M1-factory-model-bus.md §8).
+
+    KHÔNG dùng Serilog: worker này chỉ in log của consumer, và bằng chứng của D1/D2 là những
+    dòng đó. Console logger có sẵn của Microsoft.Extensions.Hosting đủ dùng và không kéo thêm
+    package cho một project sắp bị xoá.
+  -->
+
+  <PropertyGroup>
+    <RootNamespace>Nvm.BusProbe</RootNamespace>
+    <AssemblyName>Nvm.BusProbe</AssemblyName>
+    <UserSecretsId>nvm-bus-probe</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Generic host + console logging. The Worker SDK supplies the implicit usings, not the
+         assemblies; without this reference `Host.CreateApplicationBuilder` does not resolve. -->
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Platform/Nvm.Bus/Nvm.Bus.csproj" />
+    <ProjectReference Include="../../Platform/Nvm.Hosting/Nvm.Hosting.csproj" />
+  </ItemGroup>
+
+</Project>

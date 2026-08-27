@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Thứ MỌI deployable cần lúc khởi động, và không thuộc về domain hay bus.
+
+    Ra đời ở C13 vì đó là lúc có process thứ hai (Nvm.BusProbe). Cho tới C12, DotEnvLoader
+    nằm trong Nvm.Host.All và điều đó đúng — một file dùng ở một chỗ thì để ngay chỗ đó.
+    Chỉ khi có người dùng thứ hai thì mới biết ranh giới nằm ở đâu.
+
+    KHÔNG có package reference: project này chỉ dùng BCL. Thêm được gì vào đây là câu hỏi
+    phải trả lời được bằng "mọi App và mọi Worker đều cần" — nếu không thì nó thuộc về App.
+  -->
+
+  <PropertyGroup>
+    <RootNamespace>Nvm.Hosting</RootNamespace>
+  </PropertyGroup>
+
+</Project>

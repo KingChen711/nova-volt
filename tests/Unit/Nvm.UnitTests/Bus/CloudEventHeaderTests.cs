@@ -1,3 +1,4 @@
+using System.Globalization;
 using MassTransit;
 using MassTransit.Testing;
 using Microsoft.Extensions.DependencyInjection;
@@ -56,11 +57,12 @@ public sealed class CloudEventHeaderTests
         (await harness.Consumed.Any<FactoryModelRevisionActivated>(TestContext.Current.CancellationToken))
             .ShouldBeTrue();
 
-        var attributes = received.Value.ShouldNotBeNull();
+        var attributes = Read(received);
         attributes.SpecVersion.ShouldBe("1.0");
         attributes.Type.Value.ShouldBe("com.novavolt.factory-model.revision-activated.v1");
         attributes.Source.Value.ShouldBe("urn:novavolt:nv1:host-all");
         attributes.Time.ShouldBe(KnownTime);
+        attributes.DataContentType.ShouldBe("application/json");
     }
 
     [Fact]
@@ -77,7 +79,7 @@ public sealed class CloudEventHeaderTests
         (await harness.Consumed.Any<FactoryModelRevisionActivated>(TestContext.Current.CancellationToken))
             .ShouldBeTrue();
 
-        received.Value!.Id.ShouldBe(KnownEventId);
+        Read(received).Id.ShouldBe(KnownEventId);
     }
 
     [Fact]
@@ -93,8 +95,9 @@ public sealed class CloudEventHeaderTests
         (await harness.Consumed.Any<FactoryModelRevisionActivated>(TestContext.Current.CancellationToken))
             .ShouldBeTrue();
 
-        received.Value!.Source.SiteId.ShouldBe("DE1");
-        received.Value.Source.Value.ShouldBe("urn:novavolt:de1:host-all");
+        var source = Read(received).Source;
+        source.SiteId.ShouldBe("DE1");
+        source.Value.ShouldBe("urn:novavolt:de1:host-all");
     }
 
     [Fact]
@@ -107,6 +110,7 @@ public sealed class CloudEventHeaderTests
         CloudEventHeaders.Type.ShouldBe("ce_type");
         CloudEventHeaders.Source.ShouldBe("ce_source");
         CloudEventHeaders.Time.ShouldBe("ce_time");
+        CloudEventHeaders.DataContentType.ShouldBe("ce_datacontenttype");
     }
 
     [Fact]
@@ -126,11 +130,64 @@ public sealed class CloudEventHeaderTests
             .ShouldBeTrue();
 
         received.Value.ShouldBeNull();
+        received.Error.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task AMessageMissingOnlyTheContentType_IsRefusedRatherThanReadAsAPartialSet()
+    {
+        // A publisher that knows five of the six attributes — this system before the content type was
+        // stamped, or any foreign producer — must not be read as if it had stamped all of them. The
+        // five it did send are exactly the ones that let a reader default the sixth to JSON, which is
+        // the guess this envelope exists to prevent. So the headers here are written by hand: the
+        // point is a message the real filter would never produce.
+        await using var provider = new ServiceCollection()
+            .AddMassTransitTestHarness(bus => bus.AddConsumer<RecordingProbeConsumer>())
+            .AddSingleton<ReceivedAttributes>()
+            .BuildServiceProvider(true);
+        var harness = await StartHarnessAsync(provider);
+        var received = provider.GetRequiredService<ReceivedAttributes>();
+
+        await harness.Bus.Publish(
+            AnEvent(),
+            StampEverythingButTheContentType,
+            TestContext.Current.CancellationToken);
+        (await harness.Consumed.Any<FactoryModelRevisionActivated>(TestContext.Current.CancellationToken))
+            .ShouldBeTrue();
+
+        received.Value.ShouldBeNull();
+        received.Error.ShouldNotBeNull().Message.ShouldContain(CloudEventHeaders.DataContentType);
+    }
+
+    private static CloudEventAttributes Read(ReceivedAttributes received)
+    {
+        var error = received.Error?.Message;
+
+        // Reported before the null check so that a stamp deleted from the filter fails with the name
+        // of the header that went missing, rather than with "received.Value was null".
+        error.ShouldBeNull();
+
+        return received.Value.ShouldNotBeNull();
+    }
+
+    private static void StampEverythingButTheContentType(PublishContext<FactoryModelRevisionActivated> context)
+    {
+        var message = context.Message;
+
+        context.Headers.Set(CloudEventHeaders.SpecVersion, "1.0");
+        context.Headers.Set(CloudEventHeaders.Id, message.EventId.ToString());
+        context.Headers.Set(CloudEventHeaders.Type, EventTypeName.Of(typeof(FactoryModelRevisionActivated)).Value);
+        context.Headers.Set(CloudEventHeaders.Source, EventSource.Create(message.SiteId, "host-all").Value);
+        context.Headers.Set(
+            CloudEventHeaders.Time,
+            message.OccurredAt.ToString("O", CultureInfo.InvariantCulture));
     }
 
     public sealed class ReceivedAttributes
     {
         public CloudEventAttributes? Value { get; set; }
+
+        public Exception? Error { get; set; }
     }
 
     public sealed class RecordingProbeConsumer(ReceivedAttributes received)
@@ -138,7 +195,16 @@ public sealed class CloudEventHeaderTests
     {
         public Task Consume(ConsumeContext<FactoryModelRevisionActivated> context)
         {
-            received.Value = context.CloudEvent();
+            try
+            {
+                received.Value = context.CloudEvent();
+            }
+            catch (InvalidOperationException exception)
+            {
+                // Recorded, not rethrown: a throw here becomes a fault and five retries, and the
+                // assertion is about what the reader refused, not about what the bus did afterwards.
+                received.Error = exception;
+            }
 
             return Task.CompletedTask;
         }

@@ -10,12 +10,22 @@ namespace Nvm.Bus.CloudEvents;
 /// <param name="Type">What happened, and which schema version says so.</param>
 /// <param name="Source">Which deployable, at which plant, asserted it.</param>
 /// <param name="Time">When the publisher recorded the fact.</param>
+/// <param name="DataContentType">
+/// How the payload is encoded, for example <c>application/json</c>.
+/// </param>
+/// <remarks>
+/// All six are mandatory and are read as one set, because the message this type is most useful for is
+/// the one nobody can deserialize — sitting in an <c>_error</c> queue while somebody works out what it
+/// was. Reporting the other five and leaving the encoding out invites the reader to assume JSON, which
+/// is the assumption that put the message there in the first place.
+/// </remarks>
 public sealed record CloudEventAttributes(
     string SpecVersion,
     Guid Id,
     EventTypeName Type,
     EventSource Source,
-    DateTimeOffset Time);
+    DateTimeOffset Time,
+    string DataContentType);
 
 /// <summary>Reads CloudEvents attributes off a consumed message.</summary>
 /// <remarks>
@@ -52,7 +62,8 @@ public static class CloudEventContextExtensions
             Guid.Parse(Require(context, CloudEventHeaders.Id), CultureInfo.InvariantCulture),
             EventTypeName.Parse(Require(context, CloudEventHeaders.Type)),
             EventSource.Parse(Require(context, CloudEventHeaders.Source)),
-            DateTimeOffset.Parse(Require(context, CloudEventHeaders.Time), CultureInfo.InvariantCulture));
+            DateTimeOffset.Parse(Require(context, CloudEventHeaders.Time), CultureInfo.InvariantCulture),
+            Require(context, CloudEventHeaders.DataContentType));
     }
 
     private static string? Read(ConsumeContext context, string header) =>

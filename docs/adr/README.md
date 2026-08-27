@@ -44,7 +44,7 @@ việc khác.
 | 007 | Định dạng serial number | Chưa viết | M4 |
 | 008 | CloudEvents envelope | Chưa viết | M6 |
 | 009 | Ngữ nghĩa EPCIS cho genealogy edge | Chưa viết | M5 |
-| 010 | Idempotency key = UUIDv5 từ natural key | Chưa viết | M6 |
+| [010](ADR-010-idempotency-key-uuid-v5.md) | Idempotency key = UUIDv5 từ natural key | **Accepted** 2026-08-26 | M1 · C04 |
 | 011 | Ba loại timestamp | Chưa viết | M3 |
 | 012 | Production day & shift | Chưa viết | M3 |
 | 013 | OData cho Public Object Model | Chưa viết | M4 |

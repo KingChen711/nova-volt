@@ -151,6 +151,8 @@ Routing đầy đủ ở [`scope.md`](scope.md) §2.2.
 | **Correlation id** | Nhóm mọi event thuộc cùng một luồng nghiệp vụ. Ở đây thường là **work order** |
 | **Causation id** | Cái **trực tiếp gây ra** event này, thường là operation run hoặc command. *Correlation nhóm lại, causation xâu chuỗi* |
 | **Partition key** | Nhóm message phải **giữ đúng thứ tự** với nhau. Hai event cùng một cell không được vượt mặt nhau; hai cell khác nhau thì được |
+| **Command** | Một **ý định** thay đổi trạng thái, gửi tới **đúng một** handler, đặt tên ở thể mệnh lệnh (`QuarantineUnit`). Đối lập với event: event là **sự thật đã xảy ra**, thì quá khứ, ai nghe cũng được và có thể không ai nghe |
+| **Natural key** | Bộ trường **vốn có trong dữ liệu** đủ để nhận ra một sự việc, không cần ID do hệ thống cấp. Với một phép đo: `(site, equipment, unit, step, device_timestamp, signal)`. Là đầu vào để suy ra khoá dedup — xem `ADR-010` |
 | **Idempotency** | Xử lý cùng một message hai lần cho kết quả như xử lý một lần |
 | **At-least-once** | Message **sẽ** đến nhiều hơn một lần. Đây là mặc định của thế giới thật, không phải sự cố |
 | **Dedup** | Nhận ra và bỏ qua bản trùng |

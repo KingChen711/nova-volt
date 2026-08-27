@@ -4,4 +4,13 @@
     <RootNamespace>Nvm.Kernel</RootNamespace>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!--
+      Abstractions only. Đủ để AddNvmKernel khai báo IServiceCollection; KHÔNG kéo theo một
+      container. CommandDispatcher chỉ nhận System.IServiceProvider của BCL.
+      Ranh giới này được ép bằng NetArchTest ở C17 (rule A2).
+    -->
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+  </ItemGroup>
+
 </Project>

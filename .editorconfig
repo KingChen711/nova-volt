@@ -116,8 +116,14 @@ dotnet_diagnostic.CA2016.severity = warning     # quên truyền CancellationTok
 dotnet_diagnostic.CA1305.severity = warning     # thiếu IFormatProvider — quan trọng vì InvariantGlobalization
 dotnet_diagnostic.CA1310.severity = warning     # so sánh string không nêu StringComparison
 dotnet_diagnostic.CA2100.severity = error       # SQL injection
-dotnet_diagnostic.CA5350.severity = error       # thuật toán mã hoá yếu
-dotnet_diagnostic.CA5351.severity = none        # SHA-1: CẦN cho UUIDv5 (scope.md §7.2), không phải để bảo mật
+# CA5350 = thuật toán YẾU (SHA-1, TripleDES, RIPEMD160)
+# CA5351 = thuật toán ĐÃ VỠ (MD5, DES, RC2)
+# Cả hai giữ ở mức error. Bản M0 tắt CA5351 với lý do "cần SHA-1 cho UUIDv5" — lý do đó nhắm
+# nhầm rule (SHA-1 thuộc CA5350) và đã vô hiệu hoá lớp bảo vệ chống MD5/DES mà không ai cần tắt.
+# Chỗ thật sự cần SHA-1 là DeterministicGuid.CreateVersion5, và nó dùng [SuppressMessage] ngay
+# tại method kèm lý do — hẹp đúng một chỗ, thay vì mở toang cả repo.
+dotnet_diagnostic.CA5350.severity = error
+dotnet_diagnostic.CA5351.severity = error
 
 #### thứ gây ồn mà không đáng ####
 dotnet_diagnostic.CA1848.severity = none        # LoggerMessage delegate — tối ưu sớm, chưa cần

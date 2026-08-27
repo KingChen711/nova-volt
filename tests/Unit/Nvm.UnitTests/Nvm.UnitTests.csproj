@@ -14,6 +14,11 @@
     -->
     <PackageReference Include="xunit.v3" />
     <PackageReference Include="Shouldly" />
+    <!--
+      Container thật để kiểm AddNvmKernel và dispatcher. Nvm.Kernel chỉ tham chiếu Abstractions;
+      chỗ duy nhất cần một container là test và host.
+    -->
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
   </ItemGroup>
 
   <ItemGroup>

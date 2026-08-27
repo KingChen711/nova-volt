@@ -116,7 +116,9 @@ Routing đầy đủ ở [`scope.md`](scope.md) §2.2.
 | **Line** | Chuyền trong một area: `L1`, `L2` (cell), `M1` (module), `P1` (pack) |
 | **WorkCell** | Trạm/máy trong một chuyền, ví dụ `FORM-01` |
 | **Equipment path** | Chuỗi đầy đủ `NOVAVOLT/NV1/FORMATION/F1/FORM-01/FORM-01-CH-0142`. Dùng làm MQTT topic, nhãn metric, khoá phân quyền, XPath trong Mendix — **quyết định một lần, dùng khắp nơi** |
-| **Revision** *(của factory model)* | Một phiên bản của cây nhà máy. Thêm kênh sạc, tháo work cell, đổi tên line → revision mới, **không sửa tại chỗ**. Cần thiết vì hồ sơ traceability năm ngoái trỏ tới equipment path có thể **không còn tồn tại** hôm nay — và đó không phải dữ liệu hỏng |
+| **Revision** *(của factory model)* | Một phiên bản của **tài liệu** mô tả cây nhà máy. Thêm kênh sạc, tháo work cell, đổi tên line → revision mới, **không sửa tại chỗ**. Cần thiết vì hồ sơ traceability năm ngoái trỏ tới equipment path có thể **không còn tồn tại** hôm nay — và đó không phải dữ liệu hỏng |
+| **Activation** *(của revision)* | Đưa một revision **vào hiệu lực tại một nhà máy**. Tài liệu nằm trên đĩa cả tuần cũng chưa có tác dụng gì cho tới khi được kích hoạt |
+| **Staged rollout** | Triển khai từng nhà máy một. NV1 chạy revision 12 trong khi DE1 còn ở 11 — bình thường và cố ý, không phải lệch pha cần sửa |
 | **MES** | *Manufacturing Execution System* — hệ thống điều hành sản xuất, đứng giữa ERP và tầng thiết bị |
 | **OT / IT** | *Operational Technology* (tầng thiết bị nhà máy) và *Information Technology* (tầng doanh nghiệp). Ranh giới giữa hai tầng là ranh giới **an ninh** |
 | **DMZ** | Vùng đệm giữa OT và IT |

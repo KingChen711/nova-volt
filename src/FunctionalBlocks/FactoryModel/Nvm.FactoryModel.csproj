@@ -16,9 +16,16 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Contracts: event mà FB này phát ra. Đi qua contract chứ không qua reference giữa các FB (K8). -->
+    <ProjectReference Include="../../Platform/Nvm.Contracts/Nvm.Contracts.csproj" />
     <!-- EquipmentPath và FactoryNodeKind sống ở Kernel: chúng là định danh dùng chung, không
          phải tài sản riêng của FB này. Xem XML doc của EquipmentPath. -->
     <ProjectReference Include="../../Platform/Nvm.Kernel/Nvm.Kernel.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Chỉ Abstractions, đủ cho AddNvmFactoryModel. FB không dựng container. -->
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
   </ItemGroup>
 
 </Project>

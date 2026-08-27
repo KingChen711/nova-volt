@@ -35,6 +35,26 @@ public interface IActiveFactoryModel
     /// <summary>What a plant is running, or null when nothing has been activated there yet.</summary>
     ActiveFactoryModelRevision? Current(string siteId);
 
-    /// <summary>Puts a revision in force at its plant, replacing whatever was there.</summary>
-    void Activate(ActiveFactoryModelRevision revision);
+    /// <summary>Puts a revision in force, but only if the plant has not moved since it was read.</summary>
+    /// <param name="revision">The revision to put in force.</param>
+    /// <param name="expectedCurrentRevision">
+    /// The revision number <see cref="Current"/> returned, or null if it returned nothing.
+    /// </param>
+    /// <returns>False when the plant moved in between, and nothing was written.</returns>
+    /// <remarks>
+    /// <para>
+    /// Compare-and-swap rather than a plain write, because deciding and writing are two steps and
+    /// something can happen in between. Two activations landing together — a scheduled rollout and an
+    /// engineer pressing the button — both read revision 2, both find their own revision newer, and
+    /// both write. The plant ends up on whichever finished last, and two events go out each claiming
+    /// to have moved it forward from 2. A consumer rebuilding its cache from those cannot tell which
+    /// tree the plant is actually running.
+    /// </para>
+    /// <para>
+    /// The revision number doubles as the version token, so there is nothing extra to store. This is
+    /// the same optimistic concurrency the event store uses with <c>expectedVersion</c> at M5;
+    /// meeting it here first is deliberate.
+    /// </para>
+    /// </remarks>
+    bool TryActivate(ActiveFactoryModelRevision revision, int? expectedCurrentRevision);
 }

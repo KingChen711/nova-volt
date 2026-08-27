@@ -63,7 +63,16 @@ public sealed class ActivateFactoryModelRevisionHandler(
         var before = PathsOf(current?.Site);
         var after = PathsOf(candidate);
 
-        _active.Activate(new ActiveFactoryModelRevision(command.Revision, candidate));
+        // Compare-and-swap against the revision read above. The two checks before this one looked at
+        // state that another activation may have moved since; without this, both would pass their
+        // checks and both would write, and the plant would end up on whichever finished last while two
+        // events each claimed to have moved it forward from the same revision.
+        if (!_active.TryActivate(new ActiveFactoryModelRevision(command.Revision, candidate), current?.Revision))
+        {
+            throw new FactoryModelActivationException(
+                $"Plant '{command.SiteId}' moved to another revision while revision {command.Revision} "
+                + "was being activated. Read the current revision again and decide afresh.");
+        }
 
         return Task.FromResult(new FactoryModelRevisionActivated(
             // Same value as the command's key. This is the join that lets deduplication at ingestion

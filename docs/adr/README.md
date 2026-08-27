@@ -57,10 +57,17 @@ việc khác.
 | [020](ADR-020-no-invariant-globalization.md) | Không bật `InvariantGlobalization` | **Accepted** 2026-08-26 | M0 · C14 |
 | [021](ADR-021-masstransit-8-not-9.md) | Pin MassTransit 8, không nâng lên 9 | **Accepted** 2026-08-26 | M1 · C09 |
 | [022](ADR-022-publish-truc-tiep-khong-outbox-o-m1.md) | Publish thẳng lên bus ở M1, chấp nhận mất event; outbox ở M6 | **Accepted** 2026-08-27 | M1 · C13 |
+| [023](ADR-023-claim-truoc-khi-chay-handler.md) | Giành chỗ trước khi chạy handler; K7 chỉ đúng trong một process cho tới M5 | **Accepted** 2026-08-27 | M1 · R2 |
 
 Cột **Ra ở** là milestone dự kiến, không phải cam kết. Quyết định đến sớm hơn thì viết sớm hơn.
 
 ## Quan hệ giữa các ADR đã có
+
+ADR-022 và ADR-023 cũng là **một cặp**, và cùng một nguyên nhân gốc: ở M1 **chưa có database nào**,
+nên không có transaction để nối hai việc lại. ADR-022 là cái giá phải trả ở đường ra (ghi trạng thái
+rồi publish — mất 18/200 event khi broker chết); ADR-023 là cái giá ở đường vào (giành chỗ cho một
+khoá dedup mà không commit được cùng effect nó bảo vệ). Cả hai đóng lại ở cùng một chỗ — M5/M6, khi
+event store xuất hiện — và đọc riêng một cái sẽ tưởng đó là hai vấn đề khác nhau.
 
 ADR-001 và ADR-002 là **một cặp**, đọc riêng sẽ hiểu sai. ADR-001 chọn SQL Server vì mục tiêu học
 Opcenter; chính lựa chọn đó lấy đi `numrange` và `EXCLUDE` constraint, và đó là lý do ADR-002 tồn

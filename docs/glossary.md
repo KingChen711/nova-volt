@@ -177,6 +177,7 @@ Routing đầy đủ ở [`scope.md`](scope.md) §2.2.
 | **Audit trail** | Sổ ghi **thay đổi trạng thái của sản phẩm**, auditor đọc, IATF 16949 đòi phải còn. **Khác log**: log để debug hôm nay, được phép lấy mẫu, xoay vòng, tắt đi |
 | **Natural key** | Bộ trường **vốn có trong dữ liệu** đủ để nhận ra một sự việc, không cần ID do hệ thống cấp. Với một phép đo: `(site, equipment, unit, step, device_timestamp, signal)`. Là đầu vào để suy ra khoá dedup — xem `ADR-010` |
 | **Idempotency** | Xử lý cùng một message hai lần cho kết quả như xử lý một lần |
+| **Claim** *(chỗ giữ)* | Chỗ giữ cho một khoá dedup **trong lúc** lệnh đang chạy. Ba trạng thái, không phải hai: *chưa thấy* · *đang bay* · *đã xong*. Không có trạng thái giữa thì hai bản của cùng một lệnh tới cùng lúc đều thấy "chưa ai làm" và đều chạy. Xem `ADR-023` |
 | **At-least-once** | Message **sẽ** đến nhiều hơn một lần. Đây là mặc định của thế giới thật, không phải sự cố |
 | **Dedup** | Nhận ra và bỏ qua bản trùng |
 | **Event versioning** | Mỗi event mang số version ngay từ v1. Thêm field optional → **không** tăng version; đổi ý nghĩa / xoá field / đổi kiểu → **tăng**, và viết upcaster |

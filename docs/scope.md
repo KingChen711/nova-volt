@@ -1240,6 +1240,8 @@ CREATE TABLE ingest.processed_message (
 > Dedup ở **ingestion** chặn duplicate từ thiết bị. Nhưng bus cũng at-least-once → **command handler cũng phải idempotent**. Hai tầng, không phải một.
 >
 > Cách rẻ nhất cho tầng hai: mỗi command mang `IdempotencyKey`; handler ghi key vào bảng cùng transaction với event. Trùng key → trả về kết quả cũ, không xử lý lại. Đây là pipeline behavior trong `Nvm.Kernel`, viết một lần dùng cho mọi handler.
+>
+> **Nhưng "tra khoá → xử lý → ghi khoá" là check-then-act, và nó không đủ.** Hai bản của cùng một command tới cùng lúc đều tra trượt, đều được cho qua, và đều chạy. Khoá phải được **giành chỗ trên đường vào** rồi mới xác nhận trên đường ra — tức là **ba** trạng thái (*chưa thấy* · *đang bay* · *đã xong*), không phải hai. Và chỗ giữ chỉ đúng hẳn khi nó **commit cùng transaction với effect nó bảo vệ**: một chỗ giữ bền vững canh một effect không bền vững thì **tệ hơn** không có gì, vì nó nuốt bản gửi lại của một việc chưa bao giờ xảy ra. Xem `ADR-023`.
 
 ### 7.3 Ba loại timestamp — đừng bao giờ trộn
 

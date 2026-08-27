@@ -64,6 +64,12 @@ Máy đo: Windows 11, Docker Desktop, quota RAM 8 GB (xem `docs/plans/M0-bootstr
 | 2026-08-27 | `08ef83b` | `ready` xanh lại sau khi bật lại broker — lần 1 | **19,8 s** | Broker tắt ~40 s trước đó. Con số này chủ yếu là thời gian **container RabbitMQ khởi động**, không phải thời gian app nối lại |
 | 2026-08-27 | `08ef83b` | `ready` xanh lại sau khi bật lại broker — lần 2 | **4,7 s** | Broker tắt ~10 s. `check_running` của broker và `ready` của app xanh trong **cùng một nhịp poll 1 s** → phần app tự đóng góp < 1 s |
 | 2026-08-27 | `08ef83b` | Số lần app restart trong cả bốn kịch bản trên | **0** | `Application started` đúng 1 lần mỗi lần chạy |
+| 2026-08-27 | `2a927a9` | ★ **Test đỏ khi hoàn nguyên idempotency về check-then-act** | **6 / 292** | Lab phá hoại A của R2. Cả 6 nằm trong `IdempotencyConcurrencyTests`. **286 test còn lại xanh**, kể cả phép kiểm K7 tuần tự của C05. Cây làm việc R2, chưa commit. Xem `ADR-023` |
+| 2026-08-27 | `2a927a9` | Số lần handler chạy — 8 caller một khoá, check-then-act | **7** (mong đợi 1) | Cùng lần chạy lab A, test `EightCallersOneKey_FiftyRoundsRunning_NeverHandleTwice` |
+| 2026-08-27 | `2a927a9` | Số lần handler chạy — 8 caller một khoá, handler ném lỗi lần đầu, check-then-act | **8** (mong đợi 2) | Cùng lần chạy lab A, test `ConcurrentCallersWhenTheHandlerThrows_...` |
+| 2026-08-27 | `2a927a9` | ★ **Test đỏ khi bỏ compare-and-swap của activation** | **2 / 292** | Lab phá hoại B của R2. `SixteenActivationsAtOnce_ExactlyOneWins`: **16/16** caller cùng thắng thay vì 1. **Không test nào ở mức handler đỏ** — ghi cho R3 |
+| 2026-08-27 | `2a927a9` | 13 test concurrency chạy **10 vòng** trên cây đã sửa | **130 / 130 xanh** | 10 lần chạy riêng, thời gian từng lần: 0,650 / 0,480 / 0,462 / 0,477 / 0,465 / 0,456 / 0,479 / 0,504 / 0,502 / 0,473 s. Cộng dồn **4.400** lượt dispatch tranh một khoá và **160** lượt activation tranh một plant |
+| 2026-08-27 | `2a927a9` | `make ci` sau R2 | **292 / 292 xanh** | 279 test ở C18 + 13 test concurrency của R2 |
 
 > [!warning] `bus` và `rabbitmq` không thay thế được cho nhau — và đây là lý do
 > Hai probe bắt hai loại hỏng **khác nhau**, và mỗi cái mù với loại kia:
@@ -127,7 +133,7 @@ có một dòng chi tiết ở bảng phía trên.
 | Throughput bus (msg/s) | M1 publish 200 event cách nhau 100 ms — đó là kịch bản đo **mất mát**, không phải đo tải. Đo thật ở **M2** cùng N1 (≥ 5.000 msg/s) |
 | Chi phí SHA-1 của `IdempotencyKey` | `ADR-010` §Evidence ghi rõ đây là **phán đoán chưa đo**. Đo ở M2 khi có tải thật |
 | Ngưỡng kill switch | Chưa bật, vì chỉnh circuit breaker trên dữ liệu bằng 0 là đoán (`Nvm.Bus/README.md`). Bật và chỉnh ở M2 |
-| Thời gian `make ci` | Vẫn như M0: số giây chỉ có nghĩa khi test đủ nhiều. 279 test chạy ~5 s — bắt đầu ghi từ M2 |
+| Thời gian `make ci` | Vẫn như M0: số giây chỉ có nghĩa khi test đủ nhiều. 292 test chạy ~5 s — bắt đầu ghi từ M2 |
 | Thời gian projection / truy vấn | Chưa có read model. Bắt đầu ở M6 |
 
 ---

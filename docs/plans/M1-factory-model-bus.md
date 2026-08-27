@@ -370,7 +370,7 @@ Ba cách xử lý khi tới M6, chọn một và ghi vào ADR của outbox: lưu
 **Việc làm**
 - **Ba** behavior, theo đúng thứ tự này:
   1. `ValidationBehavior` — command sai hình dạng thì dừng sớm, chưa đụng gì.
-  2. `IdempotencyBehavior` — tra `IdempotencyKey`; đã thấy → trả kết quả cũ, **không** chạy handler. K7.
+  2. `IdempotencyBehavior` — **giành chỗ** cho `IdempotencyKey` **trước** khi gọi handler, xác nhận sau khi handler trả về. Đã xong rồi → trả kết quả cũ, **không** chạy handler. K7. *(Sửa ở R2 — xem khối bên dưới.)*
   3. `AuditBehavior` — ghi ai/lệnh gì/lúc nào, dùng `TimeProvider` (K1).
 - `IIdempotencyStore` + bản `InMemoryIdempotencyStore`. Bản trên SQL Server, ghi **cùng transaction với event**, thuộc M5.
 
@@ -380,9 +380,23 @@ Ba cách xử lý khi tới M6, chọn một và ghi vào ADR của outbox: lưu
 ```bash
 make test
 ```
-Test bắt buộc: gửi **cùng một command hai lần** → handler chạy **đúng 1 lần**, cả hai lần gọi trả cùng kết quả (đây là bằng chứng K7); validation fail → idempotency store **không** bị ghi (thứ tự đúng); audit ghi được `OccurredAt` từ `FakeTimeProvider` chứ không phải giờ thật.
+Test bắt buộc: gửi **cùng một command hai lần** → handler chạy **đúng 1 lần**, cả hai lần gọi trả cùng kết quả; gửi **cùng một command từ nhiều luồng cùng lúc** → handler vẫn chạy **đúng 1 lần**, mọi caller nhận cùng kết quả; validation fail → idempotency store **không** bị ghi (thứ tự đúng); audit ghi được `OccurredAt` từ `FakeTimeProvider` chứ không phải giờ thật.
 
 `Microsoft.Extensions.TimeProvider.Testing` đã được khai báo sẵn trong `Directory.Packages.props` từ M0/C02 cho đúng lúc này.
+
+> [!warning] Sửa ở R2 (2026-08-27) — chỗ này ban đầu chỉ đúng một nửa
+> Plan gốc chỉ đòi phép kiểm **tuần tự**, và cài đặt sinh ra từ nó là `Find` → handler → `Record`.
+> Câu *"chặn lặp lại, nhưng không chặn đua"* trong bản gốc là **đúng phần mô tả, sai phần kết luận**:
+> nó ghi nhận lỗ hổng rồi coi đó là chuyện chấp nhận được tới M5, trong khi K7 là ràng buộc **cứng**
+> và kịch bản làm vỡ nó — edge gateway xả cả đệm store-and-forward sau khi mất mạng — là chuyện xảy
+> ra hàng ngày, không phải trường hợp hiếm.
+>
+> **Đã sửa**: store đổi sang `Claim`/`Complete`/`Abandon`, behavior giành chỗ trước khi chạy handler.
+> Bằng chứng: hoàn nguyên về check-then-act làm đỏ **6/292** test, và **286** test cũ vẫn xanh — bộ
+> test tuần tự của C05 **không thể** nhìn thấy lỗi này.
+>
+> **Còn nợ, và không đóng được ở M1**: chỗ giữ chỉ sống bằng đời process. Hai instance, hoặc một lần
+> restart, thì bản trùng vẫn lọt. **K7 chưa đạt** — xem `ADR-023` và `docs/audit-m0-m1.md` R2.
 
 ---
 

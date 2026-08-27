@@ -77,18 +77,17 @@ public static class KernelServiceCollectionExtensions
     ///   </description></item>
     /// </list>
     /// <para>
-    /// <b>Where this order stops being a preference and becomes correctness.</b> The current store
-    /// records a key only after the handler has returned, so putting validation underneath would still
-    /// leave a rejected command unrecorded — the two orders behave the same today, and the swap is
-    /// caught by a test on the order itself rather than by a test on behaviour.
+    /// <b>This order is now correctness, and it was not always.</b> While the store recorded a key
+    /// only after the handler returned, swapping the first two stages changed nothing observable — a
+    /// rejected command left no trace either way, and only a test on the order itself caught the swap.
     /// </para>
     /// <para>
-    /// That changes with the real store. Recording on success cannot stop two identical commands
-    /// arriving at once from both running: each looks the key up, each misses, each proceeds. Closing
-    /// that needs the key to be <i>claimed</i> on the way in and confirmed on the way out. From the
-    /// moment the claim happens first, a malformed command reaching this stage marks its key as taken,
-    /// and the corrected resend — which carries the same natural key — is swallowed as a duplicate.
-    /// The operator fixes the form, presses submit, sees success, and nothing happens.
+    /// The claim protocol ended that. <see cref="IdempotencyBehavior{TCommand, TResult}"/>
+    /// reserves the key <i>before</i> calling the handler, because recording on success cannot stop two
+    /// identical commands arriving at once from both running. So a malformed command that reached this
+    /// stage would mark its key as taken, and the corrected resend — which carries the same natural
+    /// key — would be swallowed as a duplicate. The operator fixes the form, presses submit, sees
+    /// success, and nothing happens. Validation stays outermost or that is what the plant gets.
     /// </para>
     /// <para>
     /// A fourth stage belongs between idempotency and audit once there is a database: the transaction

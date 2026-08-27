@@ -30,6 +30,14 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!--
+      Seed thật, không phải fixture rút gọn. Test đọc đúng file mà hệ thống sẽ đọc, nên sửa
+      seed sẽ làm test đếm node đỏ — đó là hành vi đúng (deploy/seed/README.md).
+    -->
+    <Content Include="../../../deploy/seed/**/*.json" LinkBase="seed" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Using Include="Xunit" />
     <Using Include="Shouldly" />
   </ItemGroup>

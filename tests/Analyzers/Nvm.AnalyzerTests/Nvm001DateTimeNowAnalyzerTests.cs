@@ -1,5 +1,3 @@
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp.Testing;
 using Microsoft.CodeAnalysis.Testing;
 using Nvm.Analyzers;
 
@@ -7,41 +5,11 @@ namespace Nvm.AnalyzerTests;
 
 public sealed class Nvm001DateTimeNowAnalyzerTests
 {
-    // DefaultVerifier, not XUnitVerifier: the .XUnit flavour of the testing package is built on
-    // xunit v2 and this repo is v3 only. A failing assertion still throws and still fails the test —
-    // what is lost is xunit-shaped failure formatting, which is not worth a second test framework.
-    private static async Task VerifyAsync(string source, params DiagnosticResult[] expected)
-    {
-        var test = new CSharpAnalyzerTest<Nvm001DateTimeNowAnalyzer, DefaultVerifier>
-        {
-            TestCode = source,
+    private static Task VerifyAsync(string source, params DiagnosticResult[] expected) =>
+        AnalyzerSnippet.VerifyAsync<Nvm001DateTimeNowAnalyzer>(source, expected);
 
-            // The control snippet mentions System.TimeProvider, which is absent from the default
-            // reference set this package assumes.
-            ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
-        };
-
-        test.ExpectedDiagnostics.AddRange(expected);
-
-        await test.RunAsync(TestContext.Current.CancellationToken);
-    }
-
-    /// <summary>Locates <paramref name="expression"/> in the snippet and expects NVM001 over it.</summary>
-    /// <remarks>
-    /// Found rather than counted. Hand-written line and column numbers are wrong the first time and
-    /// wrong again after any edit to the snippet above them, and the failure they produce says
-    /// "expected a diagnostic here" — which reads exactly like the analyzer being broken.
-    /// </remarks>
-    private static DiagnosticResult Violation(string source, string expression, string type, string member)
-    {
-        var lines = source.ReplaceLineEndings("\n").Split('\n');
-        var line = Array.FindIndex(lines, text => text.Contains(expression, StringComparison.Ordinal));
-        var column = lines[line].IndexOf(expression, StringComparison.Ordinal);
-
-        return new DiagnosticResult(Nvm001DateTimeNowAnalyzer.DiagnosticId, DiagnosticSeverity.Error)
-            .WithSpan(line + 1, column + 1, line + 1, column + 1 + expression.Length)
-            .WithArguments(type, member);
-    }
+    private static DiagnosticResult Violation(string source, string expression, string type, string member) =>
+        AnalyzerSnippet.Violation(source, expression, Nvm001DateTimeNowAnalyzer.DiagnosticId, type, member);
 
     [Theory]
     [InlineData("DateTime", "UtcNow")]

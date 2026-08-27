@@ -6,15 +6,44 @@ vi phạm. Dự án này chạy 6 tháng, một người làm, không có review
 | ID | Cấm gì | Ràng buộc | Ra ở |
 |---|---|---|---|
 | `NVM001` | Đọc đồng hồ máy: `DateTime.Now/UtcNow/Today`, `DateTimeOffset.Now/UtcNow` | K1 | M1 · C15 |
+| `NVM002` | `DateTime` trong contract, **kể cả lồng trong generic / mảng / nullable** | K2 | M1 · C16 |
+| `NVM003` | Event thiếu `[EventVersion(n)]`, hoặc `n < 1` | K6 | M1 · C16 |
+
+### NVM002 soi những type nào
+
+Ba điều kiện **HOẶC** — xem `ContractSymbols.IsWireContract`:
+
+1. cài `IDomainEvent` (event ở FB khác cũng bị soi),
+2. nằm trong assembly `Nvm.Contracts`,
+3. namespace bắt đầu bằng `Nvm.Contracts.`
+
+Điều kiện 3 tồn tại cho trường hợp hay gặp nhất: một record **chưa** là event. Milestone sau nó thành
+payload của một event, và lúc đó `DateTime` bên trong đã nằm trong những dòng không ai được sửa.
+
+`Mentions()` đệ quy qua `TypeArguments` và `ElementType`, nên `DateTime?`, `DateTime[]`,
+`IReadOnlyList<DateTime>` và `Dictionary<string, DateTime[]>` đều bị bắt. Bản chỉ so kiểu ngoài cùng
+là bản ai cũng viết đầu tiên, và nó qua được mọi test viết cho property thường.
 
 Mức severity khai ở [`.editorconfig`](../../../.editorconfig), **không** chỉ trong
 `DiagnosticDescriptor` — xem bẫy số 3 bên dưới.
 
-## Vì sao NVM001 là lỗi build chứ không phải ghi chú review
+## Vì sao ba rule này là lỗi build chứ không phải ghi chú review
 
-Formation chạy hàng giờ, aging hàng tuần. Một saga chờ 12 ngày chỉ test được bằng cách **tua đồng
-hồ**, mà đồng hồ đọc từ property tĩnh thì không tua được. Kết quả không phải "test khó viết" — kết
-quả là test **không được viết**, và nhánh 12 ngày lên production mà chưa ai chạy qua nó lần nào.
+Điểm chung: **cả ba đều hỏng ở nơi không ai đang nhìn.**
+
+**NVM001.** Formation chạy hàng giờ, aging hàng tuần. Một saga chờ 12 ngày chỉ test được bằng cách
+**tua đồng hồ**, mà đồng hồ đọc từ property tĩnh thì không tua được. Kết quả không phải "test khó
+viết" — kết quả là test **không được viết**, và nhánh 12 ngày lên production mà chưa ai chạy qua nó
+lần nào.
+
+**NVM002.** `DateTime` mang cờ `Kind`, không mang offset, và cờ đó **không sống sót qua JSON**. Site
+DE1 là Leipzig, có DST, nên mỗi mùa thu có một giờ xảy ra **hai lần**. Bản ghi truy vết viết trong giờ
+đó mơ hồ vĩnh viễn, và event store là append-only — không sửa lại được. Lỗi theo mùa: chạy đúng suốt
+mấy tháng, trên mọi máy, trong mọi test, rồi một sáng Chủ nhật tháng Mười thứ tự hai event đảo nhau.
+
+**NVM003.** Cái nhãn version trông thừa đúng vào ngày viết nó, và không thêm được nữa đúng vào ngày
+cần tới. Khi đã có hình dạng thứ hai thì payload v1 nằm sẵn trong store append-only và **không cái nào
+nói nó là v1**. Chuỗi upcaster không có gì để rẽ nhánh, chỉ còn cách đoán theo field nào có mặt.
 
 `TimeProvider` là đường nối: `TimeProvider.System` lúc chạy thật, `FakeTimeProvider` trong test nhảy
 hai tuần trong một mili-giây.

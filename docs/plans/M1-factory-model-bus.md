@@ -878,13 +878,35 @@ Nếu cách đó vẫn vướng, phương án dự phòng là bảng 5 bước �
 
 | # | Vi phạm cố ý | Kỳ vọng | Kết quả |
 |---|---|---|---|
-| 1 | Thêm `DateTime Foo` vào một event | `error NVM002` | *chưa đo* |
-| 2 | Thêm `List<DateTime> Bar` | `error NVM002` | *chưa đo* |
-| 3 | Bỏ `[EventVersion(1)]` khỏi `FactoryModelRevisionActivated` | `error NVM003` | *chưa đo* |
-| 4 | `[EventVersion(0)]` | `error NVM003` | *chưa đo* |
-| 5 | Hoàn nguyên cả 4 | `make ci` xanh | *chưa đo* |
+| 0 | Build repo hiện tại | xanh — contract đang dùng `DateTimeOffset` | ✅ xanh, **0** vi phạm sẵn có |
+| 1 | Thêm `DateTime Foo` vào một event | `error NVM002` | ✅ FAILED, trỏ đúng tham số |
+| 2 | Thêm `IReadOnlyList<DateTime> Bar` | `error NVM002` | ✅ FAILED |
+| 2b | `DateTime? Maybe` và `Dictionary<string, DateTime[]> Deep` | `error NVM002` cho **cả hai** | ✅ FAILED, 2 lỗi riêng biệt |
+| 3 | Bỏ `[EventVersion(1)]` khỏi `FactoryModelRevisionActivated` | `error NVM003` | ✅ FAILED, trỏ vào tên type |
+| 4 | `[EventVersion(0)]` | `error NVM003` | ✅ FAILED, trỏ vào attribute |
+| 4b | `[EventVersion(-1)]` | `error NVM003` | ✅ FAILED |
+| — | **Đối chứng**: `DateTimeOffset` + `[EventVersion(1)]` | xanh | ✅ xanh |
+| 5 | Hoàn nguyên cả 4 | `make ci` xanh | ✅ xanh, **262** test |
 
-Bước 2 tách riêng vì phân tích kiểu lồng nhau là chỗ analyzer hay bỏ sót nhất, và một `DateTime` giấu trong `List<>` cũng phá K2 y hệt.
+Bước 2 tách riêng vì phân tích kiểu lồng nhau là chỗ analyzer hay bỏ sót nhất, và một `DateTime` giấu trong `List<>` cũng phá K2 y hệt. Bước 2b thêm vào vì `DateTime?` thực chất là `Nullable<DateTime>` — cùng một phép đệ quy, nhưng nếu chỉ so kiểu ngoài cùng thì nó lọt.
+
+#### C16.1 — Phạm vi của NVM002: ba điều kiện HOẶC, không phải một
+
+Plan viết *"trong bất kỳ type nào cài `IDomainEvent`, và trong mọi type nằm trong `Nvm.Contracts`"*. Khi viết ra thì hoá ra là **ba** điều kiện, và mỗi cái bắt được thứ hai cái kia bỏ sót:
+
+| Điều kiện | Bắt được cái gì |
+|---|---|
+| cài `IDomainEvent` | event định nghĩa ở assembly khác — M2 trở đi mỗi FB sẽ có event riêng |
+| assembly tên `Nvm.Contracts` | type trong project contract nhưng bị đặt sai namespace |
+| namespace bắt đầu bằng `Nvm.Contracts.` | type **chưa** là event. Đây là trường hợp hay gặp nhất: một record hôm nay chưa phải event, milestone sau thành payload của một event |
+
+Điều kiện thứ ba cũng là cái duy nhất test được bằng snippet — hai cái kia phụ thuộc tên assembly, mà `CSharpAnalyzerTest` luôn biên dịch dưới tên `TestProject`. Chúng được kiểm bằng bảng 5 bước ở trên, chạy trong assembly thật.
+
+#### C16.2 — Property và field cùng lúc: cẩn thận backing field
+
+Đọc cả `IPropertySymbol` lẫn `IFieldSymbol` là đúng — K2 không quan tâm bạn khai kiểu gì. Nhưng một auto-property sinh ra một **backing field cùng kiểu**, nên bản viết thẳng tay báo **hai lỗi trên một dòng**. Hai lỗi cho một sai là cách nhanh nhất để người đọc kết luận analyzer hỏng.
+
+Lọc bằng `IsImplicitlyDeclared` trên field (backing field luôn implicit), **không** lọc trên property (tham số positional record đến đây dưới dạng property, và lọc nhầm là tắt mất trường hợp chính). Có một test riêng đếm đúng **hai** diagnostic cho một class có một field và một property — framework test sẽ đỏ nếu xuất hiện cái thứ ba.
 
 **Nếu quá giờ**: `NVM003` là ứng viên cắt đầu tiên của M1 — số event ở M1 chỉ đếm trên đầu ngón tay, và golden file ở C03 đã bắt được một phần. `NVM002` thì **không** cắt: nó chặn loại lỗi chỉ lộ ra ở site DE1 vào ngày đổi giờ.
 

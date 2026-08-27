@@ -139,6 +139,8 @@ dotnet_diagnostic.CS1591.severity = none        # thiếu XML doc cho public mem
 # Một diagnostic mặc định Info sẽ KHÔNG chặn build kể cả khi TreatWarningsAsErrors đang bật,
 # và triệu chứng là build xanh — đúng cái bẫy "analyzer im lặng" ở C15.1.
 dotnet_diagnostic.NVM001.severity = error       # đọc đồng hồ máy (DateTime.Now/UtcNow/Today...) — K1
+dotnet_diagnostic.NVM002.severity = error       # DateTime trong contract, kể cả trong generic — K2
+dotnet_diagnostic.NVM003.severity = error       # event thiếu [EventVersion(n)] hoặc n < 1 — K6
 
 #### format ####
 csharp_new_line_before_open_brace = all

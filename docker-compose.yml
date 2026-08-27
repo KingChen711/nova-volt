@@ -187,6 +187,16 @@ services:
   # probe-dmz đã mô phỏng ở C05. Service .NET muốn nghe MQTT phải qua
   # Nvm.EdgeGateway đứng ở dmz-net (M2), không được nối thẳng.
   # Nếu thấy bất tiện, đó là dấu hiệu ranh giới đang hoạt động đúng.
+  #
+  # CỐ Ý KHÔNG CÓ `ports:` — đây là service duy nhất chạm ot-net.
+  #
+  # Publish port ra host mở lại đúng cái đường vừa chặn: container trên it-net
+  # không tới được `nvm-emqx:1883`, nhưng tới được `host.docker.internal:1883`.
+  # Đo được, không phải lo xa. Bind `127.0.0.1` KHÔNG cứu: proxy của Docker
+  # Desktop nối tới host qua chính loopback, nên container it-net vẫn vào được
+  # một port đã bind loopback. Cả hai số đo ở docs/plans/M0-bootstrap.md §C08.4.
+  #
+  # Muốn dùng MQTT hoặc gọi dashboard API lúc dev: `make dmz-shell`.
   # ─────────────────────────────────────────────────────────
   emqx:
     image: emqx/emqx:5.10.4
@@ -202,9 +212,6 @@ services:
       EMQX_NODE__NAME: emqx@nvm-emqx
       EMQX_DASHBOARD__DEFAULT_USERNAME: ${NVM_EMQX_USER}
       EMQX_DASHBOARD__DEFAULT_PASSWORD: ${NVM_EMQX_PASSWORD}
-    ports:
-      - "${NVM_PORT_MQTT}:1883"
-      - "${NVM_PORT_EMQX_UI}:18083"
     volumes:
       - emqxdata:/opt/emqx/data
     networks: [ot-net, dmz-net]
@@ -328,9 +335,14 @@ services:
 
   # Đứng hai chân trên ot-net và dmz-net — đúng vai trò EMQX sẽ đảm nhận ở C08.
   # Đây là con đường HỢP LỆ duy nhất để dữ liệu từ tầng nhà máy đi lên.
+  #
+  # Dùng image mosquitto chứ không phải alpine: `scripts/net-check.sh` cần chứng
+  # minh đường hợp lệ bằng một vòng pub/sub MQTT THẬT, không chỉ bằng một cú bắt
+  # tay TCP. Cùng lý do đã ghi ở C08.4 — thất bại hay thành công đều phải đúng
+  # lý do, không chỉ đúng exit code.
   probe-dmz:
     profiles: [probe]
-    image: alpine:3.21
+    image: eclipse-mosquitto:2.0.22
     container_name: nvm-probe-dmz
     command: ["sleep", "infinity"]
     mem_limit: 32m
@@ -343,3 +355,25 @@ services:
     command: ["sleep", "infinity"]
     mem_limit: 32m
     networks: [it-net]
+
+  # ─────────────────────────────────────────────────────────
+  # dmz-shell — bàn làm việc của người phát triển, đặt trong DMZ
+  #
+  # Sau khi EMQX bỏ `ports:`, đây là đường HỢP LỆ để một con người chạm tới
+  # MQTT: bước vào vùng đệm rồi làm việc từ trong đó. Trong nhà máy thật, kỹ sư
+  # không nối thẳng laptop vào mạng thiết bị mà đi qua một jump host ở DMZ —
+  # container này chính là jump host đó, thu nhỏ.
+  #
+  # CHỈ có chân dmz-net, KHÔNG có ot-net. Một máy trạm của người dùng không được
+  # đứng hai chân sang tầng thiết bị. probe-dmz có hai chân vì nó mô phỏng EMQX,
+  # là thiết bị hạ tầng, không phải người.
+  # ─────────────────────────────────────────────────────────
+  dmz-shell:
+    profiles: [tools]
+    image: eclipse-mosquitto:2.0.22
+    container_name: nvm-dmz-shell
+    mem_limit: 64m
+    stdin_open: true
+    tty: true
+    entrypoint: ["/bin/sh"]
+    networks: [dmz-net]

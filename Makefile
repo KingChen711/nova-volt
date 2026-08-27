@@ -14,7 +14,7 @@ SOLUTION := NovaVolt.Mes.slnx
 COMPOSE  := docker compose
 
 # `down` phải nêu đủ profile, nếu không container của profile không active sẽ bị bỏ lại.
-ALL_PROFILES := --profile probe --profile init --profile obs
+ALL_PROFILES := --profile probe --profile init --profile obs --profile tools
 
 # Đọc RIÊNG một biến từ .env thay vì `include .env`.
 # `include` nạp mọi biến vào make — kể cả mật khẩu — và một khoá trùng tên với biến
@@ -22,7 +22,7 @@ ALL_PROFILES := --profile probe --profile init --profile obs
 BACKUP_DIR := $(shell grep -E '^NVM_BACKUP_DIR=' .env 2>/dev/null | cut -d= -f2-)
 
 .DEFAULT_GOAL := help
-.PHONY: help up up-obs down down-v reset ps logs build test ci hooks format format-check clean backup bus-fanout bus-dlq bus-chaos
+.PHONY: help up up-obs down down-v reset ps logs net-check dmz-shell build test ci hooks format format-check clean backup bus-fanout bus-dlq bus-chaos
 
 help:
 	@echo "NovaVolt MES"
@@ -35,6 +35,8 @@ help:
 	@echo "    make reset         down-v roi up lai tu dau"
 	@echo "    make ps            Trang thai container"
 	@echo "    make logs          Theo doi log"
+	@echo "    make net-check     Kiem ranh gioi OT/IT (K11) - 9 phep do"
+	@echo "    make dmz-shell     Mo shell trong dmz-net de dung MQTT"
 	@echo ""
 	@echo "  Code"
 	@echo "    make build         Build solution"
@@ -52,6 +54,22 @@ help:
 	@echo ""
 	@echo "  Khac"
 	@echo "    make backup        git bundle toan bo repo sang NVM_BACKUP_DIR"
+
+# Ranh gioi mang la rang buoc CUNG (AGENTS.md K11), nhung tu M0 toi M1 no chi duoc
+# kiem mot lan bang tay - va phep kiem do bo lot duong vong qua port host suot hai
+# milestone. Tu day no la mot lenh chay lai duoc.
+#
+# CO Y khong nam trong `make ci`: ci phai chay duoc tren may khong bat Docker.
+# Doi lai, phai chay `make net-check` moi khi dung toi docker-compose.yml.
+net-check: .env
+	@sh scripts/net-check.sh
+
+# Duong HOP LE de mot con nguoi cham toi MQTT sau khi EMQX bo `ports:`.
+dmz-shell: .env
+	@echo "Dang o trong dmz-net. Broker la 'emqx'. Vi du:"
+	@echo "    mosquitto_sub -h emqx -t '#' -v"
+	@echo "    wget -qO- http://emqx:18083/status"
+	@$(COMPOSE) --profile tools run --rm dmz-shell
 
 # Chan som voi thong bao ro rang. Thieu .env thi docker compose bao loi kho hieu
 # ve bien khong resolve duoc, chu khong noi la thieu file.

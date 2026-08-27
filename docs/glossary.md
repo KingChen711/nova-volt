@@ -122,6 +122,9 @@ Routing đầy đủ ở [`scope.md`](scope.md) §2.2.
 | **MES** | *Manufacturing Execution System* — hệ thống điều hành sản xuất, đứng giữa ERP và tầng thiết bị |
 | **OT / IT** | *Operational Technology* (tầng thiết bị nhà máy) và *Information Technology* (tầng doanh nghiệp). Ranh giới giữa hai tầng là ranh giới **an ninh** |
 | **DMZ** | Vùng đệm giữa OT và IT |
+| **Zones & conduits** | Mô hình an ninh của **IEC 62443**: chia nhà máy thành **zone** (vùng cùng mức rủi ro) và chỉ cho đi lại qua **conduit** (ống dẫn được khai báo, kiểm soát). `ot-net` / `dmz-net` / `it-net` là ba zone; EMQX là conduit duy nhất giữa OT và DMZ |
+| **Jump host** | Máy trung gian đặt ở DMZ mà kỹ sư phải đăng nhập vào **trước**, thay vì nối thẳng laptop xuống tầng thiết bị. Trong repo: `make dmz-shell`. Nó chỉ có một chân ở DMZ — máy trạm của con người **không** được đứng hai chân sang OT |
+| **Unified Namespace (UNS)** | Một cây topic MQTT duy nhất mà mọi hệ thống đọc/ghi, thay cho hàng chục tích hợp điểm-điểm. Cây đó chính là **equipment path** ở trên — cùng chuỗi dùng làm topic, nhãn metric và khoá phân quyền |
 | **ERP** | Hệ thống quản trị doanh nghiệp. Đẩy work order xuống MES, nhận kết quả lên |
 | **B2MML** | Định dạng XML trao đổi dữ liệu ERP ↔ MES theo ISA-95 |
 

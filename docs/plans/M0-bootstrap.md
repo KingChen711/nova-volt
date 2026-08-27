@@ -360,6 +360,11 @@ Rồi kiểm ranh giới theo **cả năm chiều**, mỗi chiều nêu rõ kỳ
 | IT → internet | thông | 0% packet loss |
 | DMZ → IT | bị chặn | `ping: bad address` |
 
+> [!warning] Bảng năm chiều này **thiếu ba chiều**, và chỗ thiếu đã thành lỗ hổng thật
+> Cả năm phép trên đều đi bằng **tên container**, nên chúng chỉ chứng minh đường *trực tiếp*
+> bị chặn. Không phép nào hỏi *"đi vòng qua port host thì sao?"* — và câu trả lời suốt từ M0
+> tới M1 là **đi được**. Xem §C08.4. Bảng đúng có 9 phép, chạy bằng `make net-check`.
+
 > [!warning] Bẫy khi viết script kiểm chứng
 > `docker exec ... | tail -3` làm exit code trở thành của `tail`, luôn bằng 0. Dùng `cmd && echo DAT || echo KHONG DAT` sau một pipe như vậy sẽ **luôn báo đạt**. Phải bắt exit code vào biến trước khi lọc output. Một script kiểm chứng báo sai còn tệ hơn không có script.
 
@@ -543,7 +548,65 @@ log         : EMQX Enterprise 5.10.4 is running now!
 > [!warning] Lại dương tính giả trong script kiểm chứng
 > Phép thử "it-net không tới được EMQX" ban đầu dùng `mosquitto_pub -W 5`. Nhưng `-W` chỉ có ở `mosquitto_sub`, nên lệnh fail vì **sai cú pháp** và script báo "đạt". Cùng loại lỗi đã cảnh báo ở C05: phải xác nhận nó thất bại **đúng lý do**, không chỉ xác nhận nó thất bại. Kết quả đúng phải là `Unable to connect (Lookup error)`.
 
-**Ghi chú kiến trúc**: EMQX cố ý **không** nằm trên `it-net`. Service .NET muốn nghe MQTT phải qua `Nvm.EdgeGateway` ở `dmz-net` (M2). Port 1883 vẫn publish ra host được, vì EMQX có một chân trên `dmz-net` không phải mạng internal.
+**Ghi chú kiến trúc**: EMQX cố ý **không** nằm trên `it-net`. Service .NET muốn nghe MQTT phải qua `Nvm.EdgeGateway` ở `dmz-net` (M2).
+
+> [!caution] Câu cuối của mục này từng SAI, và đã được sửa
+> Nguyên văn cũ: *"Port 1883 vẫn publish ra host được, vì EMQX có một chân trên `dmz-net`
+> không phải mạng internal."* Vế **vì sao** thì đúng — đúng là nhờ chân `dmz-net` mà Docker
+> mới publish được. Vế **kết luận** thì sai: nó coi việc publish được là an toàn, trong khi
+> đó chính là lỗ hổng K11. Xem §C08.4.
+
+#### C08.4 — Port publish ra host là một lỗ K11, và `127.0.0.1` không vá được
+
+Phát hiện khi audit M0/M1 (2026-08-27). `emqx` đã bỏ `ports:` từ đây.
+
+**Số đo 1 — lỗ hổng có thật.** Từ `nvm-timescale` (chỉ có chân `it-net`):
+
+| Đích | Kết quả |
+|---|---|
+| `nvm-emqx:1883` | **closed** — ranh giới trực tiếp hoạt động đúng |
+| `host.docker.internal:1883` | **OPEN** |
+| `host.docker.internal:18083` | **OPEN** |
+
+Ranh giới network chỉ chặn đường trực tiếp. Port host là một cửa hông mà mọi container trên
+mọi network đều đẩy vào được.
+
+**Số đo 2 — bind loopback KHÔNG phải ranh giới.** Hai container tạm trên `dmz-net`, một
+publish `127.0.0.1:19998`, một publish `0.0.0.0:19999`. Đo lại từ `nvm-timescale`:
+
+| Đích | Kết quả |
+|---|---|
+| `host.docker.internal:19998` *(bind loopback)* | **OPEN** |
+| `host.docker.internal:19999` *(bind 0.0.0.0)* | **OPEN** |
+
+Proxy của Docker Desktop nối tới host **qua chính loopback**, nên `127.0.0.1` không phân biệt
+được container với người dùng. Phương án "bind loopback cho an toàn" bị loại **bằng số đo**,
+không phải bằng lập luận.
+
+**Số đo 3 — chỉ `ot-net` thì không publish được gì.** Container chỉ nằm trên network
+`internal: true` bị Docker **bỏ qua hoàn toàn** khai báo `ports:` — mapping không xuất hiện.
+EMQX publish được **chỉ vì** nó có chân `dmz-net`. Đây đúng là điều C08.3 nhận xét, nhưng
+kết luận ngược dấu.
+
+**Cách sửa**: bỏ `ports:` của `emqx`. Đường hợp lệ cho người dùng là `make dmz-shell` —
+một container trên `dmz-net` (và **chỉ** `dmz-net`, không có chân `ot-net`, vì máy trạm của
+con người không được đứng hai chân sang tầng thiết bị). Đây là jump host, thu nhỏ.
+
+**Chống tái phát**: `make net-check` → `scripts/net-check.sh`, 9 phép đo bằng TCP connect
+thật, exit ≠ 0 nếu thủng. Đã kiểm bằng cách phá hoại: publish lại 1883/18083 thì **đúng 2/9**
+phép trượt, 7 phép còn lại vẫn đạt — script chỉ đúng chỗ, không đỏ vơ đũa cả nắm.
+
+> [!warning] Lần thứ ba dính đúng một loại bẫy trong cùng một chủ đề
+> Bản đầu của `net-check.sh` gọi `docker exec probe-it`, nhưng `container_name` là
+> `nvm-probe-it`. Docker trả về *"No such container"* và mã thoát khác 0 — **y hệt một kết
+> nối bị chặn**. Kết quả: cả 9 chiều báo `blocked`, bảng trông như một ranh giới cực kỳ chắc
+> chắn, trong khi thực tế không đo được gì cả.
+>
+> Nó bị lộ vì phép MQTT ngay bên dưới dùng tên container đúng và **đạt** — hai dòng nói ngược
+> nhau về cùng một đường. Nếu bảng chỉ toàn TCP thì lỗi này đã lọt.
+>
+> Vì thế script có `assert_alive()`: probe không chạy nổi `true` thì thoát mã 2, **không**
+> báo `blocked`. Sai theo hướng yên tâm là kiểu sai nguy hiểm nhất ở đây.
 
 ---
 

@@ -2475,7 +2475,14 @@ networks:
 | `Nvm.Ingestion` | `dmz-net`, `it-net` |
 | Mọi App, DB, Mendix | `it-net` |
 
-**Test bắt buộc**: từ container `Nvm.App.Execution`, `ping` tới `Nvm.Simulator` phải **thất bại**. Đây là bằng chứng bạn hiểu ranh giới OT/IT, không chỉ nói suông.
+**Test bắt buộc**: `make net-check` — 9 phép đo, exit ≠ 0 nếu ranh giới thủng.
+
+> [!danger] `ping` tới tên container là phép thử KHÔNG đủ, đã có bằng chứng
+> Bản đầu của mục này yêu cầu *"từ `Nvm.App.Execution` ping tới `Nvm.Simulator` phải thất bại"*. Phép đó chỉ chứng minh đường **trực tiếp** bị chặn. Nó không thấy đường vòng qua **port host**, và đường vòng đó tồn tại thật suốt M0–M1: `it-net` không tới được `nvm-emqx:1883` nhưng tới được `host.docker.internal:1883`. Bind `127.0.0.1` không vá được. Số đo ở `plans/M0-bootstrap.md` §C08.4.
+
+**Hệ quả bắt buộc cho M2**: EMQX không publish port nào ra host, nên `Nvm.Simulator` và `Nvm.EdgeGateway` **phải chạy trong container** ở đúng network của mình — không được `dotnet run` trên máy Windows rồi nối qua `localhost:1883`. Máy Windows là tầng IT; làm vậy là tự tay dựng lại đúng lỗ hổng vừa bịt. Hai service này cần Dockerfile ngay từ M2, và load harness bắn 5.000 msg/s cũng chạy trong `ot-net`.
+
+Người cần MQTT lúc dev thì bước vào vùng đệm: `make dmz-shell` mở shell trong `dmz-net` (**chỉ** `dmz-net`, không có chân `ot-net` — máy trạm của con người không được đứng hai chân sang tầng thiết bị). Đây là **jump host**, thu nhỏ.
 
 > [!danger] Service .NET của bạn không được phép gọi thẳng xuống PLC
 > Trong nhà máy thật, đây không phải khuyến nghị mà là chính sách an ninh (IEC 62443 zones & conduits). Mọi thứ đi qua gateway/broker ở tầng DMZ. **Đừng thiết kế giải pháp giả định mình ghi trực tiếp xuống thiết bị** — bạn sẽ bị bác ngay ở buổi review kiến trúc đầu tiên.
@@ -2708,7 +2715,7 @@ Câu bám theo, nếu không khí đang mở: *"Thế phần nào hay trục tr�
 | M | Milestone | Tuần | Bắt đầu | Xong | DoD ★ đạt? | ADR | Màn hình Mendix | Ghi chú |
 |---|---|---|---|---|---|---|---|---|
 | M0 | Bootstrap & Walking Skeleton | 1,0 | 2026-08-25 | 2026-08-26 | ☑ | ☑ | ☑ | 16 commit. Cả 5 DoD đạt. 4 ADR |
-| M1 | Factory Model & Service Bus | 1,5 | | | ☐ | ☐ | — | |
+| M1 | Factory Model & Service Bus | 1,5 | 2026-08-26 | 2026-08-27 | ☑ | ☑ | — | 19 commit. **D1–D4 đạt**, D5 còn mở (vế "giải thích được"). 5 ADR: 004, 008, 010, 021, 022. 279 test. ★ Lab phá hoại: **18/200 event mất** khi broker chết 30 s |
 | M2 | Simulator, Ingestion & Idempotency | 2,5 | | | ☐ | ☐ | — | |
 | M3 | Telemetry & Production Calendar | 1,0 | | | ☐ | ☐ | — | |
 | M4 | Mendix — Operator Station v1 | 2,0 | | | ☐ | ☐ | ☐ | |

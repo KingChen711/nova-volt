@@ -2,7 +2,7 @@
 title: "M1 — Factory Model & Manufacturing Service Bus"
 milestone: M1
 duration: "1,5 tuần (18 giờ ước lượng)"
-status: planned
+status: done (D5 còn mở — xem §7)
 created: 2026-08-26
 depends_on: [M0]
 unlocks: [M2]
@@ -34,7 +34,7 @@ Milestone chỉ được đóng khi **cả 5** mệnh đề đúng, có bằng c
 - `tests/Architecture` có ≥ 5 rule chạy được (K8, K9, K2 được ép bằng máy chứ không bằng trí nhớ).
 - **5** ADR mới: `ADR-004`, `ADR-008`, `ADR-010`, `ADR-021`, `ADR-022`. Mỗi ADR viết **trong chính commit ra quyết định**, không dồn về cuối.
 - `docs/event-catalog.md` tồn tại với các event M1 thật sự phát ra.
-- `docs/glossary.md` phủ **mọi** thuật ngữ nghiệp vụ đã dùng trong M1 — kiểm bằng cách đọc lại báo cáo của 19 commit và tìm từ chưa có mục (`AGENTS.md` §5.8.2).
+- [x] `docs/glossary.md` phủ mọi thuật ngữ nghiệp vụ đã dùng trong M1 — kiểm 2026-08-27, không từ nào thiếu mục (`AGENTS.md` §5.8.2)
 
 **Không** thuộc M1: event store, outbox, projection, Functional Block đầy đủ (`Entities/`+`Migrations/`), OData/Public Object Model, EF Core, Testcontainers. M1 dựng **đường ống** và **quy ước**, không dựng nghiệp vụ.
 
@@ -1061,45 +1061,58 @@ Trả lời lúng túng câu nào → dòng tương ứng **chưa** phải `xong
 
 | # | Commit | ☐ | Ngày | Ghi chú |
 |---|---|---|---|---|
-| C01 | domain event marker + event version attribute | ☐ | | |
-| C02 | cloudevents envelope + event type naming | ☐ | | |
-| C03 | golden file + source-generated json context | ☐ | | |
-| C04 | icommand, icommandhandler, dispatcher | ☐ | | ADR-010 |
-| C05 | validation, idempotency, audit behaviors | ☐ | | |
-| C06 | isa-95 node model + invariants | ☐ | | |
-| C07 | seed NV1 + DE1 với equipment path index | ☐ | | |
-| C08 | command activate model revision | ☐ | | |
-| C09 | pin masstransit 8 + nvm.bus project | ☐ | | ADR-004, ADR-021 |
-| C10 | exchange, routing key, queue topology | ☐ | | |
-| C11 | retry, redelivery, dead letter policy | ☐ | | |
-| C12 | cloudevents attributes qua transport header | ☐ | | ADR-008 |
-| C13 | bus probe worker + 2 consumer độc lập | ☐ | | D1, D2, D4. ADR-022 |
-| C14 | bus health check không phá startup | ☐ | | |
-| C15 | analyzer NVM001 | ☐ | | D3 |
-| C16 | analyzer NVM002 + NVM003 | ☐ | | |
-| C17 | netarchtest cho ranh giới platform | ☐ | | |
-| C18 | event catalog + oef mapping | ☐ | | D5 |
-| C19 | benchmarks + đóng M1 | ☐ | | |
+| C01 | domain event marker + event version attribute | ☑ | 2026-08-26 | `4d7b789` |
+| C02 | cloudevents envelope + event type naming | ☑ | 2026-08-26 | `c50c135` |
+| C03 | golden file + source-generated json context | ☑ | 2026-08-26 | `ab1e6f1`. Kéo event M1 về sớm — golden file phải viết từ contract, nên contract có trước |
+| C04 | icommand, icommandhandler, dispatcher | ☑ | 2026-08-27 | `6d65e69`. ADR-010 |
+| C05 | validation, idempotency, audit behaviors | ☑ | 2026-08-27 | `d19406a`. Làm lộ bug khoá dùng chung trong test C04 |
+| C06 | isa-95 node model + invariants | ☑ | 2026-08-27 | `b024c70`. `EquipmentPath` + `FactoryNodeKind` đặt ở Kernel, không ở FB |
+| C07 | seed NV1 + DE1 với equipment path index | ☑ | 2026-08-27 | `92b7234`. 41 node thật |
+| C08 | command activate model revision | ☑ | 2026-08-27 | `8b77f49` |
+| C09 | pin masstransit 8 + nvm.bus project | ☑ | 2026-08-27 | `ca180f8`. ADR-004, ADR-021 |
+| C10 | exchange, routing key, queue topology | ☑ | 2026-08-27 | `ac8774a`. Kiểm exchange/queue dời sang C13 — xem §C10.3 |
+| C11 | retry, redelivery, dead letter policy | ☑ | 2026-08-27 | `d43e575`. Kiểm được ngay bằng test harness, không cần chờ C13 |
+| C12 | cloudevents attributes qua transport header | ☑ | 2026-08-27 | `0094509`. ADR-008. Test yếu ban đầu giấu một bug thật |
+| C13 | bus probe worker + 2 consumer độc lập | ☑ | 2026-08-27 | `4e7fc02`. D1, D2, D4. ADR-022 |
+| C14 | bus health check không phá startup | ☑ | 2026-08-27 | `08ef83b`. Phát hiện `bus` mù với broker chết sau khi khởi động |
+| C15 | analyzer NVM001 | ☑ | 2026-08-27 | `cec71d1`. D3 |
+| C16 | analyzer NVM002 + NVM003 | ☑ | 2026-08-27 | `2bf2fe6` |
+| C17 | netarchtest cho ranh giới platform | ☑ | 2026-08-27 | `1e88600`. 17 rule, nhiều hơn ngưỡng 5 |
+| C18 | event catalog + oef mapping | ☑ | 2026-08-27 | `0f238bc`. D5 — vế máy kiểm được |
+| C19 | benchmarks + đóng M1 | ☐ | 2026-08-27 | commit cuối của M1 |
 
 **Definition of Done**
 
 | # | Tiêu chí | ☐ | Bằng chứng |
 |---|---|---|---|
-| ★ D1 | 1 publish → 2 consumer, 2 queue riêng | ☐ | |
-| D2 | 5 lần thử → `_error` queue, không mất | ☐ | |
-| D3 | `DateTime.UtcNow` làm build FAILED | ☐ | |
-| D4 | Tắt RabbitMQ: không crash, số mất được đếm | ☐ | |
-| D5 | 6 dòng OEF đúng trạng thái, ≥ 2 dòng `xong` | ☐ | |
+| ★ D1 | 1 publish → 2 consumer, 2 queue riêng | ☑ 2026-08-27 | `make bus-fanout`: 2 dòng nhận cho 1 publish. Tắt 1 consumer → queue của nó **tăng** `messages`, consumer kia vẫn nhận — bằng chứng hai queue độc lập thật, không phải hai consumer tình cờ cùng chạy |
+| D2 | 5 lần thử → `_error` queue, không mất | ☑ 2026-08-27 | `make bus-dlq`: **5** lần thử, khoảng cách **245 / 480 / 920 / 1933 ms** (exponential + jitter). `_error` có **1** message, queue chính còn **0** |
+| D3 | `DateTime.UtcNow` làm build FAILED | ☑ 2026-08-27 | `error NVM001` khi vi phạm cố ý; `DateTimeOffset.Now` cũng bị bắt. `NVM002`/`NVM003` cùng cơ chế (C16) |
+| D4 | Tắt RabbitMQ: không crash, số mất được đếm | ☑ 2026-08-27 | **18 / 200 event mất**, cửa sổ mất **48 → 65** (một khối liền). App restart **0** lần, `/health/live` xanh suốt. Publish thành công = consumer nhận = **182** — không có vùng xám. `ADR-022` |
+| D5 | 6 dòng OEF đúng trạng thái, ≥ 2 dòng `xong` | **☐ mở** | Vế máy kiểm được: **xong** — 13 dòng cập nhật, 2 dòng `xong` (C18). Vế thứ hai **chưa**: chủ repo chưa trả lời 3 câu hỏi ở §C18 mà không đọc lại tài liệu. Xem ghi chú bên dưới |
 
 **Sản phẩm phụ bắt buộc**
 
-- [ ] `make test` xanh, số test > 22
-- [ ] `tests/Architecture` có ≥ 5 rule, mỗi rule đã được chứng minh là đỏ được
-- [ ] `ADR-004`, `ADR-008`, `ADR-010`, `ADR-021`, `ADR-022` viết xong — mỗi cái trong commit ra quyết định, không dồn về C18/C19
-- [ ] `docs/event-catalog.md` tồn tại, chỉ ghi event **đã cài đặt thật**
-- [ ] `docs/benchmarks.md` có ≥ 5 dòng số thật cho M1
+- [x] `make test` xanh — **279** test (M0 kết thúc ở 22)
+- [x] `tests/Architecture` có ≥ 5 rule — có **17**, mỗi rule đã được chứng minh là đỏ được
+- [x] `ADR-004`, `ADR-008`, `ADR-010`, `ADR-021`, `ADR-022` viết xong — mỗi cái trong commit ra quyết định, không dồn về C18/C19
+- [x] `docs/event-catalog.md` tồn tại — 35 event, **1** đã cài đặt, và đó là con số đúng
+- [x] `docs/benchmarks.md` có ≥ 5 dòng số thật cho M1 — có **16**, không ô nào là ước lượng
 - [x] `scope.md` §9/M1 và §9/M6 đã cập nhật theo §3.3 và C11.1 *(làm trước, 2026-08-26)*
-- [ ] `docs/adr/README.md` (cột *Ra ở* của ADR-004, ADR-008) và `docs/oef-mapping.md` cập nhật theo §2.3 — làm ở C18
+- [x] `docs/adr/README.md` (cột *Ra ở*) và `docs/oef-mapping.md` cập nhật theo §2.3 — làm ở C18
+
+> [!important] D5 còn mở, và đó không phải hình thức
+> `oef-mapping.md` định nghĩa `xong` bằng **hai vế**: dựng được **và** giải thích được. Vế đầu đã có
+> bằng chứng máy chạy được. Vế hai là ba câu hỏi ở §C18, trả lời **thành lời, không mở tài liệu**:
+>
+> 1. Vì sao Opcenter chọn bus-centric thay vì cho các module gọi API của nhau?
+> 2. N15 vỡ ở chỗ nào nếu `Nvm.Ingestion` gọi HTTP đồng bộ sang `Nvm.App.Execution`? (K12)
+> 3. `_error` queue giải quyết vấn đề gì mà retry không giải quyết được?
+> 4. *(thêm ở C18)* Vì sao **không** xoá probe `rabbitmq` khi MassTransit đã có health check `bus`?
+>
+> Tắc câu nào → hạ dòng OEF tương ứng xuống `đang làm`. Ghi `xong` khi chưa đạt là mất đúng thứ
+> bảng đó tồn tại để đo. Đây là đối trọng thứ ba ở `AGENTS.md` §5.8.4, và nó chỉ có tác dụng nếu
+> thật sự được dùng.
 
 ---
 

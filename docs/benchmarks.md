@@ -48,22 +48,22 @@ Máy đo: Windows 11, Docker Desktop, quota RAM 8 GB (xem `docs/plans/M0-bootstr
 
 | Ngày | Commit | Chỉ số | Giá trị | Điều kiện đo |
 |---|---|---|---|---|
-| 2026-08-27 | `0094509`+C13 | ★ **Event mất khi broker chết 30 s** | **18 / 200** | `make bus-chaos`. Publish 200 event cách nhau 100 ms, timeout 2 s mỗi lần; `stop rabbitmq` ở giây thứ 5, `start` sau 30 s. **Chưa có outbox** — xem `ADR-022` |
-| 2026-08-27 | `0094509`+C13 | Cửa sổ mất, theo số thứ tự event | **48 → 65** | Cùng lần chạy. Một khối liền, không rải rác |
-| 2026-08-27 | `0094509`+C13 | Publish thành công / consumer nhận được | **182 / 182** | Cùng lần chạy. Hai số **bằng nhau**: số mất đúng bằng số publish thất bại, không có vùng xám |
-| 2026-08-27 | `0094509`+C13 | Thời gian chạy hết 200 event | **59,0 s** | Cùng lần chạy. Chạy trơn mất ~20 s; 39 s chênh là 18 lần × 2 s timeout |
-| 2026-08-27 | `0094509`+C13 | Số lần app restart trong lúc broker chết | **0** | `Application started` xuất hiện đúng 1 lần trong `host.log`. `/health/live` = `Healthy` suốt |
-| 2026-08-27 | `0094509`+C13 | Số check `ready` đỏ khi RabbitMQ tắt | **1 / 6** | Chỉ check `rabbitmq`. `sqlserver`, `postgres`, `keycloak`, `minio`, `masstransit-bus` vẫn xanh — lỗi không lan |
-| 2026-08-27 | `0094509`+C13 | Số lần thử của consumer lỗi | **5** | `make bus-dlq`. Khoảng cách đo được: 245 / 480 / 920 / 1933 ms — exponential có jitter, khớp `NvmRetryPolicy` |
-| 2026-08-27 | `0094509`+C13 | Message trong `_error` sau 5 lần thử | **1** | Cùng lần chạy. Queue chính còn **0** — không mất, chỉ đứng riêng |
-| 2026-08-27 | `4e7fc02`+C14 | **6** readiness probe, lời gọi đầu | **272,3 ms** | Cả 6 `Healthy`. M0 đo **451 ms** với 5 probe — thêm probe thứ sáu không làm chậm đi |
-| 2026-08-27 | `4e7fc02`+C14 | 6 readiness probe, lời gọi lặp lại | **7,9 ms** rồi **7,0 ms** | Cùng endpoint, container đã ấm. M0: 10,4 / 21,4 ms với 5 probe |
-| 2026-08-27 | `4e7fc02`+C14 | ★ **Khởi động app khi RabbitMQ đang tắt** | **249 ms** | App lên bình thường. `live=Healthy`; `ready=Unhealthy` ở **`bus`** (*"Not ready: not started"*, *"Broker unreachable"*) và **`rabbitmq`**; 4 probe còn lại xanh |
-| 2026-08-27 | `4e7fc02`+C14 | Phát hiện SQL Server chết | **3157 ms** | Regression của D5/M0 (đo 3,2 s). Ngưỡng < 10 s. Chỉ `sqlserver` đỏ, 5 probe khác không lan |
-| 2026-08-27 | `4e7fc02`+C14 | ★ `bus` phát hiện broker chết **sau** khi bus đã khởi động | **không phát hiện** | `Healthy` liên tục **152 s** với broker đã `docker compose stop`. Xem ghi chú bên dưới |
-| 2026-08-27 | `4e7fc02`+C14 | `ready` xanh lại sau khi bật lại broker — lần 1 | **19,8 s** | Broker tắt ~40 s trước đó. Con số này chủ yếu là thời gian **container RabbitMQ khởi động**, không phải thời gian app nối lại |
-| 2026-08-27 | `4e7fc02`+C14 | `ready` xanh lại sau khi bật lại broker — lần 2 | **4,7 s** | Broker tắt ~10 s. `check_running` của broker và `ready` của app xanh trong **cùng một nhịp poll 1 s** → phần app tự đóng góp < 1 s |
-| 2026-08-27 | `4e7fc02`+C14 | Số lần app restart trong cả bốn kịch bản trên | **0** | `Application started` đúng 1 lần mỗi lần chạy |
+| 2026-08-27 | `4e7fc02` | ★ **Event mất khi broker chết 30 s** | **18 / 200** | `make bus-chaos`. Publish 200 event cách nhau 100 ms, timeout 2 s mỗi lần; `stop rabbitmq` ở giây thứ 5, `start` sau 30 s. **Chưa có outbox** — xem `ADR-022` |
+| 2026-08-27 | `4e7fc02` | Cửa sổ mất, theo số thứ tự event | **48 → 65** | Cùng lần chạy. Một khối liền, không rải rác |
+| 2026-08-27 | `4e7fc02` | Publish thành công / consumer nhận được | **182 / 182** | Cùng lần chạy. Hai số **bằng nhau**: số mất đúng bằng số publish thất bại, không có vùng xám |
+| 2026-08-27 | `4e7fc02` | Thời gian chạy hết 200 event | **59,0 s** | Cùng lần chạy. Chạy trơn mất ~20 s; 39 s chênh là 18 lần × 2 s timeout |
+| 2026-08-27 | `4e7fc02` | Số lần app restart trong lúc broker chết | **0** | `Application started` xuất hiện đúng 1 lần trong `host.log`. `/health/live` = `Healthy` suốt |
+| 2026-08-27 | `4e7fc02` | Số check `ready` đỏ khi RabbitMQ tắt | **1 / 6** | Chỉ check `rabbitmq`. `sqlserver`, `postgres`, `keycloak`, `minio`, `masstransit-bus` vẫn xanh — lỗi không lan |
+| 2026-08-27 | `4e7fc02` | Số lần thử của consumer lỗi | **5** | `make bus-dlq`. Khoảng cách đo được: 245 / 480 / 920 / 1933 ms — exponential có jitter, khớp `NvmRetryPolicy` |
+| 2026-08-27 | `4e7fc02` | Message trong `_error` sau 5 lần thử | **1** | Cùng lần chạy. Queue chính còn **0** — không mất, chỉ đứng riêng |
+| 2026-08-27 | `08ef83b` | **6** readiness probe, lời gọi đầu | **272,3 ms** | Cả 6 `Healthy`. M0 đo **451 ms** với 5 probe — thêm probe thứ sáu không làm chậm đi |
+| 2026-08-27 | `08ef83b` | 6 readiness probe, lời gọi lặp lại | **7,9 ms** rồi **7,0 ms** | Cùng endpoint, container đã ấm. M0: 10,4 / 21,4 ms với 5 probe |
+| 2026-08-27 | `08ef83b` | ★ **Khởi động app khi RabbitMQ đang tắt** | **249 ms** | App lên bình thường. `live=Healthy`; `ready=Unhealthy` ở **`bus`** (*"Not ready: not started"*, *"Broker unreachable"*) và **`rabbitmq`**; 4 probe còn lại xanh |
+| 2026-08-27 | `08ef83b` | Phát hiện SQL Server chết | **3157 ms** | Regression của D5/M0 (đo 3,2 s). Ngưỡng < 10 s. Chỉ `sqlserver` đỏ, 5 probe khác không lan |
+| 2026-08-27 | `08ef83b` | ★ `bus` phát hiện broker chết **sau** khi bus đã khởi động | **không phát hiện** | `Healthy` liên tục **152 s** với broker đã `docker compose stop`. Xem ghi chú bên dưới |
+| 2026-08-27 | `08ef83b` | `ready` xanh lại sau khi bật lại broker — lần 1 | **19,8 s** | Broker tắt ~40 s trước đó. Con số này chủ yếu là thời gian **container RabbitMQ khởi động**, không phải thời gian app nối lại |
+| 2026-08-27 | `08ef83b` | `ready` xanh lại sau khi bật lại broker — lần 2 | **4,7 s** | Broker tắt ~10 s. `check_running` của broker và `ready` của app xanh trong **cùng một nhịp poll 1 s** → phần app tự đóng góp < 1 s |
+| 2026-08-27 | `08ef83b` | Số lần app restart trong cả bốn kịch bản trên | **0** | `Application started` đúng 1 lần mỗi lần chạy |
 
 > [!warning] `bus` và `rabbitmq` không thay thế được cho nhau — và đây là lý do
 > Hai probe bắt hai loại hỏng **khác nhau**, và mỗi cái mù với loại kia:
@@ -90,7 +90,7 @@ Máy đo: Windows 11, Docker Desktop, quota RAM 8 GB (xem `docs/plans/M0-bootstr
 > worker và một transaction, đổi lại được gì?* Đổi lại 18 event, trong 30 giây, ở một hệ thống chưa
 > có tải.
 >
-> Cột `Commit` ghi `0094509`+C13 vì phép đo chạy trên cây làm việc của C13 trước khi commit. Thay
+> Cột `Commit` ghi `4e7fc02` vì phép đo chạy trên cây làm việc của C13 trước khi commit. Thay
 > bằng hash thật của C13 ngay sau khi commit.
 
 ---
@@ -116,6 +116,19 @@ có một dòng chi tiết ở bảng phía trên.
 | Mutation score domain (%) | ≥ 70 | — | — | — | |
 
 `—` nghĩa là chỉ số đó chưa tồn tại ở milestone ấy, không phải "chưa đo".
+
+---
+
+## Chỉ số cố ý KHÔNG đo ở M1
+
+| Chỉ số | Vì sao chưa |
+|---|---|
+| **N13 — toàn hệ thống healthy < 5 phút** | Đã đo ở **M0** (48 / 36 / 42 s so với ngưỡng 300 s). M1 **không thêm container nào** vào compose — RabbitMQ đã chạy từ M0/C08. Thứ M1 phải kiểm là *regression* của `/health/ready` khi số probe đi từ 5 lên 6, và nó đã có ở bảng trên. Bảng NFR `scope.md` §4 đã sửa N13 từ M1 sang M0 |
+| Throughput bus (msg/s) | M1 publish 200 event cách nhau 100 ms — đó là kịch bản đo **mất mát**, không phải đo tải. Đo thật ở **M2** cùng N1 (≥ 5.000 msg/s) |
+| Chi phí SHA-1 của `IdempotencyKey` | `ADR-010` §Evidence ghi rõ đây là **phán đoán chưa đo**. Đo ở M2 khi có tải thật |
+| Ngưỡng kill switch | Chưa bật, vì chỉnh circuit breaker trên dữ liệu bằng 0 là đoán (`Nvm.Bus/README.md`). Bật và chỉnh ở M2 |
+| Thời gian `make ci` | Vẫn như M0: số giây chỉ có nghĩa khi test đủ nhiều. 279 test chạy ~5 s — bắt đầu ghi từ M2 |
+| Thời gian projection / truy vấn | Chưa có read model. Bắt đầu ở M6 |
 
 ---
 

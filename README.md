@@ -67,17 +67,33 @@ Phải trả `"status":"Healthy"` kèm **5 check**: `sqlserver`, `postgres`, `ra
 | 8080 | **Mendix** `NvmShopFloor` (Studio Pro, ngoài Docker) | `/oauth/v2/login` | `op.nv1` |
 | 8081 | **Keycloak** | <http://localhost:8081> | `NVM_KEYCLOAK_ADMIN` |
 | 15672 | **RabbitMQ** management | <http://localhost:15672> | `NVM_RABBITMQ_USER` |
-| 18083 | **EMQX** dashboard | <http://localhost:18083> | `NVM_EMQX_USER` |
+| 18083 | **EMQX** dashboard | **không publish** — xem ghi chú dưới bảng | `NVM_EMQX_USER` |
 | 9001 | **MinIO** console | <http://localhost:9001> | `NVM_MINIO_USER` |
 | 9000 | MinIO API | — | — |
 | 1433 | SQL Server | — | `sa` / `NVM_MSSQL_SA_PASSWORD` |
 | 5432 | PostgreSQL + TimescaleDB | — | `NVM_POSTGRES_USER` |
 | 5672 | RabbitMQ AMQP | — | — |
-| 1883 | EMQX MQTT | — | — |
+| 1883 | EMQX MQTT | **không publish** — xem ghi chú dưới bảng | — |
 | 3000 | Grafana — profile `obs`, chưa bật tới M13 | — | — |
 
 Mật khẩu nằm trong `.env` dưới đúng khoá ghi ở cột cuối. **Không chép chúng vào tài liệu** —
 hai bản sẽ trôi khỏi nhau.
+
+> [!important] EMQX không mở port nào ra host, và đó là điều bắt buộc
+> EMQX là service duy nhất chạm `ot-net`. Publish port của nó ra host mở lại đúng đường mà
+> K11 cấm: container trên `it-net` không tới được `nvm-emqx:1883`, nhưng tới được
+> `host.docker.internal:1883`. Bind `127.0.0.1` **không** cứu — đo được, xem
+> `docs/plans/M0-bootstrap.md` §C08.4.
+>
+> Cần MQTT hoặc dashboard API lúc dev thì bước vào vùng đệm thay vì kéo nó ra ngoài:
+>
+> ```
+> make dmz-shell
+> mosquitto_sub -h emqx -t '#' -v
+> wget -qO- http://emqx:18083/status
+> ```
+>
+> Kiểm ranh giới bất cứ lúc nào bằng `make net-check` (9 phép đo, exit ≠ 0 nếu thủng).
 
 > **8080 là của Mendix, 8081 là của Keycloak.** Quyết định chốt ở C05 vì cả hai cùng mặc định
 > 8080 và đổi Mendix phiền hơn. Đổi lại sau là phải sửa cả realm config.

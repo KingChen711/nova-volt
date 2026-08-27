@@ -11,8 +11,8 @@ namespace Nvm.Kernel.Commands;
 /// helper needs one.
 /// </para>
 /// <para>
-/// The pipeline behaviours are not here yet. When they arrive they wrap this call rather than replace
-/// it, so the seam stays where it is.
+/// Behaviours wrap the handler call rather than replace it, and their order comes from the order they
+/// were registered. See <see cref="KernelServiceCollectionExtensions.AddNvmKernel"/>.
 /// </para>
 /// </remarks>
 public sealed class CommandDispatcher(IServiceProvider services) : ICommandDispatcher
@@ -64,11 +64,38 @@ public sealed class CommandDispatcher(IServiceProvider services) : ICommandDispa
             IServiceProvider services,
             CancellationToken cancellationToken)
         {
+            var typed = (TCommand)command;
+
+            // Resolved before any behaviour runs. A missing handler is a wiring mistake, and finding
+            // out about it after validation and deduplication have already had their say only makes
+            // the stack trace longer.
             var handler = services.GetService(typeof(ICommandHandler<TCommand, TResult>))
                 as ICommandHandler<TCommand, TResult>
                 ?? throw new CommandHandlerNotFoundException(typeof(TCommand));
 
-            return handler.HandleAsync((TCommand)command, cancellationToken);
+            CommandPipelineStep<TResult> next = () => handler.HandleAsync(typed, cancellationToken);
+
+            if (services.GetService(typeof(IEnumerable<ICommandBehavior<TCommand, TResult>>))
+                is not IEnumerable<ICommandBehavior<TCommand, TResult>> behaviors)
+            {
+                return next();
+            }
+
+            // Wrapped from the inside out, so the first registered behaviour ends up outermost and
+            // the registration order in AddNvmKernel reads the same way the pipeline runs.
+            var ordered = behaviors as ICommandBehavior<TCommand, TResult>[] ?? [.. behaviors];
+
+            for (var index = ordered.Length - 1; index >= 0; index--)
+            {
+                // Copied into locals: the lambda captures the variable, not its value, and reusing the
+                // loop's own would leave every stage calling the last one built.
+                var behavior = ordered[index];
+                var inner = next;
+
+                next = () => behavior.HandleAsync(typed, inner, cancellationToken);
+            }
+
+            return next();
         }
     }
 }

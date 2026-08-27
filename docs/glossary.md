@@ -152,6 +152,9 @@ Routing đầy đủ ở [`scope.md`](scope.md) §2.2.
 | **Causation id** | Cái **trực tiếp gây ra** event này, thường là operation run hoặc command. *Correlation nhóm lại, causation xâu chuỗi* |
 | **Partition key** | Nhóm message phải **giữ đúng thứ tự** với nhau. Hai event cùng một cell không được vượt mặt nhau; hai cell khác nhau thì được |
 | **Command** | Một **ý định** thay đổi trạng thái, gửi tới **đúng một** handler, đặt tên ở thể mệnh lệnh (`QuarantineUnit`). Đối lập với event: event là **sự thật đã xảy ra**, thì quá khứ, ai nghe cũng được và có thể không ai nghe |
+| **Cross-cutting concern** | Mối quan tâm cắt ngang **mọi** thao tác — kiểm hợp lệ, chống trùng, ghi vết, transaction. Viết một lần ở pipeline thay vì nhớ viết lại trong từng handler |
+| **Pipeline behavior** | Một tầng bọc quanh command handler. Chạy theo thứ tự đăng ký, tầng đầu nằm ngoài cùng, mỗi tầng tự quyết có gọi tiếp hay không |
+| **Audit trail** | Sổ ghi **thay đổi trạng thái của sản phẩm**, auditor đọc, IATF 16949 đòi phải còn. **Khác log**: log để debug hôm nay, được phép lấy mẫu, xoay vòng, tắt đi |
 | **Natural key** | Bộ trường **vốn có trong dữ liệu** đủ để nhận ra một sự việc, không cần ID do hệ thống cấp. Với một phép đo: `(site, equipment, unit, step, device_timestamp, signal)`. Là đầu vào để suy ra khoá dedup — xem `ADR-010` |
 | **Idempotency** | Xử lý cùng một message hai lần cho kết quả như xử lý một lần |
 | **At-least-once** | Message **sẽ** đến nhiều hơn một lần. Đây là mặc định của thế giới thật, không phải sự cố |

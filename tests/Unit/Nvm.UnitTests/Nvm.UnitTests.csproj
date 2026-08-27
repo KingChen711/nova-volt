@@ -19,6 +19,8 @@
       chỗ duy nhất cần một container là test và host.
     -->
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <!-- FakeTimeProvider: tua đồng hồ trong test thay vì chờ thật. Nền cho K1, dùng nhiều từ M7. -->
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
   </ItemGroup>
 
   <ItemGroup>

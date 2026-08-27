@@ -6,7 +6,11 @@ namespace Nvm.UnitTests.Commands;
 
 public sealed class CommandDispatcherTests
 {
-    private static readonly IdempotencyKey AnyKey = IdempotencyKey.FromNaturalKey("NV1", "probe");
+    // One key per command. Two commands sharing a natural key is a modelling fault, and the
+    // idempotency store refuses it — an earlier version of this file shared one key and only found
+    // out when the pipeline gained a deduplication stage.
+    private static IdempotencyKey KeyFor(string command) =>
+        IdempotencyKey.FromNaturalKey("NV1", "probe", command);
 
     private static ServiceProvider BuildContainer() =>
         new ServiceCollection()
@@ -20,7 +24,7 @@ public sealed class CommandDispatcherTests
         using var scope = container.CreateScope();
         var dispatcher = scope.ServiceProvider.GetRequiredService<ICommandDispatcher>();
 
-        var result = await dispatcher.DispatchAsync(new ActivateProbe(AnyKey, 12), TestContext.Current.CancellationToken);
+        var result = await dispatcher.DispatchAsync(new ActivateProbe(KeyFor(nameof(ActivateProbe)), 12), TestContext.Current.CancellationToken);
 
         result.ShouldBe("activated:12");
     }
@@ -34,8 +38,8 @@ public sealed class CommandDispatcherTests
         using var scope = container.CreateScope();
         var dispatcher = scope.ServiceProvider.GetRequiredService<ICommandDispatcher>();
 
-        var text = await dispatcher.DispatchAsync(new ActivateProbe(AnyKey, 7), TestContext.Current.CancellationToken);
-        var number = await dispatcher.DispatchAsync(new CountProbe(AnyKey), TestContext.Current.CancellationToken);
+        var text = await dispatcher.DispatchAsync(new ActivateProbe(KeyFor(nameof(ActivateProbe)), 7), TestContext.Current.CancellationToken);
+        var number = await dispatcher.DispatchAsync(new CountProbe(KeyFor(nameof(CountProbe))), TestContext.Current.CancellationToken);
 
         text.ShouldBe("activated:7");
         number.ShouldBe(42);
@@ -51,7 +55,7 @@ public sealed class CommandDispatcherTests
         var dispatcher = scope.ServiceProvider.GetRequiredService<ICommandDispatcher>();
 
         var thrown = await Should.ThrowAsync<CommandHandlerNotFoundException>(
-            () => dispatcher.DispatchAsync(new OrphanProbe(AnyKey), TestContext.Current.CancellationToken));
+            () => dispatcher.DispatchAsync(new OrphanProbe(KeyFor(nameof(OrphanProbe))), TestContext.Current.CancellationToken));
 
         thrown.Message.ShouldContain(nameof(OrphanProbe));
         thrown.Message.ShouldContain(nameof(KernelServiceCollectionExtensions.AddNvmKernel));
@@ -70,7 +74,7 @@ public sealed class CommandDispatcherTests
         await cancelled.CancelAsync();
 
         await Should.ThrowAsync<OperationCanceledException>(
-            () => dispatcher.DispatchAsync(new CancellableProbe(AnyKey), cancelled.Token));
+            () => dispatcher.DispatchAsync(new CancellableProbe(KeyFor(nameof(CancellableProbe))), cancelled.Token));
     }
 
     public sealed record ActivateProbe(IdempotencyKey IdempotencyKey, int Revision) : ICommand<string>;

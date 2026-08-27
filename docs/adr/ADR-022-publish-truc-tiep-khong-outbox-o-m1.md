@@ -38,8 +38,9 @@ nó bằng 0.
 
 Ranh giới của quyết định này:
 
-- Nó **không** nói outbox là không cần. Nó nói outbox thuộc M6, cùng lúc với event store, vì outbox
-  không có nghĩa nếu không có transaction để bám vào.
+- Nó **không** nói outbox là không cần. Nó nói outbox thuộc **M6**, **sau** event store ở **M5**, vì
+  outbox không có nghĩa nếu chưa có bảng và transaction để bám vào. Hai mốc nối tiếp: M5 dựng chỗ ghi
+  và transaction boundary; M6 mới nối chỗ ghi đó với RabbitMQ.
 - Nó **không** áp dụng cho đường dữ liệu từ thiết bị. Ingestion ở M2 có store-and-forward ở edge
   gateway — một cơ chế khác, giải quyết một đoạn khác của đường đi (`scope.md` §5.5).
 - Nó **không** cho phép nuốt lỗi. Publish thất bại phải bị bắt, đếm, và ghi log kèm số thứ tự.

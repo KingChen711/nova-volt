@@ -49,7 +49,7 @@ việc khác.
 | 012 | Production day & shift | Chưa viết | M3 |
 | 013 | OData cho Public Object Model | Chưa viết | M4 |
 | 014 | Mendix là lớp UI duy nhất | Chưa viết | M4 |
-| 015 | Saga dùng Quartz store thay vì delayed exchange | Chưa viết | M9 |
+| 015 | Saga dùng Quartz store thay vì delayed exchange | Chưa viết | M7 |
 | 016 | OR-Tools CP-SAT cho matching | Chưa viết | M11 |
 | 017 | Hold cascade là job có checkpoint | Chưa viết | M9 |
 | 018 | Package versioning theo Functional Block | Chưa viết | M12 |

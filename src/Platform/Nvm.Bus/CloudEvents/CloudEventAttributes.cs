@@ -111,8 +111,38 @@ public static class CloudEventContextExtensions
             dataContentType);
     }
 
-    private static string? Read(ConsumeContext context, string header) =>
-        context.Headers.TryGetHeader(header, out var value) ? value as string : null;
+    // Present-but-unreadable is not the same as absent, and `value as string` collapses the two: a
+    // header carrying the wrong type comes back null and the message reads as though it never had
+    // that attribute. That is the same defect as the specversion sentinel one layer down — the reader
+    // reports "nothing here" while the header is sitting on the message saying otherwise.
+    private static string? Read(ConsumeContext context, string header)
+    {
+        if (!context.Headers.TryGetHeader(header, out var value) || value is null)
+        {
+            return null;
+        }
+
+        if (value is not string text)
+        {
+            throw new InvalidOperationException(
+                $"Header '{header}' is present but carries {value.GetType()} rather than a string. "
+                + "CloudEvents attributes travel as text; this is malformed metadata, not absent "
+                + "metadata.");
+        }
+
+        // CloudEvents states that an absent attribute and a present-but-empty one are different
+        // claims, which is why the optional five are omitted rather than written empty (ADR-008). The
+        // same rule read backwards: an empty mandatory header is a publisher asserting an encoding of
+        // "" — malformed — not a publisher staying silent.
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            throw new InvalidOperationException(
+                $"Header '{header}' is present but empty. An absent CloudEvents attribute and an "
+                + "empty one are different statements; an empty mandatory one is malformed.");
+        }
+
+        return text;
+    }
 
     // Half a set of attributes is worse than none: a reader would take the ones present and silently
     // assume defaults for the rest. Either the publisher stamped the message or it did not.

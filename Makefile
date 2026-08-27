@@ -40,7 +40,7 @@ help:
 	@echo ""
 	@echo "  Code"
 	@echo "    make build         Build solution"
-	@echo "    make test          Chay unit test"
+	@echo "    make test          Chay toan bo test cua solution"
 	@echo "    make ci            Chay dung chuoi kiem tra cua CI"
 	@echo "    make hooks         Bat pre-commit hook cho repo nay"
 	@echo "    make format        Tu dong sua format theo .editorconfig"

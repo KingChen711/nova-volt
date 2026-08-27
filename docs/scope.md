@@ -2729,7 +2729,7 @@ Câu bám theo, nếu không khí đang mở: *"Thế phần nào hay trục tr�
 | M | Milestone | Tuần | Bắt đầu | Xong | DoD ★ đạt? | ADR | Màn hình Mendix | Ghi chú |
 |---|---|---|---|---|---|---|---|---|
 | M0 | Bootstrap & Walking Skeleton | 1,0 | 2026-08-25 | 2026-08-26 | ☑ | ☑ | ☑ | 16 commit. Cả 5 DoD đạt. 4 ADR |
-| M1 | Factory Model & Service Bus | 1,5 | 2026-08-26 | *(chưa)* | ☐ | ☑ | — | **đang làm**. ★D1–D4 đạt; **D5 còn mở** (vế *"giải thích được"*), **C19 chưa xong** → milestone **chưa đóng**. **K7 đầy đủ còn mở tới M5**: idempotency hiện chỉ đúng trong một process (`ADR-023`). 8 ADR: 004, 008, 010, 021, 022, 023, 024, 025. 325 test. ★ Lab phá hoại: **18/200 event mất** khi broker chết 30 s |
+| M1 | Factory Model & Service Bus | 1,5 | 2026-08-26 | *(chưa)* | ☐ | ☑ | — | **đang làm**. ★D1–D4 đạt; **D5 còn mở** (vế *"giải thích được"*), **C19 chưa xong** → milestone **chưa đóng**. **K7 đầy đủ còn mở tới M5**: idempotency hiện chỉ đúng trong một process (`ADR-023`). 8 ADR: 004, 008, 010, 021, 022, 023, 024, 025. 328 test (`make ci`: 282 unit + 23 analyzer + 17 architecture + 6 contract). ★ Lab phá hoại: **18/200 event mất** khi broker chết 30 s |
 | M2 | Simulator, Ingestion & Idempotency | 2,5 | | | ☐ | ☐ | — | |
 | M3 | Telemetry & Production Calendar | 1,0 | | | ☐ | ☐ | — | |
 | M4 | Mendix — Operator Station v1 | 2,0 | | | ☐ | ☐ | ☐ | |

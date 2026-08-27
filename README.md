@@ -37,7 +37,7 @@ nói thẳng ra.
 cp .env.example .env          # 1. Không có .env thì make up dừng ngay, có hướng dẫn
 make up                       # 2. Hạ tầng + khởi tạo DB/bucket. ~40–60 s khi image đã cache
 make hooks                    # 3. Bật pre-commit hook — KHÔNG tự bật khi clone
-make test                     # 4. 325 unit test, ~6 s
+make test                     # 4. 328 automated test toàn solution, ~5 s
 dotnet run --project src/Apps/Nvm.Host.All   # 5. Host .NET ở :5080
 ```
 

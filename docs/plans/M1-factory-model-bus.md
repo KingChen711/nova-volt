@@ -742,7 +742,7 @@ Dòng thứ ba là phép kiểm quan trọng nhất: nó chứng minh hai queue 
 | `make bus-dlq` | log có **đúng 5** lần thử | ✅ **5**, đánh số 1→5. Khoảng cách 245 / 480 / 920 / 1933 ms — exponential có jitter |
 | `<queue>_error` | có **1** message | ✅ `nvm.factory-model.failing-probe_error  quorum  1` |
 | queue chính | **0** message | ✅ `nvm.factory-model.failing-probe  quorum  0` |
-| Nội dung message trong `_error` | payload nguyên vẹn + header `MT-Fault-*` nêu exception | ✅ `MT-Fault-ExceptionType`, `MT-Fault-Message` (*"attempt 5 of 5"*), `MT-Fault-RetryCount: 4`, và **cả 6 header `ce_*` còn nguyên** |
+| Nội dung message trong `_error` | payload nguyên vẹn + header `MT-Fault-*` nêu exception | ✅ `MT-Fault-ExceptionType`, `MT-Fault-Message` (*"attempt 5 of 5"*), `MT-Fault-RetryCount: 4`, và **cả 6 header `ce_*` còn nguyên** — lab đếm **tên duy nhất** rồi assert `= 6`, trượt thì `bus-dlq` thoát khác 0 |
 
 > `MT-Fault-RetryCount` = **4**, không phải 5: nó đếm lần thử **lại**. Đúng cái off-by-one mà
 > `NvmRetryPolicy.MaxAttempts` đã đặt tên để tránh — và là lý do log của consumer, không phải header
@@ -1149,7 +1149,7 @@ Trả lời lúng túng câu nào → dòng tương ứng **chưa** phải `xong
 
 **Sản phẩm phụ bắt buộc**
 
-- [x] `make test` xanh — **325** test (M0 kết thúc ở 22)
+- [x] `make ci` xanh — **328** test: 282 unit · 23 analyzer · 17 architecture · 6 contract (M0 kết thúc ở 22)
 - [x] `tests/Architecture` có ≥ 5 rule — có **17**, mỗi rule đã được chứng minh là đỏ được
 - [x] `ADR-004`, `ADR-008`, `ADR-010`, `ADR-021`, `ADR-022`, `ADR-023`, `ADR-024`, `ADR-025` viết xong — mỗi cái trong commit ra quyết định, không dồn về C18/C19
 - [x] `docs/event-catalog.md` tồn tại — 35 event, **1** đã cài đặt, và đó là con số đúng

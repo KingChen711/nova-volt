@@ -267,11 +267,16 @@ dlq() {
 	dlq_headers=$(docker exec "$RABBIT" rabbitmqadmin -u "$(env_value NVM_RABBITMQ_USER)" -p "$(env_value NVM_RABBITMQ_PASSWORD)" get messages --queue nvm.factory-model.failing-probe_error --ack-mode reject_requeue_true 2>/dev/null | grep -aoE '"(MT-Fault-(ConsumerType|ExceptionType|Message|RetryCount)|MT-Reason|ce_(specversion|id|type|source|time|datacontenttype))":"?[^",]*' | sort -u || true)
 	echo "$dlq_headers"
 
-	ce_found=$(echo "$dlq_headers" | grep -c '"ce_' || true)
+	# Dem TEN header duy nhat, khong dem dong. rabbitmqadmin in moi header HAI lan
+	# (mot lan trong bang tom tat, mot lan trong phan properties), va `sort -u` tren
+	# ca dong khong gop chung lai khi phan gia tri in ra khac nhau du chi mot ky tu.
+	# Dem dong o day cho ra 12 va lam DoD truot trong khi broker van giu du sau.
+	ce_found=$(echo "$dlq_headers" | grep -aoE '"ce_[a-z]+"' | sort -u | wc -l | tr -d '[:space:]')
 
 	echo
 	echo "MT-Fault-RetryCount dem LAN THU LAI, nen 4 nghia la 5 lan chay."
-	echo "-- so header ce_* con lai tren day: $ce_found  (ky vong 6)"
+	echo "-- ten header ce_* duy nhat con lai tren day: $ce_found  (ky vong 6)"
+	echo "$dlq_headers" | grep -aoE '"ce_[a-z]+"' | sort -u | tr -d '"' | sed 's/^/     /'
 
 	if [ "$ce_found" -eq 6 ]; then
 		echo "DAT: ca 6 thuoc tinh CloudEvents song sot qua broker that va qua 5 lan thu."

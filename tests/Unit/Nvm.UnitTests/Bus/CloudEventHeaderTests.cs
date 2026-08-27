@@ -66,6 +66,35 @@ public sealed class CloudEventHeaderTests
     }
 
     [Fact]
+    public async Task AnEventSentStraightToAnEndpoint_IsStampedToo()
+    {
+        // Publish and Send are separate pipes, and a filter on one does not run on the other. Every
+        // event this system emits goes out through Publish, so the send pipe is the one nobody
+        // exercises — which is exactly why it is the one that would rot unnoticed. Without this test,
+        // deleting the ConfigureSend registration keeps the whole suite green while a direct send to
+        // an endpoint carries no CloudEvents metadata at all.
+        await using var provider = BuildHarness();
+        var harness = await StartHarnessAsync(provider);
+        var received = provider.GetRequiredService<ReceivedAttributes>();
+
+        // Derived, not hard-coded: renaming the consumer must move this address with it, otherwise the
+        // test starts sending into the void and fails for a reason that has nothing to do with filters.
+        var endpoint = await harness.Bus.GetSendEndpoint(new Uri(
+            harness.Bus.Address,
+            DefaultEndpointNameFormatter.Instance.Consumer<RecordingProbeConsumer>()));
+        await endpoint.Send(AnEvent(), TestContext.Current.CancellationToken);
+
+        (await harness.Consumed.Any<FactoryModelRevisionActivated>(TestContext.Current.CancellationToken))
+            .ShouldBeTrue();
+
+        var attributes = Read(received);
+        attributes.SpecVersion.ShouldBe("1.0");
+        attributes.Type.Value.ShouldBe("com.novavolt.factory-model.revision-activated.v1");
+        attributes.Source.Value.ShouldBe("urn:novavolt:nv1:host-all");
+        attributes.DataContentType.ShouldBe("application/json");
+    }
+
+    [Fact]
     public async Task CloudEventId_IsTheEventIdAndThereforeTheCommandsIdempotencyKey()
     {
         // The join between the two deduplication layers, checked on the wire rather than in a record.
@@ -172,6 +201,63 @@ public sealed class CloudEventHeaderTests
         error.Message.ShouldContain("5 of the 6");
     }
 
+    [Fact]
+    public async Task AHeaderCarryingSomethingOtherThanText_IsMalformedRatherThanAbsent()
+    {
+        // The type-level twin of the sentinel bug. A header read with `as string` comes back null when
+        // it holds anything else, so a message with six headers — one of them an integer — would read
+        // as a message with five, and be refused for the wrong reason, or worse, read as one with none.
+        await using var provider = new ServiceCollection()
+            .AddMassTransitTestHarness(bus => bus.AddConsumer<RecordingProbeConsumer>())
+            .AddSingleton<ReceivedAttributes>()
+            .BuildServiceProvider(true);
+        var harness = await StartHarnessAsync(provider);
+        var received = provider.GetRequiredService<ReceivedAttributes>();
+
+        await harness.Bus.Publish(
+            AnEvent(),
+            context =>
+            {
+                StampEveryHeader(context);
+                context.Headers.Set(CloudEventHeaders.Time, 1756090542);
+            },
+            TestContext.Current.CancellationToken);
+        (await harness.Consumed.Any<FactoryModelRevisionActivated>(TestContext.Current.CancellationToken))
+            .ShouldBeTrue();
+
+        received.Value.ShouldBeNull();
+        received.Error.ShouldNotBeNull().Message.ShouldContain(CloudEventHeaders.Time);
+    }
+
+    [Fact]
+    public async Task AHeaderPresentButEmpty_IsMalformedRatherThanAbsent()
+    {
+        // CloudEvents treats "no attribute" and "attribute with an empty value" as different claims —
+        // the reason the five optional attributes are omitted rather than written blank. Read the other
+        // way round, an empty ce_datacontenttype is a publisher asserting an encoding of "", and that
+        // must not pass as a well-formed set.
+        await using var provider = new ServiceCollection()
+            .AddMassTransitTestHarness(bus => bus.AddConsumer<RecordingProbeConsumer>())
+            .AddSingleton<ReceivedAttributes>()
+            .BuildServiceProvider(true);
+        var harness = await StartHarnessAsync(provider);
+        var received = provider.GetRequiredService<ReceivedAttributes>();
+
+        await harness.Bus.Publish(
+            AnEvent(),
+            context =>
+            {
+                StampEveryHeader(context);
+                context.Headers.Set(CloudEventHeaders.DataContentType, "   ");
+            },
+            TestContext.Current.CancellationToken);
+        (await harness.Consumed.Any<FactoryModelRevisionActivated>(TestContext.Current.CancellationToken))
+            .ShouldBeTrue();
+
+        received.Value.ShouldBeNull();
+        received.Error.ShouldNotBeNull().Message.ShouldContain(CloudEventHeaders.DataContentType);
+    }
+
     private static CloudEventAttributes Read(ReceivedAttributes received)
     {
         var error = received.Error?.Message;
@@ -182,6 +268,9 @@ public sealed class CloudEventHeaderTests
 
         return received.Value.ShouldNotBeNull();
     }
+
+    private static void StampEveryHeader(PublishContext<FactoryModelRevisionActivated> context) =>
+        StampEveryHeaderExcept(context, omitted: string.Empty);
 
     private static void StampEveryHeaderExcept(
         PublishContext<FactoryModelRevisionActivated> context,

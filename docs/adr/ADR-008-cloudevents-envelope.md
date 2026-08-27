@@ -102,15 +102,26 @@ nữa không ai đi tìm một spec nói điều này.
 ## Evidence
 
 **1. Filter chạy trên đường code thật, và trên cả hai pipe.** `Publish` và `Send` là **hai pipe khác
-nhau** trong MassTransit: một filter đăng ký ở `ConfigureSend` **không** chạy khi ai đó gọi `Publish`.
-Mọi event của hệ thống này đi bằng `Publish`, nên đăng ký một pipe thôi sẽ stamp **rỗng** trên
-RabbitMQ — và không có lỗi nào ở đâu để báo, vì header vắng mặt không phải là exception.
-`CloudEventsSendFilter` vì thế cài trên **cả** `IFilter<SendContext<T>>` lẫn `IFilter<PublishContext<T>>`.
+nhau** trong MassTransit: một filter đăng ký ở `ConfigureSend` **không** chạy khi ai đó gọi `Publish`,
+và ngược lại. Mọi event của hệ thống này đi bằng `Publish`, nên đăng ký một pipe thôi sẽ stamp **rỗng**
+trên RabbitMQ — không có lỗi nào ở đâu để báo, vì header vắng mặt không phải exception.
+
+Chính vì mọi thứ đi bằng `Publish`, **send pipe là cái không ai chạm tới** — và là cái sẽ mục đi mà
+không ai biết. Nó có test riêng, `AnEventSentStraightToAnEndpoint_IsStampedToo`. Bỏ đúng dòng
+`ConfigureSend` khỏi `UseNvmCloudEvents`:
+
+```
+failed  AnEventSentStraightToAnEndpoint_IsStampedToo
+total: 14 · failed: 1 · succeeded: 13
+```
+
+Đúng một test đỏ, và nó là test duy nhất đi qua pipe đó. Trước khi có nó, xoá cả một pipe khỏi đăng ký
+làm đỏ **không cái gì**.
 
 **2. Unit test đi qua registration thật và ghim đủ sáu header.** Test dựng harness bằng chính
-`UseNvmCloudEvents(...)` mà `AddNvmBus` gọi, rồi `Publish` và đọc lại bằng `context.CloudEvent()` ở
-phía consumer — không tự ghi header trong test. Một test tự stamp rồi assert đọc lại được sẽ xanh kể
-cả khi filter bị xoá; đó là *"test không bao giờ đỏ được thì không kiểm gì"*.
+`UseNvmCloudEvents(...)` mà `AddNvmBus` gọi, rồi đọc lại bằng `context.CloudEvent()` ở phía consumer —
+không tự ghi header trong test. Một test tự stamp rồi assert đọc lại được sẽ xanh kể cả khi filter bị
+xoá; đó là *"test không bao giờ đỏ được thì không kiểm gì"*.
 
 Bỏ đúng một dòng stamp `ce_datacontenttype` khỏi filter:
 
@@ -133,11 +144,11 @@ Nhánh giữa phải đọc **cả sáu giá trị trước** rồi mới phán.
 attribute nào"* với *"một bộ hỏng"*: message thiếu đúng sentinel sẽ đọc ra `null`, tức là **được coi
 là hợp lệ**, trong khi năm header còn lại đang nằm trên nó nói điều ngược lại.
 
-Đo bằng lab: khôi phục lối tắt sentinel, chạy lại 11 test của `CloudEventHeaderTests`:
+Đo bằng lab: khôi phục lối tắt sentinel, chạy lại `CloudEventHeaderTests`:
 
 ```
 failed AMessageMissingAnyOneMandatoryAttribute...(omitted: "ce_specversion")
-total: 11 · failed: 1 · succeeded: 10
+total: 14 · failed: 1 · succeeded: 13
 ```
 
 **Đúng một ca đỏ, và đó là ca của chính sentinel.** Năm ca thiếu-header còn lại vẫn xanh — vì một
@@ -145,11 +156,29 @@ sentinel chỉ giấu được sự vắng mặt của **chính nó**. Đó là 
 header chứ không phải một test cho header đáng ngờ nhất: bộ sáu không có thành viên đặc quyền, nên
 phép kiểm cũng không được có.
 
-**4. Kiểm trên broker thật bằng `make bus-dlq`.** Message đi qua RabbitMQ, consumer ném đúng **5**
+**4. "Có mặt nhưng không đọc được" cũng khác "vắng mặt".** Cùng một lỗi, ở tầng kiểu thay vì tầng bộ:
+đọc header bằng `value as string` thì một header mang kiểu khác trả về `null`, và message sáu header
+đọc thành message năm header. Reader vì thế phân ba trạng thái ở mức từng header — vắng mặt · có mặt
+và là chuỗi không rỗng · **malformed** — và ném cho trạng thái thứ ba, nêu đích danh kiểu thật. Chuỗi
+rỗng cũng là malformed: cùng nguyên tắc đã khiến năm thuộc tính tuỳ chọn bị **bỏ hẳn** thay vì ghi
+rỗng, đọc ngược lại.
+
+**5. Kiểm trên broker thật bằng `make bus-dlq`.** Message đi qua RabbitMQ, consumer ném đúng **5**
 lần, message vào `nvm.factory-model.failing-probe_error` và queue chính còn **0**
-(`benchmarks.md` 2026-08-27). Đọc message trong `_error` bằng `rabbitmqadmin get messages
---ack-mode reject_requeue_true` cho thấy **cả sáu** header `ce_*` còn nguyên bên cạnh `MT-Fault-*`,
-và lab **đếm rồi assert đúng 6** — trượt thì `bus-dlq` trả exit code khác 0.
+(`benchmarks.md` 2026-08-27). Lab đọc message bằng `rabbitmqadmin get messages --ack-mode
+reject_requeue_true`, **đếm số tên header `ce_*` duy nhất** và assert đúng **6** — trượt thì
+`bus-dlq` thoát khác 0.
+
+> Đếm **tên duy nhất**, không đếm dòng. `rabbitmqadmin` in mỗi header **hai** dòng — một dòng tên với
+> giá trị rỗng, một dòng tên với giá trị thật:
+>
+> ```
+> "ce_datacontenttype":
+> "ce_datacontenttype":"application/json
+> ```
+>
+> `grep -c '"ce_'` vì thế cho **12** và làm DoD trượt trong khi broker vẫn giữ đủ sáu. Một phép đo sai
+> theo hướng bi quan vẫn là một phép đo sai — nó dạy người đọc bỏ qua kết quả của chính lệnh DoD.
 
 Đây đúng là tình huống ADR này tồn tại vì nó: payload không ai deserialize nổi, header vẫn nói được
 message tự nhận là gì, từ site nào, lúc nào, và payload được mã hoá bằng gì.

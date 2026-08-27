@@ -31,7 +31,7 @@ public sealed class EquipmentPathTests
         path.EnterpriseCode.ShouldBe("NOVAVOLT");
         path.SiteId.ShouldBe("NV1");
         path.Code.ShouldBe("FORM-01-CH-0142");
-        path.Segments.Count.ShouldBe(6);
+        path.Segments.Length.ShouldBe(6);
         path.Value.ShouldBe(Channel);
     }
 

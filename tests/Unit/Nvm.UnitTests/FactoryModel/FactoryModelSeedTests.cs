@@ -40,7 +40,7 @@ public sealed class FactoryModelSeedTests
         // The flat index is built from the walk, so a mismatch would mean two nodes collapsed into one
         // dictionary entry — which is exactly the duplicate-path failure the index must not hide.
         Snapshot.NodeCount.ShouldBe(41);
-        Snapshot.Paths.Count.ShouldBe(Snapshot.Root.Descend().Count());
+        Snapshot.Paths.Length.ShouldBe(Snapshot.Root.Descend().Count());
     }
 
     [Fact]

@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Nvm.FactoryModel.Entities;
 
 namespace Nvm.FactoryModel.Storage;
@@ -54,7 +55,7 @@ public sealed class InMemoryFactoryModelCatalog : IFactoryModelCatalog
     }
 
     /// <inheritdoc />
-    public IReadOnlyList<int> Revisions { get; }
+    public ImmutableArray<int> Revisions { get; }
 
     /// <inheritdoc />
     public int LatestRevision => Revisions[^1];

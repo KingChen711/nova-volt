@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Nvm.Kernel.Identity;
 
 namespace Nvm.FactoryModel.Entities;
@@ -18,7 +19,7 @@ namespace Nvm.FactoryModel.Entities;
 /// </remarks>
 public sealed record FactoryNode
 {
-    private FactoryNode(EquipmentPath path, string name, IReadOnlyList<FactoryNode> children)
+    private FactoryNode(EquipmentPath path, string name, ImmutableArray<FactoryNode> children)
     {
         Path = path;
         Name = name;
@@ -32,7 +33,15 @@ public sealed record FactoryNode
     public string Name { get; }
 
     /// <summary>The nodes one level down, in the order the model declares them.</summary>
-    public IReadOnlyList<FactoryNode> Children { get; }
+    /// <remarks>
+    /// <see cref="ImmutableArray{T}"/>, because <c>IReadOnlyList</c> is a promise about one reference
+    /// and not about the object behind it: hand back the caller's <c>List</c> through it and the
+    /// caller can still add to it, or anyone can cast it back and do the same. A node gained or lost
+    /// after <see cref="FactoryModelSnapshot"/> built its flat index puts the tree and the index into
+    /// permanent disagreement — the walk finds a machine the lookup denies exists — and a lookup is
+    /// what every message off the shop floor uses.
+    /// </remarks>
+    public ImmutableArray<FactoryNode> Children { get; }
 
     /// <summary>The node's own code, the last segment of its path.</summary>
     public string Code => Path.Code;
@@ -54,17 +63,20 @@ public sealed record FactoryNode
     /// <summary>Builds a node and checks that its children really are its children.</summary>
     /// <param name="path">Where the node sits.</param>
     /// <param name="name">Display name.</param>
-    /// <param name="children">Nodes one level down, or null for a leaf.</param>
+    /// <param name="children">Nodes one level down, or null for a leaf. Copied, not kept.</param>
     /// <exception cref="ArgumentException">
     /// A child's path is not this node's path extended by exactly one segment, or two children share a
     /// code.
     /// </exception>
-    public static FactoryNode Create(EquipmentPath path, string name, IReadOnlyList<FactoryNode>? children = null)
+    public static FactoryNode Create(EquipmentPath path, string name, IEnumerable<FactoryNode>? children = null)
     {
         ArgumentNullException.ThrowIfNull(path);
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
-        var declared = children ?? [];
+        // Copied here, before anything is checked. Validating the caller's collection and then storing
+        // that same collection would check one thing and keep another: the caller still holds it and
+        // can add an unvalidated node the moment this returns.
+        var declared = children is null ? [] : children.ToImmutableArray();
 
         foreach (var child in declared)
         {

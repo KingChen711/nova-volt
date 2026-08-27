@@ -44,7 +44,7 @@ context là mất sạch, và không agent nào sau đó biết còn nợ gì. *
 | **R1** | IT đi vòng tới OT qua port host | **K11** | **xong** — `2a927a9` | ✅ đo lại 3 lần |
 | **R2** | Idempotency không chặn duplicate đồng thời | **K7** | **xong** — commit R2 | ✅ lab phá hoại: bỏ cơ chế → **6/292** và **2/292** test đỏ, đúng chỗ, đúng lý do |
 | **R3** | Activation revision 2 → 3 chưa được chứng minh | plan C08 | **xong** — commit R3 | ✅ xác minh lại cả 4 phát hiện; lab: bỏ diff → **3/308** test đỏ |
-| **R4** | `IReadOnlyList` bị nhầm là immutable | — | chưa | ☐ |
+| **R4** | `IReadOnlyList` bị nhầm là immutable | — | **xong** — commit R4 | ✅ viết 5 test khai thác, **cả 5 chạy được** trước khi sửa |
 | **R5** | Tài liệu nói M1 xong trong khi D5 còn mở | §1.3 | chưa | ☐ |
 
 ---
@@ -180,9 +180,9 @@ Handler hoàn nguyên bằng bản sao + `sha256sum -c`, khớp bit-for-bit.
 
 ---
 
-## R4 — Bịt lỗ immutability của factory model · **chưa**
+## R4 — Bịt lỗ immutability của factory model · **xong**
 
-**Phát hiện của audit** *(chưa tự kiểm)*:
+**Phát hiện của audit** *(đã tự kiểm 2026-08-27 — cả hai đúng, và có thêm ba lỗ nữa)*:
 
 - `FactoryNode.Create` **giữ nguyên** `IReadOnlyList` do caller truyền vào.
 - `EquipmentPath.Segments` expose thẳng array nội bộ dưới dạng `IReadOnlyList`.
@@ -197,6 +197,54 @@ collection mutable · **không thêm package** nếu BCL đủ.
 `Children`/`Segments` qua cast · flat index và tree luôn thống nhất.
 
 **Commit message dự kiến**: `fix(factory-model): enforce immutable hierarchy collections`
+
+### Đã làm — 2026-08-27
+
+Cách kiểm: viết **test khai thác** trước, cho chúng xanh, rồi mới sửa và lật ngược thành regression.
+**Cả 5 khai thác đều chạy được** trên code cũ — audit nêu 2, thực tế 5:
+
+| # | Khai thác | Trước khi sửa |
+|---|---|---|
+| 1 | Sửa list đã truyền vào `FactoryNode.Create` | Node đổi theo, **invariant vừa kiểm bị vô hiệu** |
+| 2 | `((IList<FactoryNode>)node.Children).Add(...)` | Thành công |
+| 3 | `((string[])path.Segments)[1] = "DE1"` | Thành công; `Value` và `SiteId` nói hai chuyện khác nhau |
+| 4 | `((IList<FactorySite>)snapshot.Sites).Clear()` | Thành công *(ngoài phạm vi audit)* |
+| 5 | Sửa cây sau khi index đã dựng | Cây **42** node, index **41**, `Find` trả `null` cho node đang có trong cây |
+
+**Đã sửa** theo `ADR-025`: `ImmutableArray<T>` cho `Segments` · `Children` · `Sites` · `Paths` ·
+`Revisions`; `FrozenDictionary` cho flat index; `Create` nhận `IEnumerable<T>` và **sao chép trước khi
+kiểm invariant**. Chỉ BCL, không thêm package.
+
+**Yêu cầu của audit — từng mục**:
+
+| Yêu cầu | Kết quả |
+|---|---|
+| defensive-copy toàn bộ collection tại boundary | ✅ `Create`, `FactoryModelSnapshot`, catalog |
+| không expose object cast được về collection mutable | ✅ `(string[])Segments` giờ là **lỗi biên dịch** `CS0030`; đường `IList<T>` còn biên dịch nhưng mọi mutator ném |
+| không thêm package nếu BCL đủ | ✅ `System.Collections.Immutable` + `.Frozen` nằm sẵn trong .NET 10 |
+| test: mutate source list sau `Create` không làm node đổi | ✅ |
+| test: không mutate được `Children`/`Segments` qua cast | ✅ |
+| test: flat index và tree luôn thống nhất | ✅ |
+
+`make ci`: **319 / 319** (309 → +10).
+
+> [!important] Phát hiện phụ — vì sao phải đổi **kiểu**, không phải vá từng chỗ
+> Hai chỗ khác trên bề mặt công khai (`EquipmentPathsAdded` của event và `Revisions` của catalog)
+> **đang an toàn**, nhưng an toàn *do tình cờ*: cả hai được gán bằng collection expression nên compiler
+> sinh `<>z__ReadOnlyList`, đo được lúc chạy bằng `GetType().FullName`. Mức an toàn phụ thuộc **cách
+> viết ở một call site**, không phụ thuộc hợp đồng kiểu — đổi một dòng thành `List<string>` là lỗ mở
+> lại, im lặng.
+>
+> Chính một test khai thác của tôi lúc đầu **trượt** vì lý do đó, chứ không phải vì code an toàn.
+>
+> **Đối chứng dương**: nới đúng một kiểu (`IFactoryModelCatalog.Revisions`) về `IReadOnlyList<int>` →
+> đúng **1/10** test đỏ, nêu đích danh member; các test mutation lúc chạy **vẫn xanh**. Test soi kiểu
+> khai báo bằng reflection là thứ duy nhất bắt được, và nới kiểu chính là cách lỗ này sẽ mở lại.
+>
+> **Cố ý chưa đụng**: kiểu khai báo trên `FactoryModelRevisionActivated` vẫn là `IReadOnlyList<string>`
+> — nó là **wire contract** có golden file và chịu `NVM002`, nên đổi nó là một đơn vị công việc riêng.
+> Cái đã làm ngay: hàm sinh ra hai danh sách đó trả `ImmutableArray<string>`, nên bảo đảm đến từ kiểu
+> chứ không từ cách viết.
 
 ---
 

@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Nvm.FactoryModel.Entities;
 
 namespace Nvm.FactoryModel.Storage;
@@ -33,7 +34,7 @@ public interface IFactoryModelCatalog
     /// drafted and never published, and refusing to load that would be inventing a rule the business
     /// does not have.
     /// </remarks>
-    IReadOnlyList<int> Revisions { get; }
+    ImmutableArray<int> Revisions { get; }
 
     /// <summary>The highest revision on the shelf. Not necessarily the one any plant is running.</summary>
     int LatestRevision { get; }

@@ -1,3 +1,5 @@
+using System.Collections.Frozen;
+using System.Collections.Immutable;
 using Nvm.Kernel.Identity;
 
 namespace Nvm.FactoryModel.Entities;
@@ -19,19 +21,23 @@ namespace Nvm.FactoryModel.Entities;
 /// </remarks>
 public sealed class FactoryModelSnapshot
 {
-    private readonly IReadOnlyDictionary<EquipmentPath, FactoryNode> _index;
+    private readonly FrozenDictionary<EquipmentPath, FactoryNode> _index;
 
     internal FactoryModelSnapshot(
         int revision,
         DateTimeOffset generatedAt,
         FactoryNode root,
-        IReadOnlyList<FactorySite> sites)
+        IEnumerable<FactorySite> sites)
     {
         Revision = revision;
         GeneratedAt = generatedAt;
         Root = root;
-        Sites = sites;
-        _index = root.Descend().ToDictionary(node => node.Path);
+        Sites = sites.ToImmutableArray();
+
+        // Frozen rather than a plain dictionary: built once at load, read on every message off the
+        // shop floor, and never written again. It also removes the last way the index could drift
+        // from the tree — there is no mutator to reach, by cast or otherwise.
+        _index = root.Descend().ToFrozenDictionary(node => node.Path);
     }
 
     /// <summary>Which revision of the plant this is. Strictly increasing over time.</summary>
@@ -44,13 +50,13 @@ public sealed class FactoryModelSnapshot
     public FactoryNode Root { get; }
 
     /// <summary>The plants in this revision.</summary>
-    public IReadOnlyList<FactorySite> Sites { get; }
+    public ImmutableArray<FactorySite> Sites { get; }
 
     /// <summary>How many nodes the tree holds, at every level together.</summary>
     public int NodeCount => _index.Count;
 
     /// <summary>Every path in this revision.</summary>
-    public IReadOnlyCollection<EquipmentPath> Paths => (IReadOnlyCollection<EquipmentPath>)_index.Keys;
+    public ImmutableArray<EquipmentPath> Paths => _index.Keys;
 
     /// <summary>
     /// Finds a node by its path, or returns null when this revision does not contain it.

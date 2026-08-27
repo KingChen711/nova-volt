@@ -417,6 +417,16 @@ make test
 ```
 Test bắt buộc: cha sai bậc bị từ chối; path 6 đoạn ra `Equipment`, 3 đoạn ra `Area`; path có đoạn rỗng (`NOVAVOLT//NV1`) bị từ chối; path phân biệt hoa thường (mã khắc và MQTT topic đều là chữ hoa — hạ hoa âm thầm ở đây sẽ đẻ ra hai node cho cùng một máy).
 
+> [!warning] Sửa ở R4 (2026-08-27) — "read-only" từng chỉ là lời hứa của XML doc
+> `FactoryNode`, `FactoryModelSnapshot` và `EquipmentPath` đều tự mô tả là read-only, nhưng dùng
+> `IReadOnlyList<T>` để diễn đạt — thứ chỉ hứa rằng *tham chiếu này* không có mutator, không hứa gì về
+> đối tượng đứng sau. **Năm đường khai thác đều chạy được**, trong đó nặng nhất là sửa cây **sau khi**
+> snapshot đã dựng flat index: duyệt cây ra 42 node, index nói 41, `Find` trả `null` cho một node đang
+> nằm trong cây, và **không có gì ném exception**.
+>
+> **Đã sửa**: `ImmutableArray<T>` cho mọi collection lộ ra ngoài, `FrozenDictionary` cho flat index,
+> `Create` sao chép trước khi kiểm invariant. Chỉ BCL. Xem `ADR-025` và `docs/audit-m0-m1.md` R4.
+
 **Ghi chú**: `EquipmentPath` là thứ dùng lại nhiều nhất trong toàn dự án — MQTT topic, tên entity, nhãn metric, khoá phân quyền, XPath trong Mendix (`scope.md` §2.1). Sai ở đây thì sai ở sáu chỗ.
 
 #### C06.1 — Nghiệp vụ: sáu bậc ISA-95 nghĩa là gì với người trong nhà máy

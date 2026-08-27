@@ -669,6 +669,7 @@ Bài 7 của course. Trong dự án này, `SiteId` xuất hiện ở:
 | Event type phải có `[EventVersion(n)]` | Analyzer `NVM003` |
 | Mọi command handler phải idempotent (có `IdempotencyKey`) | Test convention |
 | Mọi bảng có `SiteId` | Migration test |
+| Collection lộ ra ngoài là `ImmutableArray<T>`, không phải `IReadOnlyList<T>` | Test phản-hồi-quy soi kiểu khai báo (`ADR-025`) |
 
 **ADR** — tối thiểu 18 bản, ghi ngay khi quyết định, không ghi hồi tố. Danh sách gợi ý:
 

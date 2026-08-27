@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Nvm.Contracts.Events.FactoryModel;
 using Nvm.FactoryModel.Commands;
 using Nvm.FactoryModel.Entities;
@@ -102,6 +103,11 @@ public sealed class ActivateFactoryModelRevisionHandler(
     // Sorted, so two runs over the same change produce byte-identical events. An event whose payload
     // depends on hash ordering cannot be compared against a golden file, and cannot be diffed by
     // whoever is trying to work out what a revision actually did.
-    private static IReadOnlyList<string> Difference(HashSet<string> left, HashSet<string> right) =>
+    //
+    // ImmutableArray rather than letting the compiler pick a read-only list for the IReadOnlyList the
+    // contract declares. Both are safe today; only one stays safe if somebody later assigns a plain
+    // List here, because then the guarantee comes from the type instead of from how the value was
+    // built at this one call site.
+    private static ImmutableArray<string> Difference(HashSet<string> left, HashSet<string> right) =>
         [.. left.Except(right, StringComparer.Ordinal).Order(StringComparer.Ordinal)];
 }

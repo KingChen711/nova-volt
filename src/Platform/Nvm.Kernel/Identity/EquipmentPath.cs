@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 
 namespace Nvm.Kernel.Identity;
@@ -38,9 +39,9 @@ public sealed record EquipmentPath
     private const int MaxSegments = (int)FactoryNodeKind.Equipment;
     private const int SiteSegmentIndex = (int)FactoryNodeKind.Site - 1;
 
-    private readonly string[] _segments;
+    private readonly ImmutableArray<string> _segments;
 
-    private EquipmentPath(string value, string[] segments)
+    private EquipmentPath(string value, ImmutableArray<string> segments)
     {
         Value = value;
         _segments = segments;
@@ -53,7 +54,15 @@ public sealed record EquipmentPath
     public FactoryNodeKind Kind => (FactoryNodeKind)_segments.Length;
 
     /// <summary>The segments, outermost first.</summary>
-    public IReadOnlyList<string> Segments => _segments;
+    /// <remarks>
+    /// <see cref="ImmutableArray{T}"/> rather than <c>IReadOnlyList</c>, and the difference is not
+    /// stylistic. <c>IReadOnlyList</c> only promises that <i>this reference</i> offers no mutators; a
+    /// caller can cast it back to the array underneath and write through it. Doing that here would
+    /// leave <see cref="Value"/> saying one thing and <see cref="SiteId"/>, <see cref="Code"/> and
+    /// <see cref="Kind"/> saying another — a path that names one machine and reports itself as
+    /// another, in the one string the whole system keys on.
+    /// </remarks>
+    public ImmutableArray<string> Segments => _segments;
 
     /// <summary>The last segment: the code of the thing this path names.</summary>
     public string Code => _segments[^1];
@@ -72,12 +81,20 @@ public sealed record EquipmentPath
     public string? SiteId => _segments.Length > SiteSegmentIndex ? _segments[SiteSegmentIndex] : null;
 
     /// <summary>The path one level up, or null when this is already the enterprise.</summary>
-    public EquipmentPath? Parent =>
-        _segments.Length == MinSegments
-            ? null
-            : new EquipmentPath(
-                string.Join(Separator, _segments[..^1]),
-                _segments[..^1]);
+    public EquipmentPath? Parent
+    {
+        get
+        {
+            if (_segments.Length == MinSegments)
+            {
+                return null;
+            }
+
+            var parentSegments = _segments.RemoveAt(_segments.Length - 1);
+
+            return new EquipmentPath(string.Join(Separator, parentSegments), parentSegments);
+        }
+    }
 
     /// <summary>Parses a path, throwing when it is malformed.</summary>
     /// <exception cref="FormatException">The string does not describe a position in the hierarchy.</exception>
@@ -111,7 +128,9 @@ public sealed record EquipmentPath
             return false;
         }
 
-        path = new EquipmentPath(value, segments);
+        // Copied rather than wrapped: the array Split handed back is local here, but a type whose
+        // immutability depended on nobody else holding the array would be immutable by luck.
+        path = new EquipmentPath(value, [.. segments]);
         return true;
     }
 
@@ -134,7 +153,7 @@ public sealed record EquipmentPath
 
         return new EquipmentPath(
             string.Concat(Value, Separator.ToString(), childCode),
-            [.. _segments, childCode]);
+            _segments.Add(childCode));
     }
 
     /// <summary>Returns the full path.</summary>
@@ -142,7 +161,7 @@ public sealed record EquipmentPath
 
     /// <summary>Compares two paths by their text.</summary>
     /// <remarks>
-    /// The record's generated equality would compare the segment array by reference and report two
+    /// The record's generated equality would compare the segments by reference and report two
     /// identical paths as different. Ordinal comparison is also the right one: these are machine
     /// codes, not words, and a culture-aware comparison could decide that two different machines have
     /// the same name.

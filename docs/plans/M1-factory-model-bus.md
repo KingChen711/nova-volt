@@ -2,7 +2,7 @@
 title: "M1 — Factory Model & Manufacturing Service Bus"
 milestone: M1
 duration: "1,5 tuần (18 giờ ước lượng)"
-status: done (D5 còn mở — xem §7)
+status: in progress (D5 chưa đạt, C19 chưa xong — xem §7)
 created: 2026-08-26
 depends_on: [M0]
 unlocks: [M2]
@@ -664,8 +664,9 @@ Hệ quả cần biết: retry in-memory **giữ message trong bộ nhớ consum
 > Nền của commit này là §3.2 — đọc mục đó trước, đặc biệt bảng phân biệt *envelope của framework* với *envelope nghiệp vụ*.
 
 **Việc làm**
-- `CloudEventsPublishFilter` — filter phía gửi, ghi các thuộc tính CloudEvents thành header AMQP: `ce_specversion`, `ce_id`, `ce_type`, `ce_source`, `ce_subject`, `ce_time`, `ce_dataschema`, cộng `correlationid` / `causationid` / `partitionkey`.
-- `CloudEventsConsumeFilter` — đọc ngược, đưa vào một `CloudEventContext` mà consumer lấy được qua DI scope.
+- `CloudEventsSendFilter` — filter phía gửi, cài trên **cả** send pipe lẫn publish pipe, ghi **6 thuộc tính bắt buộc** thành header AMQP: `ce_specversion`, `ce_id`, `ce_type`, `ce_source`, `ce_time`, `ce_datacontenttype`. Sáu cái này suy ra được từ chính event, không cần ai cấp thêm.
+- **Năm thuộc tính tuỳ chọn** — `subject`, `dataschema`, `correlationid`, `causationid`, `partitionkey` — **vắng mặt**, không ghi rỗng. CloudEvents coi *"không có"* và *"có, giá trị rỗng"* là hai tuyên bố khác nhau, và ở M1 chưa có nguồn dữ liệu nào cấp được chúng: `correlationid` là work order, `causationid` là operation run, cả hai đến ở M5.
+- Consumer đọc ngược **theo nhu cầu** bằng extension `context.CloudEvent()`. **Không** có `CloudEventsConsumeFilter` và **không** có `CloudEventContext` trong DI scope — một filter chạy trên mọi message để dựng một object mà phần lớn consumer không đụng tới là chi phí thu của tất cả để phục vụ số ít.
 - `ce_id` **phải bằng** `IdempotencyKey` khi event sinh ra từ một command — đây là mối nối giữa §7.2 và §7.4, và là thứ làm dedup ở M2 khả thi. Nếu hai giá trị này lệch nhau thì mỗi tầng dedup theo một khoá khác nhau và cả hai đều vô dụng.
 - **`ADR-008` — CloudEvents envelope**: ghi cả quyết định lẫn phần **không** làm. *Consequences* phải nêu ba điều: (1) message trên dây không phải CloudEvents thuần; (2) tiền tố `ce_` là **quy ước nội bộ**, vì AMQP 0-9-1 không có binding chính thức (§3.2); (3) envelope đầy đủ §7.4 vẫn là contract của event store ở M6. *Alternatives* nêu phương án raw JSON và lý do loại (K10 — Mendix không đọc bus).
 
@@ -676,9 +677,23 @@ Hệ quả cần biết: retry in-memory **giữ message trong bộ nhớ consum
 docker exec nvm-rabbitmq rabbitmqadmin -u nvm -p nvm_dev_only \
   get messages --queue <queue> --ack-mode reject_requeue_true
 ```
-Kỳ vọng: thấy đủ 7 header `ce_*` với giá trị đúng, và `ce_id` khớp `IdempotencyKey` của command đã gửi.
+Kỳ vọng: thấy đúng **6** header `ce_*` với giá trị đúng, **không** thấy `ce_subject` / `ce_dataschema` / `correlationid` / `causationid` / `partitionkey`, và `ce_id` khớp `IdempotencyKey` của command đã gửi.
 
 Đọc bằng công cụ **ngoài** MassTransit là phần quan trọng của phép kiểm này: nếu chỉ kiểm bằng chính consumer MassTransit thì không phân biệt được "header có thật trên dây" với "MassTransit tự nhớ trong process".
+
+> [!warning] Sửa ở R5 (2026-08-27) — plan này đã trôi khỏi code và khỏi `ADR-008`
+> Bản gốc của C12 nêu **7** header `ce_*` (gồm `ce_subject` và `ce_dataschema`) cộng ba header
+> `correlationid` / `causationid` / `partitionkey`, và nêu một `CloudEventsConsumeFilter` bơm
+> `CloudEventContext` vào DI scope. **Không cái nào trong số đó tồn tại.**
+>
+> Đọc lại code ngày 2026-08-27: `CloudEventsSendFilter` ghi đúng **6** header, năm thuộc tính tuỳ
+> chọn vắng mặt, và phía nhận là một extension `context.CloudEvent()` chứ không phải filter.
+> `ADR-008` — viết cùng lúc với code — mô tả **đúng**; chỗ sai là plan. Đã sửa plan theo code và ADR,
+> không sửa ngược lại.
+>
+> Bài học đáng giữ: `ADR-008` và `CloudEventHeaders` khớp nhau vì cả hai được viết trong commit ra
+> quyết định. Plan được viết trước khi gõ dòng code đầu tiên và không ai đọc lại — đó chính là kiểu
+> trôi mà `AGENTS.md` §2.4 nói tới.
 
 #### C12.1 — Image ship `rabbitmqadmin` v2, cú pháp khác mọi ví dụ trên mạng
 
@@ -1074,7 +1089,9 @@ Trả lời lúng túng câu nào → dòng tương ứng **chưa** phải `xong
   - thời gian `/health/ready` với 6 check, so với 451 ms / 10,4 ms của M0;
   - thời gian `make test` sau khi thêm ~3 project test.
 - Cập nhật cột M1 trong `scope.md` Phụ lục A.
-- Đổi `status: planned` → `status: done` trong frontmatter của plan này.
+- Đổi `status: planned` → `status: done` trong frontmatter của plan này — **chỉ khi D5 đã đạt cả hai vế**.
+  Ngày 2026-08-27 dòng này đã bị thực hiện sớm trong khi D5 còn mở, và R5 phải trả nó về `in progress`.
+  `status` của plan là thứ người khác đọc để biết milestone đã đóng chưa; đóng sớm là báo cáo sai (`AGENTS.md` §1.3).
 - Điền checklist §7.
 - Nếu §2.4 đúng — không đo lại N13 — thì ghi một dòng trong mục *"Chỉ số cố ý KHÔNG đo"* của `benchmarks.md` nêu rõ lý do, để lần sau không tưởng là quên.
 
@@ -1135,11 +1152,11 @@ Trả lời lúng túng câu nào → dòng tương ứng **chưa** phải `xong
 
 **Sản phẩm phụ bắt buộc**
 
-- [x] `make test` xanh — **279** test (M0 kết thúc ở 22)
+- [x] `make test` xanh — **319** test (M0 kết thúc ở 22; 279 ở C18, +40 từ R2–R4)
 - [x] `tests/Architecture` có ≥ 5 rule — có **17**, mỗi rule đã được chứng minh là đỏ được
-- [x] `ADR-004`, `ADR-008`, `ADR-010`, `ADR-021`, `ADR-022` viết xong — mỗi cái trong commit ra quyết định, không dồn về C18/C19
+- [x] `ADR-004`, `ADR-008`, `ADR-010`, `ADR-021`, `ADR-022` viết xong — mỗi cái trong commit ra quyết định, không dồn về C18/C19. Thêm `ADR-023`, `ADR-024`, `ADR-025` từ đợt sửa R2–R4
 - [x] `docs/event-catalog.md` tồn tại — 35 event, **1** đã cài đặt, và đó là con số đúng
-- [x] `docs/benchmarks.md` có ≥ 5 dòng số thật cho M1 — có **16**, không ô nào là ước lượng
+- [x] `docs/benchmarks.md` có ≥ 5 dòng số thật cho M1 — có **31**, không ô nào là ước lượng
 - [x] `scope.md` §9/M1 và §9/M6 đã cập nhật theo §3.3 và C11.1 *(làm trước, 2026-08-26)*
 - [x] `docs/adr/README.md` (cột *Ra ở*) và `docs/oef-mapping.md` cập nhật theo §2.3 — làm ở C18
 

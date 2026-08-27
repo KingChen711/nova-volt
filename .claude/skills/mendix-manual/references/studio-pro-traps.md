@@ -7,7 +7,8 @@ thừa từ dự án CGVibe. Cả hai đều là thứ **đã tái lập đượ
 
 ## 0. Kiểm chứng trong NovaVolt MES — Studio Pro 11.12.3
 
-> Bản Studio Pro thực tế là **11.12.3**, không phải 11.12.1 như plan M0 ghi.
+> Bản Studio Pro thực tế là **11.12.3**. Plan M0 từng ghi 11.12.1; đã sửa ngày 2026-08-27 ở R5, nên
+> plan và thực tế giờ khớp — đừng dựa vào ghi chú cũ nói rằng chúng lệch nhau.
 > App `NvmShopFloor` dùng **Git**, không phải SVN. `mx.exe` cho `mx check` phải đúng 11.12.3.
 
 ### 0.1 Tên menu đã xác nhận

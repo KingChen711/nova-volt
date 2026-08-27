@@ -45,7 +45,7 @@ context là mất sạch, và không agent nào sau đó biết còn nợ gì. *
 | **R2** | Idempotency không chặn duplicate đồng thời | **K7** | **xong** — commit R2 | ✅ lab phá hoại: bỏ cơ chế → **6/292** và **2/292** test đỏ, đúng chỗ, đúng lý do |
 | **R3** | Activation revision 2 → 3 chưa được chứng minh | plan C08 | **xong** — commit R3 | ✅ xác minh lại cả 4 phát hiện; lab: bỏ diff → **3/308** test đỏ |
 | **R4** | `IReadOnlyList` bị nhầm là immutable | — | **xong** — commit R4 | ✅ viết 5 test khai thác, **cả 5 chạy được** trước khi sửa |
-| **R5** | Tài liệu nói M1 xong trong khi D5 còn mở | §1.3 | chưa | ☐ |
+| **R5** | Tài liệu nói M1 xong trong khi D5 còn mở | §1.3 | **xong** — commit R5 | ✅ đối chiếu từng tuyên bố với code/lệnh thật; C12 sai 4 chỗ so với code |
 
 ---
 
@@ -248,7 +248,7 @@ kiểm invariant**. Chỉ BCL, không thêm package.
 
 ---
 
-## R5 — Đồng bộ tài liệu, giữ M1 ở trạng thái mở · **chưa**
+## R5 — Đồng bộ tài liệu, giữ M1 ở trạng thái mở · **xong**
 
 Làm **sau** các repair unit code, để tài liệu phản ánh trạng thái cuối.
 
@@ -269,6 +269,33 @@ Làm **sau** các repair unit code, để tài liệu phản ánh trạng thái 
 9. Chạy link/path check phù hợp, `git diff --check`, `make ci`.
 
 **Commit message dự kiến**: `docs(m1): align milestone status with verified implementation`
+
+### Đã làm — 2026-08-27
+
+| # | Việc | Đã làm gì |
+|---|---|---|
+| 1 | Bảo toàn sửa hash benchmark | Đối chiếu: hash thật của C13 **đúng là** `4e7fc02`, không phải sửa. Thay câu dặn dò bằng kết luận, kèm quy ước cột `Commit` cho các dòng R2–R4 |
+| 2 | Không ghi `status: done` khi D5 mở | `M1` frontmatter → `status: in progress (D5 chưa đạt, C19 chưa xong)`. §C19 ghi thêm: chỉ được lật `status` khi D5 đạt **cả hai vế** |
+| 3 | `scope.md` không đánh dấu M1 xong | Phụ lục A: cột *Xong* → *(chưa)*, cột *DoD ★ đạt?* ☑ → ☐, ghi chú nêu C19 chưa xong và D5 còn mở |
+| 4 | Hai dòng OEF về `đang làm` | **Bus-Centric Design** và **Manufacturing Service Bus** → `đang làm`, mỗi dòng nêu rõ *vế máy kiểm được xong, vế giải thích được chưa*. Bảng tổng kết: `xong` 2 → **0**, `đang làm` 14 → **16**. Đoạn diễn giải viết lại |
+| 5 | C19 chưa hoàn thành | Giữ `☐` trong checklist; đã nói rõ vì sao nó **không thể** xong trước D5 |
+| 6 | CloudEvents: plan C12 khớp `ADR-008` + code | Đọc `CloudEventsSendFilter` và `CloudEventHeaders`: **6 header bắt buộc**, **5 thuộc tính tuỳ chọn vắng mặt**, phía nhận là extension `context.CloudEvent()`, **không có** `CloudEventsConsumeFilter`. Plan sai **4 chỗ** → sửa plan theo code và ADR. `scope.md` §7.4 thêm bảng phân biệt **transport header trên bus** với **envelope đầy đủ trong event store/export** |
+| 7 | Root README | `22 unit test` → **319** · `5 check` → **6**, thêm `bus` và giải thích vì sao `bus` và `rabbitmq` không thay nhau được (số đo 152 s) · dòng *Trạng thái* → M1 **đang làm** |
+| 8 | Mendix | M0 plan `11.12.1` → **11.12.3** (3 chỗ) · ghi commit Team Server **`cc8c9db`** vào cả M0 plan lẫn `mendix/README.md` · bỏ mục *"còn thiếu: commit model"* · **không** tuyên bố đã fetch — ghi rõ là ref trên máy, chưa fetch lại |
+| 9 | Kiểm | `make ci`, `git diff --check`, kiểm link tương đối trong docs |
+
+**Đối chiếu bằng lệnh thật, không đọc rồi tin**: hash Team Server đọc từ working copy Mendix
+(`main` = `origin/main` = `cc8c9db`, working copy sạch); 6 header CloudEvents đếm trong
+`CloudEventsSendFilter.Stamp`; số test lấy từ `make ci`; số dòng benchmark M1 đếm bằng `grep -c`.
+
+> [!important] Ba thứ phải chuyển đi trước khi xoá file này — đã chuyển đủ
+> | Thứ | Đã về đâu |
+> |---|---|
+> | Giới hạn K7 xuyên process | `ADR-023` §Consequences, và XML doc của `IdempotencyBehavior` |
+> | Lựa chọn A/B của R3 | `M1-factory-model-bus.md` §C08, khối *"Sửa ở R3"*, kèm `ADR-024` |
+> | Phần còn dở | **D5** và **C19** — nằm ở `M1-factory-model-bus.md` §7, đúng chỗ của chúng. Đó là việc tồn đọng của **M1**, không phải của audit này |
+>
+> Nghĩa là điều kiện xoá đã đủ. Việc cuối: `chore(docs): remove m0/m1 audit backlog`, một commit riêng.
 
 > [!caution] Điểm đã thay đổi so với lúc audit viết
 > Chủ repo đã commit phần docs của **C19 chung vào commit R1** (`2a927a9`). Nghĩa là `scope.md` Phụ lục A

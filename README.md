@@ -9,7 +9,7 @@ Hệ thống MES / Traceability mô phỏng cho nhà máy sản xuất pin xe đ
 | **Backend** | .NET 10 LTS · SQL Server (event store, write model) · PostgreSQL + TimescaleDB (telemetry, read model) |
 | **Messaging** | RabbitMQ (Manufacturing Service Bus) · EMQX (MQTT Sparkplug B) |
 | **UI** | Mendix (toàn bộ) |
-| **Trạng thái** | **M0 xong** 2026-08-26 · tiếp theo **M1 — Factory Model & Service Bus** · [lộ trình 14 milestone](docs/scope.md#9-lộ-trình-milestone) |
+| **Trạng thái** | **M0 xong** 2026-08-26 · **M1 đang làm** — code xong, milestone chưa đóng vì D5 còn mở · [lộ trình 14 milestone](docs/scope.md#9-lộ-trình-milestone) |
 
 ---
 
@@ -37,7 +37,7 @@ nói thẳng ra.
 cp .env.example .env          # 1. Không có .env thì make up dừng ngay, có hướng dẫn
 make up                       # 2. Hạ tầng + khởi tạo DB/bucket. ~40–60 s khi image đã cache
 make hooks                    # 3. Bật pre-commit hook — KHÔNG tự bật khi clone
-make test                     # 4. 22 unit test, ~10 s
+make test                     # 4. 319 unit test, ~6 s
 dotnet run --project src/Apps/Nvm.Host.All   # 5. Host .NET ở :5080
 ```
 
@@ -53,9 +53,16 @@ Kiểm bước 5 ở cửa sổ khác:
 curl http://localhost:5080/health/ready
 ```
 
-Phải trả `"status":"Healthy"` kèm **5 check**: `sqlserver`, `postgres`, `rabbitmq`, `minio`,
-`keycloak`. EMQX **cố ý không** nằm trong readiness — host chưa dùng MQTT, xem
+Phải trả `"status":"Healthy"` kèm **6 check**: `sqlserver`, `postgres`, `rabbitmq`, `bus`,
+`minio`, `keycloak`. EMQX **cố ý không** nằm trong readiness — host chưa dùng MQTT, xem
 `docs/plans/M0-bootstrap.md` §C10.1.
+
+`bus` và `rabbitmq` **không thay thế được cho nhau**, và cả hai đều phải có. `bus` là health check của
+MassTransit: nó nói về bus **trong process này** — đã khởi động chưa. `rabbitmq` nói về **broker**. Đo
+được: broker chết *trước* khi app khởi động thì cả hai bắt được; broker chết *sau* khi bus đã chạy thì
+`bus` báo `Healthy` suốt **152 giây** trong khi `rabbitmq` bắt được ngay. Xoá `rabbitmq` vì *"MassTransit
+đã có health check rồi"* là để đúng kịch bản nguy hiểm nhất — broker chết giữa ca — không ai canh
+(`docs/benchmarks.md`).
 
 ### Bảng port
 

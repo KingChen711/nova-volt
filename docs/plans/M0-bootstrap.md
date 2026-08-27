@@ -74,7 +74,7 @@ Xác nhận ngày 2026-08-25:
 | # | Vấn đề | Quyết định | Hệ quả lên plan |
 |---|---|---|---|
 | Q1 | Repo GitHub remote | **Chưa tạo.** Làm local trước | C12 đổi hướng: xây `make ci` chạy local + pre-commit hook, `ci.yml` viết sẵn nhưng chưa chạy. D4 đổi thành *"`make ci` xanh"*. Thêm `make backup` ở C11 |
-| Q2 | Mendix Studio Pro | **11.12.1** | OIDC SSO yêu cầu Mendix 9.0+ → tương thích. Cần kèm **Community Commons** |
+| Q2 | Mendix Studio Pro | **11.12.3** | OIDC SSO yêu cầu Mendix 9.0+ → tương thích. Cần kèm **Community Commons**. *(Plan gốc ghi 11.12.1; bản thật sự dùng để tạo app là **11.12.3** — sửa ở R5, xem `mendix/README.md`)* |
 | Q3 | Mendix Cloud node | **Không dùng trong M0** | C13 chạy bằng `Run Locally`. Cloud node để tới M13 |
 
 ### 3.1 Vì sao đổi C12 thay vì hoãn nó
@@ -927,11 +927,11 @@ khi có người thứ hai clone repo trên máy khác, và lúc đó rất khó
 **Mục tiêu**: chứng minh đường đi từ Mendix tới identity — nền cho mọi màn hình sau này.
 
 > [!important] Mendix có repo riêng
-> App Mendix sống trong **Team Server repo của chính nó**, không nằm trong repo `novavolt-mes`. Trong repo chính, commit này chỉ thêm `mendix/README.md`. Công việc mô hình hoá được commit riêng trong Team Server.
+> App Mendix sống trong **Team Server repo của chính nó**, không nằm trong repo `novavolt-mes`. Trong repo chính, commit này chỉ thêm `mendix/README.md`. Công việc mô hình hoá được commit riêng trong Team Server — đã xong: `cc8c9db` *(`feat(mendix): add NvmShopFloor app with keycloak sso`)*.
 
-**Việc làm — phía Mendix Studio Pro 11.12.1**
+**Việc làm — phía Mendix Studio Pro 11.12.3**
 - Tạo app `NvmShopFloor` từ Blank template
-- Cài module **OIDC SSO** từ Marketplace *(yêu cầu Mendix 9.0+, nên 11.12.1 dùng được)* kèm dependency bắt buộc **Community Commons**. Bản OIDC ≤ 4.3.0 cần thêm **Encryption** — kiểm tra version lúc cài, đừng cài thừa
+- Cài module **OIDC SSO** từ Marketplace *(yêu cầu Mendix 9.0+, nên 11.12.3 dùng được)* kèm dependency bắt buộc **Community Commons**. Bản OIDC ≤ 4.3.0 cần thêm **Encryption** — kiểm tra version lúc cài, đừng cài thừa
 - Cấu hình OIDC trỏ tới Keycloak realm `novavolt`, client `nvm-mendix`
 - **Chạy bằng `Run Locally`** — không cần Mendix Cloud node ở milestone này (xem §3, Q3)
 - Tạo module `NvmShared` (chuẩn bị cho C-về-sau: connector POM, response mapper)

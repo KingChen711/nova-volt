@@ -176,7 +176,7 @@ Bước và lý do dính vào nhau. Người đang bấm phải lọc chữ đ�
 
 1. Hỏi (hoặc xác nhận lại) **đường dẫn `.mpr` tuyệt đối** và **branch đang mở**. Tên app
    trong launcher của Studio Pro **không phải định danh** — nhiều bản sao cùng tên là chuyện thường.
-2. Hỏi **Studio Pro version** nếu chưa biết. Dự án này dùng **11.12.3** — plan M0 ghi 11.12.1 là sai, xem
+2. Hỏi **Studio Pro version** nếu chưa biết. Dự án này dùng **11.12.3**, và plan M0 đã được sửa cho khớp (R5, 2026-08-27), xem
    [studio-pro-traps.md](references/studio-pro-traps.md) §0. `mx.exe` phải cùng version với bản đã sửa app.
 3. Hỏi app có đang **dirty** không (Version Control → có thay đổi chưa commit). Nếu có,
    quyết định xem thay đổi đó có thuộc việc đang làm không **trước khi** đề xuất thao tác gì.

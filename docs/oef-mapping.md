@@ -31,8 +31,8 @@ Cập nhật **hai lúc**, không đợi cuối milestone:
 
 | Khái niệm OEF | Bài trong course | Thành phần trong dự án | File / thư mục | Trạng thái | Ghi chú |
 |---|---|---|---|---|---|
-| **Bus-Centric Design** | 1. Key Design Principles | RabbitMQ + MassTransit, mọi giao tiếp liên-FB đi qua bus | `src/Platform/Nvm.Bus/` | `xong` | M1 hết C14. Một publish → **2 consumer, 2 queue riêng** (C13). Lab phá hoại cho con số giải thích **vì sao** bus-centric là điều kiện của N15: **18/200 event mất** khi broker chết 30 s, app **không restart lần nào**, `/health/live` xanh suốt (`benchmarks.md`, `ADR-022`) |
-| **Manufacturing Service Bus** | 1, 6. RabbitMQ Configuration | Topology exchange/queue, retry, DLQ, delayed message | `src/Platform/Nvm.Bus/Topology/` | `xong` | Exchange theo context + routing key `nvm.{site}.{context}.{event}.v{n}` (C10); retry đo được **5 lần / 245–480–920–1933 ms** có jitter (C11); **1 message vào `_error`, queue chính còn 0** (C13). **Delayed message CỐ Ý không làm** — plugin không có trong image, và `ADR-015` đã chốt Quartz cho M7 (`Nvm.Bus/README.md`) |
+| **Bus-Centric Design** | 1. Key Design Principles | RabbitMQ + MassTransit, mọi giao tiếp liên-FB đi qua bus | `src/Platform/Nvm.Bus/` | `đang làm` | **Vế máy kiểm được: xong. Vế "giải thích được": chưa** — D5 của M1 còn mở, nên theo đúng luật hai vế ở đầu file này, ô vẫn là `đang làm`. M1 hết C14. Một publish → **2 consumer, 2 queue riêng** (C13). Lab phá hoại cho con số giải thích **vì sao** bus-centric là điều kiện của N15: **18/200 event mất** khi broker chết 30 s, app **không restart lần nào**, `/health/live` xanh suốt (`benchmarks.md`, `ADR-022`) |
+| **Manufacturing Service Bus** | 1, 6. RabbitMQ Configuration | Topology exchange/queue, retry, DLQ, delayed message | `src/Platform/Nvm.Bus/Topology/` | `đang làm` | **Vế máy kiểm được: xong. Vế "giải thích được": chưa** (D5 còn mở). Exchange theo context + routing key `nvm.{site}.{context}.{event}.v{n}` (C10); retry đo được **5 lần / 245–480–920–1933 ms** có jitter (C11); **1 message vào `_error`, queue chính còn 0** (C13). **Delayed message CỐ Ý không làm** — plugin không có trong image, và `ADR-015` đã chốt Quartz cho M7 (`Nvm.Bus/README.md`) |
 | **SOA layers** | 1 | Horizontal (Platform) + vertical (Functional Block) | `src/Platform/` vs `src/FunctionalBlocks/` | `đang làm` | Platform có `Nvm.Contracts`, `Nvm.Kernel`, `Nvm.Bus`; FunctionalBlocks có `FactoryModel`. Ranh giới được **ép bằng NetArchTest** (C17). Chưa `xong` vì mới có **một** FB — quy tắc "FB không reference FB" chưa có gì để vi phạm |
 | **Event-Driven Architecture** | 1 | CloudEvents envelope + domain event trên bus | `src/Platform/Nvm.Contracts/` | `đang làm` | Envelope §7.4 + `IDomainEvent` + `[EventVersion]` + golden file (C01–C03); thuộc tính CloudEvents đi ở transport header trên message thật (C12, `ADR-008`). Còn thiếu **event store** và **upcaster** — đó mới là phần chứng minh đọc được event 15 năm sau (M5, M6) |
 | **Domain-Driven Design / bounded context** | 1, 17. Domain within OEF | Mỗi Functional Block = một bounded context có schema DB riêng | `src/FunctionalBlocks/<Name>/` | `đang làm` | `FactoryModel` là bounded context đầu tiên, có từ vựng riêng và exchange riêng trên bus. **Chưa có schema DB riêng** — chưa có DB nào (M5) |
@@ -58,16 +58,22 @@ Cập nhật **hai lúc**, không đợi cuối milestone:
 
 ## Tổng kết sau M1
 
-| Trạng thái | Sau M0 | **Sau M1** |
+| Trạng thái | Sau M0 | **Hiện tại (M1 chưa đóng)** |
 |---|---|---|
-| `xong` | 0 | **2** |
-| `đang làm` | 6 | **14** |
+| `xong` | 0 | **0** |
+| `đang làm` | 6 | **16** |
 | `chưa làm` | 16 | **6** |
 | `khác scope` | 0 | 0 |
 
-Hai ô `xong` đều thuộc **Bus-Centric Design** và **Manufacturing Service Bus** — đúng trọng tâm mà
-`scope.md` §9/M1 đặt ra. Chúng đạt cả hai vế: dựng được, **và** có một con số giải thích vì sao
-Opcenter làm như vậy.
+**Chưa ô nào `xong`, và con số 0 đó là con số đúng.** Hai ô gần nhất — **Bus-Centric Design** và
+**Manufacturing Service Bus** — đã đạt **vế thứ nhất**: dựng được, chạy được, có số đo. Vế thứ hai của
+chính file này (*"giải thích được vì sao Opcenter làm như vậy"*) thì chưa: D5 của M1 yêu cầu chủ repo
+trả lời ba câu hỏi ở `M1-factory-model-bus.md` §C18 **thành lời, không mở tài liệu**, và việc đó chưa
+xảy ra.
+
+Ngày 2026-08-27 hai ô này từng được ghi `xong`. Đó là ghi sớm, và R5 trả chúng về `đang làm`. Hạ trạng
+thái không phải thất bại — ghi `xong` khi chưa đạt mới là, vì nó làm hỏng đúng thước đo mà file này
+tồn tại để giữ.
 
 Con số đó là **18/200 event mất** khi broker chết 30 giây (`benchmarks.md`, `ADR-022`). Nó nói hai
 điều cùng lúc:
@@ -77,7 +83,7 @@ Con số đó là **18/200 event mất** khi broker chết 30 giây (`benchmarks
 - Và bus **một mình không đủ**. 18 event biến mất vì không có transaction nào nối "ghi trạng thái"
   với "publish". Đó là bẫy dual-write, và là toàn bộ lý do outbox tồn tại ở M6.
 
-Mười bốn ô `đang làm` không phải nửa vời — phần lớn đang chờ **một thứ duy nhất: database**.
+Mười sáu ô `đang làm` không phải nửa vời — phần lớn đang chờ **một thứ duy nhất: database**.
 `Facets/`, `Migrations/`, `TransactionBehavior`, event store, upcaster, schema riêng cho từng bounded
 context, filter ép ở server cho multiplant — tất cả cùng đến ở **M5**.
 

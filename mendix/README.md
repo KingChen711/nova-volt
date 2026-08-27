@@ -7,9 +7,10 @@ Thư mục này chỉ giữ tài liệu để người khác (và chính bạn s
 |---|---|
 | Tên app | `NvmShopFloor` |
 | Team Server (Git) | `https://git.api.mendix.com/0b71f9c2-da6d-44af-b37c-90da46cf3253.git/` |
-| Studio Pro | **11.12.3** — không phải 11.12.1 như `docs/plans/M0-bootstrap.md` ghi |
+| Studio Pro | **11.12.3** |
 | Version control | **Git**, không phải SVN |
 | Branch chính | `main` |
+| Commit model mới nhất | `cc8c9db` — `feat(mendix): add NvmShopFloor app with keycloak sso` |
 | Thư mục làm việc trên máy hiện tại | `C:\Users\Kingc\Mendix\NvmShopFloor-main` |
 | Port khi `Run Locally` | **8080** (Keycloak nhường sang 8081 — quyết định ở C05) |
 
@@ -213,7 +214,18 @@ hiện `Operator NV1` · `op.nv1@novavolt.example` · `Site: NV1` · role `User`
 `Operator` chứng minh microflow ATP chạy: default user role chỉ cấp `User`, nên `Operator` chỉ
 có thể đến từ claim `mendix_roles`. `Site: NV1` chứng minh attribute mapping chạy.
 
+## Trạng thái version control
+
+Kiểm ngày 2026-08-27 trên working copy ở máy hiện tại:
+
+- `main` ở `cc8c9db`, working copy **sạch** — không còn thay đổi nào chưa commit.
+- Ref `origin/main` trên máy cũng ở `cc8c9db`.
+
+> [!note] Chưa fetch lại
+> Dòng thứ hai nói về **ref đang có trên máy**, không phải trạng thái thật của Team Server lúc này.
+> Chưa chạy fetch nên không có cơ sở để tuyên bố remote không có commit mới hơn. Muốn chắc thì mở
+> Studio Pro → Version Control → Update.
+
 ## Còn thiếu ở M0
 
-- Commit công việc model lên Team Server (làm từ Studio Pro, không phải `git` ở terminal).
 - `AGENTS.md` phạm vi app (ràng buộc K10/K11 cho Maia trong Studio Pro) — cân nhắc ở M4.

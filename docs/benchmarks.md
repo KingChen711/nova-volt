@@ -105,8 +105,13 @@ Máy đo: Windows 11, Docker Desktop, quota RAM 8 GB (xem `docs/plans/M0-bootstr
 > worker và một transaction, đổi lại được gì?* Đổi lại 18 event, trong 30 giây, ở một hệ thống chưa
 > có tải.
 >
-> Cột `Commit` ghi `4e7fc02` vì phép đo chạy trên cây làm việc của C13 trước khi commit. Thay
-> bằng hash thật của C13 ngay sau khi commit.
+> Cột `Commit` ghi `4e7fc02` vì phép đo chạy trên cây làm việc của C13 trước khi commit. **Đã đối
+> chiếu ở R5**: hash thật của C13 đúng là `4e7fc02` (`M1-factory-model-bus.md` §7, checklist), nên
+> không phải sửa gì. Ghi lại kết luận thay vì để nguyên câu dặn dò, vì một việc "phải làm" đã làm
+> xong mà vẫn nằm đó sẽ được làm lại lần thứ hai.
+>
+> Cùng quy ước cho các dòng R2–R4 phía dưới: cột `Commit` là HEAD **lúc đo**, tức commit ngay
+> trước đợt sửa đó, không phải commit chứa chính đợt sửa.
 
 ---
 

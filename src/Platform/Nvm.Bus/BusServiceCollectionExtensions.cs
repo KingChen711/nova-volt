@@ -1,10 +1,12 @@
 using System.Reflection;
 using MassTransit;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Nvm.Bus.CloudEvents;
 using Nvm.Bus.Topology;
 using Nvm.Contracts.CloudEvents;
 using Nvm.Contracts.Events;
+using Nvm.Hosting;
 using RabbitMQ.Client;
 
 namespace Nvm.Bus;
@@ -12,6 +14,16 @@ namespace Nvm.Bus;
 /// <summary>Wires the Manufacturing Service Bus into a host.</summary>
 public static class BusServiceCollectionExtensions
 {
+    /// <summary>The name this process's bus reports under on <c>/health/ready</c>.</summary>
+    /// <remarks>
+    /// <c>bus</c>, not <c>masstransit-bus</c>. Every other probe in this system is named after what it
+    /// checks — <c>sqlserver</c>, <c>postgres</c>, <c>rabbitmq</c> — and this one checks the bus, not
+    /// the library that implements it. Whoever reads a red line at 3 a.m. needs to know which
+    /// dependency is unhappy, and would then look for a second, differently named probe for RabbitMQ
+    /// — which is exactly the right thing to look for, because it exists and means something else.
+    /// </remarks>
+    public const string HealthCheckName = "bus";
+
     /// <summary>Registers MassTransit against RabbitMQ with this system's topology.</summary>
     /// <param name="services">The container being built.</param>
     /// <param name="configureOptions">Connection settings.</param>
@@ -35,6 +47,8 @@ public static class BusServiceCollectionExtensions
         {
             // Queue names come from what a consumer is for, not from what its class is called.
             bus.SetEndpointNameFormatter(NvmEndpointNameFormatter.Instance);
+
+            ConfigureHealthCheck(bus);
 
             registerConsumers?.Invoke(bus);
 
@@ -95,6 +109,47 @@ public static class BusServiceCollectionExtensions
 
         return bus;
     }
+
+    /// <summary>States the bus health check's name and tags instead of inheriting them.</summary>
+    /// <remarks>
+    /// <para>
+    /// <c>AddMassTransit</c> registers a health check on its own, and left alone it appears as
+    /// <c>masstransit-bus</c> with whatever tags that version of the library happens to choose. Both
+    /// are operational facts — the name shows up in dashboards and runbooks, and the tag decides which
+    /// endpoint the probe answers on — so both are stated here, for the same reason a queue name is
+    /// stated in <see cref="Topology.BusEndpointAttribute"/> rather than derived.
+    /// </para>
+    /// <para>
+    /// The tag is <b>ready only, never live</b>. This check fails when the bus cannot serve, and a
+    /// process whose bus cannot serve is still a process that must not be restarted — putting it on
+    /// liveness turns a broker outage into a restart loop across every instance at once, which is
+    /// exactly what N15 forbids.
+    /// </para>
+    /// <para>
+    /// <b>What it does and does not tell you.</b> It reports on <i>this process's</i> bus: whether it
+    /// started, and whether its receive endpoints are ready. It is not a broker probe. A host that
+    /// only publishes has no receive endpoints, so after a bus has started successfully this check
+    /// stays healthy even while the broker is gone — measured in M1/C14. Reachability of the broker is
+    /// answered by the separate <c>rabbitmq</c> probe in the host, and the two are not
+    /// interchangeable.
+    /// </para>
+    /// </remarks>
+    private static void ConfigureHealthCheck(IBusRegistrationConfigurator bus) =>
+        bus.ConfigureHealthCheckOptions(health =>
+        {
+            health.Name = HealthCheckName;
+
+            // Cleared, not added to. The defaults are whatever the library chose, and appending would
+            // leave this check answering on an endpoint nobody here decided it should answer on.
+            health.Tags.Clear();
+            health.Tags.Add(HealthTags.Ready);
+
+            // Unhealthy, not the Degraded that MassTransit would otherwise report while the bus is
+            // still coming up. Degraded answers HTTP 200, so an instance whose bus cannot carry a
+            // message would stay in rotation — a readiness probe that never goes red checks nothing.
+            // (MassTransit 8.5 marked FailureStatus obsolete; this one property now sets both.)
+            health.MinimalFailureStatus = HealthStatus.Unhealthy;
+        });
 
     /// <summary>
     /// Points every declared event at its context's topic exchange, with the routing key this system

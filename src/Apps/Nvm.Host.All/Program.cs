@@ -105,13 +105,13 @@ try
     // database is briefly slow.
     app.MapHealthChecks("/health/live", new HealthCheckOptions
     {
-        Predicate = registration => registration.Tags.Contains("live"),
+        Predicate = registration => registration.Tags.Contains(HealthTags.Live),
         ResponseWriter = HealthReportWriter.Write,
     });
 
     app.MapHealthChecks("/health/ready", new HealthCheckOptions
     {
-        Predicate = registration => registration.Tags.Contains("ready"),
+        Predicate = registration => registration.Tags.Contains(HealthTags.Ready),
         ResponseWriter = HealthReportWriter.Write,
     });
 

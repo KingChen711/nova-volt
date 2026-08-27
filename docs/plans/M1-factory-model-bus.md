@@ -749,12 +749,34 @@ Dòng cuối cũng quan trọng không kém: MassTransit tự nối lại. Nếu
 
 | Kiểm | Kỳ vọng | Kết quả |
 |---|---|---|
-| 6 probe lúc bình thường | tất cả `Healthy` | *chưa đo* |
-| **Khởi động app khi RabbitMQ đang tắt** | app lên được, `live=Healthy`, `ready=Unhealthy[bus]` | *chưa đo* |
-| Tắt SQL Server (D5 của M0) | vẫn phát hiện < 10 s, các check khác không lan | *chưa đo* |
-| Tổng thời gian `/health/ready` | ghi vào `benchmarks.md`, so với 451 ms / 10,4 ms của M0 | *chưa đo* |
+| 6 probe lúc bình thường | tất cả `Healthy` | ✅ `bus`, `keycloak`, `minio`, `postgres`, `rabbitmq`, `sqlserver`. `live` vẫn chỉ có `self` |
+| **Khởi động app khi RabbitMQ đang tắt** | app lên được, `live=Healthy`, `ready=Unhealthy[bus]` | ✅ lên sau **249 ms**; `live=Healthy`; `ready=Unhealthy` ở `bus` (*"Not ready: not started"* / *"Broker unreachable"*) **và** `rabbitmq`; 4 probe khác xanh |
+| Tắt SQL Server (D5 của M0) | vẫn phát hiện < 10 s, các check khác không lan | ✅ **3157 ms** (M0: 3,2 s). Chỉ `sqlserver` đỏ |
+| Tổng thời gian `/health/ready` | ghi vào `benchmarks.md`, so với 451 ms / 10,4 ms của M0 | ✅ **272,3 ms** lần đầu, **7,9 / 7,0 ms** lần sau — nhanh hơn M0 dù nhiều hơn một probe |
+| Bật lại broker | `ready` xanh lại, **không** restart app | ✅ **19,8 s** và **4,7 s** ở hai lần đo; `Application started` đúng 1 lần |
 
-Dòng thứ hai là dòng phải chạy thật, không suy luận. Đây đúng loại bẫy đã gặp ở M0/C10.3 với RabbitMQ: thư viện health check muốn có sẵn một `IConnection` trong DI, và tạo connection **lúc đăng ký service** làm app không khởi động nổi khi broker tắt. MassTransit khởi động bus bằng `IHostedService` nên về lý thuyết không vướng, nhưng "về lý thuyết" không phải bằng chứng.
+Dòng thứ hai là dòng phải chạy thật, không suy luận. Đây đúng loại bẫy đã gặp ở M0/C10.3 với RabbitMQ: thư viện health check muốn có sẵn một `IConnection` trong DI, và tạo connection **lúc đăng ký service** làm app không khởi động nổi khi broker tắt. MassTransit khởi động bus bằng `IHostedService` nên về lý thuyết không vướng, nhưng "về lý thuyết" không phải bằng chứng. **Đã chạy: không vướng.**
+
+#### C14.1 — `bus` mù với đúng kịch bản nguy hiểm nhất
+
+Health check của MassTransit nói về **bus trong process này**: đã khởi động chưa, receive endpoint sẵn sàng chưa. Nó **không** phải probe của broker.
+
+Hệ quả đo được: `Nvm.Host.All` chỉ publish nên không có receive endpoint nào, và khi bus đã khởi động xong thì không còn gì để báo hỏng. Tắt broker giữa chừng → `bus` báo **`Healthy` liên tục 152 giây**.
+
+| | broker chết **trước** khi app khởi động | broker chết **sau** khi bus đã chạy |
+|---|---|---|
+| `bus` | ✅ bắt được | ❌ Healthy suốt |
+| `rabbitmq` (HTTP tới management API) | ✅ bắt được | ✅ bắt được |
+
+Nên **giữ cả hai**, và lý do phải được ghi lại chứ không để ai đó sau này xoá `rabbitmq` vì "MassTransit đã có health check rồi". Ngược lại `bus` cũng không xoá được: nó là thứ giữ `ready` đỏ trong lúc bus đang khởi động, trước khi có connection nào để probe kia kiểm.
+
+#### C14.2 — Đặt tên và gắn tag cho health check, đừng để thư viện tự chọn
+
+`AddMassTransit` tự đăng ký health check tên `masstransit-bus` với tag do chính nó chọn. Cả hai đều là **sự kiện vận hành**: tên xuất hiện trong dashboard và runbook, còn tag quyết định probe trả lời ở endpoint nào — cùng loại lý do đã đặt cho tên queue ở C10.2.
+
+Nên C14 khai tường minh qua `ConfigureHealthCheckOptions`: tên `bus` (đặt theo **thứ nó kiểm**, giống `sqlserver`/`postgres`, không theo tên thư viện), tag đúng `ready` và **không** `live`, `MinimalFailureStatus = Unhealthy`.
+
+Dòng cuối không phải chi tiết vụn: `Degraded` trả HTTP **200**, nên một bus báo `Degraded` sẽ để instance ở lại trong rotation trong khi nó không chuyển nổi message. Ba điều này được ép bằng test (`BusHealthCheckTests`) chứ không bằng comment — nâng version MassTransit mà mặc định đổi thì build đỏ.
 
 ---
 

@@ -19,6 +19,9 @@
   <ItemGroup>
     <!-- Envelope và tên event đi trên bus. Bus KHÔNG reference FB nào (K8). -->
     <ProjectReference Include="../Nvm.Contracts/Nvm.Contracts.csproj" />
+    <!-- Chỉ để lấy HealthTags: bus tự đăng ký health check của nó, và phải gắn đúng tag
+         mà host dùng để lọc. Nvm.Hosting không kéo theo package nào. -->
+    <ProjectReference Include="../Nvm.Hosting/Nvm.Hosting.csproj" />
   </ItemGroup>
 
   <ItemGroup>

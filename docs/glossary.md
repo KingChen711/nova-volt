@@ -160,6 +160,9 @@ Routing đầy đủ ở [`scope.md`](scope.md) §2.2.
 | `_skipped` | Message tới đúng queue nhưng **không consumer nào nhận kiểu đó**. Đầy lên = binding sai hoặc consumer chưa deploy |
 | **Retry** | Chạy lại consumer khi nó ném exception. Ở đây retry nằm **trong cùng một lần delivery** — message không quay lại broker, nên consumer bị chiếm suốt cả chuỗi |
 | **Jitter** | Cộng nhiễu ngẫu nhiên vào khoảng cách retry. Không có nó, mọi consumer hỏng vì **một nguyên nhân chung** sẽ thử lại đồng pha, và đợt sóng retry đổ về đúng lúc hệ thống yếu nhất |
+| **Health check** / probe | Một câu hỏi hệ thống tự đặt cho chính nó và trả lời được bằng máy: *"SQL Server có với tới được không?"*. Mỗi probe có tên riêng vì tên đó là thứ hiện lên dashboard lúc 3 giờ sáng |
+| **Liveness** (`/health/live`) | *"Process còn sống, đừng restart tôi."* **Chỉ** kiểm trong process. Cho một dependency chết vào đây nghĩa là orchestrator sẽ giết một service khoẻ mạnh mỗi lần database chậm |
+| **Readiness** (`/health/ready`) | *"Dependency của tôi với tới được, gửi traffic sang."* Đỏ thì instance bị rút khỏi **rotation** (danh sách nơi load balancer gửi request tới) và tự quay lại khi dependency sống lại. Đây là nơi dependency chết được phép làm đỏ |
 | **Kill switch** / circuit breaker | Tạm dừng một endpoint khi tỉ lệ lỗi vượt ngưỡng. Giữ message **nằm trong queue** thay vì đốt hết ngân sách retry rồi rơi vào `_error`. Chưa bật — xem `Nvm.Bus/README.md` |
 | **Scheduled redelivery** | Trả message về broker để thử lại sau **hàng phút/giờ**, khác retry trong-delivery. Cần plugin RabbitMQ mà image không có |
 | **Correlation id** | Nhóm mọi event thuộc cùng một luồng nghiệp vụ. Ở đây thường là **work order** |

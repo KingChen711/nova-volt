@@ -56,6 +56,30 @@ Máy đo: Windows 11, Docker Desktop, quota RAM 8 GB (xem `docs/plans/M0-bootstr
 | 2026-08-27 | `0094509`+C13 | Số check `ready` đỏ khi RabbitMQ tắt | **1 / 6** | Chỉ check `rabbitmq`. `sqlserver`, `postgres`, `keycloak`, `minio`, `masstransit-bus` vẫn xanh — lỗi không lan |
 | 2026-08-27 | `0094509`+C13 | Số lần thử của consumer lỗi | **5** | `make bus-dlq`. Khoảng cách đo được: 245 / 480 / 920 / 1933 ms — exponential có jitter, khớp `NvmRetryPolicy` |
 | 2026-08-27 | `0094509`+C13 | Message trong `_error` sau 5 lần thử | **1** | Cùng lần chạy. Queue chính còn **0** — không mất, chỉ đứng riêng |
+| 2026-08-27 | `4e7fc02`+C14 | **6** readiness probe, lời gọi đầu | **272,3 ms** | Cả 6 `Healthy`. M0 đo **451 ms** với 5 probe — thêm probe thứ sáu không làm chậm đi |
+| 2026-08-27 | `4e7fc02`+C14 | 6 readiness probe, lời gọi lặp lại | **7,9 ms** rồi **7,0 ms** | Cùng endpoint, container đã ấm. M0: 10,4 / 21,4 ms với 5 probe |
+| 2026-08-27 | `4e7fc02`+C14 | ★ **Khởi động app khi RabbitMQ đang tắt** | **249 ms** | App lên bình thường. `live=Healthy`; `ready=Unhealthy` ở **`bus`** (*"Not ready: not started"*, *"Broker unreachable"*) và **`rabbitmq`**; 4 probe còn lại xanh |
+| 2026-08-27 | `4e7fc02`+C14 | Phát hiện SQL Server chết | **3157 ms** | Regression của D5/M0 (đo 3,2 s). Ngưỡng < 10 s. Chỉ `sqlserver` đỏ, 5 probe khác không lan |
+| 2026-08-27 | `4e7fc02`+C14 | ★ `bus` phát hiện broker chết **sau** khi bus đã khởi động | **không phát hiện** | `Healthy` liên tục **152 s** với broker đã `docker compose stop`. Xem ghi chú bên dưới |
+| 2026-08-27 | `4e7fc02`+C14 | `ready` xanh lại sau khi bật lại broker — lần 1 | **19,8 s** | Broker tắt ~40 s trước đó. Con số này chủ yếu là thời gian **container RabbitMQ khởi động**, không phải thời gian app nối lại |
+| 2026-08-27 | `4e7fc02`+C14 | `ready` xanh lại sau khi bật lại broker — lần 2 | **4,7 s** | Broker tắt ~10 s. `check_running` của broker và `ready` của app xanh trong **cùng một nhịp poll 1 s** → phần app tự đóng góp < 1 s |
+| 2026-08-27 | `4e7fc02`+C14 | Số lần app restart trong cả bốn kịch bản trên | **0** | `Application started` đúng 1 lần mỗi lần chạy |
+
+> [!warning] `bus` và `rabbitmq` không thay thế được cho nhau — và đây là lý do
+> Hai probe bắt hai loại hỏng **khác nhau**, và mỗi cái mù với loại kia:
+>
+> | | broker chết **trước** khi app khởi động | broker chết **sau** khi bus đã chạy |
+> |---|---|---|
+> | `bus` | ✅ bắt được (25 ms) | ❌ **Healthy suốt 152 s** |
+> | `rabbitmq` | ✅ bắt được | ✅ bắt được |
+>
+> `bus` là health check của MassTransit: nó nói về **bus trong process này** — đã khởi động chưa, các
+> receive endpoint sẵn sàng chưa. `Nvm.Host.All` chỉ publish nên **không có receive endpoint nào**, và
+> một bus đã khởi động xong thì không còn gì để báo hỏng. Xoá probe `rabbitmq` vì "MassTransit đã có
+> health check rồi" là để lại đúng kịch bản nguy hiểm nhất — broker chết giữa ca — không ai canh.
+>
+> Ngược lại cũng không xoá được `bus`: nó là thứ giữ `ready` đỏ trong lúc bus đang khởi động, trước
+> khi có connection nào để `rabbitmq` kiểm.
 
 > [!important] Con số 18 nói lên cái gì, và không nói lên cái gì
 > Nó **không** phải chỉ số chất lượng của RabbitMQ hay của MassTransit. Cả hai làm đúng việc của

@@ -73,6 +73,26 @@ mà không ai đăng ký — thường là một binding sai hoặc một consum
 
 **Không có gì tự động dọn hai queue này.** Chúng là hàng đợi cần người xem.
 
+## Health check
+
+`AddNvmBus` khai tường minh health check mà MassTransit tự đăng ký:
+
+| | Giá trị | Vì sao không để mặc định |
+|---|---|---|
+| Tên | `bus` | Mặc định là `masstransit-bus`. Mọi probe khác đặt tên theo **thứ nó kiểm** (`sqlserver`, `postgres`, `rabbitmq`), không theo thư viện |
+| Tag | đúng `ready`, **không** `live` | Bus không nối được broker là lý do ngừng nhận traffic, **không** phải lý do restart process — N15 |
+| `MinimalFailureStatus` | `Unhealthy` | `Degraded` trả HTTP **200**, tức instance vẫn ở trong rotation trong khi bus không chuyển nổi message |
+
+Ba dòng này được ép bằng `BusHealthCheckTests`, không bằng bảng này.
+
+> [!warning] `bus` KHÔNG phải probe của broker
+> Nó nói về bus **trong process này**: đã khởi động chưa, receive endpoint sẵn sàng chưa. Một host chỉ
+> publish thì không có receive endpoint nào, nên sau khi bus khởi động xong nó **không phát hiện được
+> broker chết** — đo ở M1/C14: `Healthy` liên tục 152 giây với broker đã tắt.
+>
+> Việc đó thuộc về probe `rabbitmq` riêng trong host (HTTP tới management API). Hai probe, hai loại
+> hỏng, không thay thế nhau. Xem `docs/benchmarks.md` §M1.
+
 ## Retry
 
 `NvmRetryPolicy`: **5 lần thử** (1 lần đầu + 4 lần lại), khoảng cách exponential từ 200 ms, trần

@@ -11,6 +11,20 @@ namespace Nvm.Host.Infrastructure;
 /// </summary>
 /// <remarks>
 /// <para>
+/// Six probes answer <c>/health/ready</c>, and only five of them are registered here. The sixth,
+/// <c>bus</c>, is added by <c>AddNvmBus</c> because MassTransit brings its own and the sensible thing
+/// is to name and tag that one rather than register a second alongside it. Counting probes by reading
+/// this file alone therefore gives five, and the endpoint returns six — the missing one is not
+/// missing.
+/// </para>
+/// <para>
+/// <b><c>rabbitmq</c> and <c>bus</c> are not duplicates.</b> <c>rabbitmq</c> asks the broker's
+/// management API whether the broker is up and not blocking publishers; <c>bus</c> asks whether this
+/// process's own bus started and its receive endpoints are ready. A host that only publishes has no
+/// receive endpoints, so <c>bus</c> stays green through a broker outage that <c>rabbitmq</c> catches
+/// (measured in M1/C14) — deleting either one leaves a real failure with nothing watching it.
+/// </para>
+/// <para>
 /// EMQX is deliberately absent. The MQTT broker sits on <c>ot-net</c> and <c>dmz-net</c> only;
 /// nothing on the IT tier talks to it, and <c>Nvm.EdgeGateway</c> — the service that does — arrives
 /// in M2. A readiness probe for a dependency the process does not use would take the app out of
@@ -61,18 +75,18 @@ internal static class HealthCheckRegistration
             .AddCheck(
                 "self",
                 () => HealthCheckResult.Healthy("Process is running."),
-                tags: ["live"])
+                tags: [HealthTags.Live])
             .AddSqlServer(
                 sqlServer,
                 name: "sqlserver",
                 failureStatus: HealthStatus.Unhealthy,
-                tags: ["ready"],
+                tags: [HealthTags.Ready],
                 timeout: ProbeTimeout)
             .AddNpgSql(
                 postgres,
                 name: "postgres",
                 failureStatus: HealthStatus.Unhealthy,
-                tags: ["ready"],
+                tags: [HealthTags.Ready],
                 timeout: ProbeTimeout)
             .AddUrlGroup(
                 // The alarms endpoint, not the overview one: a broker that has blocked publishers
@@ -83,19 +97,19 @@ internal static class HealthCheckRegistration
                         new AuthenticationHeaderValue("Basic", rabbitCredentials),
                 name: "rabbitmq",
                 failureStatus: HealthStatus.Unhealthy,
-                tags: ["ready"],
+                tags: [HealthTags.Ready],
                 timeout: ProbeTimeout)
             .AddUrlGroup(
                 keycloakDiscovery,
                 name: "keycloak",
                 failureStatus: HealthStatus.Unhealthy,
-                tags: ["ready"],
+                tags: [HealthTags.Ready],
                 timeout: ProbeTimeout)
             .AddUrlGroup(
                 minioLive,
                 name: "minio",
                 failureStatus: HealthStatus.Unhealthy,
-                tags: ["ready"],
+                tags: [HealthTags.Ready],
                 timeout: ProbeTimeout);
 
         return services;

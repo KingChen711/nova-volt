@@ -8,7 +8,7 @@ namespace Nvm.FactoryModel.Commands;
 /// <param name="IdempotencyKey">Which intention this is. Build it with <see cref="KeyFor"/>.</param>
 /// <param name="SiteId">The plant, for example <c>NV1</c>.</param>
 /// <param name="Revision">
-/// The revision of the model document to activate.
+/// Which document in the catalog to put in force.
 /// </param>
 /// <remarks>
 /// <para>
@@ -17,10 +17,18 @@ namespace Nvm.FactoryModel.Commands;
 /// Leipzig keeps running the previous one, and the two are told apart by which document each is on.
 /// </para>
 /// <para>
-/// <paramref name="Revision"/> is a guard rather than a selector. There is only ever one document on
-/// disk, so naming the revision says "I looked at revision 12 and I mean to activate that" — and the
-/// handler refuses if the file has moved on since. Activating a plant model nobody read is how a
-/// decommissioned work cell reappears on the shop floor.
+/// <paramref name="Revision"/> selects one immutable document out of
+/// <see cref="Storage.IFactoryModelCatalog"/>, which holds every revision that exists rather than only
+/// the one in force. Documents are never rewritten, so naming a revision resolves to exactly the tree
+/// the caller read — "I looked at revision 12 and I mean to activate that" is a statement the handler
+/// can check rather than take on trust.
+/// </para>
+/// <para>
+/// The handler then asks three questions before writing: does the catalog hold this revision, does
+/// that document describe this plant, and does it move the plant <b>forward</b> from whatever revision
+/// is in force there now. The write itself is a compare-and-swap against that same current revision,
+/// so two activations racing for one plant cannot both succeed. Activating a plant model nobody read
+/// is how a decommissioned work cell reappears on the shop floor.
 /// </para>
 /// </remarks>
 public sealed record ActivateFactoryModelRevisionCommand(

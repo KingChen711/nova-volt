@@ -22,7 +22,7 @@ Ràng buộc thật lúc quyết:
 
 - **K10 / §7.5**: Mendix **không bao giờ** đọc bus. Nó đi qua Public Object Model (OData) và
   Command API. Ở M1, **mọi** consumer trên bus đều là .NET.
-- **§7.4** vẫn là contract của event store (M6) và của Digital Battery Passport (M12) — nơi hình
+- **§7.4** vẫn là contract của event store (M5) và của Digital Battery Passport (M12) — nơi hình
   dạng đầy đủ thật sự được đọc bởi bên thứ ba.
 - **AMQP 0-9-1 không có binding CloudEvents chính thức.** Spec có binding cho HTTP (`ce-`), Kafka
   (`ce_`), AMQP **1.0** (`cloudEvents:`), MQTT, NATS. RabbitMQ nói AMQP 0-9-1 — không nằm trong
@@ -49,7 +49,7 @@ Các thuộc tính **tuỳ chọn** — `subject`, `dataschema`, `correlationid`
 `partitionkey` — **bị bỏ hẳn**, không ghi rỗng. CloudEvents coi *vắng mặt* và *null* là hai phát
 biểu khác nhau, và không cái nào trong số đó suy ra được từ `IDomainEvent`.
 
-Envelope §7.4 **đầy đủ** vẫn là contract, chỉ ở chỗ khác: nó là hình dạng event store lưu (M6) và
+Envelope §7.4 **đầy đủ** vẫn là contract, chỉ ở chỗ khác: nó là hình dạng event store lưu (M5) và
 hình dạng passport công bố (M12). Nó không phải hình dạng trên dây.
 
 `ce_` là **quy ước nội bộ**, không phải chuẩn. Ghi ra ở đây và trong `CloudEventHeaders` để ba năm
@@ -85,7 +85,7 @@ nữa không ai đi tìm một spec nói điều này.
 
 **Việc phát sinh**
 
-- M6: event store lưu envelope §7.4 **đầy đủ**, không lưu header. Golden file đã có từ C03.
+- M5: event store lưu envelope §7.4 **đầy đủ**, không lưu header. Golden file đã có từ C03.
 - Khi command mang `correlationId`/`causationId`, thêm hai header và cập nhật ADR này bằng một ADR
   mới, không sửa cái này.
 - Nếu xuất hiện consumer ngoài .NET trên bus, mở lại quyết định.
@@ -101,26 +101,38 @@ nữa không ai đi tìm một spec nói điều này.
 
 ## Evidence
 
-**1. Filter chạy trên đường code thật, không phải mô phỏng.** Test dùng chính
-`UseNvmCloudEvents(...)` mà `AddNvmBus` gọi, trên in-memory transport của MassTransit. Xoá dòng
-đăng ký publish pipe đi:
+**1. Filter chạy trên đường code thật, và trên cả hai pipe.** `Publish` và `Send` là **hai pipe khác
+nhau** trong MassTransit: một filter đăng ký ở `ConfigureSend` **không** chạy khi ai đó gọi `Publish`.
+Mọi event của hệ thống này đi bằng `Publish`, nên đăng ký một pipe thôi sẽ stamp **rỗng** trên
+RabbitMQ — và không có lỗi nào ở đâu để báo, vì header vắng mặt không phải là exception.
+`CloudEventsSendFilter` vì thế cài trên **cả** `IFilter<SendContext<T>>` lẫn `IFilter<PublishContext<T>>`.
+
+**2. Unit test đi qua registration thật và ghim đủ sáu header.** Test dựng harness bằng chính
+`UseNvmCloudEvents(...)` mà `AddNvmBus` gọi, rồi `Publish` và đọc lại bằng `context.CloudEvent()` ở
+phía consumer — không tự ghi header trong test. Một test tự stamp rồi assert đọc lại được sẽ xanh kể
+cả khi filter bị xoá; đó là *"test không bao giờ đỏ được thì không kiểm gì"*.
+
+Bỏ đúng một dòng stamp `ce_datacontenttype` khỏi filter:
 
 ```
 failed  EveryOutgoingEvent_CarriesTheMandatoryCloudEventsAttributes
 failed  CloudEventId_IsTheEventIdAndThereforeTheCommandsIdempotencyKey
 failed  Source_NamesThePlantTheEventCameFromNotTheProcessesDefault
+  "Message carries 'ce_specversion' but not 'ce_datacontenttype'.
+   CloudEvents attributes are written as a set."
 ```
 
-**2. Bản test đầu tiên của tôi SAI, và nó giấu một bug thật.** Bản đầu tự ghi header trong test rồi
-assert đọc lại được — tức là nó xanh kể cả khi filter bị xoá. Viết lại cho chạy qua filter thật thì
-**ba test đỏ ngay**: filter đăng ký ở `ConfigureSend`, mà `Publish` đi qua **publish pipe** — hai
-pipe khác nhau trong MassTransit. Mọi event của hệ thống đi bằng `Publish`, nên bản đầu sẽ **không
-stamp gì cả** trên RabbitMQ, và không có lỗi nào để báo.
+Sáu header là **một bộ**, và phía đọc ép đúng như vậy: có `ce_specversion` mà thiếu bất kỳ header bắt
+buộc nào thì `CloudEvent()` ném thay vì trả về một bộ attribute nửa vời. Không header nào cả thì trả
+`null` — vắng mặt là một sự thật về message, không phải một lỗi.
 
-Sửa: đăng ký filter trên **cả hai** pipe.
+**3. Kiểm trên broker thật bằng `make bus-dlq`.** Message đi qua RabbitMQ, consumer ném đúng **5**
+lần, message vào `nvm.factory-model.failing-probe_error` và queue chính còn **0**
+(`benchmarks.md` 2026-08-27). Đọc message trong `_error` bằng `rabbitmqadmin get messages
+--ack-mode reject_requeue_true` cho thấy header `ce_*` **còn nguyên** bên cạnh `MT-Fault-*` — đúng
+tình huống ADR này tồn tại vì nó: payload không ai deserialize nổi, header vẫn nói được message tự
+nhận là gì, từ site nào.
 
-> Đây là ví dụ rõ nhất trong repo cho luật *"test không bao giờ đỏ được thì không kiểm gì"*. Một test
-> yếu không chỉ vô dụng — nó **che** đúng cái bug nó lẽ ra phải bắt.
-
-**3. Chưa kiểm trên broker thật.** Header trên AMQP frame sẽ được đọc bằng
-`rabbitmqadmin get messages` ở **C13**, khi đã có queue thật để message nằm lại.
+> Lab hiện lọc hiển thị **ba** trong sáu header (`ce_id`, `ce_type`, `ce_source`) cho gọn màn hình.
+> Ba cái đó đủ trả lời *"nó là event gì, của ai"*, nhưng bộ đầy đủ mới là thứ ADR này quyết định —
+> nới bộ lọc ra sáu là việc nên làm ở lần chạm `bus-lab.sh` kế tiếp.

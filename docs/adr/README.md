@@ -57,9 +57,9 @@ việc khác.
 | [020](ADR-020-no-invariant-globalization.md) | Không bật `InvariantGlobalization` | **Accepted** 2026-08-26 | M0 · C14 |
 | [021](ADR-021-masstransit-8-not-9.md) | Pin MassTransit 8, không nâng lên 9 | **Accepted** 2026-08-26 | M1 · C09 |
 | [022](ADR-022-publish-truc-tiep-khong-outbox-o-m1.md) | Publish thẳng lên bus ở M1, chấp nhận mất event; outbox ở M6 | **Accepted** 2026-08-27 | M1 · C13 |
-| [023](ADR-023-claim-truoc-khi-chay-handler.md) | Giành chỗ trước khi chạy handler; K7 chỉ đúng trong một process cho tới M5 | **Accepted** 2026-08-27 | M1 · R2 |
-| [024](ADR-024-revision-la-tai-lieu-catalog-thay-cho-mot-snapshot.md) | Revision là tài liệu bất biến; hệ thống giữ cả catalog, không giữ một snapshot | **Accepted** 2026-08-27 | M1 · R3 |
-| [025](ADR-025-immutablearray-cho-collection-lo-ra-ngoai.md) | Collection lộ ra ngoài dùng `ImmutableArray<T>`, không dùng `IReadOnlyList<T>` | **Accepted** 2026-08-27 | M1 · R4 |
+| [023](ADR-023-claim-truoc-khi-chay-handler.md) | Giành chỗ trước khi chạy handler; K7 chỉ đúng trong một process cho tới M5 | **Accepted** 2026-08-27 | M1 |
+| [024](ADR-024-revision-la-tai-lieu-catalog-thay-cho-mot-snapshot.md) | Revision là tài liệu bất biến; hệ thống giữ cả catalog, không giữ một snapshot | **Accepted** 2026-08-27 | M1 |
+| [025](ADR-025-immutablearray-cho-collection-lo-ra-ngoai.md) | Collection lộ ra ngoài dùng `ImmutableArray<T>`, không dùng `IReadOnlyList<T>` | **Accepted** 2026-08-27 | M1 |
 
 Cột **Ra ở** là milestone dự kiến, không phải cam kết. Quyết định đến sớm hơn thì viết sớm hơn.
 

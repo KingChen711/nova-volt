@@ -2,7 +2,7 @@
 title: "M1 — Factory Model & Manufacturing Service Bus"
 milestone: M1
 duration: "1,5 tuần (18 giờ ước lượng)"
-status: in progress (D5 chưa đạt, C19 chưa xong — xem §7)
+status: in progress (D5 chưa đạt, C19 chưa xong, K7 đầy đủ còn mở theo `ADR-023` — xem §7)
 created: 2026-08-26
 depends_on: [M0]
 unlocks: [M2]
@@ -92,8 +92,8 @@ Xác nhận ngày 2026-08-26. Chủ repo uỷ quyền cho agent quyết cả ba,
 
 | # | Vấn đề | Quyết định | Hệ quả lên plan |
 |---|---|---|---|
-| Q1 | FactoryModel lưu ở đâu | **Seed file**, chưa database | C07 nạp `deploy/seed/factory-model.r*.json` — **một file cho mỗi revision** (sửa ở R3, `ADR-024`). Persistence vào M5 cùng bố cục FB đầy đủ |
-| Q2 | CloudEvents nằm ở đâu trên dây | **Attribute ở transport header**, body giữ envelope MassTransit | C12 viết filter + `ADR-008`. Envelope đầy đủ §7.4 là contract của event store (M6), không phải của dây |
+| Q1 | FactoryModel lưu ở đâu | **Seed file**, chưa database | C07 nạp `deploy/seed/factory-model.r*.json` — **một file cho mỗi revision**, mỗi file là một tài liệu bất biến (`ADR-024`). Persistence vào M5 cùng bố cục FB đầy đủ |
+| Q2 | CloudEvents nằm ở đâu trên dây | **Attribute ở transport header**, body giữ envelope MassTransit | C12 viết filter + `ADR-008`. Envelope đầy đủ §7.4 là contract của event store (M5), không phải của dây |
 | Q3 | Lab phá hoại M1 | **Phát biểu lại DoD**: đếm số event mất thay vì đòi bằng 0 | D4 ở §1 đã sửa. `ADR-022` bắt buộc. `scope.md` §9/M1 và §9/M6 **đã sửa** 2026-08-26 |
 
 ### 3.1 Q1 — Vì sao seed file, khi Opcenter thật để factory model trong database
@@ -118,7 +118,7 @@ Thứ đáng học ở đây — và là lý do `ADR-008` xứng đáng tồn t�
 | | Là gì | Ai sở hữu | Sống ở đâu |
 |---|---|---|---|
 | **Envelope của framework** | MassTransit gói message để nó tự định tuyến, retry, fault | MassTransit | chỉ trên dây, giữa hai process .NET |
-| **Envelope CloudEvents §7.4** | Contract nghiệp vụ: cái gì xảy ra, ở site nào, do đâu gây ra, theo schema nào | `Nvm.Contracts` | **event store** (M6), file DPP (M12), mọi lần publish ra ngoài tổ chức |
+| **Envelope CloudEvents §7.4** | Contract nghiệp vụ: cái gì xảy ra, ở site nào, do đâu gây ra, theo schema nào | `Nvm.Contracts` | **event store** (M5), file DPP (M12), mọi lần publish ra ngoài tổ chức |
 
 Nhập hai cái làm một là lỗi thiết kế hay gặp: hoặc bạn để framework quyết định contract nghiệp vụ (đổi thư viện là vỡ hợp đồng), hoặc bạn ép framework mang nguyên contract nghiệp vụ và mất hết tính năng của nó.
 
@@ -370,7 +370,7 @@ Ba cách xử lý khi tới M6, chọn một và ghi vào ADR của outbox: lưu
 **Việc làm**
 - **Ba** behavior, theo đúng thứ tự này:
   1. `ValidationBehavior` — command sai hình dạng thì dừng sớm, chưa đụng gì.
-  2. `IdempotencyBehavior` — **giành chỗ** cho `IdempotencyKey` **trước** khi gọi handler, xác nhận sau khi handler trả về. Đã xong rồi → trả kết quả cũ, **không** chạy handler. K7. *(Sửa ở R2 — xem khối bên dưới.)*
+  2. `IdempotencyBehavior` — **giành chỗ** (`Claim`) cho `IdempotencyKey` **trước** khi gọi handler, `Complete` sau khi handler trả về, `Abandon` ở mọi nhánh lỗi. Đã xong rồi → trả kết quả cũ, **không** chạy handler. *(Giới hạn ở khối bên dưới.)*
   3. `AuditBehavior` — ghi ai/lệnh gì/lúc nào, dùng `TimeProvider` (K1).
 - `IIdempotencyStore` + bản `InMemoryIdempotencyStore`. Bản trên SQL Server, ghi **cùng transaction với event**, thuộc M5.
 
@@ -384,19 +384,21 @@ Test bắt buộc: gửi **cùng một command hai lần** → handler chạy **
 
 `Microsoft.Extensions.TimeProvider.Testing` đã được khai báo sẵn trong `Directory.Packages.props` từ M0/C02 cho đúng lúc này.
 
-> [!warning] Sửa ở R2 (2026-08-27) — chỗ này ban đầu chỉ đúng một nửa
-> Plan gốc chỉ đòi phép kiểm **tuần tự**, và cài đặt sinh ra từ nó là `Find` → handler → `Record`.
-> Câu *"chặn lặp lại, nhưng không chặn đua"* trong bản gốc là **đúng phần mô tả, sai phần kết luận**:
-> nó ghi nhận lỗ hổng rồi coi đó là chuyện chấp nhận được tới M5, trong khi K7 là ràng buộc **cứng**
-> và kịch bản làm vỡ nó — edge gateway xả cả đệm store-and-forward sau khi mất mạng — là chuyện xảy
-> ra hàng ngày, không phải trường hợp hiếm.
+> [!important] Bảo đảm hiện có: **process-local duplicate suppression**, không phải K7 đầy đủ
+> Giành chỗ trước khi chạy handler đóng được cửa mà check-then-act để hở. Nhưng chỗ giữ nằm trong RAM
+> của một process, nên bảo đảm dừng đúng ở ranh giới process:
 >
-> **Đã sửa**: store đổi sang `Claim`/`Complete`/`Abandon`, behavior giành chỗ trước khi chạy handler.
-> Bằng chứng: hoàn nguyên về check-then-act làm đỏ **6/292** test, và **286** test cũ vẫn xanh — bộ
-> test tuần tự của C05 **không thể** nhìn thấy lỗi này.
+> | Kịch bản | Hiện tại |
+> |---|---|
+> | Duplicate **tuần tự** — gửi lại sau khi lần đầu đã xong | **đạt**, trả kết quả cũ, handler không chạy lại |
+> | Duplicate **đồng thời trong một process** — n luồng cùng khoá | **đạt**, đúng một handler chạy, mọi caller nhận cùng kết quả |
+> | **Lỗi trước khi hoàn tất** — handler ném, hoặc process bị huỷ giữa chừng | **đạt**, claim được `Abandon`, khoá mở lại, gửi lại được |
+> | **Restart / nhiều instance** | **chưa đạt** — store mất sạch khi restart và không chia sẻ giữa hai instance |
+> | **Atomicity** giữa idempotency record và business effect | **chưa đạt** — chưa có transaction nào bao cả hai |
 >
-> **Còn nợ, và không đóng được ở M1**: chỗ giữ chỉ sống bằng đời process. Hai instance, hoặc một lần
-> restart, thì bản trùng vẫn lọt. **K7 chưa đạt** — xem `ADR-023` và `docs/audit-m0-m1.md` R2.
+> Nên gọi đúng tên là **process-local idempotency**. **K7 đầy đủ vẫn mở**: một claim bền vững canh một
+> effect không bền vững thì tệ hơn, không tốt hơn — đó là lý do SQL store không được kéo từ M5 lên.
+> Ranh giới transaction bền vững đóng nó lại ở **M5**. Quyết định và đánh đổi ở `ADR-023`.
 
 ---
 
@@ -407,7 +409,7 @@ Test bắt buộc: gửi **cùng một command hai lần** → handler chạy **
 **Việc làm**
 - `src/FunctionalBlocks/FactoryModel/Nvm.FactoryModel.csproj` — Functional Block **đầu tiên**. Reference `Nvm.Contracts` và `Nvm.Kernel`, **không** reference FB nào khác (K8, ép ở C17).
 - `FactoryNodeKind` enum sáu bậc. Cha hợp lệ của mỗi bậc là **cố định** — `Equipment` không thể treo thẳng vào `Site`.
-- `FactoryNode` — `Code`, `Name`, `Kind`, `ParentPath`, `SiteId`, `Children`.
+- `FactoryNode` — state chính là `Path`, `Name`, `Children`. `Code`, `Kind` và `SiteId` **derive** từ `Path` chứ không lưu riêng, nên không có hai nguồn để lệch nhau; cha lấy qua `Path.Parent` khi cần.
 - `EquipmentPath` — value object cho chuỗi `NOVAVOLT/NV1/FORMATION/F1/FORM-01/FORM-01-CH-0142` (`scope.md` §2.1). Parse phải **cho phép đường dẫn ngắn hơn** (một Area cũng có path hợp lệ) và trả về `Kind` suy ra từ độ sâu.
 - Ràng buộc: mọi node đều có `SiteId` (K3); node `Enterprise` là ngoại lệ duy nhất và phải được xử lý tường minh, không để `null` trôi.
 
@@ -417,15 +419,14 @@ make test
 ```
 Test bắt buộc: cha sai bậc bị từ chối; path 6 đoạn ra `Equipment`, 3 đoạn ra `Area`; path có đoạn rỗng (`NOVAVOLT//NV1`) bị từ chối; path phân biệt hoa thường (mã khắc và MQTT topic đều là chữ hoa — hạ hoa âm thầm ở đây sẽ đẻ ra hai node cho cùng một máy).
 
-> [!warning] Sửa ở R4 (2026-08-27) — "read-only" từng chỉ là lời hứa của XML doc
-> `FactoryNode`, `FactoryModelSnapshot` và `EquipmentPath` đều tự mô tả là read-only, nhưng dùng
-> `IReadOnlyList<T>` để diễn đạt — thứ chỉ hứa rằng *tham chiếu này* không có mutator, không hứa gì về
-> đối tượng đứng sau. **Năm đường khai thác đều chạy được**, trong đó nặng nhất là sửa cây **sau khi**
-> snapshot đã dựng flat index: duyệt cây ra 42 node, index nói 41, `Find` trả `null` cho một node đang
-> nằm trong cây, và **không có gì ném exception**.
+> [!important] Collection lộ ra ngoài dùng `ImmutableArray`, không phải `IReadOnlyList`
+> `IReadOnlyList<T>` chỉ hứa rằng *tham chiếu này* không có mutator; nó không hứa gì về đối tượng đứng
+> sau, nên caller giữ lại list gốc hoặc cast ngược đều sửa được cây đã dựng xong.
 >
-> **Đã sửa**: `ImmutableArray<T>` cho mọi collection lộ ra ngoài, `FrozenDictionary` cho flat index,
-> `Create` sao chép trước khi kiểm invariant. Chỉ BCL. Xem `ADR-025` và `docs/audit-m0-m1.md` R4.
+> Vì thế: `ImmutableArray<T>` cho `Children`, `Segments`, `Sites`, `Paths` và `Revisions` ·
+> `FrozenDictionary` cho flat index của snapshot · `Create` nhận `IEnumerable<T>` và **sao chép trước
+> khi kiểm invariant**, để thứ được kiểm đúng là thứ được giữ. Chỉ BCL, không thêm package.
+> Lý do đầy đủ và số đo ở `ADR-025`.
 
 **Ghi chú**: `EquipmentPath` là thứ dùng lại nhiều nhất trong toàn dự án — MQTT topic, tên entity, nhãn metric, khoá phân quyền, XPath trong Mendix (`scope.md` §2.1). Sai ở đây thì sai ở sáu chỗ.
 
@@ -456,11 +457,11 @@ Hai bậc in đậm là hai bậc quan trọng nhất với dự án này, vì h
 **Mục tiêu**: có dữ liệu thật của hai site, và tra cứu được trong O(1).
 
 **Việc làm**
-- `deploy/seed/factory-model.r<n>.json` — nguồn sự thật, **một file cho mỗi revision**, mỗi file có `revision` (số nguyên tăng dần) và `generatedAt`. Bản đầu là `r1`; `r2` và `r3` đến ở R3 (`ADR-024`):
+- `deploy/seed/factory-model.r<n>.json` — nguồn sự thật, **một file cho mỗi revision**, mỗi file có `revision` (số nguyên tăng dần) và `generatedAt`. Kệ hiện có `r1`, `r2`, `r3`; mỗi file là một tài liệu **đầy đủ và bất biến**, không phải diff chồng lên bản trước (`ADR-024`):
   - **NV1** (Hải Phòng, `Asia/Ho_Chi_Minh`): 7 area `ELECTRODE`, `ASSEMBLY`, `FORMATION`, `AGING`, `MODULE`, `PACK`, `WAREHOUSE`; line `L1`, `L2` (cell), `M1` (module), `P1` (pack).
   - **DE1** (Leipzig, `Europe/Berlin`) — **cố ý có DST**, xem `scope.md` §2.3. Ở M1 chỉ cần `TimeZoneId` là chuỗi trong seed; `IProductionCalendar` là M3.
   - Ít nhất một WorkCell có Equipment thật để `EquipmentPath` 6 đoạn không phải giả định: `FORM-01` với vài kênh `FORM-01-CH-0001…`.
-- `FactoryModelSnapshot` — nạp seed, dựng `IReadOnlyDictionary<EquipmentPath, FactoryNode>` phẳng cho tra cứu, và giữ cây cho duyệt.
+- `FactoryModelSnapshot` — nạp seed, dựng `FrozenDictionary<EquipmentPath, FactoryNode>` phẳng cho tra cứu, và giữ cây cho duyệt.
 - Nạp bằng source-generated JSON của C03. Seed file được nhúng làm `EmbeddedResource` **hay** đọc từ đĩa? → đọc từ đĩa qua đường dẫn cấu hình, mặc định `deploy/seed/`. Lý do: M2 sẽ cần sửa seed mà không build lại.
 
 **Kiểm chứng**
@@ -494,8 +495,8 @@ Nên hai điều phải đúng ngay từ M1:
 
 **Việc làm**
 - `ActivateFactoryModelRevisionCommand : ICommand` — `SiteId`, `Revision`, `IdempotencyKey`.
-- Handler: tra tài liệu ứng viên theo `revision` trong `IFactoryModelCatalog`, kiểm `revision` mới **lớn hơn** revision đang hoạt động, đổi trạng thái, trả về event kèm diff so với tài liệu đang có hiệu lực.
-- `[EventVersion(1)] FactoryModelRevisionActivated : IDomainEvent` — `SiteId`, `Revision`, `NodeCount`, `ActivatedAt`, `EquipmentPathsAdded`, `EquipmentPathsRemoved`.
+- Handler: tra tài liệu ứng viên theo `revision` trong `IFactoryModelCatalog`, kiểm tài liệu đó **có mô tả plant này**, kiểm `revision` mới **lớn hơn** revision đang hoạt động tại plant, ghi trạng thái bằng **compare-and-swap** so với revision vừa đọc, trả về event kèm diff so với tài liệu đang có hiệu lực.
+- `[EventVersion(1)] FactoryModelRevisionActivated : IDomainEvent` — `SiteId`, `Revision`, `NodeCount`, `OccurredAt`, `EquipmentPathsAdded`, `EquipmentPathsRemoved`. `OccurredAt` đến từ `IDomainEvent`: mọi event trả lời *"lúc nào"* bằng cùng một tên field, nên không có event nào tự chế tên riêng cho cùng một câu hỏi.
 - **Chưa publish lên bus ở commit này** — handler trả event, chưa có ai nhận. Bus vào ở C13.
 
 **Kiểm chứng**
@@ -504,23 +505,23 @@ make test
 ```
 Test bắt buộc: activate revision 3 khi đang ở 2 → thành công; activate lại revision 2 → bị từ chối với lý do rõ ràng; gửi **hai lần cùng một `IdempotencyKey`** → handler chạy 1 lần (K7 chạy thật trong một luồng thật, không phải trong test giả của C05); event có `[EventVersion(1)]` và mọi field thời gian là `DateTimeOffset`.
 
-> [!warning] Sửa ở R3 (2026-08-27) — phép kiểm này từng **không viết được**
-> Bản gốc của C08 nạp **một** `FactoryModelSnapshot` singleton từ **một** file, nên handler chặn ngay
-> ở `_available.Revision != command.Revision`. Revision 2 không tồn tại ở đâu trong hệ thống, và
-> *"activate revision 3 khi đang ở 2"* không phải bị quên — nó bất khả thi. Hệ quả đo được:
-> `EquipmentPathsRemoved` chưa bao giờ khác rỗng, và **staged rollout** mà `oef-mapping.md` đang
-> tuyên bố thì không đi qua được handler.
+> [!important] Một revision là **một tài liệu**, và kệ giữ cả ba
+> `IFactoryModelCatalog` giữ `factory-model.r1.json`, `r2.json`, `r3.json` — mỗi file một tài liệu
+> đầy đủ, bất biến, không bao giờ bị ghi đè. `IActiveFactoryModel` chỉ nói **plant nào đang mở quyển
+> nào**. Hai vai trò tách rời là thứ làm cho staged rollout diễn đạt được: hai plant đứng ở hai
+> revision khác nhau chỉ là hai entry trỏ vào hai tài liệu cùng nằm trên kệ.
 >
-> **Chủ repo chọn hướng B** trong hai hướng audit nêu (`docs/audit-m0-m1.md` R3), dạng **catalog**:
-> một revision là **một tài liệu bất biến**, seed thành `factory-model.r1/r2/r3.json`, và
-> `IFactoryModelCatalog` giữ cả kệ. Handler tra ứng viên theo revision rồi diff với tài liệu **đang
-> có hiệu lực tại chính plant đó**. Lý do đầy đủ và các phương án bị loại: `ADR-024`.
+> Handler vì thế đọc **hai** tài liệu, không phải một: tài liệu ứng viên, và tài liệu **đang có hiệu
+> lực tại chính plant đó**. Diff phải so với thứ đang chạy, không phải với tài liệu đứng cạnh trên kệ
+> — nếu không, một plant bỏ qua vài revision sẽ nhận diff của người khác.
 >
-> **Giờ chạy thật**: NV1 đi 1 → 2 → 3, bước cuối báo đúng 1 path đến (`STACK-04`) và 1 path đi
-> (`FORM-02`); DE1 bỏ qua r2, nhảy 1 → 3, chỉ báo `EOL-01`; NV1 ở revision 3 trong khi DE1 ở 1.
+> **Đang chạy thật**: NV1 đi `r2` → `r3` báo đúng 1 path đến (`ASSEMBLY/L2/STACK-04`) và 1 path đi
+> (`FORMATION/F1/FORM-02`); DE1 bỏ qua `r2`, nhảy `r1` → `r3` và chỉ báo `EOL-01`, không kéo theo
+> thay đổi của NV1.
 >
-> **Vẫn còn nợ**: active revision nằm trong RAM và **mất khi restart** — có test ghim đúng giới hạn
-> đó thay vì để trong comment. Đóng lại ở M5.
+> **Giới hạn còn hiệu lực**: catalog đọc lại được từ đĩa, nhưng **active revision theo site nằm trong
+> RAM và mất khi restart** — có test ghim đúng giới hạn đó thay vì để nó trong comment. Đóng lại ở
+> **M5** cùng persistence. Lý do đầy đủ và các phương án bị loại: `ADR-024`.
 
 **Vì sao chọn đúng event này làm event demo của M1**: nó là event **thật**, có ích ở M2 (consumer nào cache `equipment_path` sẽ cần biết khi cây đổi), chứ không phải một `TestEvent` sinh ra để chứng minh bus chạy rồi xoá. So sánh với ba container `probe` ở M0/C05 — cũng là scaffolding, nhưng ở đó việc kiểm ranh giới mạng không có cách nào khác; ở đây thì có.
 
@@ -532,7 +533,7 @@ Vì trong nhà máy, đổi cấu hình dây chuyền là một **sự kiện c�
 
 | | Nghiệp vụ hỏi gì | Ai trả lời |
 |---|---|---|
-| **Thời điểm** | Cây đổi lúc mấy giờ? Ca nào đang chạy lúc đó? | `ActivatedAt` trong event |
+| **Thời điểm** | Cây đổi lúc mấy giờ? Ca nào đang chạy lúc đó? | `OccurredAt` trong event |
 | **Nội dung đổi** | Thêm/bớt thiết bị nào? | `EquipmentPathsAdded` / `Removed` |
 | **Hạ nguồn** | Ai cần biết? Service nào đang cache cây cũ? | bus (C13) |
 
@@ -668,7 +669,7 @@ Hệ quả cần biết: retry in-memory **giữ message trong bộ nhớ consum
 - **Năm thuộc tính tuỳ chọn** — `subject`, `dataschema`, `correlationid`, `causationid`, `partitionkey` — **vắng mặt**, không ghi rỗng. CloudEvents coi *"không có"* và *"có, giá trị rỗng"* là hai tuyên bố khác nhau, và ở M1 chưa có nguồn dữ liệu nào cấp được chúng: `correlationid` là work order, `causationid` là operation run, cả hai đến ở M5.
 - Consumer đọc ngược **theo nhu cầu** bằng extension `context.CloudEvent()`. **Không** có `CloudEventsConsumeFilter` và **không** có `CloudEventContext` trong DI scope — một filter chạy trên mọi message để dựng một object mà phần lớn consumer không đụng tới là chi phí thu của tất cả để phục vụ số ít.
 - `ce_id` **phải bằng** `IdempotencyKey` khi event sinh ra từ một command — đây là mối nối giữa §7.2 và §7.4, và là thứ làm dedup ở M2 khả thi. Nếu hai giá trị này lệch nhau thì mỗi tầng dedup theo một khoá khác nhau và cả hai đều vô dụng.
-- **`ADR-008` — CloudEvents envelope**: ghi cả quyết định lẫn phần **không** làm. *Consequences* phải nêu ba điều: (1) message trên dây không phải CloudEvents thuần; (2) tiền tố `ce_` là **quy ước nội bộ**, vì AMQP 0-9-1 không có binding chính thức (§3.2); (3) envelope đầy đủ §7.4 vẫn là contract của event store ở M6. *Alternatives* nêu phương án raw JSON và lý do loại (K10 — Mendix không đọc bus).
+- **`ADR-008` — CloudEvents envelope**: ghi cả quyết định lẫn phần **không** làm. *Consequences* phải nêu ba điều: (1) message trên dây không phải CloudEvents thuần; (2) tiền tố `ce_` là **quy ước nội bộ**, vì AMQP 0-9-1 không có binding chính thức (§3.2); (3) envelope đầy đủ §7.4 vẫn là contract của event store ở M5. *Alternatives* nêu phương án raw JSON và lý do loại (K10 — Mendix không đọc bus).
 
 **Kiểm chứng**
 ```bash
@@ -681,19 +682,15 @@ Kỳ vọng: thấy đúng **6** header `ce_*` với giá trị đúng, **không
 
 Đọc bằng công cụ **ngoài** MassTransit là phần quan trọng của phép kiểm này: nếu chỉ kiểm bằng chính consumer MassTransit thì không phân biệt được "header có thật trên dây" với "MassTransit tự nhớ trong process".
 
-> [!warning] Sửa ở R5 (2026-08-27) — plan này đã trôi khỏi code và khỏi `ADR-008`
-> Bản gốc của C12 nêu **7** header `ce_*` (gồm `ce_subject` và `ce_dataschema`) cộng ba header
-> `correlationid` / `causationid` / `partitionkey`, và nêu một `CloudEventsConsumeFilter` bơm
-> `CloudEventContext` vào DI scope. **Không cái nào trong số đó tồn tại.**
+> [!important] Phía nhận là extension, **không** phải filter
+> `CloudEventsSendFilter` ghi đúng **6** header trên **cả** publish pipe lẫn send pipe. Phía nhận đọc
+> bằng extension `context.CloudEvent()` theo nhu cầu, chứ không có `CloudEventsConsumeFilter` bơm
+> context vào DI scope: một filter sẽ chạy cho mọi message dù có ai đọc attribute hay không, và thêm
+> một đăng ký nữa phải giữ khớp với phía gửi. Đọc theo nhu cầu làm đúng việc đó mà không có gì để
+> đồng bộ.
 >
-> Đọc lại code ngày 2026-08-27: `CloudEventsSendFilter` ghi đúng **6** header, năm thuộc tính tuỳ
-> chọn vắng mặt, và phía nhận là một extension `context.CloudEvent()` chứ không phải filter.
-> `ADR-008` — viết cùng lúc với code — mô tả **đúng**; chỗ sai là plan. Đã sửa plan theo code và ADR,
-> không sửa ngược lại.
->
-> Bài học đáng giữ: `ADR-008` và `CloudEventHeaders` khớp nhau vì cả hai được viết trong commit ra
-> quyết định. Plan được viết trước khi gõ dòng code đầu tiên và không ai đọc lại — đó chính là kiểu
-> trôi mà `AGENTS.md` §2.4 nói tới.
+> Sáu header là **một bộ**: đọc thiếu một cái nào cũng ném, vì nửa bộ attribute tệ hơn không có bộ
+> nào — người đọc sẽ lấy phần có mặt rồi mặc định phần còn lại. `ADR-008` giữ quyết định đầy đủ.
 
 #### C12.1 — Image ship `rabbitmqadmin` v2, cú pháp khác mọi ví dụ trên mạng
 
@@ -1089,8 +1086,8 @@ Trả lời lúng túng câu nào → dòng tương ứng **chưa** phải `xong
   - thời gian `/health/ready` với 6 check, so với 451 ms / 10,4 ms của M0;
   - thời gian `make test` sau khi thêm ~3 project test.
 - Cập nhật cột M1 trong `scope.md` Phụ lục A.
-- Đổi `status: planned` → `status: done` trong frontmatter của plan này — **chỉ khi D5 đã đạt cả hai vế**.
-  Ngày 2026-08-27 dòng này đã bị thực hiện sớm trong khi D5 còn mở, và R5 phải trả nó về `in progress`.
+- Đổi frontmatter của plan này sang `status: done` — **chỉ khi D5 đã đạt cả hai vế**. Hiện tại
+  `status: in progress`: D5 chưa đạt, C19 chưa xong, và K7 đầy đủ còn mở tới M5 (`ADR-023`).
   `status` của plan là thứ người khác đọc để biết milestone đã đóng chưa; đóng sớm là báo cáo sai (`AGENTS.md` §1.3).
 - Điền checklist §7.
 - Nếu §2.4 đúng — không đo lại N13 — thì ghi một dòng trong mục *"Chỉ số cố ý KHÔNG đo"* của `benchmarks.md` nêu rõ lý do, để lần sau không tưởng là quên.
@@ -1152,9 +1149,9 @@ Trả lời lúng túng câu nào → dòng tương ứng **chưa** phải `xong
 
 **Sản phẩm phụ bắt buộc**
 
-- [x] `make test` xanh — **319** test (M0 kết thúc ở 22; 279 ở C18, +40 từ R2–R4)
+- [x] `make test` xanh — **320** test (M0 kết thúc ở 22)
 - [x] `tests/Architecture` có ≥ 5 rule — có **17**, mỗi rule đã được chứng minh là đỏ được
-- [x] `ADR-004`, `ADR-008`, `ADR-010`, `ADR-021`, `ADR-022` viết xong — mỗi cái trong commit ra quyết định, không dồn về C18/C19. Thêm `ADR-023`, `ADR-024`, `ADR-025` từ đợt sửa R2–R4
+- [x] `ADR-004`, `ADR-008`, `ADR-010`, `ADR-021`, `ADR-022`, `ADR-023`, `ADR-024`, `ADR-025` viết xong — mỗi cái trong commit ra quyết định, không dồn về C18/C19
 - [x] `docs/event-catalog.md` tồn tại — 35 event, **1** đã cài đặt, và đó là con số đúng
 - [x] `docs/benchmarks.md` có ≥ 5 dòng số thật cho M1 — có **31**, không ô nào là ước lượng
 - [x] `scope.md` §9/M1 và §9/M6 đã cập nhật theo §3.3 và C11.1 *(làm trước, 2026-08-26)*

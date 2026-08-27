@@ -4,7 +4,7 @@
 |---|---|
 | **Status** | **Accepted** |
 | **Date** | 2026-08-27 |
-| **Liên quan** | `ADR-010` (khoá dedup), `ADR-001` (event store ở M5), `ADR-022` (dual-write), [`AGENTS.md`](../../AGENTS.md) §4/K7, [`scope.md`](../scope.md) §7.2, [`plans/M1-factory-model-bus.md`](../plans/M1-factory-model-bus.md) §C05, §C08, [`audit-m0-m1.md`](../audit-m0-m1.md) R2 |
+| **Liên quan** | `ADR-010` (khoá dedup), `ADR-001` (event store ở M5), `ADR-022` (dual-write), [`AGENTS.md`](../../AGENTS.md) §4/K7, [`scope.md`](../scope.md) §7.2, [`plans/M1-factory-model-bus.md`](../plans/M1-factory-model-bus.md) §C05, §C08 |
 
 ---
 
@@ -77,8 +77,10 @@ Race xuyên process vẫn mở, và **cố ý** để mở tới M5 — lý do �
 - Một command **hỏng** lọt xuống tới stage này sẽ chiếm mất khoá, và bản gửi lại **đã sửa** — mang cùng
   natural key — bị nuốt như bản trùng. Người vận hành sửa form, bấm gửi, thấy thành công, và không có
   gì xảy ra. Đây là giá của claim-trước, và là lý do `ValidationBehavior` phải ở ngoài cùng.
-- Nhánh "thua CAS" **chưa có test ở mức handler**: lab B làm đỏ 2 test, cả hai ở mức store. Ghi lại cho
-  R3 trong `audit-m0-m1.md`.
+- Nhánh "thua CAS" ném `FactoryModelActivationException`, và nhánh đó **đã được test đi qua ở mức
+  handler**: `ActivateFactoryModelRevisionTests.Activating_WhenThePlantMovedUnderneath_IsRefusedRatherThanOverwriting`
+  ép thua bằng một stand-in `IActiveFactoryModel`, nên nhánh chạy trên **mọi** build chứ không chỉ trên
+  build mà scheduler tình cờ xen kẽ đúng cách.
 - Không có eviction. Đúng cho test, không chấp nhận được cho một process chạy dài.
 
 **Việc phát sinh**
@@ -86,7 +88,6 @@ Race xuyên process vẫn mở, và **cố ý** để mở tới M5 — lý do �
 - **M5**: bản SQL Server, `Claim` và event ghi trong **cùng một transaction**; test cho restart và cho
   hai instance. Đây mới là chỗ K7 đóng lại.
 - **M2**: đo chi phí `Claim` dưới tải thật (≥ 5.000 msg/s), cùng lúc với chi phí SHA-1 của `ADR-010`.
-- **R3**: chứng minh transition revision 2 → 3 **đi qua handler**, gồm cả nhánh thua CAS.
 - Đo lại ngưỡng timeout 30 s khi có tải thật; hiện tại nó là phán đoán.
 
 ## Alternatives considered
@@ -101,7 +102,7 @@ Race xuyên process vẫn mở, và **cố ý** để mở tới M5 — lý do �
 
 ## Evidence
 
-Máy đo: Windows 11, .NET 10, cấu hình `Release`. HEAD `2a927a9`, cây làm việc R2 chưa commit.
+Máy đo: Windows 11, .NET 10, cấu hình `Release`. Số đo lấy tại thời điểm ra quyết định (2026-08-27, nền `2a927a9`); giữ nguyên ở đây làm **bằng chứng của quyết định**, không phải mô tả cây hiện tại.
 
 **Nền** — `make ci`:
 
@@ -143,8 +144,9 @@ total: 292 · failed: 2 · succeeded: 290
 | `SixteenActivationsAtOnce_ExactlyOneWins` | 1 caller thắng | **16** |
 | `ActivatingOnAStaleRead_IsRefusedRatherThanOverwriting` | `false` | `true` |
 
-Không test nào ở **mức handler** đỏ. Nhánh `FactoryModelActivationException` chưa được test nào đi qua
-— ghi lại ở đây để R3 nhặt, thay vì lặng lẽ bỏ.
+Cả hai test đỏ nằm ở **mức store**. Điều đó nói rằng một lab chỉ chứng minh được thứ có test đứng đúng
+tầng để nhìn: nhánh `FactoryModelActivationException` ở **mức handler** cần một test riêng, và giờ nó
+có — `Activating_WhenThePlantMovedUnderneath_IsRefusedRatherThanOverwriting`, ép thua bằng stand-in.
 
 **Chạy lặp** — 10 vòng, mỗi vòng 13 test concurrency, trên cây đã hoàn nguyên:
 

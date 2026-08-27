@@ -4,7 +4,7 @@
 |---|---|
 | **Status** | **Accepted** |
 | **Date** | 2026-08-27 |
-| **Liên quan** | `ADR-024` (revision là tài liệu), [`AGENTS.md`](../../AGENTS.md) §4/K4, [`scope.md`](../scope.md) §5.7, [`audit-m0-m1.md`](../audit-m0-m1.md) R4 |
+| **Liên quan** | `ADR-024` (revision là tài liệu), [`AGENTS.md`](../../AGENTS.md) §4/K4, [`scope.md`](../scope.md) §5.7 |
 
 ---
 
@@ -16,7 +16,7 @@ dùng để diễn đạt điều đó là `IReadOnlyList<T>`, và **`IReadOnlyL
 
 Nó chỉ hứa rằng *tham chiếu này* không có mutator. Đối tượng đứng sau nó thì vẫn có.
 
-Audit R4 nêu hai chỗ; kiểm chứng lại bằng test khai thác thật cho **năm** chỗ, cả năm đều chạy được:
+Viết test khai thác thật cho từng đường nghi ngờ: **năm** đường, cả năm đều chạy được:
 
 1. `FactoryNode.Create` **giữ nguyên** collection của caller. Caller thêm phần tử sau khi `Create` trả
    về → node đổi theo, và **các invariant vừa kiểm xong bị vô hiệu**: node thêm vào không đi qua phép
@@ -105,11 +105,11 @@ kiểu khai báo trên contract vẫn là `IReadOnlyList<string>`.
 | `ReadOnlyCollection<T>` bọc quanh list | Chặn được lúc chạy (mutator ném) nhưng **không chặn lúc biên dịch**, vẫn ép về `IList<T>` được, và tốn thêm một lớp bọc cho mỗi node. Được ít hơn, trả nhiều hơn |
 | Trả `IEnumerable<T>` | Chặn ghi, nhưng lấy mất `Length` và indexer — mà `Children[0]` và `Segments[^1]` là cách dùng chính. Và caller sẽ `.ToList()` khắp nơi, tức lại tạo ra bản sao mutable |
 | Chỉ vá `FactoryNode.Create` (defensive copy), giữ nguyên kiểu | Bịt được lỗ 1, để nguyên lỗ 2–5. Và không trả lời được vấn đề "an toàn do tình cờ" ở §Context |
-| Thêm thư viện immutable ngoài BCL | `System.Collections.Immutable` đã nằm trong shared framework .NET 10. Audit R4 nói thẳng: **không thêm package nếu BCL đủ** |
+| Thêm thư viện immutable ngoài BCL | `System.Collections.Immutable` đã nằm trong shared framework .NET 10. **Không thêm package khi BCL đủ** |
 
 ## Evidence
 
-Máy đo: Windows 11, .NET 10, cấu hình `Release`. HEAD `0015a05`, cây làm việc R4 chưa commit.
+Máy đo: Windows 11, .NET 10, cấu hình `Release`. Số đo lấy tại thời điểm ra quyết định (2026-08-27, nền `0015a05`); giữ nguyên ở đây làm **bằng chứng của quyết định**, không phải mô tả cây hiện tại.
 
 **Trước** — năm test khai thác, viết để **chạy được**, và cả năm **xanh**:
 

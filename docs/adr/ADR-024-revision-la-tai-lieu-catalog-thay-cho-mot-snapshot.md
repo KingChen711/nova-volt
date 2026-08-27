@@ -4,14 +4,14 @@
 |---|---|
 | **Status** | **Accepted** |
 | **Date** | 2026-08-27 |
-| **Liên quan** | `ADR-023` (claim), `ADR-001` (event store ở M5), [`AGENTS.md`](../../AGENTS.md) §4/K3, K4, [`scope.md`](../scope.md) §2.1, §6.5, [`plans/M1-factory-model-bus.md`](../plans/M1-factory-model-bus.md) §C07, §C08, [`audit-m0-m1.md`](../audit-m0-m1.md) R3 |
+| **Liên quan** | `ADR-023` (claim), `ADR-001` (event store ở M5), [`AGENTS.md`](../../AGENTS.md) §4/K3, K4, [`scope.md`](../scope.md) §2.1, §6.5, [`plans/M1-factory-model-bus.md`](../plans/M1-factory-model-bus.md) §C07, §C08 |
 
 ---
 
 ## Context
 
 Plan C08 **bắt buộc** một phép kiểm: *"activate revision 3 khi đang ở 2 → thành công"*. Phép kiểm đó
-chưa bao giờ tồn tại, và audit R3 tìm ra lý do sâu hơn *"quên viết test"*.
+chưa bao giờ tồn tại, và lý do sâu hơn *"quên viết test"*.
 
 Cài đặt tới hết M1 nạp **một** `FactoryModelSnapshot` singleton từ **một** file
 `deploy/seed/factory-model.json`, `"revision": 1`. Handler chặn ngay ở dòng đầu:
@@ -112,7 +112,7 @@ vững; nó vẫn nằm trong RAM và vẫn mất khi restart (M5).
 
 ## Evidence
 
-Máy đo: Windows 11, .NET 10, cấu hình `Release`. HEAD `7934ac1`, cây làm việc R3 chưa commit.
+Máy đo: Windows 11, .NET 10, cấu hình `Release`. Số đo lấy tại thời điểm ra quyết định (2026-08-27, nền `7934ac1`); giữ nguyên ở đây làm **bằng chứng của quyết định**, không phải mô tả cây hiện tại.
 
 **Trước**: `make ci` **292/292** xanh, và trong đó **không có test nào** activate revision khác 1.
 

@@ -36,34 +36,79 @@ public sealed record CloudEventAttributes(
 /// with nothing to keep in sync.
 /// </para>
 /// <para>
-/// No validation on the way in either. A message that reached a consumer has already been routed and
-/// deserialized by MassTransit, which used its own envelope to do it; refusing it here for a missing
-/// <c>ce_</c> header would reject a message the system had already understood. That check belongs at
-/// the edge where messages from outside this system arrive, and there is no such edge yet.
+/// A message carrying <b>no</b> <c>ce_</c> header at all is not an error. Not everything on a bus
+/// comes from this system's publish path, and MassTransit routed and deserialized this one using its
+/// own envelope; refusing it here would reject a message the system had already understood. Absent
+/// attributes are a fact about the message, so they are reported as <see langword="null"/>.
+/// </para>
+/// <para>
+/// A <b>partial</b> set is a different thing, and it is refused. The six attributes are written
+/// together by one filter, so anything between one and five of them means the message was stamped by
+/// something that does not agree with this system about what the set is. Reporting the ones present
+/// invites the reader to default the rest — and the default for the missing encoding is exactly the
+/// JSON assumption this envelope exists to prevent.
 /// </para>
 /// </remarks>
 public static class CloudEventContextExtensions
 {
+    private const int MandatoryHeaderCount = 6;
+
     /// <summary>Reads the CloudEvents attributes, or null when the message carries none.</summary>
     /// <param name="context">The consume context.</param>
+    /// <returns>
+    /// The six attributes when all six headers are present; <see langword="null"/> when none of them
+    /// is.
+    /// </returns>
+    /// <exception cref="InvalidOperationException">
+    /// The message carries some of the mandatory headers but not all of them.
+    /// </exception>
     public static CloudEventAttributes? CloudEvent(this ConsumeContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
 
+        // All six are read before any of them is judged. Picking one as a sentinel — specversion is
+        // the tempting choice — makes that one header decide between "no attributes" and "a broken
+        // set", so a message missing only the sentinel reads as a message carrying nothing at all.
         var specVersion = Read(context, CloudEventHeaders.SpecVersion);
+        var id = Read(context, CloudEventHeaders.Id);
+        var type = Read(context, CloudEventHeaders.Type);
+        var source = Read(context, CloudEventHeaders.Source);
+        var time = Read(context, CloudEventHeaders.Time);
+        var dataContentType = Read(context, CloudEventHeaders.DataContentType);
 
-        if (specVersion is null)
+        if (specVersion is null
+            && id is null
+            && type is null
+            && source is null
+            && time is null
+            && dataContentType is null)
         {
             return null;
         }
 
+        if (specVersion is null
+            || id is null
+            || type is null
+            || source is null
+            || time is null
+            || dataContentType is null)
+        {
+            throw PartialSet(
+                (CloudEventHeaders.SpecVersion, specVersion),
+                (CloudEventHeaders.Id, id),
+                (CloudEventHeaders.Type, type),
+                (CloudEventHeaders.Source, source),
+                (CloudEventHeaders.Time, time),
+                (CloudEventHeaders.DataContentType, dataContentType));
+        }
+
         return new CloudEventAttributes(
             specVersion,
-            Guid.Parse(Require(context, CloudEventHeaders.Id), CultureInfo.InvariantCulture),
-            EventTypeName.Parse(Require(context, CloudEventHeaders.Type)),
-            EventSource.Parse(Require(context, CloudEventHeaders.Source)),
-            DateTimeOffset.Parse(Require(context, CloudEventHeaders.Time), CultureInfo.InvariantCulture),
-            Require(context, CloudEventHeaders.DataContentType));
+            Guid.Parse(id, CultureInfo.InvariantCulture),
+            EventTypeName.Parse(type),
+            EventSource.Parse(source),
+            DateTimeOffset.Parse(time, CultureInfo.InvariantCulture),
+            dataContentType);
     }
 
     private static string? Read(ConsumeContext context, string header) =>
@@ -71,9 +116,18 @@ public static class CloudEventContextExtensions
 
     // Half a set of attributes is worse than none: a reader would take the ones present and silently
     // assume defaults for the rest. Either the publisher stamped the message or it did not.
-    private static string Require(ConsumeContext context, string header) =>
-        Read(context, header)
-        ?? throw new InvalidOperationException(
-            $"Message carries '{CloudEventHeaders.SpecVersion}' but not '{header}'. "
-            + "CloudEvents attributes are written as a set.");
+    //
+    // The message names every header that is missing, not just the first one found. Someone reading
+    // this off a message in an _error queue is trying to work out which publisher produced it, and
+    // "three of the six are absent" narrows that down in a way "the first one is absent" does not.
+    private static InvalidOperationException PartialSet(
+        params (string Header, string? Value)[] attributes)
+    {
+        var missing = attributes.Where(pair => pair.Value is null).Select(pair => pair.Header);
+
+        return new InvalidOperationException(
+            $"Message carries only {attributes.Count(pair => pair.Value is not null)} of the "
+            + $"{MandatoryHeaderCount} mandatory CloudEvents headers; missing: "
+            + $"{string.Join(", ", missing)}. CloudEvents attributes are written as a set.");
+    }
 }

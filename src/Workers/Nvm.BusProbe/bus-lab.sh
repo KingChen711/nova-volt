@@ -258,13 +258,29 @@ dlq() {
 	# reject_requeue_true: xem xong TRA message lai queue, khong tieu thu mat.
 	# rabbitmqadmin v2 in ra mot bang rong ca man hinh, nen loc lay dung nhung header
 	# tra loi hai cau hoi: no hong vi cai gi, va no van con la event gi.
+	#
+	# Loc DU CA SAU header ce_*, khong phai ba cai de nhan ra nhat. ADR-008 quyet dinh
+	# rang sau thuoc tinh la MOT BO; mot lab chi soi ba cai thi khong the do duoc quyet
+	# dinh do - no van xanh khi mot trong ba cai con lai bien mat tren day.
 	echo
 	echo "-- header cua message trong _error (doc roi tra lai queue):"
-	docker exec "$RABBIT" rabbitmqadmin -u "$(env_value NVM_RABBITMQ_USER)" -p "$(env_value NVM_RABBITMQ_PASSWORD)" get messages --queue nvm.factory-model.failing-probe_error --ack-mode reject_requeue_true 2>/dev/null | grep -aoE '"(MT-Fault-(ConsumerType|ExceptionType|Message|RetryCount)|MT-Reason|ce_(id|type|source))":"?[^",]*' | sort -u || true
+	dlq_headers=$(docker exec "$RABBIT" rabbitmqadmin -u "$(env_value NVM_RABBITMQ_USER)" -p "$(env_value NVM_RABBITMQ_PASSWORD)" get messages --queue nvm.factory-model.failing-probe_error --ack-mode reject_requeue_true 2>/dev/null | grep -aoE '"(MT-Fault-(ConsumerType|ExceptionType|Message|RetryCount)|MT-Reason|ce_(specversion|id|type|source|time|datacontenttype))":"?[^",]*' | sort -u || true)
+	echo "$dlq_headers"
+
+	ce_found=$(echo "$dlq_headers" | grep -c '"ce_' || true)
 
 	echo
 	echo "MT-Fault-RetryCount dem LAN THU LAI, nen 4 nghia la 5 lan chay."
-	echo "Cac header ce_* van con: message khong deserialize noi van noi duoc no la event gi."
+	echo "-- so header ce_* con lai tren day: $ce_found  (ky vong 6)"
+
+	if [ "$ce_found" -eq 6 ]; then
+		echo "DAT: ca 6 thuoc tinh CloudEvents song sot qua broker that va qua 5 lan thu."
+		echo "     Message khong deserialize noi van noi duoc no la event gi, cua site nao,"
+		echo "     luc nao, va payload duoc ma hoa bang gi."
+	else
+		echo "TRUOT: thieu header ce_*. ADR-008 doi du 6; dem duoc $ce_found."
+		return 1
+	fi
 }
 
 # ─────────────────────────────────────────────────────────

@@ -133,14 +133,23 @@ public sealed class CloudEventHeaderTests
         received.Error.ShouldBeNull();
     }
 
-    [Fact]
-    public async Task AMessageMissingOnlyTheContentType_IsRefusedRatherThanReadAsAPartialSet()
+    [Theory]
+    [InlineData(CloudEventHeaders.SpecVersion)]
+    [InlineData(CloudEventHeaders.Id)]
+    [InlineData(CloudEventHeaders.Type)]
+    [InlineData(CloudEventHeaders.Source)]
+    [InlineData(CloudEventHeaders.Time)]
+    [InlineData(CloudEventHeaders.DataContentType)]
+    public async Task AMessageMissingAnyOneMandatoryAttribute_IsRefusedRatherThanReadAsAPartialSet(
+        string omitted)
     {
-        // A publisher that knows five of the six attributes — this system before the content type was
-        // stamped, or any foreign producer — must not be read as if it had stamped all of them. The
-        // five it did send are exactly the ones that let a reader default the sixth to JSON, which is
-        // the guess this envelope exists to prevent. So the headers here are written by hand: the
-        // point is a message the real filter would never produce.
+        // Every header in turn, because "the set" has no privileged member. Checking one of them first
+        // and treating its absence as "this message has no attributes" is exactly the bug this covers:
+        // it would let a message missing that one header pass as a message carrying nothing, while the
+        // other five sit on it saying otherwise.
+        //
+        // The headers are written by hand here — the point is a message the real filter would never
+        // produce, from a publisher that does not agree with this system about what the set is.
         await using var provider = new ServiceCollection()
             .AddMassTransitTestHarness(bus => bus.AddConsumer<RecordingProbeConsumer>())
             .AddSingleton<ReceivedAttributes>()
@@ -150,13 +159,17 @@ public sealed class CloudEventHeaderTests
 
         await harness.Bus.Publish(
             AnEvent(),
-            StampEverythingButTheContentType,
+            context => StampEveryHeaderExcept(context, omitted),
             TestContext.Current.CancellationToken);
         (await harness.Consumed.Any<FactoryModelRevisionActivated>(TestContext.Current.CancellationToken))
             .ShouldBeTrue();
 
         received.Value.ShouldBeNull();
-        received.Error.ShouldNotBeNull().Message.ShouldContain(CloudEventHeaders.DataContentType);
+
+        var error = received.Error.ShouldNotBeNull();
+        error.ShouldBeOfType<InvalidOperationException>();
+        error.Message.ShouldContain(omitted);
+        error.Message.ShouldContain("5 of the 6");
     }
 
     private static CloudEventAttributes Read(ReceivedAttributes received)
@@ -170,17 +183,26 @@ public sealed class CloudEventHeaderTests
         return received.Value.ShouldNotBeNull();
     }
 
-    private static void StampEverythingButTheContentType(PublishContext<FactoryModelRevisionActivated> context)
+    private static void StampEveryHeaderExcept(
+        PublishContext<FactoryModelRevisionActivated> context,
+        string omitted)
     {
         var message = context.Message;
 
-        context.Headers.Set(CloudEventHeaders.SpecVersion, "1.0");
-        context.Headers.Set(CloudEventHeaders.Id, message.EventId.ToString());
-        context.Headers.Set(CloudEventHeaders.Type, EventTypeName.Of(typeof(FactoryModelRevisionActivated)).Value);
-        context.Headers.Set(CloudEventHeaders.Source, EventSource.Create(message.SiteId, "host-all").Value);
-        context.Headers.Set(
-            CloudEventHeaders.Time,
-            message.OccurredAt.ToString("O", CultureInfo.InvariantCulture));
+        var all = new (string Header, string Value)[]
+        {
+            (CloudEventHeaders.SpecVersion, "1.0"),
+            (CloudEventHeaders.Id, message.EventId.ToString()),
+            (CloudEventHeaders.Type, EventTypeName.Of(typeof(FactoryModelRevisionActivated)).Value),
+            (CloudEventHeaders.Source, EventSource.Create(message.SiteId, "host-all").Value),
+            (CloudEventHeaders.Time, message.OccurredAt.ToString("O", CultureInfo.InvariantCulture)),
+            (CloudEventHeaders.DataContentType, "application/json"),
+        };
+
+        foreach (var (header, value) in all.Where(pair => pair.Header != omitted))
+        {
+            context.Headers.Set(header, value);
+        }
     }
 
     public sealed class ReceivedAttributes

@@ -26,6 +26,7 @@
   <ItemGroup>
     <ProjectReference Include="../../../src/Platform/Nvm.Contracts/Nvm.Contracts.csproj" />
     <ProjectReference Include="../../../src/Platform/Nvm.Kernel/Nvm.Kernel.csproj" />
+    <ProjectReference Include="../../../src/FunctionalBlocks/FactoryModel/Nvm.FactoryModel.csproj" />
   </ItemGroup>
 
   <ItemGroup>

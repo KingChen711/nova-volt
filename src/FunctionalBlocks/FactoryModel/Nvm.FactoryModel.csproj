@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Functional Block ĐẦU TIÊN của dự án (khái niệm OEF, bài 9 của course).
+
+    Quy tắc K8: FB không được reference FB khác. Trao đổi giữa các FB đi qua Nvm.Contracts
+    và bus, không đi qua project reference. Ràng buộc này được ép bằng NetArchTest ở C17,
+    không phải bằng việc nhớ.
+
+    Bố cục đầy đủ của một FB (Entities/ Facets/ Commands/ Handlers/ Migrations/) được chốt ở M5.
+    Ở M1, FB này mới có phần mô hình cây — đủ để bus có một event thật để chở.
+  -->
+
+  <PropertyGroup>
+    <RootNamespace>Nvm.FactoryModel</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- EquipmentPath và FactoryNodeKind sống ở Kernel: chúng là định danh dùng chung, không
+         phải tài sản riêng của FB này. Xem XML doc của EquipmentPath. -->
+    <ProjectReference Include="../../Platform/Nvm.Kernel/Nvm.Kernel.csproj" />
+  </ItemGroup>
+
+</Project>

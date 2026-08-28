@@ -53,7 +53,39 @@ services:
     image: timescale/timescaledb:2.29.2-pg17
     container_name: nvm-timescale
     restart: unless-stopped
-    mem_limit: 1g
+    # 2 GiB, không phải 1: `shared_buffers` nằm TRONG hạn mức của container, nên cap 1 GiB ép
+    # Postgres chạy với 128 MB mặc định. Xem `command` bên dưới để biết vì sao con số đó là nút thắt.
+    mem_limit: 2g
+    # Postgres mặc định là cấu hình cho một máy không ai biết trước. Ở đây thì biết: ingestion ghi
+    # liên tục ở N1 vào một bảng vài triệu dòng có HAI index trên UUID ngẫu nhiên
+    # (`source_event_id` là hàm của natural key nên KHÔNG thể sắp theo thời gian được).
+    #
+    # Đo được ở R5: một backend Postgres bão hoà ~1 core và trần đầu-cuối dừng ở 4.300 msg/s, trong
+    # khi `shared_buffers` 128 MB nhỏ hơn working set của các index đó — mỗi lần chèn là một lần
+    # miss rồi đọc lại.
+    #
+    # `synchronous_commit` và `full_page_writes` GIỮ NGUYÊN mặc định (on). Đổi hai cái đó là mua
+    # throughput bằng độ bền, và D1 đòi số row khớp tuyệt đối sau khi kill process.
+    command:
+      - postgres
+      - -c
+      - shared_buffers=768MB
+      - -c
+      - effective_cache_size=2GB
+      - -c
+      - maintenance_work_mem=256MB
+      # Checkpoint thưa hơn: dưới tải ghi liên tục, `max_wal_size` 1 GB mặc định ép checkpoint vài
+      # phút một lần, và mỗi checkpoint kéo theo full-page write cho từng page bị chạm lần đầu.
+      - -c
+      - max_wal_size=8GB
+      - -c
+      - min_wal_size=1GB
+      - -c
+      - checkpoint_timeout=15min
+      - -c
+      - checkpoint_completion_target=0.9
+      - -c
+      - wal_buffers=64MB
     environment:
       POSTGRES_DB: ${NVM_POSTGRES_DB}
       POSTGRES_USER: ${NVM_POSTGRES_USER}
@@ -218,6 +250,17 @@ services:
       EMQX_NODE__NAME: emqx@nvm-emqx
       EMQX_DASHBOARD__DEFAULT_USERNAME: ${NVM_EMQX_USER}
       EMQX_DASHBOARD__DEFAULT_PASSWORD: ${NVM_EMQX_PASSWORD}
+      # Gateway ACK chỉ sau fsync. Cửa sổ 32 mặc định đo được ép batch 128 xuống đúng 32 record,
+      # khiến receiver chỉ đạt ~939 msg/s và broker drop 245.165/300.000 message trong 60 giây.
+      #
+      # 512 chứ không phải 128: cửa sổ phải chứa được số message đang chờ fsync ở CẢ hai chiều —
+      # broker gửi xuống gateway, và harness gửi lên broker. Đo 2026-08-29: nâng 32 lên 256 đưa
+      # batch fsync về đúng 128 record; nâng tiếp 256 lên 512 KHÔNG đổi trần (5.119 so với 5.104
+      # msg/s), vì trần nằm ở chi phí fan-out của chính EMQX, không nằm ở cửa sổ.
+      EMQX_MQTT__MAX_INFLIGHT: "512"
+      # Không chữa throughput bằng queue. 16.384 chỉ hấp thụ burst dropout đã đo 1.627 message và
+      # tối đa khoảng hai giây reconnect ở 5.000 msg/s; gate D2 vẫn bắt receiver chậm kéo dài.
+      EMQX_MQTT__MAX_MQUEUE_LEN: "16384"
     volumes:
       - emqxdata:/opt/emqx/data
     networks: [ot-net, dmz-net]
@@ -386,9 +429,10 @@ services:
   # POST thất bại giữ nguyên cursor của buffer; message đã fsync không bị biến thành loss chỉ vì
   # ingestion chưa sẵn sàng.
   #
-  # NVM_EDGE_FLUSH_RATE là công tắc của lab §5.C10.3: đặt 0 để tắt rate limit và đo xem
-  # ADR-029 có đang giải một vấn đề thật không. Mặc định 12000 msg/s — cao hơn N1 (5000)
-  # đủ để tiêu backlog trong ngân sách 3 phút của D3, không cao tới mức xả sạch cùng lúc.
+  # NVM_EDGE_FLUSH_RATE là công tắc A/B của lab §5.C10.3. Mặc định **0 = không có trần tĩnh**,
+  # chốt 2026-08-30 (G3): lab đo đường ống xả 13.224 msg/s, nên trần 12.000 cũ nằm DƯỚI khả năng
+  # thật và chỉ làm hồi phục chậm hơn 165 giây mà không chặn được gì — ingestion chưa từng trả
+  # 429/503. Phanh thật là closed-loop: 429/503 + Retry-After. Xem ADR-029 §Evidence.
   # ─────────────────────────────────────────────────────────
   edge-gateway:
     build:
@@ -404,11 +448,18 @@ services:
     environment:
       DOTNET_ENVIRONMENT: Production
       NVM_EDGE__BrokerHost: emqx
+      # Công tắc topology: `seed` là 8 kênh của demo, `seed-load` là 1.000 kênh của bài test/load
+      # (deploy/seed-load/). Harness phải đặt CÙNG giá trị, nếu không gateway từ chối mọi topic.
+      NVM_EDGE__SeedDirectory: "${NVM_SEED_DIR:-seed}"
       NVM_EDGE__IngestionUrl: http://ingestion:8080/api/ingestion/v1/sparkplug-batches
       NVM_EDGE__LogEvery: "1000"
       NVM_EDGE__Buffer__DirectoryPath: /var/lib/nvm-edge-gateway/buffer
-      NVM_EDGE__Buffer__FlushMessagesPerSecond: "${NVM_EDGE_FLUSH_RATE:-12000}"
-      NVM_EDGE__Buffer__FlushBurstMessages: "${NVM_EDGE_FLUSH_RATE:-12000}"
+      NVM_EDGE__Buffer__FlushMessagesPerSecond: "${NVM_EDGE_FLUSH_RATE:-0}"
+      NVM_EDGE__Buffer__FlushBurstMessages: "${NVM_EDGE_FLUSH_RATE:-0}"
+      # Flusher là một vòng lặp tuần tự: đọc batch, POST, tiến cursor. Trần của nó đúng bằng
+      # batch size chia round trip, nên đây là công tắc A/B để đo xem 4.300 msg/s là do batch
+      # quá nhỏ hay do PostgreSQL đã bão hoà. Không đoán, đo rồi mới chốt default.
+      NVM_EDGE__Buffer__FlushBatchSize: "${NVM_EDGE_FLUSH_BATCH:-1024}"
     volumes:
       - edgedata:/var/lib/nvm-edge-gateway
     networks: [dmz-net]
@@ -438,10 +489,11 @@ services:
       NVM_INGEST__BusHost: rabbitmq
       NVM_INGEST__BusUsername: ${NVM_RABBITMQ_USER}
       NVM_INGEST__BusPassword: ${NVM_RABBITMQ_PASSWORD}
-      # Whitelist tín hiệu lên bus (scope.md §5.5): quan trắc liên tục là telemetry và dừng ở
-      # TimescaleDB; giá trị ĐÃ ĐÁNH GIÁ mới là domain event. Capacity là thứ chấm điểm một cell.
-      # Publish mọi reading là đẩy hàng nghìn event/giây lên một bus dựng để chở quyết định.
-      NVM_INGEST__PublishedSignals__0: Formation/Capacity
+      # Whitelist một signal code RIÊNG cho kết quả cuối đã đánh giá. Đường cong thô mang tên
+      # Formation/Capacity và không bao giờ nằm trong danh sách này, nên nó dừng ở TimescaleDB kể cả
+      # sau M7 — khi channel đã ánh xạ được vào cell và mọi reading thô cũng sẽ có UnitId.
+      # Tính "đã đánh giá" phải nằm ở TÊN tín hiệu, không suy ra từ việc có UnitId hay không.
+      NVM_INGEST__PublishedSignals__0: Formation/CapacityResult
       # File drop của C15: máy EOL cũ xuất CSV lên share. Cùng cửa dedup với đường MQTT.
       NVM_INGEST__FileDrop__Enabled: "true"
       NVM_INGEST__FileDrop__InboxPath: /var/lib/nvm-ingestion/inbox
@@ -497,9 +549,12 @@ services:
       DOTNET_ENVIRONMENT: Production
       NVM_LOAD_BROKER_HOST: emqx
       NVM_LOAD_LINE_PATH: NOVAVOLT/NV1/FORMATION/F1
+      # Cùng công tắc topology với gateway. Xem NVM_EDGE__SeedDirectory.
+      NVM_LOAD_SEED_DIRECTORY: "${NVM_SEED_DIR:-seed}"
       NVM_LOAD_RATE: "${NVM_LOAD_RATE:-5000}"
       NVM_LOAD_DURATION_SECONDS: "${NVM_LOAD_DURATION:-600}"
-      NVM_LOAD_PUBLISHERS: "${NVM_LOAD_PUBLISHERS:-8}"
+      # Một MQTT session đại diện EDGE-F1; concurrency chỉ là cửa sổ QoS 1 đang chờ ACK.
+      NVM_LOAD_MAX_IN_FLIGHT: "${NVM_LOAD_MAX_IN_FLIGHT:-256}"
     networks: [ot-net]
 
   # Hai container rỗng, chỉ tồn tại để chứng minh ranh giới mạng có thật.

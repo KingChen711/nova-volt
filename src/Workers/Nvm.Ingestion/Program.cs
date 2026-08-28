@@ -93,7 +93,9 @@ builder.Services.AddSingleton<IMeasurementIngestor>(services => new PostgresMeas
     services.GetRequiredService<IngestionLag>(),
     services.GetRequiredService<IMeasurementEventPublisher>(),
     services.GetRequiredService<PublishedSignals>(),
-    options.ClockDriftThreshold));
+    options.ClockDriftThreshold,
+    options.WriterParallelism,
+    options.MinRowsPerWriter));
 builder.Services.AddIngestionAdmissionControl(options);
 builder.Services
     .AddHealthChecks()

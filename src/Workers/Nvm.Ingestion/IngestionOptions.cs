@@ -34,6 +34,32 @@ public sealed class IngestionOptions
     /// <summary>Batches allowed to wait for a slot before ingestion starts refusing.</summary>
     public int MaxQueuedBatches { get; set; } = 16;
 
+    /// <summary>Database writers one accepted batch may spread its rows across.</summary>
+    /// <remarks>
+    /// <para>
+    /// PostgreSQL serves one connection with one backend process, so a batch written through a
+    /// single transaction can use exactly one core however many the host has. Measured at R5: with
+    /// one edge node and a strictly sequential flusher, the whole pipeline was serial, the timescale
+    /// container sat at ~93% of one core, and end-to-end throughput stopped at 4.141 msg/s while the
+    /// gateway was already accepting 5.105 msg/s. Memory tuning did not move it because the limit
+    /// was CPU, not cache misses.
+    /// </para>
+    /// <para>
+    /// A production plant reaches the same parallelism for free by having many edge nodes posting at
+    /// once. D2 measures one, so the fan-out has to be explicit here instead.
+    /// </para>
+    /// <para>
+    /// Each writer commits its own transaction, so a failure can leave part of a batch committed.
+    /// That is safe precisely because dedup is the contract: the gateway retries the whole batch and
+    /// the committed rows come back as duplicates rather than as second copies. One is never
+    /// dropped and never stored twice, which is what D1 asserts.
+    /// </para>
+    /// </remarks>
+    public int WriterParallelism { get; set; } = 4;
+
+    /// <summary>Rows a batch must exceed before it is worth splitting across writers.</summary>
+    public int MinRowsPerWriter { get; set; } = 256;
+
     /// <summary>Delay handed back in <c>Retry-After</c> when a batch is refused.</summary>
     public TimeSpan RetryAfter { get; set; } = TimeSpan.FromSeconds(2);
 
@@ -49,11 +75,12 @@ public sealed class IngestionOptions
     /// <summary>The CSV file-drop adapter (C15). Off unless a plant has an old machine.</summary>
     public FileDrop.FileDropOptions FileDrop { get; set; } = new();
 
-    /// <summary>Signal codes whose readings are announced on the bus (scope.md §5.5).</summary>
+    /// <summary>Signal codes that name an evaluated result rather than an observation.</summary>
     /// <remarks>
-    /// Empty means telemetry only, which is the safe default: the reading is stored either way, and
-    /// the whitelist decides only whether anything is told about it. See
-    /// <see cref="Publishing.PublishedSignals"/> for why this is not a heuristic.
+    /// Empty means telemetry only, which is the safe default: the reading is stored either way. List
+    /// the code the plant uses for the <b>result</b> — <c>Formation/CapacityResult</c>, not
+    /// <c>Formation/Capacity</c> — because this list is the only thing that says a signal carries a
+    /// decision. See <see cref="Publishing.PublishedSignals"/> for the boundary from scope.md §5.5.
     /// </remarks>
     public IList<string> PublishedSignals { get; } = [];
 
@@ -71,7 +98,7 @@ public sealed class IngestionOptions
 
     /// <summary>Whether this process should connect to the bus at all.</summary>
     /// <remarks>
-    /// False when no signal is whitelisted and no credentials are configured. A migration job has
+    /// False when no result signal is whitelisted or credentials are absent. A migration job has
     /// neither, and a bus it never uses is a dependency that can only fail.
     /// </remarks>
     public bool PublishesToBus =>
@@ -120,6 +147,16 @@ public sealed class IngestionOptions
         if (MaxQueuedBatches < 0)
         {
             throw new InvalidOperationException($"{SectionName}:MaxQueuedBatches cannot be negative.");
+        }
+
+        if (WriterParallelism <= 0)
+        {
+            throw new InvalidOperationException($"{SectionName}:WriterParallelism must be positive.");
+        }
+
+        if (MinRowsPerWriter <= 0)
+        {
+            throw new InvalidOperationException($"{SectionName}:MinRowsPerWriter must be positive.");
         }
 
         if (RetryAfter <= TimeSpan.Zero)

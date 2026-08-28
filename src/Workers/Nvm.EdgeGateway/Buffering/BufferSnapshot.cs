@@ -5,12 +5,17 @@ namespace Nvm.EdgeGateway.Buffering;
 /// <param name="Bytes">Bytes occupied by data segments on disk.</param>
 /// <param name="CorruptRecords">Records whose CRC failed during recovery.</param>
 /// <param name="TruncatedTails">Incomplete final writes cut back to the last record boundary.</param>
+/// <param name="DataFsyncs">
+/// Physical data-file fsync calls since process start. Divided into the records that crossed them,
+/// this distinguishes "one fsync per message" from "one fsync per batch" without guessing.
+/// </param>
 /// <param name="MaxBytes">The hard disk cap.</param>
 public sealed record BufferSnapshot(
     long Depth,
     long Bytes,
     long CorruptRecords,
     long TruncatedTails,
+    long DataFsyncs,
     long MaxBytes)
 {
     /// <summary>Whether the next smallest framed record could still fit.</summary>

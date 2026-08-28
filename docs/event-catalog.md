@@ -29,10 +29,19 @@ Schema thuộc bounded context **Quality**; **Ingestion** là bên *phát* từ 
 đánh giá* từ M5 (K8: đi qua contract + bus, không reference trực tiếp).
 
 Ingestion **không** phát mọi phép đo. `scope.md` §5.5 vạch ranh giới: quan trắc liên tục là
-**telemetry** và dừng ở TimescaleDB; giá trị **đã đánh giá** mới là domain event. Cơ chế là một
-**whitelist signal code** (`NVM_INGEST__PublishedSignals`), mặc định **rỗng**. Phát mọi reading ở
-tốc độ N1 là 5.000 event/giây lên một bus dựng để chở quyết định — và nó hỏng **âm thầm**: không có
-lỗi nào, broker chỉ đầy dần, và event store biến thành đúng cái TSDB nằm cạnh nó.
+**telemetry** và dừng ở TimescaleDB; giá trị **đã đánh giá** mới là domain event. Một row chỉ được
+phát khi **đồng thời**: signal code nằm trong whitelist (`NVM_INGEST__PublishedSignals`) và có
+`UnitId`. Whitelist chỉ chứa **`Formation/CapacityResult`** — tên riêng của kết quả cuối đã đánh giá.
+Đường cong thô mang tên `Formation/Capacity`, một tên khác, nên nó **không bao giờ** đủ điều kiện dù
+sau M7 mọi reading thô cũng sẽ có `UnitId`. `UnitId` là điều kiện *đầy đủ* của một event đã là fact,
+không phải phép thử xem nó có phải fact hay không. Vì thế đường cong MQTT vẫn được lưu đầy đủ nhưng
+không lên bus; C14
+được chứng minh bằng fixture kết quả cuối từ CSV adapter có khai báo `UnitId` của cell. Ingestion
+không xác thực phép ánh xạ cell từ channel ở M2 — việc đó thuộc formation process ở M7.
+
+Whitelist mặc định **rỗng**. Phát mọi reading ở tốc độ N1 là 5.000 event/giây lên một bus dựng để
+chở quyết định — và nó hỏng **âm thầm**: không có lỗi nào, broker chỉ đầy dần, và event store biến
+thành đúng cái TSDB nằm cạnh nó.
 
 ---
 

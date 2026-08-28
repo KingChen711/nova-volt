@@ -22,7 +22,7 @@ ALL_PROFILES := --profile probe --profile init --profile obs --profile tools --p
 BACKUP_DIR := $(shell grep -E '^NVM_BACKUP_DIR=' .env 2>/dev/null | cut -d= -f2-)
 
 .DEFAULT_GOAL := help
-.PHONY: help up up-obs down down-v reset ps logs net-check dmz-shell build test ci hooks format format-check clean backup bus-fanout bus-dlq bus-chaos sim-up sim-down sim-logs sim-report sim-net-check edge-up edge-down edge-logs edge-net-check buffer-crash ingestion-up ingestion-down ingestion-logs ingestion-migrate outage-lab load load-net-check reconcile
+.PHONY: help up up-obs down down-v reset ps logs net-check dmz-shell build test ci hooks format format-check clean backup bus-fanout bus-dlq bus-chaos sim-up sim-down sim-logs sim-report sim-net-check edge-up edge-down edge-logs edge-net-check buffer-crash ingestion-up ingestion-down ingestion-logs ingestion-migrate outage-lab backpressure-lab load load-session-check load-net-check reconcile
 
 help:
 	@echo "NovaVolt MES"
@@ -57,10 +57,15 @@ help:
 	@echo "    make ingestion-down Dung ingestion"
 	@echo "    make ingestion-logs Theo doi batch inserted/duplicate"
 	@echo "    make ingestion-migrate Chay rieng migration job PostgreSQL"
-	@echo "    make outage-lab    D3: tat backend 2 phut, do backlog va so row lech"
+	@echo "    make outage-lab    D3 fail-closed: tat backend 2 phut, assert row delta = 0"
+	@echo "    make backpressure-lab  Lab #3: nap 30 phut roi xa 2 lan, A/B rate limit"
 	@echo ""
 	@echo "  Do tai (D2)"
-	@echo "    make load          Ban RATE msg/s trong DURATION giay tu ot-net, roi in lag"
+	@echo "    make load          D2/M2 tren 1.000 kenh: source = gateway = DB exact, receiver theo kip"
+	@echo "    NVM_LOAD_ENFORCE_N1=1 make load    Nghiem thu nang luc: ep N1 5.000 msg/s va p95 <5s"
+	@echo "                                       qualification o M9, requalification o M13 (ADR-031)"
+	@echo "    NVM_SEED_DIR=seed make load        Chay D2 tren topology demo 8 kenh"
+	@echo "    make load-session-check Kiem 60 giay: mot node, mot session, khong sequence gap/rebirth"
 	@echo "    make load-net-check Kiem harness chi o ot-net, toi EMQX nhung khong toi RabbitMQ"
 	@echo "    make reconcile     D1: doi chieu phep do logic voi row trong DB (DURATION=3600)"
 	@echo ""
@@ -260,16 +265,26 @@ ingestion-migrate: .env
 	@$(COMPOSE) --profile ingestion run --rm ingestion-migrate
 
 # D2. Harness chay TRONG ot-net; lag doc tu ingestion o dmz-net qua dmz-shell.
-# `make load RATE=5000 DURATION=600` la con so cua DoD; de nho hon khi dang dev.
+# `make load` mac dinh OFFER 5.100 msg/s. Nguong DoD van la 5.000 va nam trong script, khong
+# phai o day: mot nguon phat dung bang nguong chi dat duoc no neu khong bao gio vap, vi mot
+# mili-giay mat vi stall la mot mili-giay khong lay lai duoc. Offer cao hon mot chut la cach phep
+# do noi ve duong ong thay vi noi ve dung cu do.
 #
 # Hai ve cua phep do o hai mang khac nhau CO Y: harness khong duoc nhin thay ingestion,
 # vi thiet bi that cung khong nhin thay (K11).
+#
+# Topology mac dinh cua target nay la seed-load (1.000 kenh), KHONG phai seed demo 8 kenh.
+# scope.md §9/M2 cam ket bai test/load chay 1.000 kenh, va mot cam ket chi duoc giu bang thu
+# chay mac dinh: mot co opt-in thi lan nao quen la lan do D2 do mot nha may khac. Demo va
+# docker-compose van mac dinh `seed` — xem NVM_EDGE__SeedDirectory. Doi co chu dich thi van duoc:
+#     NVM_SEED_DIR=seed make load
 load: .env
-	@$(COMPOSE) --profile load build load-harness
-	@NVM_LOAD_RATE=$${RATE:-5000} NVM_LOAD_DURATION=$${DURATION:-600} 		$(COMPOSE) --profile load run --rm load-harness
-	@echo ""
-	@echo "  Ve NHAN — lag do chinh ingestion tinh (recorded_at - device_timestamp):"
-	@$(COMPOSE) --profile tools run --rm dmz-shell 		wget -qO- http://ingestion:8080/api/ingestion/v1/stats || 		echo "  Khong doc duoc stats. Ingestion dang chay chua? make ingestion-up"
+	@NVM_SEED_DIR=$${NVM_SEED_DIR:-seed-load} RATE=$${RATE:-5100} DURATION=$${DURATION:-600} sh scripts/load-gate.sh
+
+# R2 protocol gate. 500 msg/s nam duoi capacity da do cua receiver de co lap tinh hop le cua
+# Sparkplug session; no KHONG thay the D2 o target `load` (5.000 msg/s trong 600 giay).
+load-session-check: .env
+	@RATE=$${RATE:-500} DURATION=$${DURATION:-60} sh scripts/load-session-check.sh
 
 load-net-check: .env
 	@sh scripts/load-net-check.sh
@@ -284,6 +299,12 @@ reconcile: .env
 # WARMUP/OUTAGE/DRAIN_BUDGET de chay nhanh luc dev; mac dinh la con so cua DoD.
 outage-lab: .env
 	@sh scripts/backend-outage-lab.sh
+
+# Lab pha hoai #3 (plan C10.3). Nap 30 phut o N1 voi ingestion TAT, chup buffer, roi xa CUNG mot
+# backlog hai lan: mot lan khong rate limit, mot lan co. Bon con so di vao ADR-029.
+# FILL/DRAIN_BUDGET de chay nhanh luc dev; mac dinh la con so cua plan.
+backpressure-lab: .env
+	@sh scripts/backpressure-lab.sh
 
 # ─────────────────────────────────────────────────────────
 # Bus — bang chung cua M1/C13

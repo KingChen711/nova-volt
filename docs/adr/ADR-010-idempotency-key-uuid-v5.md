@@ -70,6 +70,27 @@ pipeline (C05). ADR này chỉ chốt **cách sinh ra giá trị**.
 - Ở C12, `ce_id` của event sinh từ command **phải bằng** `IdempotencyKey` của command đó.
 - Ở M6, khi outbox lưu khoá xuống SQL Server: **đọc §C04.2 trước** — xem mục Evidence.
 
+### Rủi ro đã biết: đồng hồ chạy nhanh chiếm chỗ của phép đo thật đến sau
+
+Khoá tự nhiên gồm `device_timestamp` và **không** gồm `clock_quality`. Hệ quả trên dây chuyền thật:
+một kênh có đồng hồ chạy nhanh ghi vào **tương lai**, và khi thời gian thật đi tới đúng mili-giây đó,
+phép đo THẬT mang cùng natural key sẽ bị dedup **nuốt im lặng**. Không có lỗi nào được ném, không
+counter nào tăng ngoài `duplicates`.
+
+Đo được ở M2 (2026-08-29): **307.104** row có `device_timestamp` tới tận **2026-09-10** do simulator
+nén thời gian, và **4.149** row va chạm trong một lần chạy D2 — toàn bộ là `Drifted`, toàn bộ row của
+run là `Good`. Ở lab đó nó vô hại vì nguồn là simulator; với thiết bị thật thì không.
+
+**Không sửa bằng cách thêm `gateway_timestamp` hoặc `clock_quality` vào khoá.** Cả hai đổi giá trị khi
+message được gửi lại hoặc replay, nên thêm chúng là làm hỏng đúng tính chất khoá này tồn tại để có:
+cùng một phép đo, gửi ba lần, ba ngày sau, vẫn ra một khoá.
+
+| | |
+|---|---|
+| **Trạng thái** | Chấp nhận có ý thức ở M2. Không có sample id đáng tin từ thiết bị để đưa vào khoá |
+| **Địa chỉ** | **Trước khi có thiết bị thật đầu tiên** — nghĩa là trước milestone đầu tiên đọc dữ liệu từ máy thật, không phải "một lúc nào đó" |
+| **Acceptance gate lúc đó** | Hoặc thiết bị cấp một sample id ổn định để thay `device_timestamp` trong khoá, hoặc ingestion phải **đếm và báo** va chạm giữa một row `Drifted` có sẵn và một row `Good` đến sau, thay vì để `duplicates` gộp chung |
+
 ## Alternatives considered
 
 | Phương án | Vì sao loại |
@@ -122,6 +143,31 @@ Test đầu là tình huống thật: `["NV1", "ROL|004", "STACK"]` và `["NV1",
 dẹt thành `"NV1|ROL|004|STACK"`. **Hai phép đo khác nhau, một khoá — và một cái biến mất ở bước
 dedup.** Lot code của nhà cung cấp là chuỗi tự do từ hệ thống của người khác, nên ký tự phân cách
 lọt vào giá trị là chuyện *khi nào*, không phải *có hay không*.
+
+**5. Khoá này chặn bao nhiêu — lab phá hoại #1 của `scope.md` §9/M2.** Đo ở M2, chỗ trống mà
+ADR này để lại từ M1/C04 giờ điền được.
+
+`make reconcile DURATION=300` trên đường ống thật, simulator bật đủ fault, `TimeCompression=1`:
+
+```
+  Phep do logic simulator sinh ra   : 282
+  Row telemetry trong DB            : 282
+  Lech                              : 0
+  Duplicate bi dedup chan           : 69
+```
+
+**69 trên 282 row — 24,5 %.** Mỗi delivery rơi vào `ON CONFLICT DO NOTHING` là đúng một row sẽ
+thừa nếu khoá này không tồn tại. Cao hơn 10 % mà fault của simulator bơm vào, vì duplicate còn đến
+từ hai nguồn nữa: MQTT QoS 1 giao lại, và rebirth khai lại nguyên trạng cả kênh (`C11`).
+
+Điều đáng nhớ không phải con số. Là **cách nó hỏng nếu thiếu**: không exception, không log lỗi,
+`INSERT` nào cũng thành công. Bảng chỉ đơn giản có nhiều hơn 24,5 % số phép đo mà nhà máy đã đo, và
+mọi phép tính yield trên đó đều lệch — theo một hướng khó ngờ, vì dữ liệu *thừa* trông không giống
+dữ liệu hỏng.
+
+Lab **#2** đo chiều ngược lại — bỏ `device_timestamp` khỏi khoá thì **65.628 / 65.676 phép đo
+(99,93 %) bị nuốt**, và cũng im lặng y hệt. Số ở `benchmarks.md`; phép đo ở
+`NaturalKeyWithoutDeviceTimestampTests`.
 
 **4. Cái bẫy cho M6 — UUIDv7 trên SQL Server không hề sequential.** Chạy trên container
 `nvm-mssql` ngày 2026-08-26:

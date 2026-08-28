@@ -28,7 +28,7 @@ public sealed class FileDropTests
     private static string Row(int index) =>
         string.Create(
             CultureInfo.InvariantCulture,
-            $"NOVAVOLT/NV1/FORMATION/F1/FORM-01/FORM-01-CH-0142,,Formation/Capacity,2026-08-28T09:28:11.{index:000}Z,real,4.8{index:000}");
+            $"NOVAVOLT/NV1/FORMATION/F1/FORM-01/FORM-01-CH-0142,,Formation/CapacityResult,2026-08-28T09:28:11.{index:000}Z,real,4.8{index:000}");
 
     [Fact]
     public async Task TheSameFileDroppedTwice_DoesNotChangeTheRowCount()

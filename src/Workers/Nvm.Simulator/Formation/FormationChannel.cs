@@ -51,6 +51,9 @@ public sealed class FormationChannel
     private double _lastAmpHours;
     private FormationStep _lastStep;
 
+    // The instant of the last declaration, which is what tells a rebirth from a new cell.
+    private DateTimeOffset? _lastDeclaredAt;
+
     /// <summary>Creates a channel that is empty until a cell is loaded into it.</summary>
     /// <param name="path">Where the channel is, for example <c>…/FORM-01/FORM-01-CH-0001</c>.</param>
     /// <param name="profile">The cycle shape every cell in this channel follows.</param>
@@ -70,15 +73,24 @@ public sealed class FormationChannel
     /// <summary>The cell currently in the channel, or null when it is empty.</summary>
     public string? CellSerial { get; private set; }
 
-    /// <summary>How many measurements this channel has emitted since it was created.</summary>
+    /// <summary>How many readings this channel has taken since it was created.</summary>
     /// <remarks>
-    /// The left-hand side of the reconciliation in D1. Counts <b>signals</b>, so the cell serial is
-    /// not in it: the serial says which unit the readings are about, and is an association rather
-    /// than something measured.
+    /// <para>
+    /// The left-hand side of the reconciliation in D1, and it counts what the <b>instrument did</b>:
+    /// every metric a <c>DBIRTH</c> declares, and every signal a sample found past its deadband. The
+    /// cell serial is in it, because the gateway forwards it and the pipeline stores a row for it
+    /// like any other declared metric; only the protocol metrics are left out, and those belong to
+    /// the node rather than to a channel.
+    /// </para>
+    /// <para>
+    /// Counted where the reading is <b>taken</b>, before any transport. Counting on the far side of
+    /// a publish looks stricter and is the opposite: a batch the worker then abandons would leave
+    /// this side of the reconciliation at the same moment the rows it owed left the other side, and
+    /// the two would balance over a loss nobody could see. What the link then did with a reading is
+    /// the link's number to keep — <see cref="SimulatorWorker.AbandonedMeasurements"/>.
+    /// </para>
     /// </remarks>
     public long MeasurementCount { get; private set; }
-
-    private DateTimeOffset? _lastDeclaredAt;
 
     /// <summary>Declares the channel: every metric, by name, alias and current value.</summary>
     /// <param name="cellSerial">The cell in the channel.</param>
@@ -110,17 +122,15 @@ public sealed class FormationChannel
             Reading(CellSerialMetric, CellSerialAlias, new MetricValue.Text(cellSerial), at),
         ];
 
-        // Counted from what is returned, never from a literal. A birth declares six readings and a
-        // hard-coded five made the run report claim one fewer than it published — per DBIRTH, on
-        // every channel, for the whole run. D1 compares this number against rows in the database, so
-        // a constant that disagrees with the array beside it does not fail a test: it makes the
-        // reconciliation come out short and look like data loss.
+        // Counted from the array beside it, never from a literal. A hard-coded "five" next to six
+        // readings made the run report claim one fewer per DBIRTH, on every channel, for a whole run
+        // — and nothing failed: the reconciliation simply came out short and read as data loss.
         //
-        // And counted only when the instant is new. A rebirth re-declares the channel: same cell,
-        // same values, same device clock, therefore the same natural key — deduplication is right to
-        // store it once, and a run report that counted it twice would put the left side of D1 above
-        // the right by one full DBIRTH per rebirth. Measured at exactly -48 on an eight-channel line.
-        // A duplicate is not a measurement, and neither is a restatement of one.
+        // And only when the instant is new. A rebirth restates this channel: same cell, same values,
+        // same device clock, therefore the same natural key — deduplication is right to store it
+        // once, and a second count here would put the left side of D1 above the right by one full
+        // DBIRTH per rebirth. Measured at exactly -48 on an eight-channel line. A restatement of a
+        // measurement is not another measurement.
         if (at != _lastDeclaredAt)
         {
             MeasurementCount += declared.Length;
@@ -176,6 +186,10 @@ public sealed class FormationChannel
         // reported — the classic report-by-exception bug, where a slow drift is invisible.
         RememberSent(changed, sample);
 
+        // The reading exists at this point and cannot be taken again: the deadband state has already
+        // moved with it, so the next sample compares against a value this one reported. Deferring the
+        // count until a publish succeeded would leave a reading the channel really took describable
+        // by nothing at all.
         MeasurementCount += changed.Count;
 
         return changed.DrainToImmutable();

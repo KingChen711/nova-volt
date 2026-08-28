@@ -1,4 +1,4 @@
-# ADR-023 — Giành chỗ trước khi chạy handler; K7 chỉ đúng trong một process cho tới M5
+# ADR-023 — Giành chỗ trước khi chạy handler; K7 chỉ đúng trong một process cho tới khi có store bền vững
 
 | | |
 |---|---|
@@ -48,7 +48,9 @@ kịch bản check-then-act không chịu nổi, và nó xảy ra mỗi lần m�
    compare-and-swap, lấy chính số revision làm version token.
 
 **Ranh giới của quyết định này**: nó **không** tuyên bố K7 đã đạt. Nó đóng race **trong một process**.
-Race xuyên process vẫn mở, và **cố ý** để mở tới M5 — lý do ở §Alternatives, dòng đầu tiên.
+Race xuyên process vẫn mở, và **cố ý** để mở cho tới khi có một effect bền vững để commit cùng —
+lý do ở §Alternatives, dòng đầu tiên. Lúc viết, mốc đó là M5; từ 2026-08-30 nó là **M4** (xem
+*"Điều kiện kéo lên ĐÃ xảy ra"*).
 
 ## Consequences
 
@@ -85,8 +87,49 @@ Race xuyên process vẫn mở, và **cố ý** để mở tới M5 — lý do �
 
 **Việc phát sinh**
 
+- **M4**: `IIdempotencyStore` bền vững phải có mặt trong hoặc trước commit đầu tiên có write — xem mục
+  *"Điều kiện kéo lên ĐÃ xảy ra"* dưới đây. Đây là chỗ K7 đóng cho effect của M4.
 - **M5**: bản SQL Server, `Claim` và event ghi trong **cùng một transaction**; test cho restart và cho
-  hai instance. Đây mới là chỗ K7 đóng lại.
+  hai instance. Đây là chỗ K7 đóng cho event store.
+
+### Lịch đóng K7 — chốt 2026-08-29, không còn để ngỏ
+
+`AGENTS.md` K7 nói *"mọi command handler idempotent"* như một ràng buộc **cứng**, còn repo đang chạy
+`InMemoryIdempotencyStore`. Hai câu đó mâu thuẫn nhau, và cho tới lúc này mâu thuẫn ấy chỉ sống trong
+đầu người đọc. Đây là chỗ nó được ghi ra:
+
+| | |
+|---|---|
+| **Đóng ở** | ~~**M5**, cùng event store~~ — **đã bị thay bởi mục ngay dưới bảng này (2026-08-30)**. Lập luận gốc vẫn đúng nguyên văn: một chỗ giữ bền vững canh một effect **không** bền vững thì tệ hơn chứ không tốt hơn. Nó chỉ không còn áp dụng, vì effect của M4 **là** bền vững |
+| **Kéo lên trước M4 nếu** | M4 tạo **effect bền vững** (ghi xuống DB, gửi ra ngoài) **hoặc** chạy nhiều instance. Lúc đó điều kiện "effect không bền vững" không còn đúng và lý do hoãn biến mất |
+| **Nếu M4 chỉ là demo một process** | Permanent docs phải nói thẳng giới hạn đó — chính là mục này — chứ không im lặng |
+| **Điều kiện nghiệm thu ở M5** | `Claim` có unique key trong SQL; claim + business effect + outcome **cùng một transaction**; replay bản trùng trả về **đúng outcome cũ**; và production host **từ chối khởi động** với in-memory store |
+
+#### Điều kiện kéo lên ĐÃ xảy ra — cập nhật 2026-08-30 (J6 của re-audit)
+
+Bảng trên viết điều kiện kéo lên ở thì tương lai (*"kéo lên trước M4 **nếu** M4 tạo effect bền vững"*),
+và đọc lại `scope.md` §9/M4 thì điều kiện đó **đã đúng ngay lúc bảng này được viết**. M4 có:
+
+- *"Submit data collection → thấy event xuất hiện trên RabbitMQ management UI"* — một effect rời khỏi
+  process và không lấy lại được.
+- *"Gọi lại đúng command với cùng `idempotencyKey` → server trả kết quả cũ, **không** tạo bản ghi thứ
+  hai"* — một DoD **không thể** đạt bằng `InMemoryIdempotencyStore`: chỗ giữ sống đúng bằng đời của
+  process, nên một lần restart giữa hai lần gửi là một bản ghi thứ hai, im lặng.
+
+Nên nhánh *"nếu M4 chỉ là demo một process"* không còn áp dụng, và không được tiếp tục viết *"đóng ở
+M5"* như thể điều kiện chưa xảy ra.
+
+| | |
+|---|---|
+| **Phải có trong hoặc trước commit đầu tiên của M4 có write** | Một `IIdempotencyStore` **bền vững**: `Claim` có unique key ở tầng database, và **outcome được lưu** để replay trả lại đúng kết quả cũ thay vì chạy lại handler. Claim + effect nghiệp vụ + outcome commit **cùng một transaction** |
+| **Đường nào KHÔNG được đi** | Không kéo event store của M5 về sớm — cái M4 cần là một bảng claim/outcome, không phải một stream store. Không Redis, không distributed lock: cả hai nằm ngoài transaction ghi effect nên chỉ đổi một lỗ lấy một lỗ (xem §Alternatives) |
+| **Nghiệm thu ở M4** | Gửi lại cùng `idempotencyKey` **sau khi restart process** → trả đúng outcome cũ, `count(*)` của bản ghi nghiệp vụ **không đổi**; và host từ chối khởi động với in-memory store |
+| **Cái gì KHÔNG nằm trong transaction đó** | **Publish lên RabbitMQ.** Transaction của M4 bao **claim + bản ghi nghiệp vụ + outcome** — cả ba đều trong cùng một database. Việc bắn event lên bus vẫn nằm ngoài nó, nên đó vẫn là **dual-write** đúng như `ADR-022` mô tả, và nó chỉ đóng lại khi outbox có ở **M6**. Idempotency của handler không sửa được chuyện đó: nó bảo đảm handler chạy một lần, không bảo đảm event rời khỏi process |
+| **M5 vẫn giữ phần của mình** | Bản chạy cùng event store: claim + **event** trong một transaction, và test cho hai instance. M4 đóng K7 cho effect của M4; M5 đóng nó cho event store |
+
+Không cần Redis, distributed lock, saga engine hay lời hứa exactly-once từ broker. M2 đã đóng tầng
+**ingestion** của K7 — khoá dedup commit cùng transaction với chính row nó bảo vệ (C12) — và đó là
+tầng khác với tầng command handler. `scope.md` §7.2 gọi đúng: **hai tầng, hai lịch**.
 - **M2**: đo chi phí `Claim` dưới tải thật (≥ 5.000 msg/s), cùng lúc với chi phí SHA-1 của `ADR-010`.
 - Đo lại ngưỡng timeout 30 s khi có tải thật; hiện tại nó là phán đoán.
 

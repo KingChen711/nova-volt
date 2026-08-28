@@ -372,9 +372,9 @@ Ba cách xử lý khi tới M6, chọn một và ghi vào ADR của outbox: lưu
   1. `ValidationBehavior` — command sai hình dạng thì dừng sớm, chưa đụng gì.
   2. `IdempotencyBehavior` — **giành chỗ** (`Claim`) cho `IdempotencyKey` **trước** khi gọi handler, `Complete` sau khi handler trả về, `Abandon` ở mọi nhánh lỗi. Đã xong rồi → trả kết quả cũ, **không** chạy handler. *(Giới hạn ở khối bên dưới.)*
   3. `AuditBehavior` — ghi ai/lệnh gì/lúc nào, dùng `TimeProvider` (K1).
-- `IIdempotencyStore` + bản `InMemoryIdempotencyStore`. Bản trên SQL Server, ghi **cùng transaction với event**, thuộc M5.
+- `IIdempotencyStore` + bản `InMemoryIdempotencyStore`. Bản **bền vững đầu tiên thuộc M4**: claim + bản ghi nghiệp vụ + outcome trong **cùng một transaction** (`ADR-023`). Bản ghi cùng transaction với **event** thì đi cùng event store ở M5.
 
-**Vì sao KHÔNG có `TransactionBehavior` ở đây** — `scope.md` §9/M1 liệt kê bốn behavior (*Validation → Idempotency → Audit → Transaction*). Behavior thứ tư cần một `IUnitOfWork` thật, mà M1 không có database nào để mở transaction lên. Viết một behavior rỗng bây giờ là để lại code chết chờ commit sau, trái [`AGENTS.md` §5.1](../../AGENTS.md). Nó vào M5 cùng event store. Thứ tự đã đặt sẵn chỗ cho nó: transaction phải là vòng **ngoài cùng** so với handler và **trong** so với idempotency.
+**Vì sao KHÔNG có `TransactionBehavior` ở đây** — `scope.md` §9/M1 liệt kê bốn behavior (*Validation → Idempotency → Audit → Transaction*). Behavior thứ tư cần một `IUnitOfWork` thật, mà M1 không có database nào để mở transaction lên. Viết một behavior rỗng bây giờ là để lại code chết chờ commit sau, trái [`AGENTS.md` §5.1](../../AGENTS.md). Nó vào M5 cùng event store — lưu ý M4 **đã có transaction thật của riêng nó** (claim + bản ghi nghiệp vụ + outcome, `ADR-023`), nhưng transaction đó nằm bên trong store chứ chưa phải một behavior của pipeline. Thứ tự đã đặt sẵn chỗ cho nó: transaction phải là vòng **ngoài cùng** so với handler và **trong** so với idempotency.
 
 **Kiểm chứng**
 ```bash
@@ -503,7 +503,7 @@ Nên hai điều phải đúng ngay từ M1:
 ```bash
 make test
 ```
-Test bắt buộc: activate revision 3 khi đang ở 2 → thành công; activate lại revision 2 → bị từ chối với lý do rõ ràng; gửi **hai lần cùng một `IdempotencyKey`** → handler chạy 1 lần (dedup **process-local** chạy qua dispatcher thật, không phải qua test giả của C05 — K7 đầy đủ vẫn chờ store bền vững ở M5); event có `[EventVersion(1)]` và mọi field thời gian là `DateTimeOffset`.
+Test bắt buộc: activate revision 3 khi đang ở 2 → thành công; activate lại revision 2 → bị từ chối với lý do rõ ràng; gửi **hai lần cùng một `IdempotencyKey`** → handler chạy 1 lần (dedup **process-local** chạy qua dispatcher thật, không phải qua test giả của C05 — K7 đầy đủ vẫn chờ store bền vững ở **M4**, `ADR-023`); event có `[EventVersion(1)]` và mọi field thời gian là `DateTimeOffset`.
 
 > [!important] Một revision là **một tài liệu**, và kệ giữ cả ba
 > `IFactoryModelCatalog` giữ `factory-model.r1.json`, `r2.json`, `r3.json` — mỗi file một tài liệu
@@ -1087,7 +1087,7 @@ Trả lời lúng túng câu nào → dòng tương ứng **chưa** phải `xong
   - thời gian `make test` sau khi thêm ~3 project test.
 - Cập nhật cột M1 trong `scope.md` Phụ lục A.
 - Đổi frontmatter của plan này sang `status: done` — **chỉ khi D5 đã đạt cả hai vế**. Hiện tại
-  `status: in progress`: D5 chưa đạt, C19 chưa xong, và K7 đầy đủ còn mở tới M5 (`ADR-023`).
+  `status: in progress`: D5 chưa đạt, C19 chưa xong, và K7 đầy đủ còn mở tới **M4** (`ADR-023`).
   `status` của plan là thứ người khác đọc để biết milestone đã đóng chưa; đóng sớm là báo cáo sai (`AGENTS.md` §1.3).
 - Điền checklist §7.
 - Nếu §2.4 đúng — không đo lại N13 — thì ghi một dòng trong mục *"Chỉ số cố ý KHÔNG đo"* của `benchmarks.md` nêu rõ lý do, để lần sau không tưởng là quên.

@@ -381,8 +381,8 @@ Không có "nhanh", "ổn định", "realtime". Chỉ có số. Mỗi dòng ph�
 
 | ID | Yêu cầu | Ngưỡng | Đo bằng | Milestone |
 |---|---|---|---|---|
-| N1 | Ingestion throughput | ≥ 5.000 msg/s duy trì 10 phút | Load harness MQTT | M2 |
-| N2 | Ingestion lag (device → DB) | p95 < 5 s ở tải N1 | Metric `ingest.lag` | M2 |
+| N1 | Ingestion throughput | ≥ 5.000 msg/s duy trì 10 phút | Load harness MQTT | **đo ở M2 · nghiệm thu ở M9 · đo lại ở M13** ¹ |
+| N2 | Ingestion lag (device → DB) | p95 < 5 s ở tải N1 | Metric `ingest.lag` | **đo ở M2 · nghiệm thu ở M9 · đo lại ở M13** ¹ |
 | N3 | Không mất message khi MES down | 0 message mất sau outage 2 phút | Chaos test | M13 |
 | N4 | Idempotency | 0 bản ghi thừa với 10% duplicate | Reconciliation test | M2 |
 | N5 | Command API latency | p95 < 300 ms, p99 < 800 ms | k6 | M6 |
@@ -396,6 +396,20 @@ Không có "nhanh", "ổn định", "realtime". Chỉ có số. Mỗi dòng ph�
 | N13 | Startup | Toàn hệ thống từ `docker compose up` → healthy < 5 phút | Health check loop | ~~M1~~ → **M0** *(đã đo: 48 / 36 / 42 s, `benchmarks.md`)* |
 | N14 | Test suite | Toàn bộ < 10 phút | CI timing | M13 |
 | N15 | Availability của dây chuyền | **MES down không được làm dừng dây chuyền** | Simulator vẫn chạy khi backend tắt | M2 |
+
+> ¹ **Ngưỡng không đổi; chỗ nghiệm thu thì đổi** (`ADR-031`, owner approval 2026-08-30). M2 **đo** N1/N2
+> mỗi lần chạy `make load` và in ra kèm chữ CHƯA ĐẠT, nhưng **nghiệm thu** chúng cần một rig mà máy đo
+> không phải là ràng buộc. Điều kiện vào của rig — **preflight** — là **giao được ≥ 10.000 msg/s ở QoS 1
+> tới một no-op subscriber**, không phải trần publish khi không có subscriber nào: rig hiện tại đạt 9.925
+> ở tầng sai đó nhưng chỉ **5.951** ở tầng đúng, nên nó **trượt preflight**.
+>
+> **Qualification không muộn hơn M9**, vì **N9** đo mức suy giảm của throughput *so với chính N1* —
+> không có N1 đã nghiệm thu thì N9 không có nền để so. **Requalification ở M13**, sau khi OpenTelemetry
+> đầy đủ và trace context xuyên MQTT vào đường nóng.
+>
+> Điều M2 nghiệm thu là **tính đúng đắn dưới tải**: cái vào bằng cái ra, EMQX không vứt message nào, và
+> receiver theo kịp nguồn trong suốt cửa sổ chạy — đã đạt trên topology **1.000 kênh**, 2.361.174 message
+> exact. Số N1/N2 đo được ở topology đó: **3.933,2 msg/s** và p95 **99,5 s**.
 
 > [!danger] N15 là ràng buộc cứng nhất, và nó quyết định kiến trúc
 > Nếu MES chết, dây chuyền **vẫn phải chạy**. Nghĩa là **mọi** lời gọi từ tầng thiết bị lên là **fire-and-forget có buffer**, không bao giờ synchronous blocking. Edge gateway store-and-forward khi mất kết nối, và hệ thống phải nuốt được trận lũ dữ liệu tồn đọng khi mạng có lại.
@@ -624,7 +638,7 @@ Bạn đã chọn **SQL Server cho nghiệp vụ (giống Opcenter thật) + Pos
 |---|---|---|---|
 | **Event store** | `ProductionUnitSerialized`, `UnitGraded` | **SQL Server** | Cần transaction với write model, cần audit, giống Opcenter thật. `REVOKE UPDATE, DELETE` để ép immutability |
 | **Write model / master data** | Recipe, Material lot, Equipment, Factory model | **SQL Server** | EF Core, quan hệ chặt, invariant cần transaction |
-| **Outbox** | Message chờ publish | **SQL Server** | Phải cùng transaction với event store — đây là lý do outbox tồn tại |
+| **Outbox** | Message chờ publish | **SQL Server** *(event store)* + **PostgreSQL** *(ingestion)* | Phải cùng transaction với thứ nó nói về — đây là lý do outbox tồn tại. **Hai** database ghi độc lập nên phải **hai** outbox: một cái không bao được transaction của cái kia (`ADR-022`) |
 | **Telemetry** | Nhiệt độ máy sấy mỗi 100 ms, đường cong formation | **TimescaleDB** | Volume lớn, ghi nhiều đọc ít, cần compression + downsampling + retention policy |
 | **Read model** | Closure table, WIP board, OEE, dashboard | **PostgreSQL** | Đọc nặng, tách khỏi write để không tranh chấp; JSONB tiện cho projection linh hoạt |
 | **Genealogy closure** | Bảng đóng cho forward trace | **PostgreSQL** | Cần index GiST cho khoảng mét trên cuộn, `numrange` + exclusion constraint |
@@ -1834,7 +1848,16 @@ SELECT add_continuous_aggregate_policy('ts.process_signal_1m',
 **Mục tiêu**: nuốt được dữ liệu thiết bị đúng, kể cả khi thiết bị gửi bậy.
 
 **Việc làm**
-- `Nvm.Simulator`: giả lập máy formation (1.000 kênh), EOL tester, coating line. Dùng `TimeProvider` nén thời gian.
+- `Nvm.Simulator`: giả lập máy **formation**. Dùng `TimeProvider` nén thời gian.
+  - Seed demo mặc định **8 kênh**; riêng bài test/load chạy topology **1.000 kênh**, vì cardinality
+    của alias table và session là phần thật của ingestion chứ không phải của simulator. Từ 2026-08-30
+    `make load` **mặc định** `NVM_SEED_DIR=seed-load` — một cam kết chỉ được giữ bằng thứ chạy mặc
+    định; `NVM_SEED_DIR=seed make load` quay lại 8 kênh khi có chủ đích.
+  - **EOL tester → defer sang M8**, **coating line → defer sang M9** (quyết định chủ repo 2026-08-29).
+    Lý do: cả hai chỉ có consumer ở đúng milestone đó —
+    M8 chấm grading trên kết quả EOL, M9 dựng SPC trên coating weight — nên dựng chúng ở M2 là
+    dựng một nguồn không ai đọc. Bài học integration bẩn mà hai loại máy này đáng lẽ dạy đã do
+    **CSV adapter (C15)** giữ, và nó đã chạy.
   - Cố ý gửi **trùng 10%** message.
   - Cố ý **ngắt kết nối ngẫu nhiên** rồi gửi bù cả cụm.
   - Cố ý cho **10% thiết bị lệch đồng hồ** ±2 giờ.
@@ -1846,9 +1869,46 @@ SELECT add_continuous_aggregate_policy('ts.process_signal_1m',
 - Load harness: bắn 5.000 msg/s.
 
 **Definition of Done**
-- [ ] Chạy 1 giờ với 10% duplicate: **số bản ghi trong DB khớp chính xác số phép đo logic** — không dư, không thiếu (T1, N4).
-- [ ] **≥ 5.000 msg/s duy trì 10 phút**, p95 lag < 5 s (N1, N2).
-- [ ] Tắt toàn bộ backend 2 phút → simulator vẫn chạy bình thường; bật lại → **0 message mất trên chặng thiết bị → ingestion**, backlog tiêu hết trong < 3 phút (**N15**).
+- [x] Chạy 1 giờ với 10% duplicate: **số bản ghi trong DB khớp chính xác số phép đo logic** — không dư, không thiếu (T1, N4). `make reconcile` 3.600 giây đồng hồ thật: **3.540 = 3.540, lệch 0**, 409 duplicate bị dedup chặn.
+      Chạy lại **2026-08-30 trên `8d06c7e`**, tức sau khi vế trái chuyển sang đếm lúc đo (J7) và waiter của D3 đổi (J8):
+      **trùng từng con số** — 3.540 = 3.540, 409 duplicate, 922 row `Drifted`, 2 rebirth, 0 publish hỏng, 2.618 mẫu `Good`,
+      và `abandonedMeasurements` **0**. Trên một run không mất gì thì hai cách đếm phải cho cùng một số, và chúng cho cùng một số.
+- [x] **Đúng đắn dưới tải, 10 phút liên tục, trên topology 1.000 kênh**: source = gateway decode = fsync =
+      forward = row lưu + row dedup, **không lệch một row**; EMQX `send_msg.dropped` = **0**; receiver theo
+      kịp nguồn suốt cửa sổ. Đo 2026-08-30 với `make load` (mặc định `seed-load`): **2.361.174** message
+      exact, **1.000** DBIRTH dưới một `seq` stream, dedup 0, reject 0, buffer cuối 0. Hai lượt **8 kênh**
+      trước đó (2.826.722 và 2.679.501) cũng exact nhưng chạy trên topology demo, không phải topology mà
+      mục *Việc làm* ở trên cam kết.
+  > **N1/N2 KHÔNG còn là điều kiện đóng M2** — owner approval 2026-08-30, `ADR-031`. Ngưỡng **không đổi**
+  > (≥ 5.000 msg/s trong 10 phút, p95 < 5 s); chỗ nghiệm thu đổi: **qualification ≤ M9**, **requalification
+  > M13**, và rig phải qua **preflight QoS 1 ≥ 10.000 msg/s tới no-op subscriber** trước khi con số của nó
+  > được dùng để kết luận. Ô checkbox chuyển sang §9/M9 và §9/M13 — để nó nằm lại đây dưới dạng ô mở là
+  > vừa chặn M2 vừa không ai chịu trách nhiệm. M2 vẫn **đo và in** hai số này mỗi lần `make load` chạy:
+  > trên 1.000 kênh, **3.933,2 msg/s** và p95 **99,5 s** — **CHƯA ĐẠT**, và xa hơn nhiều so với con số
+  > 4.710,7 / 9,14 s mà topology demo 8 kênh từng cho.
+- [x] Tắt toàn bộ backend 2 phút → simulator vẫn chạy bình thường; bật lại → **0 message mất trên chặng thiết bị → ingestion**,
+      backlog tiêu hết trong < 3 phút (**N15**). **ĐẠT 2026-08-30, sau hai lần hạ trạng thái.** Bằng chứng cũ (tắt 152 s, lệch 0, drain 28 s)
+      bấm giờ **sau** khi backend đã lên, nên nó không chấm đúng mệnh đề. Chạy lại với đồng hồ đặt trước lệnh bật và gate
+      strict `< 180`, lần đầu ra **lệch −5 row** — và đó là lỗi của **vế trái**: `logicalMeasurements` đếm phép đo
+      lúc **soạn** batch chứ không phải lúc **phát**. Bản sửa đầu (J7) chuyển counter sang tăng ngay sau
+      `PublishAsync`, và **re-audit đã bác bản sửa đó**: đếm sau publish
+      đặt **cả hai vế xuống dưới cùng một chỗ có thể mất**, nên mất dữ liệu thiết bị → broker làm hai vế cùng
+      tụt và phép đối chiếu vẫn cân. Bản sửa hiện tại đưa vế trái về **lúc đo** (`Declare`/`Sample`), bắt
+      shutdown hoàn tất batch đã soạn, và tách phần link không chở nổi thành `abandonedMeasurements` —
+      **báo cáo riêng, không trừ vào vế trái**, D1/D3 bắt buộc nó bằng **0**.
+      Hai lần chạy lệch 0 (16.483 = 16.483 và 16.426 = 16.426), tắt 142/140 s ✔, restart 0/0 ✔, depth cuối 0 ✔
+      vẫn là số thật của oracle cũ, nhưng chúng chỉ chứng minh phần counter đã nhận thì về tới DB;
+      **vế mất dữ liệu phải đo lại** trên oracle mới.
+      **Vế thời gian: đã đo lại và ĐẠT.** Hai số **181 s** rồi **180 s** là output thật của một waiter hỏng —
+      nó đòi `buffered == forwarded`, hai counter đếm theo đời tiến trình, trong khi buffer và cursor sống qua
+      restart; ba snapshot liên tiếp cho `depth=0` mà `33616 != 33673`, lệch **57** vĩnh viễn, nên vòng đợi chờ
+      hết ngân sách trên một backlog đã sạch. Sau khi đích được chốt thành `forwarded` tại snapshot hữu hạn cộng
+      backlog đo ở chính snapshot ấy: **drain 37 s**, lệch **0** (16.288 = 16.288), backlog **7.288** record,
+      `abandonedMeasurements` **0**, depth cuối **0**, tắt **141 s**, restart **0/0**, **7.717** phép đo sinh ra
+      trong outage. Đồng hồ vẫn bấm **trước** `docker compose start` và gate vẫn strict `< 180`.
+      Trần backoff **không** chặn D3: `throttled 0`, `rate_limited 0`, và **166 giây** ghi trước kia đo từ lần
+      fail đầu tiên — tức từ giữa outage có chủ ý — chứ không phải từ lúc backend sẵn sàng.
+      Xem `benchmarks.md` các dòng `working tree J8`.
   > **Chặng ingestion → bus vẫn có thể mất**, và M2 không đóng được điều đó: chưa có transactional outbox (M6), nên đó vẫn là dual-write — `ADR-022` đã đo **18/200 event mất** khi broker chết 30 giây. M2 **đếm** số mất ở chặng này thay vì tuyên bố nó bằng 0. **N3** (*0 message mất toàn hệ thống*) giữ ở **M13**, đo lại sau khi outbox có ở M6. Lý do đầy đủ: `plans/M2-simulator-ingestion-idempotency.md` §2.3.
 - [ ] `NDEATH` làm mọi metric của node chuyển `STALE` mà không xoá dữ liệu lịch sử.
 - [ ] Message có `device_timestamp` lệch 2 giờ vẫn được nhận, gắn cờ `Drifted`.
@@ -1858,7 +1918,17 @@ SELECT add_continuous_aggregate_policy('ts.process_signal_1m',
 2. Đổi natural key thiếu `device_timestamp` → xem hai phép đo khác nhau bị nuốt mất một.
 3. Cho gateway buffer 30 phút rồi flush cùng lúc → đo xem ingestion có sập không, có cần backpressure không.
 
-**Học được** (T1): at-least-once là mặc định của thế giới thật; idempotency là **điều kiện đúng đắn**, không phải tối ưu hoá. Và nó cần **hai tầng**, không phải một (§7.2) — M2 đóng tầng ingestion, nơi khoá dedup commit được cùng transaction với dữ liệu nó bảo vệ; tầng command handler phải chờ event store ở M5 (`ADR-023`).
+**Học được** (T1): at-least-once là mặc định của thế giới thật; idempotency là **điều kiện đúng đắn**, không phải tối ưu hoá. Và nó cần **hai tầng**, không phải một (§7.2) — M2 đóng tầng ingestion, nơi khoá dedup commit được cùng transaction với dữ liệu nó bảo vệ; tầng command handler đóng ở **M4**, nơi effect bền vững đầu tiên xuất hiện (`ADR-023`, cập nhật 2026-08-30).
+
+> [!important] K7 chưa đạt đầy đủ, và điều kiện kéo lên đã xảy ra — cập nhật 2026-08-30
+> `AGENTS.md` K7 là ràng buộc **cứng**, còn repo vẫn chạy `InMemoryIdempotencyStore` — chỉ đúng trong một
+> process. `ADR-023` đặt lịch đóng ở M5 **với điều kiện kéo lên nếu M4 tạo effect bền vững**, và đọc lại
+> §9/M4 thì điều kiện đó **đã đúng**: M4 phát event lên bus và đòi *"gọi lại cùng `idempotencyKey` → không
+> tạo bản ghi thứ hai"*, mà một store trong RAM không đạt được qua một lần restart.
+>
+> Nên **K7 đóng ở M4**, không phải M5: store bền vững phải có mặt **trong hoặc trước** commit đầu tiên của
+> M4 có write. M5 vẫn giữ phần của nó — claim cùng transaction với event store. Chi tiết và acceptance gate
+> ở `ADR-023` §Consequences, mục *"Điều kiện kéo lên ĐÃ xảy ra"*. Đọc trước khi lập plan M4.
 
 ---
 
@@ -1897,12 +1967,22 @@ SELECT add_continuous_aggregate_policy('ts.process_signal_1m',
   - **Data collection form**: nhập kết quả đo, submit qua Command API.
   - **WIP board**: đếm unit theo (line, step, quality state), auto refresh.
 - Mendix security: module role `Operator`, `LineLeader`; XPath constraint theo `SiteId`.
+- **`IIdempotencyStore` bền vững — K7, kéo lên từ M5** (`ADR-023`, cập nhật 2026-08-30). Phải có mặt
+  **trong hoặc trước** commit đầu tiên của M4 có write: `Claim` với unique key ở tầng database, outcome
+  **được lưu** để replay trả lại kết quả cũ thay vì chạy lại handler, và claim + effect nghiệp vụ +
+  outcome commit trong **cùng một transaction**. Không kéo event store của M5 về sớm (M4 cần một bảng
+  claim/outcome, không cần stream store), không Redis, không distributed lock — cả hai nằm ngoài
+  transaction ghi effect nên chỉ đổi một lỗ lấy một lỗ.
 
 **Definition of Done**
 - [ ] Đăng nhập bằng Keycloak, role map đúng sang Mendix module role.
 - [ ] Quét một serial không tồn tại → hiện thông báo tiếng Việt rõ ràng, **không** hiện lỗi kỹ thuật.
 - [ ] Submit data collection → thấy event xuất hiện trên RabbitMQ management UI.
 - [ ] Gọi lại đúng command với cùng `idempotencyKey` → server trả kết quả cũ, **không** tạo bản ghi thứ hai.
+- [ ] **Cùng phép trên, nhưng gửi lại SAU khi restart process** → vẫn trả đúng outcome cũ và `count(*)` của
+      bản ghi nghiệp vụ **không đổi**. Đây là vế mà `InMemoryIdempotencyStore` không thể đạt, và là lý do
+      K7 đóng ở milestone này (`ADR-023`).
+- [ ] Production host **từ chối khởi động** khi `IIdempotencyStore` được đăng ký là bản in-memory.
 - [ ] Page load p95 < 1,5 s (N12).
 - [ ] User thuộc NV1 **không** thấy bất kỳ dữ liệu DE1 nào.
 
@@ -1950,6 +2030,13 @@ SELECT add_continuous_aggregate_policy('ts.process_signal_1m',
 
 **Việc làm**
 - Transactional outbox trên SQL Server (§8.1), dispatcher với `READPAST` + exponential backoff.
+- **Outbox thứ hai, trên PostgreSQL của ingestion** — và nó **không** thay được bằng cái trên. Outbox
+  SQL Server chỉ bao được transaction của **event store**; row telemetry nằm ở PostgreSQL, nên không có
+  transaction nào ôm được cả hai (`ADR-022`, mục *partial commit của parallel writers*). Row outbox phải
+  ghi **trong cùng transaction `WriteChunkAsync`** với row telemetry mà nó nói về — hoặc một relay/
+  checkpoint bền tương đương đọc row đã commit và tự chịu trách nhiệm phát đúng một lần. Bắt buộc không
+  phải hình dạng cài đặt mà là **ranh giới**: quyết định *"event này phải được phát"* commit cùng thứ nó
+  nói về, chứ không sống trong RAM của một process có thể chết giữa chừng.
 - `Nvm.Projections`: projection engine có checkpoint, idempotent (UPSERT), rebuild được.
 - Bảng cạnh `trace.genealogy_link` + `trace.roll_segment` với `numrange` + GiST + `EXCLUDE` (§6.4).
 - Closure table `rm.genealogy_closure` (§8.2).
@@ -1967,6 +2054,11 @@ SELECT add_continuous_aggregate_policy('ts.process_signal_1m',
 - [ ] `EXCLUDE` constraint chặn được insert segment chồng lấn.
 - [ ] Bảng so sánh recursive CTE vs closure table đã điền số thật vào ADR-006.
 - [ ] Chạy lại **đúng kịch bản lab phá hoại của M1** (tắt RabbitMQ giữa lúc publish) với outbox đã bật → số event mất về **0**, đối chiếu trực tiếp với con số đã ghi ở `ADR-022`. Đây là chỗ outbox chứng minh nó đáng giá.
+- [ ] ★ **Fault test partial commit**: ép **một** writer chunk commit và **một** chunk fail trong cùng một
+      batch, để `Task.WhenAll` ném trước khi bất cứ event nào được phát; gateway retry **cả** batch, dedup
+      nhận ra phần đã lưu. Kết quả cuối phải là **đúng một event cho mỗi row eligible đã commit** — không
+      thiếu, không nhân đôi. Trước M6 mệnh đề này **sai**: phần đã commit không bao giờ được phát và
+      `publishFailures` vẫn bằng 0, nên người nhìn counter thấy mọi thứ bình thường (`ADR-022`).
 
 **Lab phá hoại**
 1. Bỏ outbox, ghi DB rồi publish trực tiếp. Kill process giữa hai lệnh. Đếm message mất trên 100 lần thử.
@@ -2044,9 +2136,23 @@ SELECT add_continuous_aggregate_policy('ts.process_signal_1m',
 - Separation of duties: `held_by != signer_id`.
 - Mendix `NvmQuality` dùng **Mendix Workflow**: NCR inbox → investigation → disposition → parallel approval → release.
 - SPC: X̄-R chart + Cpk trên đo lường coating weight.
+- **Qualification N1/N2** (`ADR-031`, owner approval 2026-08-30) — việc kéo về từ M2, và nó phải xong
+  **trước** phép đo cascade, không phải cùng lúc. Hai bước, theo thứ tự:
+  1. **Preflight rig**: đo QoS 1 delivery tới một `mosquitto_sub` no-op. Phải **≥ 10.000 msg/s** (2 × N1).
+     Không dùng trần publish khi không có subscriber — nó đọc sai tầng: rig của M2 đạt 9.925 ở đó nhưng
+     chỉ 5.951 khi có một subscriber QoS 1.
+  2. **Phép đo**: `NVM_LOAD_ENFORCE_N1=1 make load` trên topology 1.000 kênh, 600 giây.
 
 **Definition of Done**
+- [ ] ★ **Rig qua preflight**: QoS 1 delivery tới no-op subscriber **≥ 10.000 msg/s**. Trượt bước này thì
+      con số của hai ô dưới **không được dùng để kết luận** — rig hiện tại đo 5.951 và trượt.
+- [ ] ★ **N1 nghiệm thu**: `NVM_LOAD_ENFORCE_N1=1 make load` exit 0 — **≥ 5.000 msg/s** đầu-cuối trong
+      **600 giây** trên topology 1.000 kênh. Ngưỡng nằm trong `scripts/load-gate.sh`, không có biến môi
+      trường nào hạ được nó. Đo ở M2: **3.933,2** msg/s → CHƯA ĐẠT.
+- [ ] ★ **N2 nghiệm thu**: p95 lag **< 5 s** trong cùng lần chạy đó. Đo ở M2: **99,5 s** → CHƯA ĐẠT.
 - [ ] **Hold 1 lot làm 3.000 pack chuyển trạng thái trong < 60 s, và ingestion throughput không giảm quá 10%** (N9, T7). ★
+      *Đo mức suy giảm so với **N1 đã nghiệm thu** ở ba ô trên. Chạy nó trên một throughput chưa ai chấm là
+      đo phần trăm của một con số không có nghĩa — đó là lý do qualification không được muộn hơn milestone này.*
 - [ ] Chạy cascade hai lần → kết quả giống hệt một lần (idempotent).
 - [ ] Kill job giữa chừng → restart → resume từ checkpoint, không làm lại từ đầu.
 - [ ] Hold theo `span` chỉ giữ đúng tập cell bị ảnh hưởng, verify bằng test có ground truth.
@@ -2161,6 +2267,10 @@ SELECT add_continuous_aggregate_policy('ts.process_signal_1m',
 
 **Definition of Done**
 - [ ] **Một trace span đi liền mạch từ message MQTT → ingestion → domain → projection → OData → Mendix** (T9). ★
+- [ ] **Requalification N1/N2** (`ADR-031`): chạy lại `NVM_LOAD_ENFORCE_N1=1 make load` **sau khi**
+      OpenTelemetry đầy đủ và trace context xuyên MQTT đã ở trên đường nóng. Vẫn phải **≥ 5.000 msg/s**
+      và p95 **< 5 s** trên rig qua preflight. Một con số đạt ở M9 **không** tự động còn đạt ở đây — ba thứ
+      M13 thêm vào đều nằm trên chính đường dữ liệu đó, và đó là toàn bộ lý do có ô này.
 - [ ] Chaos: tắt SQL Server 2 phút → 0 message mất, tự phục hồi < 60 s sau khi bật lại (T10, N3).
 - [ ] Chaos: latency RabbitMQ +500 ms → hệ thống chậm nhưng không sập, alert bắn đúng.
 - [ ] Mutation score domain layer ≥ 70%.
@@ -2738,8 +2848,8 @@ Câu bám theo, nếu không khí đang mở: *"Thế phần nào hay trục tr�
 | M | Milestone | Tuần | Bắt đầu | Xong | DoD ★ đạt? | ADR | Màn hình Mendix | Ghi chú |
 |---|---|---|---|---|---|---|---|---|
 | M0 | Bootstrap & Walking Skeleton | 1,0 | 2026-08-25 | 2026-08-26 | ☑ | ☑ | ☑ | 16 commit. Cả 5 DoD đạt. 4 ADR |
-| M1 | Factory Model & Service Bus | 1,5 | 2026-08-26 | *(chưa)* | ☐ | ☑ | — | **đang làm**. ★D1–D4 đạt; **D5 còn mở** (vế *"giải thích được"*), **C19 chưa xong** → milestone **chưa đóng**. **K7 đầy đủ còn mở tới M5**: idempotency hiện chỉ đúng trong một process (`ADR-023`). 8 ADR: 004, 008, 010, 021, 022, 023, 024, 025. 328 test (`make ci`: 282 unit + 23 analyzer + 17 architecture + 6 contract). ★ Lab phá hoại: **18/200 event mất** khi broker chết 30 s |
-| M2 | Simulator, Ingestion & Idempotency | 2,5 | | | ☐ | ☐ | — | |
+| M1 | Factory Model & Service Bus | 1,5 | 2026-08-26 | *(chưa)* | ☐ | ☑ | — | **đang làm**. ★D1–D4 đạt; **D5 còn mở** (vế *"giải thích được"*), **C19 chưa xong** → milestone **chưa đóng**. **K7 đầy đủ còn mở tới M4**: idempotency hiện chỉ đúng trong một process (`ADR-023`; mốc đổi từ M5 sang M4 ngày 2026-08-30 vì effect của M4 là bền vững). 8 ADR: 004, 008, 010, 021, 022, 023, 024, 025. 328 test (`make ci`: 282 unit + 23 analyzer + 17 architecture + 6 contract). ★ Lab phá hoại: **18/200 event mất** khi broker chết 30 s |
+| M2 | Simulator, Ingestion & Idempotency | 2,5 | 2026-08-28 | *(chưa)* | ☐ | ☑ | — | **đang làm**. **Cả năm DoD đã đạt**: ★D1 (3.600 giây thật: **3.540 = 3.540, lệch 0**, đo lại trên oracle cuối `8d06c7e` — trùng từng con số), D2 vế M2 (**2.361.174** message exact trên **1.000 kênh**, EMQX dropped 0), ★D3 (**16.288 = 16.288**, drain **37 s** trên ngân sách strict < 180, `abandonedMeasurements` 0), D4, D5. N1/N2 đã rời sang **M9/M13** (`ADR-031`). Còn lại **một** điều kiện đóng: chủ repo trả lời được các câu *vì sao* mà không mở tài liệu. 6 ADR: 026, 027, 028, 029, 030, 031. **585 test**, buffer-crash **0/200**. ★ D2 lộ nút thắt thật: harness bắn đúng 5.000 msg/s nhưng đường ống nuốt **936 msg/s**, EMQX xả **80 %**. ★ Lab: bỏ dedup **+24,5 %** row thừa · bỏ `device_timestamp` khỏi khoá **99,93 %** row bị nuốt, cả hai **không ném lỗi nào** |
 | M3 | Telemetry & Production Calendar | 1,0 | | | ☐ | ☐ | — | |
 | M4 | Mendix — Operator Station v1 | 2,0 | | | ☐ | ☐ | ☐ | |
 | M5 | Functional Block & Event Store | 3,0 | | | ☐ | ☐ | ☐ | |
@@ -2758,8 +2868,8 @@ Câu bám theo, nếu không khí đang mở: *"Thế phần nào hay trục tr�
 
 | Chỉ số | Mục tiêu | M2 | M6 | M9 | M13 |
 |---|---|---|---|---|---|
-| Ingestion throughput (msg/s) | ≥ 5.000 | | | | |
-| Ingestion lag p95 (s) | < 5 | | | | |
+| Ingestion throughput (msg/s) | ≥ 5.000 | **936** ✗ | | | |
+| Ingestion lag p95 (s) | < 5 | **2,42** ✓ | | | |
 | Forward trace p95 (ms) | < 200 | — | | | |
 | Backward trace p95 (ms) | < 150 | — | | | |
 | Command API p95 (ms) | < 300 | — | | | |

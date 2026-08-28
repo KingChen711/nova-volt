@@ -36,6 +36,7 @@ public sealed class FileStoreAndForwardBuffer : IAsyncDisposable
     private long _bytes;
     private long _corruptRecords;
     private long _truncatedTails;
+    private long _dataFsyncs;
     private bool _disposed;
 
     /// <summary>Opens an existing queue or creates an empty first segment.</summary>
@@ -65,6 +66,7 @@ public sealed class FileStoreAndForwardBuffer : IAsyncDisposable
             Interlocked.Read(ref _bytes),
             Interlocked.Read(ref _corruptRecords),
             Interlocked.Read(ref _truncatedTails),
+            Interlocked.Read(ref _dataFsyncs),
             _options.MaxBytes);
 
     /// <summary>Appends one fsync batch. The method returns only after the data reaches disk.</summary>
@@ -129,7 +131,7 @@ public sealed class FileStoreAndForwardBuffer : IAsyncDisposable
             // FlushAsync only moves managed buffers to the OS. Flush(true) is the durability
             // boundary the MQTT acknowledgement waits for; there is no asynchronous fsync API.
             await _tailStream.FlushAsync(cancellationToken);
-            DurableFlush(_tailStream);
+            DurableDataFlush(_tailStream);
         }
         finally
         {
@@ -485,7 +487,7 @@ public sealed class FileStoreAndForwardBuffer : IAsyncDisposable
         }
 
         await _tailStream.FlushAsync(cancellationToken);
-        DurableFlush(_tailStream);
+        DurableDataFlush(_tailStream);
         await _tailStream.DisposeAsync();
 
         var nextId = checked(_segments.Last().Key + 1);
@@ -511,7 +513,7 @@ public sealed class FileStoreAndForwardBuffer : IAsyncDisposable
         // make a new empty tail before persisting the cursor; otherwise no append can trigger normal
         // rotation and capacity would remain paused forever.
         await _tailStream.FlushAsync(cancellationToken);
-        DurableFlush(_tailStream);
+        DurableDataFlush(_tailStream);
         await _tailStream.DisposeAsync();
 
         var nextId = checked(tail.Key + 1);
@@ -733,7 +735,11 @@ public sealed class FileStoreAndForwardBuffer : IAsyncDisposable
 
     // Stream.FlushAsync has no flush-to-physical-disk equivalent. Callers await it first to empty
     // managed buffers, then this narrow helper invokes the durability primitive MQTT ACK depends on.
-    private static void DurableFlush(FileStream stream) => stream.Flush(flushToDisk: true);
+    private void DurableDataFlush(FileStream stream)
+    {
+        stream.Flush(flushToDisk: true);
+        Interlocked.Increment(ref _dataFsyncs);
+    }
 
     private static bool TryReadExactly(Stream stream, Span<byte> buffer)
     {

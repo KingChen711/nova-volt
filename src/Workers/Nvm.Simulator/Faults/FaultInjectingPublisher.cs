@@ -56,7 +56,14 @@ public sealed partial class FaultInjectingPublisher : ISparkplugPublisher
     /// <summary>How many messages were sent a second time.</summary>
     public long DuplicateMessages { get; private set; }
 
-    /// <summary>How many messages reached the broker, duplicates included.</summary>
+    /// <summary>How many messages the inner publisher accepted, duplicates included.</summary>
+    /// <remarks>
+    /// The boundary is exact and it is not the same one <see cref="PublishAsync"/> returns from: a
+    /// message being <see cref="Held"/> through a simulated dropout has not been published and is not
+    /// in this number until the flush that releases it. Under MQTT QoS 1 the inner publisher returns
+    /// when the broker has acknowledged, so past that point "the broker has it" is a claim this can
+    /// make.
+    /// </remarks>
     public long PublishedMessages { get; private set; }
 
     /// <summary>How many times the link went down.</summary>
@@ -81,6 +88,24 @@ public sealed partial class FaultInjectingPublisher : ISparkplugPublisher
     }
 
     /// <inheritdoc />
+    /// <remarks>
+    /// Forwarded, for the same reason as a rebirth: opening a session is the transport's business and
+    /// a fault that swallowed it would model a link no cable can be.
+    /// </remarks>
+    public Func<ulong>? BeginSession
+    {
+        get => _inner.BeginSession;
+        set => _inner.BeginSession = value;
+    }
+
+    /// <inheritdoc />
+    public Func<CancellationToken, Task>? SessionRestored
+    {
+        get => _inner.SessionRestored;
+        set => _inner.SessionRestored = value;
+    }
+
+    /// <inheritdoc />
     public async Task ConnectAsync(CancellationToken cancellationToken)
     {
         await _inner.ConnectAsync(cancellationToken).ConfigureAwait(false);
@@ -89,6 +114,14 @@ public sealed partial class FaultInjectingPublisher : ISparkplugPublisher
     }
 
     /// <inheritdoc />
+    /// <remarks>
+    /// Returning without throwing does <b>not</b> mean the broker has the message. While the link is
+    /// down this holds it in memory and returns, exactly as a device with a small internal buffer
+    /// behaves, and the message goes out on the flush that follows the reconnect. A caller that
+    /// treated a successful return as delivery would be counting messages that are still on the
+    /// device — which is why the run report counts measurements where the channel takes them and
+    /// leaves delivery to <see cref="PublishedMessages"/>.
+    /// </remarks>
     public async Task PublishAsync(SparkplugMessage message, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(message);
@@ -126,6 +159,15 @@ public sealed partial class FaultInjectingPublisher : ISparkplugPublisher
 
         await SendAsync(message, cancellationToken).ConfigureAwait(false);
     }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Straight through. Whether a session exists is the transport's business, and a fault that
+    /// answered this question itself would let a run publish into a link this class only pretends is
+    /// there.
+    /// </remarks>
+    public Task WaitForSessionAsync(CancellationToken cancellationToken) =>
+        _inner.WaitForSessionAsync(cancellationToken);
 
     /// <summary>Sends everything held, whether or not the link is due back.</summary>
     /// <param name="cancellationToken">Cancels the flush.</param>

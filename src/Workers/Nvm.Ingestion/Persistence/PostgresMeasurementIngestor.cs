@@ -69,6 +69,8 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
     private readonly IMeasurementEventPublisher _publisher;
     private readonly PublishedSignals _publishedSignals;
     private readonly TimeSpan _clockDriftThreshold;
+    private readonly int _writerParallelism;
+    private readonly int _minRowsPerWriter;
 
     /// <summary>Creates the transaction boundary used by HTTP and file drop alike.</summary>
     /// <param name="dataSource">Connection source for the one transaction per batch.</param>
@@ -81,6 +83,10 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
     /// How far the device and gateway clocks may disagree before a reading is flagged. Defaults to
     /// <see cref="ClockQualityClassifier.DefaultThreshold"/>.
     /// </param>
+    /// <param name="writerParallelism">
+    /// Database writers one batch may spread across. One keeps the single-transaction behaviour.
+    /// </param>
+    /// <param name="minRowsPerWriter">Rows each additional writer must be given to be worth opening.</param>
     public PostgresMeasurementIngestor(
         NpgsqlDataSource dataSource,
         TimeProvider timeProvider,
@@ -88,8 +94,13 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
         IngestionLag? lag = null,
         IMeasurementEventPublisher? publisher = null,
         PublishedSignals? publishedSignals = null,
-        TimeSpan? clockDriftThreshold = null)
+        TimeSpan? clockDriftThreshold = null,
+        int writerParallelism = 1,
+        int minRowsPerWriter = 256)
     {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(writerParallelism);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(minRowsPerWriter);
+
         _dataSource = dataSource ?? throw new ArgumentNullException(nameof(dataSource));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _metrics = metrics ?? throw new ArgumentNullException(nameof(metrics));
@@ -97,6 +108,8 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
         _publisher = publisher ?? NullMeasurementEventPublisher.Instance;
         _publishedSignals = publishedSignals ?? PublishedSignals.None;
         _clockDriftThreshold = clockDriftThreshold ?? ClockQualityClassifier.DefaultThreshold;
+        _writerParallelism = writerParallelism;
+        _minRowsPerWriter = minRowsPerWriter;
     }
 
     /// <inheritdoc />
@@ -154,8 +167,8 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
         return await StoreAsync(distinct, rawCount, cancellationToken);
     }
 
-    // The one transaction both adapters commit through. Neither of them gets to decide what dedup
-    // means; they only decide how to read.
+    // The transaction boundary both adapters commit through. Neither of them gets to decide what
+    // dedup means; they only decide how to read.
     private async Task<IngestionResult> StoreAsync(
         Dictionary<Guid, MeasurementRow> distinct,
         int rawCount,
@@ -166,18 +179,24 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
             return new IngestionResult(0, 0);
         }
 
-        await using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
-        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+        MeasurementRow[] rows = [.. distinct.Values];
+        var chunks = SplitAcrossWriters(rows);
+        MeasurementRow[] claimedRows;
 
-        var claimedIds = await ClaimAsync(connection, transaction, [.. distinct.Values], cancellationToken);
-        var claimedRows = distinct.Values.Where(row => claimedIds.Contains(row.SourceEventId)).ToArray();
-
-        if (claimedRows.Length > 0)
+        if (chunks.Length == 1)
         {
-            await StoreAsync(connection, transaction, claimedRows, cancellationToken);
+            claimedRows = await WriteChunkAsync(chunks[0], cancellationToken);
         }
+        else
+        {
+            // One PostgreSQL backend per connection, so this is the only way a single batch reaches
+            // more than one core. Each chunk is its own transaction; see IngestionOptions
+            // .WriterParallelism for why a partial commit stays correct under retry.
+            var written = await Task.WhenAll(
+                chunks.Select(chunk => WriteChunkAsync(chunk, cancellationToken)));
 
-        await transaction.CommitAsync(cancellationToken);
+            claimedRows = [.. written.SelectMany(chunk => chunk)];
+        }
 
         RecordLag(claimedRows);
 
@@ -199,6 +218,50 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
         _metrics.RecordPublishOutcome(announced.Count, failures);
 
         return result with { PublishFailures = failures };
+    }
+
+    // Splitting costs a connection and a transaction per chunk, which is only worth paying once a
+    // batch is big enough that index maintenance dominates. Small batches stay on one writer.
+    private MeasurementRow[][] SplitAcrossWriters(MeasurementRow[] rows)
+    {
+        var writers = Math.Min(_writerParallelism, rows.Length / _minRowsPerWriter);
+
+        if (writers <= 1)
+        {
+            return [rows];
+        }
+
+        var chunkSize = (rows.Length + writers - 1) / writers;
+        var chunks = new MeasurementRow[writers][];
+
+        for (var index = 0; index < writers; index++)
+        {
+            var start = index * chunkSize;
+            var length = Math.Min(chunkSize, rows.Length - start);
+            chunks[index] = rows[start..(start + length)];
+        }
+
+        return chunks;
+    }
+
+    // Claim and store share one transaction so a row can never be claimed without being stored.
+    private async Task<MeasurementRow[]> WriteChunkAsync(
+        MeasurementRow[] rows,
+        CancellationToken cancellationToken)
+    {
+        await using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+
+        var claimedIds = await ClaimAsync(connection, transaction, rows, cancellationToken);
+        var claimedRows = rows.Where(row => claimedIds.Contains(row.SourceEventId)).ToArray();
+
+        if (claimedRows.Length > 0)
+        {
+            await StoreAsync(connection, transaction, claimedRows, cancellationToken);
+        }
+
+        await transaction.CommitAsync(cancellationToken);
+        return claimedRows;
     }
 
     // Good clocks only. The measurement subtracts two clocks, so a PLC two hours out would
@@ -226,7 +289,16 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
 
         foreach (var row in rows)
         {
-            if (_publishedSignals.Includes(row.SignalCode))
+            // The signal code decides. An evaluated result is a different signal from the curve it
+            // came off - Formation/CapacityResult against Formation/Capacity - so the whitelist can
+            // name one without ever admitting the other, and it keeps doing that after M7 gives
+            // every raw reading a unit id.
+            //
+            // The unit id is then required as well, because an event that grades a cell has to say
+            // WHICH cell; a result signal arriving without one is malformed rather than telemetry,
+            // and it is stored and left unannounced instead of being announced about nobody.
+            if (_publishedSignals.Includes(row.SignalCode)
+                && !string.IsNullOrWhiteSpace(row.UnitId))
             {
                 announced.Add(row.ToEvent());
             }

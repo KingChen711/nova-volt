@@ -55,6 +55,7 @@ Routing đầy đủ ở [`scope.md`](scope.md) §2.2.
 |---|---|
 | **OCV** | *Open Circuit Voltage* — điện áp khi không tải. `OCV2` là lần đo thứ hai, sau aging. **Sụt nhiều = self-discharge = cell lỗi** |
 | **ACIR** | *AC Internal Resistance* — điện trở trong. Cao bất thường = tiếp xúc kém hoặc vật liệu lỗi |
+| **Capacity** *(dung lượng)* | Lượng điện một cell tích trữ hoặc xả được, thường tính bằng Ah. Giá trị tăng dần trong đường cong formation là **telemetry**; chỉ kết quả cuối đã được đánh giá và gắn đúng cell mới được dùng cho grading. Hai thứ đó là **hai tín hiệu khác tên**: đường cong là `Formation/Capacity`, kết quả cuối là `Formation/CapacityResult`. Tách tên vì tính "đã đánh giá" không suy ra được từ dữ liệu — sau khi channel ánh xạ được vào cell (M7) thì mọi điểm trên đường cong cũng có cell, và một hệ thống suy đoán bằng "có cell nghĩa là đã đánh giá" sẽ đẩy cả đường cong lên bus |
 | **Self-discharge** | Cell tự mất điện khi nằm yên. Dấu hiệu của lỗi bên trong |
 | **Grading** (`GRADE`) | Từ OCV + ACIR + dung lượng → gán cell vào một **bin**. Cell không "đạt/trượt" mà **được phân hạng** |
 | **Bin** | Nhóm chất lượng sau grading |
@@ -205,11 +206,13 @@ Routing đầy đủ ở [`scope.md`](scope.md) §2.2.
 | **`bdSeq`** *(birth/death sequence)* | Số phiên của một edge node, tăng mỗi lần node nối lại. Nằm trong cả `NBIRTH` lẫn `NDEATH` (qua MQTT Last Will), nên khớp được cặp birth–death **của đúng một phiên**. Nếu chỉ nhìn `NDEATH` mà không nhìn `bdSeq`, một `NDEATH` đến muộn của phiên cũ sẽ giết nhầm phiên mới vừa lên |
 | **`STALE`** *(trạng thái metric)* | Giá trị cuối cùng biết được là X, lúc T, và từ đó **không còn tin được**. Khác `0` — phòng điều khiển đọc `0` thành *"điện áp bằng 0"* và báo động nhầm là cell chết. Khác `null` — đọc thành *"chưa có dữ liệu"* rồi bỏ qua. Chỉ `STALE` mới nói đúng việc phải làm: đi kiểm **kết nối**, không kiểm cell. `NDEATH` là thứ tạo ra trạng thái này, và nó **không** xoá dữ liệu lịch sử (K4) |
 | **Metric giao thức** *(protocol metric)* | `bdSeq` và các metric `Node Control/…`, `Device Control/…`. Sparkplug không có chỗ nào khác để đặt chúng nên chúng đi lẫn với metric thật — và đó là cái bẫy: ghi chúng xuống telemetry là ghi những "phép đo" không máy nào đo, làm phép đối chiếu D1 lệch đúng một lượng cố định mỗi lần node birth. Gateway lọc chúng ra trước khi forward |
+| **Phép đo logic** *(logical measurement)* | Một lần kênh đọc được một tín hiệu của cell đang nằm trong nó. Là việc của **thiết bị**, nên nó được đếm **lúc đo** — trước MQTT, trước gateway — và đó là vế trái của D1/D3; vế phải là row trong DB. Đếm nó ở chỗ message rời khỏi simulator là đặt cả hai vế cùng một phía của chỗ có thể mất, và một outage sẽ làm hai vế cùng tụt rồi vẫn báo khớp |
+| **Phép đo bị bỏ** *(abandoned measurement)* | Phép đo logic đã sinh ra nhưng đường truyền không chở đi: session chết giữa batch, hoặc publish lỗi. Được **báo riêng**, không bao giờ trừ khỏi vế trái — trừ đi chính là cách một oracle mất khả năng nhìn thấy mất mát. D1/D3 bắt buộc nó bằng **0** |
 | **Backpressure** | Bên nhận **nói ra** rằng nó đang quá tải, và bên gửi **chậm lại** — thay vì bên gửi cứ đẩy cho tới khi bên nhận sập. Ở đây: ingestion trả `429`/`503`, gateway giảm tốc flush. Ngược với **retry storm**: cả khu mất mạng cùng lúc thì cũng nối lại cùng lúc, và nếu mỗi gateway phản ứng với lỗi bằng cách thử **nhanh hơn**, một sự cố mạng 30 giây thành sự cố hệ thống nửa tiếng |
 | **Retry storm** | Vòng lặp tự siết: bên nhận quá tải → trả lỗi → bên gửi retry dày hơn → bên nhận quá tải nặng hơn. Thứ chặn nó là backpressure cộng exponential backoff **có jitter** — jitter để n client không cùng thử lại ở đúng một mốc |
 | **Clock drift** *(lệch đồng hồ)* | Đồng hồ của thiết bị chạy sai so với giờ thật. Nguyên nhân đời thường: pin CMOS hết, NTP không tới được tầng OT, board vừa thay còn giờ mặc định. Đặc điểm khiến nó nguy hiểm — **không có gì trông hỏng cả**: giá trị đo đúng, serial đúng, topic đúng, chỉ `device_timestamp` sai. Chỉ lộ ra khi so với một đồng hồ đáng tin hơn, và đó là việc của `gateway_timestamp`. Lệch là **thuộc tính của thiết bị**, không phải của từng message: một pin CMOS hỏng thì sai trên **mọi** lần đo của kênh đó |
 | **Dropout** *(rớt kết nối)* | Thiết bị mất kết nối rồi nối lại. Trong lúc rớt nó **đệm lại**, không vứt đi — nên hệ quả không phải mất dữ liệu mà là một **khoảng lặng rồi một cụm dồn**. Cụm dồn mới là thứ nguy hiểm: cả khu nối lại cùng lúc thì đổ ập vào một hệ thống vừa khởi động lại. Đây là lý do C10 có rate limit, và là lý do một dropout phải được mô phỏng thành *gap rồi burst*, không phải thành mất message |
-| **Poison message** | Message mà consumer **không bao giờ** xử lý nổi, dù thử bao nhiêu lần. Retry không cứu được; nó chỉ làm nghẽn endpoint. Chỗ đúng của nó là `_error` queue (bus) hoặc thư mục `rejected/` (file drop), kèm lý do đọc được |
+| **Poison message** | Message mà consumer **không bao giờ** xử lý nổi, dù thử bao nhiêu lần. Retry không cứu được; bus đưa nó vào `_error`, file drop đưa vào `rejected/`. Với MQTT QoS 1, gateway phải ghi counter + lý do rồi **ACK** để không ghim cả persistent session vào cùng một payload; có lưu raw payload để replay hay không là quyết định retention/security riêng, không được ngầm suy ra từ `_error` |
 
 ## 9. Ba loại timestamp — đừng bao giờ trộn
 
@@ -222,3 +225,19 @@ Routing đầy đủ ở [`scope.md`](scope.md) §2.2.
 | `recorded_at` | Lúc hệ thống ghi nhận | Đáng tin nhất | **Audit**, retention, replay |
 
 **Lưu cả ba, không bao giờ ghi đè.** `clock_quality` (`Good` / `Drifted` / `Unknown`) tính từ độ lệch giữa hai cái đầu.
+
+### 9.1 `device_timestamp` chỉ có độ phân giải **1 mili-giây**
+
+Sparkplug B mang timestamp là `uint64` **mili-giây** kể từ epoch (`proto/sparkplug_b.proto`), nên
+`device_timestamp` không thể mịn hơn 1 ms dù đồng hồ PLC có mịn hơn.
+
+Hệ quả nằm ở **định nghĩa phép đo**, không phải ở protocol: khoá tự nhiên
+`(site_id, equipment_id, unit_id, step_code, device_timestamp, signal_code)` chứa `device_timestamp`,
+nên **hai reading của cùng một signal trên cùng một thiết bị trong cùng một mili-giây LÀ MỘT phép
+đo**. Dedup lưu một row là đúng — đó không phải mất dữ liệu.
+
+Điều này chỉ chạm tới thực tế khi một thiết bị phát nhanh hơn 1.000 lần/giây cho **một** signal.
+Một kênh formation thật lấy mẫu vài lần mỗi giây nên không bao giờ chạm. Một load harness bắn
+5.000 msg/s qua 8 kênh thì chạm: đo được **2,37 %** reading trùng mili-giây
+([`benchmarks.md`](benchmarks.md)). Vì vậy mọi phép đối chiếu phải so **message với message** và
+**phép đo với row**, không trộn hai vế.

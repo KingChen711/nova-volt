@@ -61,7 +61,7 @@ việc khác.
 | [024](ADR-024-revision-la-tai-lieu-catalog-thay-cho-mot-snapshot.md) | Revision là tài liệu bất biến; hệ thống giữ cả catalog, không giữ một snapshot | **Accepted** 2026-08-27 | M1 |
 | [025](ADR-025-immutablearray-cho-collection-lo-ra-ngoai.md) | Collection lộ ra ngoài dùng `ImmutableArray<T>`, không dùng `IReadOnlyList<T>` | **Accepted** 2026-08-27 | M1 |
 | [026](ADR-026-sinh-c-sharp-tu-sparkplug-proto.md) | Sinh C# từ `sparkplug_b.proto` đã vendored, không dùng thư viện Sparkplug | **Accepted** 2026-08-28 | M2 · C01 |
-| 027 | Chặng gateway → ingestion trong `dmz-net` | Chưa viết | M2 · C08 |
+| [027](ADR-027-http-protobuf-gateway-ingestion-trong-dmz.md) | HTTP POST batch protobuf cho chặng gateway → ingestion trong `dmz-net` | **Accepted** 2026-08-28 | M2 · C08 |
 | 028 | Store-and-forward trên đĩa của edge gateway | Chưa viết | M2 · C09 |
 | 029 | Backpressure và rate limit khi flush buffer | Chưa viết | M2 · C10 |
 

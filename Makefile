@@ -22,7 +22,7 @@ ALL_PROFILES := --profile probe --profile init --profile obs --profile tools --p
 BACKUP_DIR := $(shell grep -E '^NVM_BACKUP_DIR=' .env 2>/dev/null | cut -d= -f2-)
 
 .DEFAULT_GOAL := help
-.PHONY: help up up-obs down down-v reset ps logs net-check dmz-shell build test ci hooks format format-check clean backup bus-fanout bus-dlq bus-chaos sim-up sim-down sim-logs sim-report sim-net-check
+.PHONY: help up up-obs down down-v reset ps logs net-check dmz-shell build test ci hooks format format-check clean backup bus-fanout bus-dlq bus-chaos sim-up sim-down sim-logs sim-report sim-net-check edge-up edge-down edge-logs edge-net-check
 
 help:
 	@echo "NovaVolt MES"
@@ -44,6 +44,12 @@ help:
 	@echo "    make sim-logs      Theo doi log simulator"
 	@echo "    make sim-report    In bao cao run - ve trai cua phep doi chieu D1"
 	@echo "    make sim-net-check Kiem simulator chi o ot-net, toi EMQX nhung khong toi RabbitMQ"
+	@echo ""
+	@echo "  Edge gateway"
+	@echo "    make edge-up       Build va chay gateway trong dmz-net"
+	@echo "    make edge-down     Dung gateway"
+	@echo "    make edge-logs     Theo doi decoded/forwarded/dropped"
+	@echo "    make edge-net-check Kiem gateway chi o dmz-net, toi EMQX nhung khong toi RabbitMQ"
 	@echo ""
 	@echo "  Code"
 	@echo "    make build         Build solution"
@@ -197,6 +203,24 @@ sim-report:
 
 sim-net-check:
 	@sh scripts/sim-net-check.sh
+
+# ─────────────────────────────────────────────────────────
+# Edge gateway — conduit duy nhat tu MQTT sang ingestion
+# ─────────────────────────────────────────────────────────
+edge-up: .env
+	@$(COMPOSE) up -d --build edge-gateway
+	@sh scripts/edge-net-check.sh
+	@echo ""
+	@echo "Edge gateway dang chay trong dmz-net. Theo doi: make edge-logs"
+
+edge-down:
+	@$(COMPOSE) rm -sf edge-gateway
+
+edge-logs:
+	@$(COMPOSE) logs -f --tail 100 edge-gateway
+
+edge-net-check:
+	@sh scripts/edge-net-check.sh
 
 # ─────────────────────────────────────────────────────────
 # Bus — bang chung cua M1/C13

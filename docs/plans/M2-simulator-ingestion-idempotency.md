@@ -376,7 +376,7 @@ make net-check && make sim-net-check
 
 **Kiểm chứng**
 ```bash
-make net-check && make sim-up
+make net-check && make sim-up && make edge-up
 ```
 Từ `make dmz-shell`: thấy message trên EMQX. Log gateway: đếm số message decode được. Và **`connects rabbitmq 5672` từ container gateway phải đóng** — nếu mở thì §2.1 đã bị lách chứ không được giải.
 
@@ -736,7 +736,7 @@ make bus-fanout && make bus-dlq && make bus-chaos
 | C05 | formation cycler, nén thời gian | ☑ | 2026-08-28 | |
 | C06 | fault: trùng, dropout, lệch đồng hồ | ☑ | 2026-08-28 | Bật bằng config; lab bật ở C07 |
 | C07 | simulator trong `ot-net` | ☑ | 2026-08-28 | `net-check` 9/9 + `sim-net-check` 3/3 |
-| C08 | gateway subscribe EMQX | ☐ | | ADR-027 |
+| C08 | gateway subscribe EMQX | ☑ | 2026-08-28 | ADR-027; `edge-net-check` 3/3 |
 | C09 | buffer store-and-forward | ☐ | | ADR-028 |
 | C10 | rate limit + backpressure | ☐ | | ADR-029. **D3**. Lab #3 (xả 30 phút) |
 | C11 | NBIRTH / NDEATH / seq gap | ☐ | | **D4** |

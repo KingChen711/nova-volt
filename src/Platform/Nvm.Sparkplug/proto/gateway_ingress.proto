@@ -1,0 +1,36 @@
+// NovaVolt-owned wire contract between Nvm.EdgeGateway and Nvm.Ingestion.
+//
+// Unlike sparkplug_b.proto, this file is ours. The URL carries /v1 and field numbers in this file
+// are append-only for that version: rename fields freely in code, never reuse a number on the wire.
+
+syntax = "proto3";
+
+package nvm.edge.v1;
+option csharp_namespace = "Nvm.Sparkplug.Transport.Generated";
+
+message SparkplugIngressBatch {
+  repeated DecodedSparkplugMessage messages = 1;
+}
+
+message DecodedSparkplugMessage {
+  string site_id = 1;
+  string equipment_path = 2;
+  string topic = 3;
+  string message_type = 4;
+  int64 gateway_timestamp_unix_ms = 5;
+  repeated DecodedDeviceReading readings = 6;
+}
+
+message DecodedDeviceReading {
+  string metric_name = 1;
+  optional uint64 alias = 2;
+  int64 device_timestamp_unix_ms = 3;
+
+  oneof value {
+    double real_value = 4;
+    sint64 integral_value = 5;
+    bool flag_value = 6;
+    string text_value = 7;
+    bool absent_value = 8;
+  }
+}

@@ -48,6 +48,12 @@
       namespace lạ trong code đọc thành một câu đúng: kiểu này đến từ đặc tả, không phải của mình.
     -->
     <Protobuf Include="proto/sparkplug_b.proto" ProtoRoot="proto" GrpcServices="None" />
+    <!--
+      Contract do NovaVolt sở hữu cho chặng gateway -> ingestion (ADR-027). Sinh internal:
+      callers nhận DecodedSparkplugMessage và byte[], không phụ thuộc Google.Protobuf hay type
+      generated. Field number của contract này append-only trong v1.
+    -->
+    <Protobuf Include="proto/gateway_ingress.proto" ProtoRoot="proto" GrpcServices="None" Access="Internal" />
   </ItemGroup>
 
 </Project>

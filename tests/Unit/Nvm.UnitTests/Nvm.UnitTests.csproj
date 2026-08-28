@@ -33,6 +33,8 @@
     <ProjectReference Include="../../../src/Platform/Nvm.Sparkplug/Nvm.Sparkplug.csproj" />
     <!-- Simulator: sinh dữ liệu là logic, và nó được kiểm ở đây chứ không phải bằng cách nhìn log. -->
     <ProjectReference Include="../../../src/Workers/Nvm.Simulator/Nvm.Simulator.csproj" />
+    <!-- Gateway: decode + gateway timestamp + protobuf HTTP body được kiểm trước khi chạy container. -->
+    <ProjectReference Include="../../../src/Workers/Nvm.EdgeGateway/Nvm.EdgeGateway.csproj" />
   </ItemGroup>
 
   <ItemGroup>

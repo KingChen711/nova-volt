@@ -15,6 +15,7 @@
   </Folder>
   <Folder Name="/src/Workers/">
     <Project Path="src/Workers/Nvm.BusProbe/Nvm.BusProbe.csproj" />
+    <Project Path="src/Workers/Nvm.EdgeGateway/Nvm.EdgeGateway.csproj" />
     <Project Path="src/Workers/Nvm.Simulator/Nvm.Simulator.csproj" />
   </Folder>
   <Folder Name="/tools/">

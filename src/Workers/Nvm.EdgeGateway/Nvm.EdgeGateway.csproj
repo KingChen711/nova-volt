@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <!--
+    Conduit OT -> DMZ -> ingestion. Chỉ service này nói cả MQTT phía thiết bị và HTTP phía
+    ingestion; nó không reference Nvm.Bus và không có route tới RabbitMQ (K11, K12).
+  -->
+
+  <PropertyGroup>
+    <RootNamespace>Nvm.EdgeGateway</RootNamespace>
+    <AssemblyName>Nvm.EdgeGateway</AssemblyName>
+    <UserSecretsId>nvm-edge-gateway</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="MQTTnet" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Platform/Nvm.Sparkplug/Nvm.Sparkplug.csproj" />
+    <ProjectReference Include="../../Platform/Nvm.Hosting/Nvm.Hosting.csproj" />
+    <ProjectReference Include="../../FunctionalBlocks/FactoryModel/Nvm.FactoryModel.csproj" />
+  </ItemGroup>
+
+</Project>

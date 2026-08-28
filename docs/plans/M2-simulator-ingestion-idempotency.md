@@ -740,7 +740,7 @@ make bus-fanout && make bus-dlq && make bus-chaos
 | C07 | simulator trong `ot-net` | ☑ | 2026-08-28 | `net-check` 9/9 + `sim-net-check` 3/3 |
 | C08 | gateway subscribe EMQX | ☑ | 2026-08-28 | ADR-027; `edge-net-check` 3/3 |
 | C09 | buffer store-and-forward | ☑ | 2026-08-28 | ADR-028; crash **0/200** (dự đoán 20/200) |
-| C10 | rate limit + backpressure | ☐ | | ADR-029. **D3**. Lab #3 (xả 30 phút) |
+| C10 | rate limit + backpressure | ☐ | 2026-08-28 | Code + ADR-029 xong; `make outage-lab` đã có. **Chưa tick**: D3 và lab #3 chưa chạy |
 | C11 | NBIRTH / NDEATH / seq gap | ☐ | | **D4** |
 | C12 | processed_message + dedup | ☑ | 2026-08-28 | ADR-030; 480 test xanh |
 | C13 | clock quality classifier | ☐ | | **D5**. Lab #1 và #2 |

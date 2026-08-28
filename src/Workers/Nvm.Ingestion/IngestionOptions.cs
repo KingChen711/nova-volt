@@ -23,6 +23,20 @@ public sealed class IngestionOptions
     /// <summary>Maximum readings accepted in one transaction.</summary>
     public int MaxReadingsPerBatch { get; set; } = 50_000;
 
+    /// <summary>Batches allowed to hold a database transaction at the same time.</summary>
+    /// <remarks>
+    /// Admission control, not a throughput setting. Without a ceiling, a gateway draining hours of
+    /// backlog opens transactions faster than PostgreSQL retires them, and the failure arrives as
+    /// connection-pool timeouts spread across every caller rather than as one honest "slow down".
+    /// </remarks>
+    public int MaxConcurrentBatches { get; set; } = 8;
+
+    /// <summary>Batches allowed to wait for a slot before ingestion starts refusing.</summary>
+    public int MaxQueuedBatches { get; set; } = 16;
+
+    /// <summary>Delay handed back in <c>Retry-After</c> when a batch is refused.</summary>
+    public TimeSpan RetryAfter { get; set; } = TimeSpan.FromSeconds(2);
+
     /// <summary>Builds options, using the repo's separate PostgreSQL variables for local development.</summary>
     public static IngestionOptions FromConfiguration(IConfiguration configuration)
     {
@@ -54,6 +68,21 @@ public sealed class IngestionOptions
         if (MaxReadingsPerBatch <= 0)
         {
             throw new InvalidOperationException($"{SectionName}:MaxReadingsPerBatch must be positive.");
+        }
+
+        if (MaxConcurrentBatches <= 0)
+        {
+            throw new InvalidOperationException($"{SectionName}:MaxConcurrentBatches must be positive.");
+        }
+
+        if (MaxQueuedBatches < 0)
+        {
+            throw new InvalidOperationException($"{SectionName}:MaxQueuedBatches cannot be negative.");
+        }
+
+        if (RetryAfter <= TimeSpan.Zero)
+        {
+            throw new InvalidOperationException($"{SectionName}:RetryAfter must be positive.");
         }
     }
 

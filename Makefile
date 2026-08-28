@@ -22,7 +22,7 @@ ALL_PROFILES := --profile probe --profile init --profile obs --profile tools --p
 BACKUP_DIR := $(shell grep -E '^NVM_BACKUP_DIR=' .env 2>/dev/null | cut -d= -f2-)
 
 .DEFAULT_GOAL := help
-.PHONY: help up up-obs down down-v reset ps logs net-check dmz-shell build test ci hooks format format-check clean backup bus-fanout bus-dlq bus-chaos sim-up sim-down sim-logs sim-report sim-net-check edge-up edge-down edge-logs edge-net-check buffer-crash ingestion-up ingestion-down ingestion-logs ingestion-migrate
+.PHONY: help up up-obs down down-v reset ps logs net-check dmz-shell build test ci hooks format format-check clean backup bus-fanout bus-dlq bus-chaos sim-up sim-down sim-logs sim-report sim-net-check edge-up edge-down edge-logs edge-net-check buffer-crash ingestion-up ingestion-down ingestion-logs ingestion-migrate outage-lab
 
 help:
 	@echo "NovaVolt MES"
@@ -57,6 +57,7 @@ help:
 	@echo "    make ingestion-down Dung ingestion"
 	@echo "    make ingestion-logs Theo doi batch inserted/duplicate"
 	@echo "    make ingestion-migrate Chay rieng migration job PostgreSQL"
+	@echo "    make outage-lab    D3: tat backend 2 phut, do backlog va so row lech"
 	@echo ""
 	@echo "  Code"
 	@echo "    make build         Build solution"
@@ -252,6 +253,11 @@ ingestion-logs:
 ingestion-migrate: .env
 	@$(COMPOSE) --profile ingestion build ingestion
 	@$(COMPOSE) --profile ingestion run --rm ingestion-migrate
+
+# Lab D3. Can `make up && make sim-up && make edge-up && make ingestion-up` truoc.
+# WARMUP/OUTAGE/DRAIN_BUDGET de chay nhanh luc dev; mac dinh la con so cua DoD.
+outage-lab: .env
+	@sh scripts/backend-outage-lab.sh
 
 # ─────────────────────────────────────────────────────────
 # Bus — bang chung cua M1/C13

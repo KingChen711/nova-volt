@@ -119,6 +119,16 @@
     <PackageVersion Include="Testcontainers.PostgreSql" Version="4.14.0" />
   </ItemGroup>
 
+  <ItemGroup Label="ASP.NET Core test host — M2/C10">
+    <!--
+      TestHost dựng pipeline thật trong process, không mở socket. Cần để kiểm hợp đồng
+      backpressure của ingestion (429 + Retry-After) mà không phải bật container.
+
+      LICENSE, kiểm 2026-08-28: Microsoft.AspNetCore.TestHost 10.0.3 → MIT.
+    -->
+    <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="10.0.3" />
+  </ItemGroup>
+
   <ItemGroup Label="Dependency injection — C04 trở đi">
     <!--
       CHỈ Abstractions, không phải gói DI đầy đủ. Nvm.Kernel cần IServiceCollection để đăng ký

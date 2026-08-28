@@ -47,12 +47,18 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton(dataSource);
 builder.Services.AddSingleton<IngestionMetrics>();
 builder.Services.AddSingleton<IMeasurementIngestor, PostgresMeasurementIngestor>();
+builder.Services.AddIngestionAdmissionControl(options);
 builder.Services
     .AddHealthChecks()
     .AddCheck("self", () => HealthCheckResult.Healthy(), tags: [HealthTags.Live])
     .AddCheck<PostgresReadinessCheck>("postgres", tags: [HealthTags.Ready]);
 
 var app = builder.Build();
+
+// The limiter only applies where a policy is attached, which is the batch endpoint alone. Health
+// checks stay outside it: a saturated ingestion must still answer /health/ready, or Docker would
+// restart the container for the sin of being busy and turn backpressure into an outage.
+app.UseRateLimiter();
 
 app.MapHealthChecks(
     "/health/live",

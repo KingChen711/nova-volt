@@ -63,7 +63,7 @@ việc khác.
 | [026](ADR-026-sinh-c-sharp-tu-sparkplug-proto.md) | Sinh C# từ `sparkplug_b.proto` đã vendored, không dùng thư viện Sparkplug | **Accepted** 2026-08-28 | M2 · C01 |
 | [027](ADR-027-http-protobuf-gateway-ingestion-trong-dmz.md) | HTTP POST batch protobuf cho chặng gateway → ingestion trong `dmz-net` | **Accepted** 2026-08-28 | M2 · C08 |
 | [028](ADR-028-file-append-only-cho-store-and-forward.md) | File append-only tự viết cho store-and-forward của edge gateway | **Accepted** 2026-08-28 | M2 · C09 |
-| 029 | Backpressure và rate limit khi flush buffer | Chưa viết | M2 · C10 |
+| [029](ADR-029-rate-limit-va-backpressure-khi-xa-buffer.md) | Rate limit khi flush, và vì sao gateway phải chậm lại thay vì thử lại nhanh hơn | **Accepted** 2026-08-28 | M2 · C10 |
 | [030](ADR-030-khoa-dedup-toan-cuc-khong-partition-theo-thang.md) | Khoá dedup toàn cục, không partition theo tháng | **Accepted** 2026-08-28 | M2 · C12 |
 
 Cột **Ra ở** là milestone dự kiến, không phải cam kết. Quyết định đến sớm hơn thì viết sớm hơn.

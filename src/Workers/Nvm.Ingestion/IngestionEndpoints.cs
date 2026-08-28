@@ -12,7 +12,8 @@ internal static class IngestionEndpoints
     {
         ArgumentNullException.ThrowIfNull(app);
 
-        app.MapPost(SparkplugBatchPath, IngestSparkplugBatchAsync);
+        app.MapPost(SparkplugBatchPath, IngestSparkplugBatchAsync)
+            .RequireRateLimiting(IngestionAdmissionControl.PolicyName);
     }
 
     private static async Task<IResult> IngestSparkplugBatchAsync(

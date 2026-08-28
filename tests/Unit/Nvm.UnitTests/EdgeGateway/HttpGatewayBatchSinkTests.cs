@@ -1,4 +1,6 @@
 using System.Net;
+using System.Net.Http.Headers;
+using Microsoft.Extensions.Time.Testing;
 using Nvm.EdgeGateway;
 using Nvm.EdgeGateway.Forwarding;
 using Nvm.Sparkplug;
@@ -7,13 +9,15 @@ namespace Nvm.UnitTests.EdgeGateway;
 
 public sealed class HttpGatewayBatchSinkTests
 {
+    private static readonly DateTimeOffset Now = new(2026, 8, 28, 9, 15, 30, TimeSpan.Zero);
+
     [Fact]
     public async Task SendAsync_PostsVersionedProtobufBodyThatIngestionCanDecode()
     {
         var handler = new CapturingHandler(HttpStatusCode.Accepted);
         using var client = new HttpClient(handler);
         var options = new EdgeGatewayOptions();
-        var sink = new HttpGatewayBatchSink(client, options);
+        var sink = new HttpGatewayBatchSink(client, options, new FakeTimeProvider(Now));
         var message = SparkplugIngressBatchCodecTests.Message(
             new DeviceReading(
                 "Formation/Voltage",
@@ -32,16 +36,64 @@ public sealed class HttpGatewayBatchSinkTests
     [Fact]
     public async Task SendAsync_NonSuccessStatus_IsNotAcknowledgedAsForwarded()
     {
-        var handler = new CapturingHandler(HttpStatusCode.ServiceUnavailable);
+        var handler = new CapturingHandler(HttpStatusCode.InternalServerError);
         using var client = new HttpClient(handler);
-        var sink = new HttpGatewayBatchSink(client, new EdgeGatewayOptions());
+        var sink = new HttpGatewayBatchSink(client, new EdgeGatewayOptions(), new FakeTimeProvider(Now));
         var message = SparkplugIngressBatchCodecTests.Message();
 
         await Should.ThrowAsync<HttpRequestException>(() =>
             sink.SendAsync([message], TestContext.Current.CancellationToken));
     }
 
-    private sealed class CapturingHandler(HttpStatusCode statusCode) : HttpMessageHandler
+    [Theory]
+    [InlineData(HttpStatusCode.TooManyRequests)]
+    [InlineData(HttpStatusCode.ServiceUnavailable)]
+    public async Task SendAsync_OverloadStatus_CarriesTheServerRequestedDelay(HttpStatusCode statusCode)
+    {
+        var handler = new CapturingHandler(statusCode, new RetryConditionHeaderValue(TimeSpan.FromSeconds(7)));
+        using var client = new HttpClient(handler);
+        var sink = new HttpGatewayBatchSink(client, new EdgeGatewayOptions(), new FakeTimeProvider(Now));
+
+        var exception = await Should.ThrowAsync<GatewayBackpressureException>(() =>
+            sink.SendAsync([SparkplugIngressBatchCodecTests.Message()], TestContext.Current.CancellationToken));
+
+        exception.StatusCode.ShouldBe(statusCode);
+        exception.RetryAfter.ShouldBe(TimeSpan.FromSeconds(7));
+    }
+
+    [Fact]
+    public async Task SendAsync_OverloadWithoutRetryAfter_LeavesThePaceToTheGateway()
+    {
+        var handler = new CapturingHandler(HttpStatusCode.ServiceUnavailable);
+        using var client = new HttpClient(handler);
+        var sink = new HttpGatewayBatchSink(client, new EdgeGatewayOptions(), new FakeTimeProvider(Now));
+
+        var exception = await Should.ThrowAsync<GatewayBackpressureException>(() =>
+            sink.SendAsync([SparkplugIngressBatchCodecTests.Message()], TestContext.Current.CancellationToken));
+
+        exception.RetryAfter.ShouldBeNull();
+    }
+
+    [Fact]
+    public void ReadRetryAfter_HttpDate_IsResolvedAgainstTheInjectedClock()
+    {
+        var header = new RetryConditionHeaderValue(Now.AddSeconds(30));
+
+        HttpGatewayBatchSink.ReadRetryAfter(header, Now).ShouldBe(TimeSpan.FromSeconds(30));
+    }
+
+    [Fact]
+    public void ReadRetryAfter_DateAlreadyPassed_IsIgnoredRatherThanNegative()
+    {
+        // A clock-skewed or queued response must not hand the flusher a negative wait: Task.Delay
+        // would throw and turn "slow down" into a crash loop.
+        var header = new RetryConditionHeaderValue(Now.AddSeconds(-30));
+
+        HttpGatewayBatchSink.ReadRetryAfter(header, Now).ShouldBeNull();
+    }
+
+    private sealed class CapturingHandler(HttpStatusCode statusCode, RetryConditionHeaderValue? retryAfter = null)
+        : HttpMessageHandler
     {
         internal HttpMethod? Method { get; private set; }
 
@@ -62,7 +114,9 @@ public sealed class HttpGatewayBatchSinkTests
                 ? []
                 : await request.Content.ReadAsByteArrayAsync(cancellationToken);
 
-            return new HttpResponseMessage(statusCode);
+            var response = new HttpResponseMessage(statusCode);
+            response.Headers.RetryAfter = retryAfter;
+            return response;
         }
     }
 }

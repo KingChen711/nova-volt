@@ -380,6 +380,10 @@ services:
   #
   # POST thất bại giữ nguyên cursor của buffer; message đã fsync không bị biến thành loss chỉ vì
   # ingestion chưa sẵn sàng.
+  #
+  # NVM_EDGE_FLUSH_RATE là công tắc của lab §5.C10.3: đặt 0 để tắt rate limit và đo xem
+  # ADR-029 có đang giải một vấn đề thật không. Mặc định 12000 msg/s — cao hơn N1 (5000)
+  # đủ để tiêu backlog trong ngân sách 3 phút của D3, không cao tới mức xả sạch cùng lúc.
   # ─────────────────────────────────────────────────────────
   edge-gateway:
     build:
@@ -398,6 +402,8 @@ services:
       NVM_EDGE__IngestionUrl: http://ingestion:8080/api/ingestion/v1/sparkplug-batches
       NVM_EDGE__LogEvery: "1000"
       NVM_EDGE__Buffer__DirectoryPath: /var/lib/nvm-edge-gateway/buffer
+      NVM_EDGE__Buffer__FlushMessagesPerSecond: "${NVM_EDGE_FLUSH_RATE:-12000}"
+      NVM_EDGE__Buffer__FlushBurstMessages: "${NVM_EDGE_FLUSH_RATE:-12000}"
     volumes:
       - edgedata:/var/lib/nvm-edge-gateway
     networks: [dmz-net]

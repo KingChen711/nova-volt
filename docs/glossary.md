@@ -43,6 +43,8 @@ Routing đầy đủ ở [`scope.md`](scope.md) §2.2.
 | **Formation** (`FORM`) | **Lần nạp điện đầu tiên** của cell vừa lắp. Tạo lớp **SEI** quyết định tuổi thọ pin. Kéo dài hàng giờ, cell nằm trong **tray**, cắm vào một **channel** |
 | **SEI** | *Solid Electrolyte Interphase* — lớp màng hình thành trên anode trong lúc formation |
 | **Tray / Channel** | Khay giữ cell và kênh sạc riêng của nó trong máy formation. Một máy có thể có 1.000 kênh, ví dụ `FORM-01-CH-0142` |
+| **CC / CV** | Hai chặng của một lần sạc. **CC** (*constant current*) giữ **dòng** không đổi, điện áp bò lên; tới trần điện áp thì chuyển sang **CV** (*constant voltage*) giữ **áp** không đổi, dòng tụt dần về gần 0. Chỗ gãy giữa hai chặng là mốc đọc được trên mọi đường cong formation — biểu đồ không có nó là biểu đồ của một máy chưa sạc thật |
+| **Deadband** | Ngưỡng một giá trị phải **đổi quá** thì thiết bị mới gửi. Là cách **report-by-exception** được cài đặt trong thực tế. Đặt rộng thì đường truyền nhẹ nhưng mất chi tiết; đặt hẹp thì ngược lại. Bẫy kinh điển: so giá trị mới với **lần gửi gần nhất**, không phải với lần đo gần nhất — so nhầm thì một giá trị trôi chậm sẽ vượt ngưỡng từng chút một mà **không bao giờ** bị gửi |
 | **`DEGAS`** | Xả khí sinh ra trong formation |
 | **Aging** (`AGE`) | Cell **nằm nghỉ** vài ngày tới vài tuần. Không phải chờ vô ích — cell lỗi sẽ **tự xả điện** và lộ ra |
 | **`EOL`** | ⚠️ **Hai nghĩa.** Step 440 = *End-of-**Line*** (test cuối chuyền). Cuối vòng đời pin = *End-of-**Life***. Trong code dùng `ProductionEol` và `LifecycleEol`, **không bao giờ** `EOL` trần |

@@ -31,6 +31,8 @@
     <ProjectReference Include="../../../src/FunctionalBlocks/FactoryModel/Nvm.FactoryModel.csproj" />
     <!-- Nvm.Sparkplug kéo theo Google.Protobuf; test pin đọc assembly qua đường này. -->
     <ProjectReference Include="../../../src/Platform/Nvm.Sparkplug/Nvm.Sparkplug.csproj" />
+    <!-- Simulator: sinh dữ liệu là logic, và nó được kiểm ở đây chứ không phải bằng cách nhìn log. -->
+    <ProjectReference Include="../../../src/Workers/Nvm.Simulator/Nvm.Simulator.csproj" />
   </ItemGroup>
 
   <ItemGroup>

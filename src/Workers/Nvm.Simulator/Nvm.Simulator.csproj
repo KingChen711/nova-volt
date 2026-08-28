@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <!--
+    Nguồn dữ liệu thiết bị của M2. Đóng vai một edge node Sparkplug B của line formation:
+    NBIRTH rồi DBIRTH/DDATA theo report-by-exception.
+
+    Chạy ở `ot-net` và KHÔNG BAO GIỜ chạm tới tầng IT — nó chỉ biết EMQX. Đó là lý do project
+    này không reference Nvm.Bus: một simulator publish thẳng lên RabbitMQ là đã dựng lại đúng
+    lỗ hổng mà M0/R1 bịt (K11).
+
+    Đọc `deploy/seed/factory-model.r*.json` để biết nhà máy CÓ những kênh nào. Không tự bịa
+    danh sách kênh: một topic trỏ tới thiết bị không có trong model sẽ bị ingestion từ chối
+    (K3), và một simulator sinh ra toàn message bị từ chối thì không đo được gì.
+  -->
+
+  <PropertyGroup>
+    <RootNamespace>Nvm.Simulator</RootNamespace>
+    <AssemblyName>Nvm.Simulator</AssemblyName>
+    <UserSecretsId>nvm-simulator</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <!-- Client MQTT. Chỉ ở đây và ở edge gateway (C08) — không service nào khác nói MQTT. -->
+    <PackageReference Include="MQTTnet" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Platform/Nvm.Sparkplug/Nvm.Sparkplug.csproj" />
+    <ProjectReference Include="../../Platform/Nvm.Hosting/Nvm.Hosting.csproj" />
+    <!-- Danh sách kênh đến từ model, không từ một hằng số trong code. -->
+    <ProjectReference Include="../../FunctionalBlocks/FactoryModel/Nvm.FactoryModel.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -88,6 +88,21 @@
     <PackageVersion Include="Grpc.Tools" Version="2.83.0" />
   </ItemGroup>
 
+  <ItemGroup Label="MQTT — M2/C05 trở đi">
+    <!--
+      Client MQTT cho simulator (C05) và edge gateway (C08). KHÔNG decode Sparkplug — payload là
+      protobuf, và đó là việc của Nvm.Sparkplug (ADR-026).
+
+      LICENSE, kiểm 2026-08-28 trước khi pin: nuspec ghi <license type="file">LICENSE</license>,
+      và file LICENSE trong gói là **MIT** ("The MIT License (MIT) — Copyright (c) .NET Foundation
+      and Contributors"). projectUrl là github.com/dotnet/MQTTnet. Không có bẫy như MassTransit v9.
+
+      5.2.0.1603 có nhóm targetFramework net10.0 và **không phụ thuộc package nào** — nên không có
+      version nào bị nâng ngầm qua đường transitive.
+    -->
+    <PackageVersion Include="MQTTnet" Version="5.2.0.1603" />
+  </ItemGroup>
+
   <ItemGroup Label="Dependency injection — C04 trở đi">
     <!--
       CHỈ Abstractions, không phải gói DI đầy đủ. Nvm.Kernel cần IServiceCollection để đăng ký

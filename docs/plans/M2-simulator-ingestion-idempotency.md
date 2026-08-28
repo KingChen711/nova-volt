@@ -729,11 +729,11 @@ make bus-fanout && make bus-dlq && make bus-chaos
 
 | # | Commit | ☐ | Ngày | Ghi chú |
 |---|---|---|---|---|
-| C01 | sparkplug proto + protobuf toolchain | ☐ | | ADR-026 |
-| C02 | decode sparkplug payload | ☐ | | |
-| C03 | topic ↔ equipment path | ☐ | | |
-| C04 | source event id từ natural key | ☐ | | Dùng lại `DeterministicGuid` của M1/C04 |
-| C05 | formation cycler, nén thời gian | ☐ | | |
+| C01 | sparkplug proto + protobuf toolchain | ☑ | 2026-08-28 | ADR-026 |
+| C02 | decode sparkplug payload | ☑ | 2026-08-28 | |
+| C03 | topic ↔ equipment path | ☑ | 2026-08-28 | |
+| C04 | source event id từ natural key | ☑ | 2026-08-28 | Dùng lại `DeterministicGuid` của M1/C04 |
+| C05 | formation cycler, nén thời gian | ☑ | 2026-08-28 | |
 | C06 | fault: trùng, dropout, lệch đồng hồ | ☐ | | |
 | C07 | simulator trong `ot-net` | ☐ | | `make net-check` phải vẫn 9/9 |
 | C08 | gateway subscribe EMQX | ☐ | | ADR-027 |

@@ -165,6 +165,144 @@ public static class SparkplugPayload
         return readings.DrainToImmutable();
     }
 
+    /// <summary>Encodes a birth: every metric declares its name, alias and type.</summary>
+    /// <param name="readings">The current value of every metric the device offers.</param>
+    /// <param name="sequence">The Sparkplug <c>seq</c> of this message.</param>
+    /// <param name="timestamp">When the device assembled the payload.</param>
+    /// <exception cref="ArgumentException">
+    /// A reading has no value to declare a type from, or two readings share a name or an alias.
+    /// </exception>
+    /// <remarks>
+    /// Written for the simulator in C05, and it is the only encoder in the repository. The captured
+    /// fixtures in <c>tests/Fixtures/sparkplug/</c> deliberately do not come from it — a decoder
+    /// checked against its own encoder agrees with itself even when both are wrong about the schema.
+    /// </remarks>
+    public static byte[] EncodeBirth(IReadOnlyList<DeviceReading> readings, ulong sequence, DateTimeOffset timestamp)
+    {
+        ArgumentNullException.ThrowIfNull(readings);
+
+        var payload = NewPayload(sequence, timestamp);
+
+        foreach (var reading in readings)
+        {
+            // A birth is a declaration, and there is nothing to declare about a metric whose type is
+            // only knowable from a value it does not have. Sparkplug allows is_null at birth; this
+            // system does not produce it, and refusing is better than inventing a type for it.
+            if (reading.Value is MetricValue.Absent)
+            {
+                throw new ArgumentException(
+                    $"Metric '{reading.MetricName}' is absent, so a birth cannot declare its type.",
+                    nameof(readings));
+            }
+
+            var metric = new SparkplugMetric
+            {
+                Name = reading.MetricName,
+                Datatype = (uint)DataTypeOf(reading.Value),
+                Timestamp = ToUnixMilliseconds(reading.DeviceTimestamp),
+            };
+
+            if (reading.Alias is { } alias)
+            {
+                metric.Alias = alias;
+            }
+
+            Write(metric, reading.Value);
+            payload.Metrics.Add(metric);
+        }
+
+        return payload.ToByteArray();
+    }
+
+    /// <summary>Encodes a report-by-exception update: aliases and values, nothing else.</summary>
+    /// <param name="readings">Only the metrics whose value moved.</param>
+    /// <param name="sequence">The Sparkplug <c>seq</c> of this message.</param>
+    /// <param name="timestamp">When the device assembled the payload.</param>
+    /// <remarks>
+    /// A reading that has an alias is written as the alias alone — no name, no datatype — because
+    /// that is the whole economy of the protocol and because writing them anyway would make this
+    /// encoder produce traffic no real device produces, which is the opposite of what a simulator is
+    /// for. A reading with no alias falls back to its name.
+    /// </remarks>
+    public static byte[] EncodeData(IReadOnlyList<DeviceReading> readings, ulong sequence, DateTimeOffset timestamp)
+    {
+        ArgumentNullException.ThrowIfNull(readings);
+
+        var payload = NewPayload(sequence, timestamp);
+
+        foreach (var reading in readings)
+        {
+            var metric = new SparkplugMetric { Timestamp = ToUnixMilliseconds(reading.DeviceTimestamp) };
+
+            if (reading.Alias is { } alias)
+            {
+                metric.Alias = alias;
+            }
+            else
+            {
+                metric.Name = reading.MetricName;
+                metric.Datatype = (uint)DataTypeOf(reading.Value);
+            }
+
+            Write(metric, reading.Value);
+            payload.Metrics.Add(metric);
+        }
+
+        return payload.ToByteArray();
+    }
+
+    private static Payload NewPayload(ulong sequence, DateTimeOffset timestamp) =>
+        new() { Seq = sequence, Timestamp = ToUnixMilliseconds(timestamp) };
+
+    private static ulong ToUnixMilliseconds(DateTimeOffset timestamp)
+    {
+        var milliseconds = timestamp.ToUnixTimeMilliseconds();
+
+        return milliseconds < 0
+            ? throw new ArgumentOutOfRangeException(
+                nameof(timestamp),
+                timestamp,
+                "Sparkplug timestamps are milliseconds since the Unix epoch and cannot be negative.")
+            : (ulong)milliseconds;
+    }
+
+    private static DataType DataTypeOf(MetricValue value) =>
+        value switch
+        {
+            // Double and Int64 rather than the narrowest type that fits. A simulator that emitted
+            // Float for one reading and Double for the next — because one happened to be round —
+            // would produce a device whose declared type changes mid-session, which no real one does.
+            MetricValue.Real => DataType.Double,
+            MetricValue.Integral => DataType.Int64,
+            MetricValue.Flag => DataType.Boolean,
+            MetricValue.Text => DataType.String,
+            _ => throw new ArgumentOutOfRangeException(nameof(value), value, "No Sparkplug datatype for this value."),
+        };
+
+    private static void Write(SparkplugMetric metric, MetricValue value)
+    {
+        switch (value)
+        {
+            case MetricValue.Real real:
+                metric.DoubleValue = real.Value;
+                break;
+            case MetricValue.Integral integral:
+                metric.LongValue = unchecked((ulong)integral.Value);
+                break;
+            case MetricValue.Flag flag:
+                metric.BooleanValue = flag.Value;
+                break;
+            case MetricValue.Text text:
+                metric.StringValue = text.Value;
+                break;
+            default:
+                // The device saying it has one and cannot read it. No value field is written, which is
+                // what makes is_null a statement rather than a zero.
+                metric.IsNull = true;
+                break;
+        }
+    }
+
     private static Payload Parse(ReadOnlySpan<byte> payload)
     {
         try

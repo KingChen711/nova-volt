@@ -22,7 +22,7 @@ ALL_PROFILES := --profile probe --profile init --profile obs --profile tools --p
 BACKUP_DIR := $(shell grep -E '^NVM_BACKUP_DIR=' .env 2>/dev/null | cut -d= -f2-)
 
 .DEFAULT_GOAL := help
-.PHONY: help up up-obs down down-v reset ps logs net-check dmz-shell build test ci hooks format format-check clean backup bus-fanout bus-dlq bus-chaos sim-up sim-down sim-logs sim-report sim-net-check edge-up edge-down edge-logs edge-net-check buffer-crash ingestion-up ingestion-down ingestion-logs ingestion-migrate outage-lab load load-net-check
+.PHONY: help up up-obs down down-v reset ps logs net-check dmz-shell build test ci hooks format format-check clean backup bus-fanout bus-dlq bus-chaos sim-up sim-down sim-logs sim-report sim-net-check edge-up edge-down edge-logs edge-net-check buffer-crash ingestion-up ingestion-down ingestion-logs ingestion-migrate outage-lab load load-net-check reconcile
 
 help:
 	@echo "NovaVolt MES"
@@ -62,6 +62,7 @@ help:
 	@echo "  Do tai (D2)"
 	@echo "    make load          Ban RATE msg/s trong DURATION giay tu ot-net, roi in lag"
 	@echo "    make load-net-check Kiem harness chi o ot-net, toi EMQX nhung khong toi RabbitMQ"
+	@echo "    make reconcile     D1: doi chieu phep do logic voi row trong DB (DURATION=3600)"
 	@echo ""
 	@echo "  Code"
 	@echo "    make build         Build solution"
@@ -272,6 +273,12 @@ load: .env
 
 load-net-check: .env
 	@sh scripts/load-net-check.sh
+
+# D1 — menh de quan trong nhat cua M2. Mac dinh 1 gio dong ho THAT: nen thoi gian doi hanh vi
+# duoi tai lien tuc, va do la thu dang do o day.
+# `make reconcile DURATION=120` de thu duong ong truoc khi bo ra mot gio.
+reconcile: .env
+	@sh scripts/reconcile.sh
 
 # Lab D3. Can `make up && make sim-up && make edge-up && make ingestion-up` truoc.
 # WARMUP/OUTAGE/DRAIN_BUDGET de chay nhanh luc dev; mac dinh la con so cua DoD.

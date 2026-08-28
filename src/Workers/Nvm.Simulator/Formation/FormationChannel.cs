@@ -78,6 +78,8 @@ public sealed class FormationChannel
     /// </remarks>
     public long MeasurementCount { get; private set; }
 
+    private DateTimeOffset? _lastDeclaredAt;
+
     /// <summary>Declares the channel: every metric, by name, alias and current value.</summary>
     /// <param name="cellSerial">The cell in the channel.</param>
     /// <param name="elapsed">How far into its cycle that cell is.</param>
@@ -97,9 +99,8 @@ public sealed class FormationChannel
         var sample = Shift(_profile.At(elapsed));
 
         Remember(sample);
-        MeasurementCount += 5;
 
-        return
+        ImmutableArray<DeviceReading> declared =
         [
             Reading(VoltageMetric, VoltageAlias, new MetricValue.Real(sample.Volts), at),
             Reading(CurrentMetric, CurrentAlias, new MetricValue.Real(sample.Amperes), at),
@@ -108,6 +109,25 @@ public sealed class FormationChannel
             Reading(StepMetric, StepAlias, new MetricValue.Integral((long)sample.Step), at),
             Reading(CellSerialMetric, CellSerialAlias, new MetricValue.Text(cellSerial), at),
         ];
+
+        // Counted from what is returned, never from a literal. A birth declares six readings and a
+        // hard-coded five made the run report claim one fewer than it published — per DBIRTH, on
+        // every channel, for the whole run. D1 compares this number against rows in the database, so
+        // a constant that disagrees with the array beside it does not fail a test: it makes the
+        // reconciliation come out short and look like data loss.
+        //
+        // And counted only when the instant is new. A rebirth re-declares the channel: same cell,
+        // same values, same device clock, therefore the same natural key — deduplication is right to
+        // store it once, and a run report that counted it twice would put the left side of D1 above
+        // the right by one full DBIRTH per rebirth. Measured at exactly -48 on an eight-channel line.
+        // A duplicate is not a measurement, and neither is a restatement of one.
+        if (at != _lastDeclaredAt)
+        {
+            MeasurementCount += declared.Length;
+            _lastDeclaredAt = at;
+        }
+
+        return declared;
     }
 
     /// <summary>Reads the channel and returns only what has moved since the last time.</summary>

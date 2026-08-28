@@ -364,7 +364,10 @@ services:
       NVM_SIM__LinePath: NOVAVOLT/NV1/FORMATION/F1
       # 60x: một phút thời gian nhà máy mỗi giây đồng hồ, nên chu kỳ 18 giờ xong trong
       # 18 phút và một buổi lab nhìn thấy được cả birth lẫn vòng cell mới.
-      NVM_SIM__TimeCompression: "60"
+      # NVM_SIM_COMPRESSION la cong tac cua lab D1: dat 1 de chay theo dong ho THAT.
+      # Nen thoi gian lam device_timestamp vuot len truoc gateway_timestamp, nen moi row
+      # thanh Drifted va lag thanh AM — so dem row van dung, hai cot kia thi vo nghia.
+      NVM_SIM__TimeCompression: "${NVM_SIM_COMPRESSION:-60}"
       NVM_SIM__Faults__DuplicateRate: "0.10"
       NVM_SIM__Faults__DriftedDeviceRate: "0.10"
       NVM_SIM__Faults__DropoutMeanInterval: "00:05:00"

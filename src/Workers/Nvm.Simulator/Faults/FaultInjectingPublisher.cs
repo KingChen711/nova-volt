@@ -69,6 +69,18 @@ public sealed partial class FaultInjectingPublisher : ISparkplugPublisher
     public int Held => _held.Count;
 
     /// <inheritdoc />
+    /// <remarks>
+    /// Forwarded straight through. A rebirth request is a fault-free control message from the host;
+    /// dropping it during a simulated dropout would model a link that loses commands but not data,
+    /// which no real link does.
+    /// </remarks>
+    public Func<CancellationToken, Task>? RebirthRequested
+    {
+        get => _inner.RebirthRequested;
+        set => _inner.RebirthRequested = value;
+    }
+
+    /// <inheritdoc />
     public async Task ConnectAsync(CancellationToken cancellationToken)
     {
         await _inner.ConnectAsync(cancellationToken).ConfigureAwait(false);

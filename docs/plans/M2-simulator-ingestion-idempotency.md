@@ -747,7 +747,7 @@ make bus-fanout && make bus-dlq && make bus-chaos
 | C14 | publish cloudevents lên bus | ☑ | 2026-08-28 | 530 test. Whitelist signal thay vì publish mọi reading — xem `event-catalog.md` ¹ |
 | C15 | CSV file-drop adapter | ☑ | 2026-08-28 | 547 test. `clock_quality = Unknown` của C13 tới từ đây, đúng như ghi chú C13 |
 | C16 | load harness 5.000 msg/s | ☐ | 2026-08-28 | 557 test; `load-net-check` 4/4. **Chưa tick**: D2 chưa chạy ở 5.000 msg/s |
-| C17 | reconciliation 1 giờ | ☐ | | **★ D1** |
+| C17 | reconciliation 1 giờ | ☐ | 2026-08-28 | `make reconcile` xong; 5 phút thật cho **lệch 0** (282=282, 69 duplicate bị chặn). **Chưa tick**: chưa chạy đủ 1 giờ |
 | C18 | chuyển bus lab, xoá probe | ☐ | | Bảo vệ DoD của M1 |
 | C19 | benchmarks + đóng M2 | ☐ | | |
 

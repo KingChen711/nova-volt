@@ -170,6 +170,41 @@ public sealed class NodeSessionTrackerTests
     }
 
     [Fact]
+    public void ARedeliveredNodeBirth_KeepsTheAliasTableItAlreadyHas()
+    {
+        // MQTT is at-least-once and the simulator duplicates on purpose, so the same NBIRTH arrives
+        // twice with the same bdSeq. Treating that as a new session wipes a valid alias table and
+        // makes every alias-only message after it unreadable — measured at 10.000+ rejected messages
+        // in one short run before the bdSeq comparison existed.
+        var harness = new Harness();
+        harness.Decode(NodeBirthTopic, SparkplugPayloads.NodeBirth(birthDeathSequence: 6));
+        harness.Decode(DeviceBirthTopic, SparkplugPayloads.BirthDeclaring(seq: 1, ("Formation/Voltage", 1)));
+
+        harness.Decode(NodeBirthTopic, SparkplugPayloads.NodeBirth(birthDeathSequence: 6));
+
+        harness.Decode(DeviceDataTopic, SparkplugPayloads.DataAt(seq: 2, alias: 1, value: 3.9f))
+            .ShouldNotBeNull();
+        harness.Snapshot().Liveness.ShouldBe(NodeLiveness.Online);
+    }
+
+    [Fact]
+    public void ARedeliveredDataMessage_IsNotAGap()
+    {
+        // The duplicate carries the seq it carried the first time. A gap means a message was MISSED,
+        // and asking for a rebirth on every duplicate buries the real gaps in the noise.
+        var harness = new Harness();
+        harness.Decode(NodeBirthTopic, SparkplugPayloads.NodeBirth(birthDeathSequence: 6));
+        harness.Decode(DeviceBirthTopic, SparkplugPayloads.BirthDeclaring(seq: 1, ("Formation/Voltage", 1)));
+
+        harness.Decode(DeviceDataTopic, SparkplugPayloads.DataAt(seq: 2, alias: 1, value: 3.8f));
+        harness.Decode(DeviceDataTopic, SparkplugPayloads.DataAt(seq: 2, alias: 1, value: 3.8f));
+        harness.Decode(DeviceDataTopic, SparkplugPayloads.DataAt(seq: 3, alias: 1, value: 3.9f));
+
+        harness.Counters.RebirthRequests.ShouldBe(0);
+        harness.Snapshot().SequenceGaps.ShouldBe(0);
+    }
+
+    [Fact]
     public void UnknownAlias_AsksForARebirthBeforeRefusingTheMessage()
     {
         var harness = new Harness();

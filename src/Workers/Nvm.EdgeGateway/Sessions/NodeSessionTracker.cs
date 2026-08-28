@@ -100,12 +100,18 @@ public sealed class NodeSessionTracker
                 _nodes[address] = node;
             }
 
-            if (topic.MessageType == SparkplugMessageType.NodeBirth)
+            if (topic.MessageType == SparkplugMessageType.NodeBirth && node.IsNewSession(birth.BirthDeathSequence))
             {
-                // A node birth ends the previous session outright. Keeping the old device tables
-                // "just in case" is precisely the bug alias numbering makes possible: the new session
-                // is free to give 1 to a different metric, and every unmatched device would file its
-                // readings under the previous meaning without one error being raised.
+                // A node birth with a NEW bdSeq ends the previous session outright. Keeping the old
+                // device tables "just in case" is precisely the bug alias numbering makes possible:
+                // the new session is free to give 1 to a different metric, and every unmatched device
+                // would file its readings under the previous meaning without one error being raised.
+                //
+                // The bdSeq comparison is not a refinement, it is the whole correctness of this
+                // branch. Resetting on EVERY NBIRTH looked equivalent and was not: MQTT is
+                // at-least-once, so a redelivered NBIRTH arrives with the same bdSeq, wipes a valid
+                // alias table, and every alias-only message after it becomes unreadable. Measured at
+                // 10.000+ rejected messages in one short run before this comparison existed.
                 node.OpenSession(birth.BirthDeathSequence);
             }
 
@@ -329,8 +335,20 @@ public sealed class NodeSessionTracker
             }
         }
 
+        internal bool IsNewSession(ulong? birthDeathSequence) =>
+            Liveness == NodeLiveness.Unknown
+            || BirthDeathSequence is null
+            || birthDeathSequence is null
+            || BirthDeathSequence != birthDeathSequence;
+
         internal bool IsSequenceGap(ulong observed) =>
-            LastSequence is { } last && observed != (last + 1) % SequenceWrap;
+            LastSequence is { } last
+            // A repeat of the number we just accepted is a redelivery, not a missed message. The bus
+            // and the broker are both at-least-once and the simulator injects duplicates on purpose;
+            // counting each of those as a gap would ask for a rebirth on every duplicate and bury the
+            // real gaps in the noise.
+            && observed != last
+            && observed != (last + 1) % SequenceWrap;
 
         internal void AcceptSequence(ulong? sequence)
         {

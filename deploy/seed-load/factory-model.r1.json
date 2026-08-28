@@ -1,0 +1,4089 @@
+{
+  "revision": 1,
+  "generatedAt": "2026-08-29T00:00:00+00:00",
+  "enterprise": {
+    "code": "NOVAVOLT",
+    "name": "NovaVolt Energy",
+    "children": [
+      {
+        "code": "NV1",
+        "name": "Hai Phong Gigafactory",
+        "timeZoneId": "Asia/Ho_Chi_Minh",
+        "children": [
+          {
+            "code": "FORMATION",
+            "name": "Formation",
+            "children": [
+              {
+                "code": "F1",
+                "name": "Formation line 1",
+                "children": [
+                  {
+                    "code": "FORM-01",
+                    "name": "Formation cycler 1",
+                    "children": [
+                      {
+                        "code": "FORM-01-CH-0001",
+                        "name": "Channel 1 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0002",
+                        "name": "Channel 2 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0003",
+                        "name": "Channel 3 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0004",
+                        "name": "Channel 4 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0005",
+                        "name": "Channel 5 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0006",
+                        "name": "Channel 6 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0007",
+                        "name": "Channel 7 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0008",
+                        "name": "Channel 8 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0009",
+                        "name": "Channel 9 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0010",
+                        "name": "Channel 10 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0011",
+                        "name": "Channel 11 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0012",
+                        "name": "Channel 12 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0013",
+                        "name": "Channel 13 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0014",
+                        "name": "Channel 14 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0015",
+                        "name": "Channel 15 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0016",
+                        "name": "Channel 16 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0017",
+                        "name": "Channel 17 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0018",
+                        "name": "Channel 18 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0019",
+                        "name": "Channel 19 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0020",
+                        "name": "Channel 20 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0021",
+                        "name": "Channel 21 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0022",
+                        "name": "Channel 22 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0023",
+                        "name": "Channel 23 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0024",
+                        "name": "Channel 24 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0025",
+                        "name": "Channel 25 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0026",
+                        "name": "Channel 26 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0027",
+                        "name": "Channel 27 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0028",
+                        "name": "Channel 28 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0029",
+                        "name": "Channel 29 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0030",
+                        "name": "Channel 30 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0031",
+                        "name": "Channel 31 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0032",
+                        "name": "Channel 32 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0033",
+                        "name": "Channel 33 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0034",
+                        "name": "Channel 34 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0035",
+                        "name": "Channel 35 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0036",
+                        "name": "Channel 36 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0037",
+                        "name": "Channel 37 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0038",
+                        "name": "Channel 38 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0039",
+                        "name": "Channel 39 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0040",
+                        "name": "Channel 40 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0041",
+                        "name": "Channel 41 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0042",
+                        "name": "Channel 42 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0043",
+                        "name": "Channel 43 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0044",
+                        "name": "Channel 44 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0045",
+                        "name": "Channel 45 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0046",
+                        "name": "Channel 46 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0047",
+                        "name": "Channel 47 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0048",
+                        "name": "Channel 48 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0049",
+                        "name": "Channel 49 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0050",
+                        "name": "Channel 50 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0051",
+                        "name": "Channel 51 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0052",
+                        "name": "Channel 52 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0053",
+                        "name": "Channel 53 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0054",
+                        "name": "Channel 54 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0055",
+                        "name": "Channel 55 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0056",
+                        "name": "Channel 56 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0057",
+                        "name": "Channel 57 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0058",
+                        "name": "Channel 58 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0059",
+                        "name": "Channel 59 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0060",
+                        "name": "Channel 60 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0061",
+                        "name": "Channel 61 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0062",
+                        "name": "Channel 62 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0063",
+                        "name": "Channel 63 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0064",
+                        "name": "Channel 64 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0065",
+                        "name": "Channel 65 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0066",
+                        "name": "Channel 66 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0067",
+                        "name": "Channel 67 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0068",
+                        "name": "Channel 68 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0069",
+                        "name": "Channel 69 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0070",
+                        "name": "Channel 70 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0071",
+                        "name": "Channel 71 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0072",
+                        "name": "Channel 72 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0073",
+                        "name": "Channel 73 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0074",
+                        "name": "Channel 74 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0075",
+                        "name": "Channel 75 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0076",
+                        "name": "Channel 76 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0077",
+                        "name": "Channel 77 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0078",
+                        "name": "Channel 78 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0079",
+                        "name": "Channel 79 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0080",
+                        "name": "Channel 80 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0081",
+                        "name": "Channel 81 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0082",
+                        "name": "Channel 82 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0083",
+                        "name": "Channel 83 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0084",
+                        "name": "Channel 84 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0085",
+                        "name": "Channel 85 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0086",
+                        "name": "Channel 86 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0087",
+                        "name": "Channel 87 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0088",
+                        "name": "Channel 88 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0089",
+                        "name": "Channel 89 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0090",
+                        "name": "Channel 90 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0091",
+                        "name": "Channel 91 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0092",
+                        "name": "Channel 92 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0093",
+                        "name": "Channel 93 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0094",
+                        "name": "Channel 94 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0095",
+                        "name": "Channel 95 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0096",
+                        "name": "Channel 96 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0097",
+                        "name": "Channel 97 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0098",
+                        "name": "Channel 98 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0099",
+                        "name": "Channel 99 of cycler 1"
+                      },
+                      {
+                        "code": "FORM-01-CH-0100",
+                        "name": "Channel 100 of cycler 1"
+                      }
+                    ]
+                  },
+                  {
+                    "code": "FORM-02",
+                    "name": "Formation cycler 2",
+                    "children": [
+                      {
+                        "code": "FORM-02-CH-0001",
+                        "name": "Channel 1 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0002",
+                        "name": "Channel 2 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0003",
+                        "name": "Channel 3 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0004",
+                        "name": "Channel 4 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0005",
+                        "name": "Channel 5 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0006",
+                        "name": "Channel 6 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0007",
+                        "name": "Channel 7 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0008",
+                        "name": "Channel 8 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0009",
+                        "name": "Channel 9 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0010",
+                        "name": "Channel 10 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0011",
+                        "name": "Channel 11 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0012",
+                        "name": "Channel 12 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0013",
+                        "name": "Channel 13 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0014",
+                        "name": "Channel 14 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0015",
+                        "name": "Channel 15 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0016",
+                        "name": "Channel 16 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0017",
+                        "name": "Channel 17 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0018",
+                        "name": "Channel 18 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0019",
+                        "name": "Channel 19 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0020",
+                        "name": "Channel 20 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0021",
+                        "name": "Channel 21 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0022",
+                        "name": "Channel 22 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0023",
+                        "name": "Channel 23 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0024",
+                        "name": "Channel 24 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0025",
+                        "name": "Channel 25 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0026",
+                        "name": "Channel 26 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0027",
+                        "name": "Channel 27 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0028",
+                        "name": "Channel 28 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0029",
+                        "name": "Channel 29 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0030",
+                        "name": "Channel 30 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0031",
+                        "name": "Channel 31 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0032",
+                        "name": "Channel 32 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0033",
+                        "name": "Channel 33 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0034",
+                        "name": "Channel 34 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0035",
+                        "name": "Channel 35 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0036",
+                        "name": "Channel 36 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0037",
+                        "name": "Channel 37 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0038",
+                        "name": "Channel 38 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0039",
+                        "name": "Channel 39 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0040",
+                        "name": "Channel 40 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0041",
+                        "name": "Channel 41 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0042",
+                        "name": "Channel 42 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0043",
+                        "name": "Channel 43 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0044",
+                        "name": "Channel 44 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0045",
+                        "name": "Channel 45 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0046",
+                        "name": "Channel 46 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0047",
+                        "name": "Channel 47 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0048",
+                        "name": "Channel 48 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0049",
+                        "name": "Channel 49 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0050",
+                        "name": "Channel 50 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0051",
+                        "name": "Channel 51 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0052",
+                        "name": "Channel 52 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0053",
+                        "name": "Channel 53 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0054",
+                        "name": "Channel 54 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0055",
+                        "name": "Channel 55 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0056",
+                        "name": "Channel 56 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0057",
+                        "name": "Channel 57 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0058",
+                        "name": "Channel 58 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0059",
+                        "name": "Channel 59 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0060",
+                        "name": "Channel 60 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0061",
+                        "name": "Channel 61 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0062",
+                        "name": "Channel 62 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0063",
+                        "name": "Channel 63 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0064",
+                        "name": "Channel 64 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0065",
+                        "name": "Channel 65 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0066",
+                        "name": "Channel 66 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0067",
+                        "name": "Channel 67 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0068",
+                        "name": "Channel 68 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0069",
+                        "name": "Channel 69 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0070",
+                        "name": "Channel 70 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0071",
+                        "name": "Channel 71 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0072",
+                        "name": "Channel 72 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0073",
+                        "name": "Channel 73 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0074",
+                        "name": "Channel 74 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0075",
+                        "name": "Channel 75 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0076",
+                        "name": "Channel 76 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0077",
+                        "name": "Channel 77 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0078",
+                        "name": "Channel 78 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0079",
+                        "name": "Channel 79 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0080",
+                        "name": "Channel 80 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0081",
+                        "name": "Channel 81 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0082",
+                        "name": "Channel 82 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0083",
+                        "name": "Channel 83 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0084",
+                        "name": "Channel 84 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0085",
+                        "name": "Channel 85 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0086",
+                        "name": "Channel 86 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0087",
+                        "name": "Channel 87 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0088",
+                        "name": "Channel 88 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0089",
+                        "name": "Channel 89 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0090",
+                        "name": "Channel 90 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0091",
+                        "name": "Channel 91 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0092",
+                        "name": "Channel 92 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0093",
+                        "name": "Channel 93 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0094",
+                        "name": "Channel 94 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0095",
+                        "name": "Channel 95 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0096",
+                        "name": "Channel 96 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0097",
+                        "name": "Channel 97 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0098",
+                        "name": "Channel 98 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0099",
+                        "name": "Channel 99 of cycler 2"
+                      },
+                      {
+                        "code": "FORM-02-CH-0100",
+                        "name": "Channel 100 of cycler 2"
+                      }
+                    ]
+                  },
+                  {
+                    "code": "FORM-03",
+                    "name": "Formation cycler 3",
+                    "children": [
+                      {
+                        "code": "FORM-03-CH-0001",
+                        "name": "Channel 1 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0002",
+                        "name": "Channel 2 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0003",
+                        "name": "Channel 3 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0004",
+                        "name": "Channel 4 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0005",
+                        "name": "Channel 5 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0006",
+                        "name": "Channel 6 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0007",
+                        "name": "Channel 7 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0008",
+                        "name": "Channel 8 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0009",
+                        "name": "Channel 9 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0010",
+                        "name": "Channel 10 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0011",
+                        "name": "Channel 11 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0012",
+                        "name": "Channel 12 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0013",
+                        "name": "Channel 13 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0014",
+                        "name": "Channel 14 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0015",
+                        "name": "Channel 15 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0016",
+                        "name": "Channel 16 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0017",
+                        "name": "Channel 17 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0018",
+                        "name": "Channel 18 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0019",
+                        "name": "Channel 19 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0020",
+                        "name": "Channel 20 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0021",
+                        "name": "Channel 21 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0022",
+                        "name": "Channel 22 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0023",
+                        "name": "Channel 23 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0024",
+                        "name": "Channel 24 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0025",
+                        "name": "Channel 25 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0026",
+                        "name": "Channel 26 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0027",
+                        "name": "Channel 27 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0028",
+                        "name": "Channel 28 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0029",
+                        "name": "Channel 29 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0030",
+                        "name": "Channel 30 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0031",
+                        "name": "Channel 31 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0032",
+                        "name": "Channel 32 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0033",
+                        "name": "Channel 33 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0034",
+                        "name": "Channel 34 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0035",
+                        "name": "Channel 35 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0036",
+                        "name": "Channel 36 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0037",
+                        "name": "Channel 37 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0038",
+                        "name": "Channel 38 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0039",
+                        "name": "Channel 39 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0040",
+                        "name": "Channel 40 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0041",
+                        "name": "Channel 41 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0042",
+                        "name": "Channel 42 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0043",
+                        "name": "Channel 43 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0044",
+                        "name": "Channel 44 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0045",
+                        "name": "Channel 45 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0046",
+                        "name": "Channel 46 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0047",
+                        "name": "Channel 47 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0048",
+                        "name": "Channel 48 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0049",
+                        "name": "Channel 49 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0050",
+                        "name": "Channel 50 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0051",
+                        "name": "Channel 51 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0052",
+                        "name": "Channel 52 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0053",
+                        "name": "Channel 53 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0054",
+                        "name": "Channel 54 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0055",
+                        "name": "Channel 55 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0056",
+                        "name": "Channel 56 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0057",
+                        "name": "Channel 57 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0058",
+                        "name": "Channel 58 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0059",
+                        "name": "Channel 59 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0060",
+                        "name": "Channel 60 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0061",
+                        "name": "Channel 61 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0062",
+                        "name": "Channel 62 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0063",
+                        "name": "Channel 63 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0064",
+                        "name": "Channel 64 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0065",
+                        "name": "Channel 65 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0066",
+                        "name": "Channel 66 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0067",
+                        "name": "Channel 67 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0068",
+                        "name": "Channel 68 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0069",
+                        "name": "Channel 69 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0070",
+                        "name": "Channel 70 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0071",
+                        "name": "Channel 71 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0072",
+                        "name": "Channel 72 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0073",
+                        "name": "Channel 73 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0074",
+                        "name": "Channel 74 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0075",
+                        "name": "Channel 75 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0076",
+                        "name": "Channel 76 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0077",
+                        "name": "Channel 77 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0078",
+                        "name": "Channel 78 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0079",
+                        "name": "Channel 79 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0080",
+                        "name": "Channel 80 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0081",
+                        "name": "Channel 81 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0082",
+                        "name": "Channel 82 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0083",
+                        "name": "Channel 83 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0084",
+                        "name": "Channel 84 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0085",
+                        "name": "Channel 85 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0086",
+                        "name": "Channel 86 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0087",
+                        "name": "Channel 87 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0088",
+                        "name": "Channel 88 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0089",
+                        "name": "Channel 89 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0090",
+                        "name": "Channel 90 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0091",
+                        "name": "Channel 91 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0092",
+                        "name": "Channel 92 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0093",
+                        "name": "Channel 93 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0094",
+                        "name": "Channel 94 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0095",
+                        "name": "Channel 95 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0096",
+                        "name": "Channel 96 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0097",
+                        "name": "Channel 97 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0098",
+                        "name": "Channel 98 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0099",
+                        "name": "Channel 99 of cycler 3"
+                      },
+                      {
+                        "code": "FORM-03-CH-0100",
+                        "name": "Channel 100 of cycler 3"
+                      }
+                    ]
+                  },
+                  {
+                    "code": "FORM-04",
+                    "name": "Formation cycler 4",
+                    "children": [
+                      {
+                        "code": "FORM-04-CH-0001",
+                        "name": "Channel 1 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0002",
+                        "name": "Channel 2 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0003",
+                        "name": "Channel 3 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0004",
+                        "name": "Channel 4 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0005",
+                        "name": "Channel 5 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0006",
+                        "name": "Channel 6 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0007",
+                        "name": "Channel 7 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0008",
+                        "name": "Channel 8 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0009",
+                        "name": "Channel 9 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0010",
+                        "name": "Channel 10 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0011",
+                        "name": "Channel 11 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0012",
+                        "name": "Channel 12 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0013",
+                        "name": "Channel 13 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0014",
+                        "name": "Channel 14 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0015",
+                        "name": "Channel 15 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0016",
+                        "name": "Channel 16 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0017",
+                        "name": "Channel 17 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0018",
+                        "name": "Channel 18 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0019",
+                        "name": "Channel 19 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0020",
+                        "name": "Channel 20 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0021",
+                        "name": "Channel 21 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0022",
+                        "name": "Channel 22 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0023",
+                        "name": "Channel 23 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0024",
+                        "name": "Channel 24 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0025",
+                        "name": "Channel 25 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0026",
+                        "name": "Channel 26 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0027",
+                        "name": "Channel 27 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0028",
+                        "name": "Channel 28 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0029",
+                        "name": "Channel 29 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0030",
+                        "name": "Channel 30 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0031",
+                        "name": "Channel 31 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0032",
+                        "name": "Channel 32 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0033",
+                        "name": "Channel 33 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0034",
+                        "name": "Channel 34 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0035",
+                        "name": "Channel 35 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0036",
+                        "name": "Channel 36 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0037",
+                        "name": "Channel 37 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0038",
+                        "name": "Channel 38 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0039",
+                        "name": "Channel 39 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0040",
+                        "name": "Channel 40 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0041",
+                        "name": "Channel 41 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0042",
+                        "name": "Channel 42 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0043",
+                        "name": "Channel 43 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0044",
+                        "name": "Channel 44 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0045",
+                        "name": "Channel 45 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0046",
+                        "name": "Channel 46 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0047",
+                        "name": "Channel 47 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0048",
+                        "name": "Channel 48 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0049",
+                        "name": "Channel 49 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0050",
+                        "name": "Channel 50 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0051",
+                        "name": "Channel 51 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0052",
+                        "name": "Channel 52 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0053",
+                        "name": "Channel 53 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0054",
+                        "name": "Channel 54 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0055",
+                        "name": "Channel 55 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0056",
+                        "name": "Channel 56 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0057",
+                        "name": "Channel 57 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0058",
+                        "name": "Channel 58 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0059",
+                        "name": "Channel 59 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0060",
+                        "name": "Channel 60 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0061",
+                        "name": "Channel 61 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0062",
+                        "name": "Channel 62 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0063",
+                        "name": "Channel 63 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0064",
+                        "name": "Channel 64 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0065",
+                        "name": "Channel 65 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0066",
+                        "name": "Channel 66 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0067",
+                        "name": "Channel 67 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0068",
+                        "name": "Channel 68 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0069",
+                        "name": "Channel 69 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0070",
+                        "name": "Channel 70 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0071",
+                        "name": "Channel 71 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0072",
+                        "name": "Channel 72 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0073",
+                        "name": "Channel 73 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0074",
+                        "name": "Channel 74 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0075",
+                        "name": "Channel 75 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0076",
+                        "name": "Channel 76 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0077",
+                        "name": "Channel 77 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0078",
+                        "name": "Channel 78 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0079",
+                        "name": "Channel 79 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0080",
+                        "name": "Channel 80 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0081",
+                        "name": "Channel 81 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0082",
+                        "name": "Channel 82 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0083",
+                        "name": "Channel 83 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0084",
+                        "name": "Channel 84 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0085",
+                        "name": "Channel 85 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0086",
+                        "name": "Channel 86 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0087",
+                        "name": "Channel 87 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0088",
+                        "name": "Channel 88 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0089",
+                        "name": "Channel 89 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0090",
+                        "name": "Channel 90 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0091",
+                        "name": "Channel 91 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0092",
+                        "name": "Channel 92 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0093",
+                        "name": "Channel 93 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0094",
+                        "name": "Channel 94 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0095",
+                        "name": "Channel 95 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0096",
+                        "name": "Channel 96 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0097",
+                        "name": "Channel 97 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0098",
+                        "name": "Channel 98 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0099",
+                        "name": "Channel 99 of cycler 4"
+                      },
+                      {
+                        "code": "FORM-04-CH-0100",
+                        "name": "Channel 100 of cycler 4"
+                      }
+                    ]
+                  },
+                  {
+                    "code": "FORM-05",
+                    "name": "Formation cycler 5",
+                    "children": [
+                      {
+                        "code": "FORM-05-CH-0001",
+                        "name": "Channel 1 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0002",
+                        "name": "Channel 2 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0003",
+                        "name": "Channel 3 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0004",
+                        "name": "Channel 4 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0005",
+                        "name": "Channel 5 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0006",
+                        "name": "Channel 6 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0007",
+                        "name": "Channel 7 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0008",
+                        "name": "Channel 8 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0009",
+                        "name": "Channel 9 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0010",
+                        "name": "Channel 10 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0011",
+                        "name": "Channel 11 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0012",
+                        "name": "Channel 12 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0013",
+                        "name": "Channel 13 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0014",
+                        "name": "Channel 14 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0015",
+                        "name": "Channel 15 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0016",
+                        "name": "Channel 16 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0017",
+                        "name": "Channel 17 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0018",
+                        "name": "Channel 18 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0019",
+                        "name": "Channel 19 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0020",
+                        "name": "Channel 20 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0021",
+                        "name": "Channel 21 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0022",
+                        "name": "Channel 22 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0023",
+                        "name": "Channel 23 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0024",
+                        "name": "Channel 24 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0025",
+                        "name": "Channel 25 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0026",
+                        "name": "Channel 26 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0027",
+                        "name": "Channel 27 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0028",
+                        "name": "Channel 28 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0029",
+                        "name": "Channel 29 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0030",
+                        "name": "Channel 30 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0031",
+                        "name": "Channel 31 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0032",
+                        "name": "Channel 32 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0033",
+                        "name": "Channel 33 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0034",
+                        "name": "Channel 34 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0035",
+                        "name": "Channel 35 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0036",
+                        "name": "Channel 36 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0037",
+                        "name": "Channel 37 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0038",
+                        "name": "Channel 38 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0039",
+                        "name": "Channel 39 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0040",
+                        "name": "Channel 40 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0041",
+                        "name": "Channel 41 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0042",
+                        "name": "Channel 42 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0043",
+                        "name": "Channel 43 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0044",
+                        "name": "Channel 44 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0045",
+                        "name": "Channel 45 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0046",
+                        "name": "Channel 46 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0047",
+                        "name": "Channel 47 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0048",
+                        "name": "Channel 48 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0049",
+                        "name": "Channel 49 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0050",
+                        "name": "Channel 50 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0051",
+                        "name": "Channel 51 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0052",
+                        "name": "Channel 52 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0053",
+                        "name": "Channel 53 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0054",
+                        "name": "Channel 54 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0055",
+                        "name": "Channel 55 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0056",
+                        "name": "Channel 56 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0057",
+                        "name": "Channel 57 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0058",
+                        "name": "Channel 58 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0059",
+                        "name": "Channel 59 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0060",
+                        "name": "Channel 60 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0061",
+                        "name": "Channel 61 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0062",
+                        "name": "Channel 62 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0063",
+                        "name": "Channel 63 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0064",
+                        "name": "Channel 64 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0065",
+                        "name": "Channel 65 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0066",
+                        "name": "Channel 66 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0067",
+                        "name": "Channel 67 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0068",
+                        "name": "Channel 68 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0069",
+                        "name": "Channel 69 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0070",
+                        "name": "Channel 70 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0071",
+                        "name": "Channel 71 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0072",
+                        "name": "Channel 72 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0073",
+                        "name": "Channel 73 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0074",
+                        "name": "Channel 74 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0075",
+                        "name": "Channel 75 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0076",
+                        "name": "Channel 76 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0077",
+                        "name": "Channel 77 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0078",
+                        "name": "Channel 78 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0079",
+                        "name": "Channel 79 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0080",
+                        "name": "Channel 80 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0081",
+                        "name": "Channel 81 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0082",
+                        "name": "Channel 82 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0083",
+                        "name": "Channel 83 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0084",
+                        "name": "Channel 84 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0085",
+                        "name": "Channel 85 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0086",
+                        "name": "Channel 86 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0087",
+                        "name": "Channel 87 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0088",
+                        "name": "Channel 88 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0089",
+                        "name": "Channel 89 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0090",
+                        "name": "Channel 90 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0091",
+                        "name": "Channel 91 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0092",
+                        "name": "Channel 92 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0093",
+                        "name": "Channel 93 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0094",
+                        "name": "Channel 94 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0095",
+                        "name": "Channel 95 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0096",
+                        "name": "Channel 96 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0097",
+                        "name": "Channel 97 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0098",
+                        "name": "Channel 98 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0099",
+                        "name": "Channel 99 of cycler 5"
+                      },
+                      {
+                        "code": "FORM-05-CH-0100",
+                        "name": "Channel 100 of cycler 5"
+                      }
+                    ]
+                  },
+                  {
+                    "code": "FORM-06",
+                    "name": "Formation cycler 6",
+                    "children": [
+                      {
+                        "code": "FORM-06-CH-0001",
+                        "name": "Channel 1 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0002",
+                        "name": "Channel 2 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0003",
+                        "name": "Channel 3 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0004",
+                        "name": "Channel 4 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0005",
+                        "name": "Channel 5 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0006",
+                        "name": "Channel 6 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0007",
+                        "name": "Channel 7 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0008",
+                        "name": "Channel 8 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0009",
+                        "name": "Channel 9 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0010",
+                        "name": "Channel 10 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0011",
+                        "name": "Channel 11 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0012",
+                        "name": "Channel 12 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0013",
+                        "name": "Channel 13 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0014",
+                        "name": "Channel 14 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0015",
+                        "name": "Channel 15 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0016",
+                        "name": "Channel 16 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0017",
+                        "name": "Channel 17 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0018",
+                        "name": "Channel 18 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0019",
+                        "name": "Channel 19 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0020",
+                        "name": "Channel 20 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0021",
+                        "name": "Channel 21 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0022",
+                        "name": "Channel 22 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0023",
+                        "name": "Channel 23 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0024",
+                        "name": "Channel 24 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0025",
+                        "name": "Channel 25 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0026",
+                        "name": "Channel 26 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0027",
+                        "name": "Channel 27 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0028",
+                        "name": "Channel 28 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0029",
+                        "name": "Channel 29 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0030",
+                        "name": "Channel 30 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0031",
+                        "name": "Channel 31 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0032",
+                        "name": "Channel 32 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0033",
+                        "name": "Channel 33 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0034",
+                        "name": "Channel 34 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0035",
+                        "name": "Channel 35 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0036",
+                        "name": "Channel 36 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0037",
+                        "name": "Channel 37 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0038",
+                        "name": "Channel 38 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0039",
+                        "name": "Channel 39 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0040",
+                        "name": "Channel 40 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0041",
+                        "name": "Channel 41 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0042",
+                        "name": "Channel 42 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0043",
+                        "name": "Channel 43 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0044",
+                        "name": "Channel 44 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0045",
+                        "name": "Channel 45 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0046",
+                        "name": "Channel 46 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0047",
+                        "name": "Channel 47 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0048",
+                        "name": "Channel 48 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0049",
+                        "name": "Channel 49 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0050",
+                        "name": "Channel 50 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0051",
+                        "name": "Channel 51 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0052",
+                        "name": "Channel 52 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0053",
+                        "name": "Channel 53 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0054",
+                        "name": "Channel 54 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0055",
+                        "name": "Channel 55 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0056",
+                        "name": "Channel 56 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0057",
+                        "name": "Channel 57 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0058",
+                        "name": "Channel 58 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0059",
+                        "name": "Channel 59 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0060",
+                        "name": "Channel 60 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0061",
+                        "name": "Channel 61 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0062",
+                        "name": "Channel 62 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0063",
+                        "name": "Channel 63 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0064",
+                        "name": "Channel 64 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0065",
+                        "name": "Channel 65 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0066",
+                        "name": "Channel 66 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0067",
+                        "name": "Channel 67 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0068",
+                        "name": "Channel 68 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0069",
+                        "name": "Channel 69 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0070",
+                        "name": "Channel 70 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0071",
+                        "name": "Channel 71 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0072",
+                        "name": "Channel 72 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0073",
+                        "name": "Channel 73 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0074",
+                        "name": "Channel 74 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0075",
+                        "name": "Channel 75 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0076",
+                        "name": "Channel 76 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0077",
+                        "name": "Channel 77 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0078",
+                        "name": "Channel 78 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0079",
+                        "name": "Channel 79 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0080",
+                        "name": "Channel 80 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0081",
+                        "name": "Channel 81 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0082",
+                        "name": "Channel 82 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0083",
+                        "name": "Channel 83 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0084",
+                        "name": "Channel 84 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0085",
+                        "name": "Channel 85 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0086",
+                        "name": "Channel 86 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0087",
+                        "name": "Channel 87 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0088",
+                        "name": "Channel 88 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0089",
+                        "name": "Channel 89 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0090",
+                        "name": "Channel 90 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0091",
+                        "name": "Channel 91 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0092",
+                        "name": "Channel 92 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0093",
+                        "name": "Channel 93 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0094",
+                        "name": "Channel 94 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0095",
+                        "name": "Channel 95 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0096",
+                        "name": "Channel 96 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0097",
+                        "name": "Channel 97 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0098",
+                        "name": "Channel 98 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0099",
+                        "name": "Channel 99 of cycler 6"
+                      },
+                      {
+                        "code": "FORM-06-CH-0100",
+                        "name": "Channel 100 of cycler 6"
+                      }
+                    ]
+                  },
+                  {
+                    "code": "FORM-07",
+                    "name": "Formation cycler 7",
+                    "children": [
+                      {
+                        "code": "FORM-07-CH-0001",
+                        "name": "Channel 1 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0002",
+                        "name": "Channel 2 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0003",
+                        "name": "Channel 3 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0004",
+                        "name": "Channel 4 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0005",
+                        "name": "Channel 5 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0006",
+                        "name": "Channel 6 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0007",
+                        "name": "Channel 7 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0008",
+                        "name": "Channel 8 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0009",
+                        "name": "Channel 9 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0010",
+                        "name": "Channel 10 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0011",
+                        "name": "Channel 11 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0012",
+                        "name": "Channel 12 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0013",
+                        "name": "Channel 13 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0014",
+                        "name": "Channel 14 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0015",
+                        "name": "Channel 15 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0016",
+                        "name": "Channel 16 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0017",
+                        "name": "Channel 17 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0018",
+                        "name": "Channel 18 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0019",
+                        "name": "Channel 19 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0020",
+                        "name": "Channel 20 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0021",
+                        "name": "Channel 21 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0022",
+                        "name": "Channel 22 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0023",
+                        "name": "Channel 23 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0024",
+                        "name": "Channel 24 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0025",
+                        "name": "Channel 25 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0026",
+                        "name": "Channel 26 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0027",
+                        "name": "Channel 27 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0028",
+                        "name": "Channel 28 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0029",
+                        "name": "Channel 29 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0030",
+                        "name": "Channel 30 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0031",
+                        "name": "Channel 31 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0032",
+                        "name": "Channel 32 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0033",
+                        "name": "Channel 33 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0034",
+                        "name": "Channel 34 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0035",
+                        "name": "Channel 35 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0036",
+                        "name": "Channel 36 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0037",
+                        "name": "Channel 37 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0038",
+                        "name": "Channel 38 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0039",
+                        "name": "Channel 39 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0040",
+                        "name": "Channel 40 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0041",
+                        "name": "Channel 41 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0042",
+                        "name": "Channel 42 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0043",
+                        "name": "Channel 43 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0044",
+                        "name": "Channel 44 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0045",
+                        "name": "Channel 45 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0046",
+                        "name": "Channel 46 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0047",
+                        "name": "Channel 47 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0048",
+                        "name": "Channel 48 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0049",
+                        "name": "Channel 49 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0050",
+                        "name": "Channel 50 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0051",
+                        "name": "Channel 51 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0052",
+                        "name": "Channel 52 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0053",
+                        "name": "Channel 53 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0054",
+                        "name": "Channel 54 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0055",
+                        "name": "Channel 55 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0056",
+                        "name": "Channel 56 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0057",
+                        "name": "Channel 57 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0058",
+                        "name": "Channel 58 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0059",
+                        "name": "Channel 59 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0060",
+                        "name": "Channel 60 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0061",
+                        "name": "Channel 61 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0062",
+                        "name": "Channel 62 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0063",
+                        "name": "Channel 63 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0064",
+                        "name": "Channel 64 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0065",
+                        "name": "Channel 65 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0066",
+                        "name": "Channel 66 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0067",
+                        "name": "Channel 67 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0068",
+                        "name": "Channel 68 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0069",
+                        "name": "Channel 69 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0070",
+                        "name": "Channel 70 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0071",
+                        "name": "Channel 71 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0072",
+                        "name": "Channel 72 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0073",
+                        "name": "Channel 73 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0074",
+                        "name": "Channel 74 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0075",
+                        "name": "Channel 75 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0076",
+                        "name": "Channel 76 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0077",
+                        "name": "Channel 77 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0078",
+                        "name": "Channel 78 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0079",
+                        "name": "Channel 79 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0080",
+                        "name": "Channel 80 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0081",
+                        "name": "Channel 81 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0082",
+                        "name": "Channel 82 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0083",
+                        "name": "Channel 83 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0084",
+                        "name": "Channel 84 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0085",
+                        "name": "Channel 85 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0086",
+                        "name": "Channel 86 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0087",
+                        "name": "Channel 87 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0088",
+                        "name": "Channel 88 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0089",
+                        "name": "Channel 89 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0090",
+                        "name": "Channel 90 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0091",
+                        "name": "Channel 91 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0092",
+                        "name": "Channel 92 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0093",
+                        "name": "Channel 93 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0094",
+                        "name": "Channel 94 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0095",
+                        "name": "Channel 95 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0096",
+                        "name": "Channel 96 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0097",
+                        "name": "Channel 97 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0098",
+                        "name": "Channel 98 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0099",
+                        "name": "Channel 99 of cycler 7"
+                      },
+                      {
+                        "code": "FORM-07-CH-0100",
+                        "name": "Channel 100 of cycler 7"
+                      }
+                    ]
+                  },
+                  {
+                    "code": "FORM-08",
+                    "name": "Formation cycler 8",
+                    "children": [
+                      {
+                        "code": "FORM-08-CH-0001",
+                        "name": "Channel 1 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0002",
+                        "name": "Channel 2 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0003",
+                        "name": "Channel 3 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0004",
+                        "name": "Channel 4 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0005",
+                        "name": "Channel 5 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0006",
+                        "name": "Channel 6 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0007",
+                        "name": "Channel 7 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0008",
+                        "name": "Channel 8 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0009",
+                        "name": "Channel 9 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0010",
+                        "name": "Channel 10 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0011",
+                        "name": "Channel 11 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0012",
+                        "name": "Channel 12 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0013",
+                        "name": "Channel 13 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0014",
+                        "name": "Channel 14 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0015",
+                        "name": "Channel 15 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0016",
+                        "name": "Channel 16 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0017",
+                        "name": "Channel 17 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0018",
+                        "name": "Channel 18 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0019",
+                        "name": "Channel 19 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0020",
+                        "name": "Channel 20 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0021",
+                        "name": "Channel 21 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0022",
+                        "name": "Channel 22 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0023",
+                        "name": "Channel 23 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0024",
+                        "name": "Channel 24 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0025",
+                        "name": "Channel 25 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0026",
+                        "name": "Channel 26 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0027",
+                        "name": "Channel 27 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0028",
+                        "name": "Channel 28 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0029",
+                        "name": "Channel 29 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0030",
+                        "name": "Channel 30 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0031",
+                        "name": "Channel 31 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0032",
+                        "name": "Channel 32 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0033",
+                        "name": "Channel 33 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0034",
+                        "name": "Channel 34 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0035",
+                        "name": "Channel 35 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0036",
+                        "name": "Channel 36 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0037",
+                        "name": "Channel 37 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0038",
+                        "name": "Channel 38 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0039",
+                        "name": "Channel 39 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0040",
+                        "name": "Channel 40 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0041",
+                        "name": "Channel 41 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0042",
+                        "name": "Channel 42 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0043",
+                        "name": "Channel 43 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0044",
+                        "name": "Channel 44 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0045",
+                        "name": "Channel 45 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0046",
+                        "name": "Channel 46 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0047",
+                        "name": "Channel 47 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0048",
+                        "name": "Channel 48 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0049",
+                        "name": "Channel 49 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0050",
+                        "name": "Channel 50 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0051",
+                        "name": "Channel 51 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0052",
+                        "name": "Channel 52 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0053",
+                        "name": "Channel 53 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0054",
+                        "name": "Channel 54 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0055",
+                        "name": "Channel 55 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0056",
+                        "name": "Channel 56 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0057",
+                        "name": "Channel 57 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0058",
+                        "name": "Channel 58 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0059",
+                        "name": "Channel 59 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0060",
+                        "name": "Channel 60 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0061",
+                        "name": "Channel 61 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0062",
+                        "name": "Channel 62 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0063",
+                        "name": "Channel 63 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0064",
+                        "name": "Channel 64 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0065",
+                        "name": "Channel 65 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0066",
+                        "name": "Channel 66 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0067",
+                        "name": "Channel 67 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0068",
+                        "name": "Channel 68 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0069",
+                        "name": "Channel 69 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0070",
+                        "name": "Channel 70 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0071",
+                        "name": "Channel 71 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0072",
+                        "name": "Channel 72 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0073",
+                        "name": "Channel 73 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0074",
+                        "name": "Channel 74 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0075",
+                        "name": "Channel 75 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0076",
+                        "name": "Channel 76 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0077",
+                        "name": "Channel 77 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0078",
+                        "name": "Channel 78 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0079",
+                        "name": "Channel 79 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0080",
+                        "name": "Channel 80 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0081",
+                        "name": "Channel 81 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0082",
+                        "name": "Channel 82 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0083",
+                        "name": "Channel 83 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0084",
+                        "name": "Channel 84 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0085",
+                        "name": "Channel 85 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0086",
+                        "name": "Channel 86 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0087",
+                        "name": "Channel 87 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0088",
+                        "name": "Channel 88 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0089",
+                        "name": "Channel 89 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0090",
+                        "name": "Channel 90 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0091",
+                        "name": "Channel 91 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0092",
+                        "name": "Channel 92 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0093",
+                        "name": "Channel 93 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0094",
+                        "name": "Channel 94 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0095",
+                        "name": "Channel 95 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0096",
+                        "name": "Channel 96 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0097",
+                        "name": "Channel 97 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0098",
+                        "name": "Channel 98 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0099",
+                        "name": "Channel 99 of cycler 8"
+                      },
+                      {
+                        "code": "FORM-08-CH-0100",
+                        "name": "Channel 100 of cycler 8"
+                      }
+                    ]
+                  },
+                  {
+                    "code": "FORM-09",
+                    "name": "Formation cycler 9",
+                    "children": [
+                      {
+                        "code": "FORM-09-CH-0001",
+                        "name": "Channel 1 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0002",
+                        "name": "Channel 2 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0003",
+                        "name": "Channel 3 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0004",
+                        "name": "Channel 4 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0005",
+                        "name": "Channel 5 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0006",
+                        "name": "Channel 6 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0007",
+                        "name": "Channel 7 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0008",
+                        "name": "Channel 8 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0009",
+                        "name": "Channel 9 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0010",
+                        "name": "Channel 10 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0011",
+                        "name": "Channel 11 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0012",
+                        "name": "Channel 12 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0013",
+                        "name": "Channel 13 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0014",
+                        "name": "Channel 14 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0015",
+                        "name": "Channel 15 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0016",
+                        "name": "Channel 16 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0017",
+                        "name": "Channel 17 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0018",
+                        "name": "Channel 18 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0019",
+                        "name": "Channel 19 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0020",
+                        "name": "Channel 20 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0021",
+                        "name": "Channel 21 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0022",
+                        "name": "Channel 22 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0023",
+                        "name": "Channel 23 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0024",
+                        "name": "Channel 24 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0025",
+                        "name": "Channel 25 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0026",
+                        "name": "Channel 26 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0027",
+                        "name": "Channel 27 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0028",
+                        "name": "Channel 28 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0029",
+                        "name": "Channel 29 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0030",
+                        "name": "Channel 30 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0031",
+                        "name": "Channel 31 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0032",
+                        "name": "Channel 32 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0033",
+                        "name": "Channel 33 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0034",
+                        "name": "Channel 34 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0035",
+                        "name": "Channel 35 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0036",
+                        "name": "Channel 36 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0037",
+                        "name": "Channel 37 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0038",
+                        "name": "Channel 38 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0039",
+                        "name": "Channel 39 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0040",
+                        "name": "Channel 40 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0041",
+                        "name": "Channel 41 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0042",
+                        "name": "Channel 42 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0043",
+                        "name": "Channel 43 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0044",
+                        "name": "Channel 44 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0045",
+                        "name": "Channel 45 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0046",
+                        "name": "Channel 46 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0047",
+                        "name": "Channel 47 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0048",
+                        "name": "Channel 48 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0049",
+                        "name": "Channel 49 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0050",
+                        "name": "Channel 50 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0051",
+                        "name": "Channel 51 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0052",
+                        "name": "Channel 52 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0053",
+                        "name": "Channel 53 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0054",
+                        "name": "Channel 54 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0055",
+                        "name": "Channel 55 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0056",
+                        "name": "Channel 56 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0057",
+                        "name": "Channel 57 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0058",
+                        "name": "Channel 58 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0059",
+                        "name": "Channel 59 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0060",
+                        "name": "Channel 60 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0061",
+                        "name": "Channel 61 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0062",
+                        "name": "Channel 62 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0063",
+                        "name": "Channel 63 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0064",
+                        "name": "Channel 64 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0065",
+                        "name": "Channel 65 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0066",
+                        "name": "Channel 66 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0067",
+                        "name": "Channel 67 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0068",
+                        "name": "Channel 68 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0069",
+                        "name": "Channel 69 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0070",
+                        "name": "Channel 70 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0071",
+                        "name": "Channel 71 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0072",
+                        "name": "Channel 72 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0073",
+                        "name": "Channel 73 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0074",
+                        "name": "Channel 74 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0075",
+                        "name": "Channel 75 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0076",
+                        "name": "Channel 76 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0077",
+                        "name": "Channel 77 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0078",
+                        "name": "Channel 78 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0079",
+                        "name": "Channel 79 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0080",
+                        "name": "Channel 80 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0081",
+                        "name": "Channel 81 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0082",
+                        "name": "Channel 82 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0083",
+                        "name": "Channel 83 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0084",
+                        "name": "Channel 84 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0085",
+                        "name": "Channel 85 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0086",
+                        "name": "Channel 86 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0087",
+                        "name": "Channel 87 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0088",
+                        "name": "Channel 88 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0089",
+                        "name": "Channel 89 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0090",
+                        "name": "Channel 90 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0091",
+                        "name": "Channel 91 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0092",
+                        "name": "Channel 92 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0093",
+                        "name": "Channel 93 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0094",
+                        "name": "Channel 94 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0095",
+                        "name": "Channel 95 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0096",
+                        "name": "Channel 96 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0097",
+                        "name": "Channel 97 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0098",
+                        "name": "Channel 98 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0099",
+                        "name": "Channel 99 of cycler 9"
+                      },
+                      {
+                        "code": "FORM-09-CH-0100",
+                        "name": "Channel 100 of cycler 9"
+                      }
+                    ]
+                  },
+                  {
+                    "code": "FORM-10",
+                    "name": "Formation cycler 10",
+                    "children": [
+                      {
+                        "code": "FORM-10-CH-0001",
+                        "name": "Channel 1 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0002",
+                        "name": "Channel 2 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0003",
+                        "name": "Channel 3 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0004",
+                        "name": "Channel 4 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0005",
+                        "name": "Channel 5 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0006",
+                        "name": "Channel 6 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0007",
+                        "name": "Channel 7 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0008",
+                        "name": "Channel 8 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0009",
+                        "name": "Channel 9 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0010",
+                        "name": "Channel 10 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0011",
+                        "name": "Channel 11 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0012",
+                        "name": "Channel 12 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0013",
+                        "name": "Channel 13 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0014",
+                        "name": "Channel 14 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0015",
+                        "name": "Channel 15 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0016",
+                        "name": "Channel 16 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0017",
+                        "name": "Channel 17 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0018",
+                        "name": "Channel 18 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0019",
+                        "name": "Channel 19 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0020",
+                        "name": "Channel 20 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0021",
+                        "name": "Channel 21 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0022",
+                        "name": "Channel 22 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0023",
+                        "name": "Channel 23 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0024",
+                        "name": "Channel 24 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0025",
+                        "name": "Channel 25 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0026",
+                        "name": "Channel 26 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0027",
+                        "name": "Channel 27 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0028",
+                        "name": "Channel 28 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0029",
+                        "name": "Channel 29 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0030",
+                        "name": "Channel 30 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0031",
+                        "name": "Channel 31 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0032",
+                        "name": "Channel 32 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0033",
+                        "name": "Channel 33 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0034",
+                        "name": "Channel 34 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0035",
+                        "name": "Channel 35 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0036",
+                        "name": "Channel 36 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0037",
+                        "name": "Channel 37 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0038",
+                        "name": "Channel 38 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0039",
+                        "name": "Channel 39 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0040",
+                        "name": "Channel 40 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0041",
+                        "name": "Channel 41 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0042",
+                        "name": "Channel 42 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0043",
+                        "name": "Channel 43 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0044",
+                        "name": "Channel 44 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0045",
+                        "name": "Channel 45 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0046",
+                        "name": "Channel 46 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0047",
+                        "name": "Channel 47 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0048",
+                        "name": "Channel 48 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0049",
+                        "name": "Channel 49 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0050",
+                        "name": "Channel 50 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0051",
+                        "name": "Channel 51 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0052",
+                        "name": "Channel 52 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0053",
+                        "name": "Channel 53 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0054",
+                        "name": "Channel 54 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0055",
+                        "name": "Channel 55 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0056",
+                        "name": "Channel 56 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0057",
+                        "name": "Channel 57 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0058",
+                        "name": "Channel 58 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0059",
+                        "name": "Channel 59 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0060",
+                        "name": "Channel 60 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0061",
+                        "name": "Channel 61 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0062",
+                        "name": "Channel 62 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0063",
+                        "name": "Channel 63 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0064",
+                        "name": "Channel 64 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0065",
+                        "name": "Channel 65 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0066",
+                        "name": "Channel 66 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0067",
+                        "name": "Channel 67 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0068",
+                        "name": "Channel 68 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0069",
+                        "name": "Channel 69 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0070",
+                        "name": "Channel 70 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0071",
+                        "name": "Channel 71 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0072",
+                        "name": "Channel 72 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0073",
+                        "name": "Channel 73 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0074",
+                        "name": "Channel 74 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0075",
+                        "name": "Channel 75 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0076",
+                        "name": "Channel 76 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0077",
+                        "name": "Channel 77 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0078",
+                        "name": "Channel 78 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0079",
+                        "name": "Channel 79 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0080",
+                        "name": "Channel 80 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0081",
+                        "name": "Channel 81 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0082",
+                        "name": "Channel 82 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0083",
+                        "name": "Channel 83 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0084",
+                        "name": "Channel 84 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0085",
+                        "name": "Channel 85 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0086",
+                        "name": "Channel 86 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0087",
+                        "name": "Channel 87 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0088",
+                        "name": "Channel 88 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0089",
+                        "name": "Channel 89 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0090",
+                        "name": "Channel 90 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0091",
+                        "name": "Channel 91 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0092",
+                        "name": "Channel 92 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0093",
+                        "name": "Channel 93 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0094",
+                        "name": "Channel 94 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0095",
+                        "name": "Channel 95 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0096",
+                        "name": "Channel 96 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0097",
+                        "name": "Channel 97 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0098",
+                        "name": "Channel 98 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0099",
+                        "name": "Channel 99 of cycler 10"
+                      },
+                      {
+                        "code": "FORM-10-CH-0100",
+                        "name": "Channel 100 of cycler 10"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -29,6 +29,8 @@
     <ProjectReference Include="../../../src/Platform/Nvm.Bus/Nvm.Bus.csproj" />
     <ProjectReference Include="../../../src/Platform/Nvm.Kernel/Nvm.Kernel.csproj" />
     <ProjectReference Include="../../../src/FunctionalBlocks/FactoryModel/Nvm.FactoryModel.csproj" />
+    <!-- Lịch sản xuất là hàm domain thuần: production day, ca kíp, DST. Không cần DB nào để kiểm. -->
+    <ProjectReference Include="../../../src/Platform/Nvm.Time/Nvm.Time.csproj" />
     <!-- Nvm.Sparkplug kéo theo Google.Protobuf; test pin đọc assembly qua đường này. -->
     <ProjectReference Include="../../../src/Platform/Nvm.Sparkplug/Nvm.Sparkplug.csproj" />
     <!-- Simulator: sinh dữ liệu là logic, và nó được kiểm ở đây chứ không phải bằng cách nhìn log. -->
@@ -40,6 +42,12 @@
       Phần chạm PostgreSQL nằm ở tests/Integration.
     -->
     <ProjectReference Include="../../../src/Workers/Nvm.Ingestion/Nvm.Ingestion.csproj" />
+    <!-- Harness đo D2: cấu hình sai thì con số ra vẫn có, chỉ là của một đường đi khác. -->
+    <ProjectReference Include="../../../tools/loadgen/Nvm.LoadHarness/Nvm.LoadHarness.csproj" />
+    <!-- Backfill phải dùng đúng FormationLine và đúng natural key, không có bộ sinh/identity thứ hai. -->
+    <ProjectReference Include="../../../tools/telemetry/Nvm.TelemetryBackfill/Nvm.TelemetryBackfill.csproj" />
+    <!-- Lab C14 phải tự đỏ khi phép gán ngày ngây thơ không còn được đối chiếu đúng cách. -->
+    <ProjectReference Include="../../../tools/telemetry/Nvm.CalendarLab/Nvm.CalendarLab.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -48,6 +56,12 @@
       seed sẽ làm test đếm node đỏ — đó là hành vi đúng (deploy/seed/README.md).
     -->
     <Content Include="../../../deploy/seed/**/*.json" LinkBase="seed" CopyToOutputDirectory="PreserveNewest" />
+    <!--
+      Topology 1.000 kênh của bài test/load. Catalog RIÊNG, không phải revision mới của seed demo:
+      thêm r4 vào deploy/seed/ sẽ làm mọi thứ mặc định nhảy sang 1.000 kênh vì `LatestRevision`.
+      Xem deploy/seed-load/make-load-topology.py.
+    -->
+    <Content Include="../../../deploy/seed-load/*.json" LinkBase="seed-load" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

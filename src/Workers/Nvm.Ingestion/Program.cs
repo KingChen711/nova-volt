@@ -50,6 +50,7 @@ builder.Services.AddSingleton(options);
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton(dataSource);
 builder.Services.AddSingleton<IngestionMetrics>();
+builder.Services.AddSingleton<IngestionLag>();
 builder.Services.AddSingleton(new PublishedSignals(options.PublishedSignals));
 
 if (options.FileDrop.Enabled)
@@ -89,6 +90,7 @@ builder.Services.AddSingleton<IMeasurementIngestor>(services => new PostgresMeas
     services.GetRequiredService<NpgsqlDataSource>(),
     services.GetRequiredService<TimeProvider>(),
     services.GetRequiredService<IngestionMetrics>(),
+    services.GetRequiredService<IngestionLag>(),
     services.GetRequiredService<IMeasurementEventPublisher>(),
     services.GetRequiredService<PublishedSignals>(),
     options.ClockDriftThreshold));

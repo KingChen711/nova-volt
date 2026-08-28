@@ -6,6 +6,7 @@ namespace Nvm.Ingestion;
 internal static class IngestionEndpoints
 {
     internal const string SparkplugBatchPath = "/api/ingestion/v1/sparkplug-batches";
+    internal const string StatsPath = "/api/ingestion/v1/stats";
     internal const string ProtobufMediaType = "application/x-protobuf";
 
     internal static void Map(WebApplication app)
@@ -14,6 +15,11 @@ internal static class IngestionEndpoints
 
         app.MapPost(SparkplugBatchPath, IngestSparkplugBatchAsync)
             .RequireRateLimiting(IngestionAdmissionControl.PolicyName);
+
+        // Read-only, and deliberately outside the rate limiter: the moment worth asking about is the
+        // moment ingestion is busiest, and a stats endpoint that returns 429 under load reports on
+        // exactly the conditions it cannot observe.
+        app.MapGet(StatsPath, ReadStats);
     }
 
     private static async Task<IResult> IngestSparkplugBatchAsync(
@@ -68,6 +74,22 @@ internal static class IngestionEndpoints
         }
     }
 
+    private static IResult ReadStats(IngestionMetrics metrics, IngestionLag lag)
+    {
+        var snapshot = lag.Snapshot();
+
+        return Results.Ok(new IngestionStats(
+            metrics.InsertedCount,
+            metrics.DuplicateCount,
+            metrics.DriftedCount,
+            metrics.PublishFailureCount,
+            snapshot.Samples,
+            snapshot.P50,
+            snapshot.P95,
+            snapshot.P99,
+            snapshot.Max));
+    }
+
     private static bool HasProtobufContentType(string? contentType) =>
         contentType is not null
         && string.Equals(
@@ -104,3 +126,24 @@ internal static class IngestionEndpoints
     private sealed class RequestBodyTooLargeException(int limit)
         : Exception($"Batch exceeds the {limit} byte limit.");
 }
+
+/// <summary>What one ingestion process has done since it started, and how far behind it is.</summary>
+/// <param name="Inserted">New logical readings stored.</param>
+/// <param name="Duplicates">Repeated deliveries the dedup key swallowed.</param>
+/// <param name="Drifted">Readings stored with a device clock that could not be trusted.</param>
+/// <param name="PublishFailures">Events whose row is stored and whose announcement was lost.</param>
+/// <param name="LagSamples">Readings sampled for lag — good clocks only.</param>
+/// <param name="LagP50Seconds">Median device-to-database lag.</param>
+/// <param name="LagP95Seconds">D2's number.</param>
+/// <param name="LagP99Seconds">Tail lag.</param>
+/// <param name="LagMaxSeconds">Worst lag in the recent window.</param>
+internal sealed record IngestionStats(
+    long Inserted,
+    long Duplicates,
+    long Drifted,
+    long PublishFailures,
+    long LagSamples,
+    double LagP50Seconds,
+    double LagP95Seconds,
+    double LagP99Seconds,
+    double LagMaxSeconds);

@@ -65,6 +65,7 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
     private readonly NpgsqlDataSource _dataSource;
     private readonly TimeProvider _timeProvider;
     private readonly IngestionMetrics _metrics;
+    private readonly IngestionLag _lag;
     private readonly IMeasurementEventPublisher _publisher;
     private readonly PublishedSignals _publishedSignals;
     private readonly TimeSpan _clockDriftThreshold;
@@ -73,6 +74,7 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
     /// <param name="dataSource">Connection source for the one transaction per batch.</param>
     /// <param name="timeProvider">Stamps <c>recorded_at</c> (K1).</param>
     /// <param name="metrics">Counters updated only after the transaction commits.</param>
+    /// <param name="lag">Device-to-database lag samples for D2. Null discards them.</param>
     /// <param name="publisher">Where committed business facts go next. Null publishes nothing.</param>
     /// <param name="publishedSignals">Which signal codes are business facts (scope.md §5.5).</param>
     /// <param name="clockDriftThreshold">
@@ -83,6 +85,7 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
         NpgsqlDataSource dataSource,
         TimeProvider timeProvider,
         IngestionMetrics metrics,
+        IngestionLag? lag = null,
         IMeasurementEventPublisher? publisher = null,
         PublishedSignals? publishedSignals = null,
         TimeSpan? clockDriftThreshold = null)
@@ -90,6 +93,7 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
         _dataSource = dataSource ?? throw new ArgumentNullException(nameof(dataSource));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _metrics = metrics ?? throw new ArgumentNullException(nameof(metrics));
+        _lag = lag ?? new IngestionLag();
         _publisher = publisher ?? NullMeasurementEventPublisher.Instance;
         _publishedSignals = publishedSignals ?? PublishedSignals.None;
         _clockDriftThreshold = clockDriftThreshold ?? ClockQualityClassifier.DefaultThreshold;
@@ -175,6 +179,8 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
 
         await transaction.CommitAsync(cancellationToken);
 
+        RecordLag(claimedRows);
+
         var drifted = claimedRows.Count(row => row.ClockQuality != ClockQuality.Good);
         var result = new IngestionResult(claimedRows.Length, rawCount - claimedRows.Length, drifted);
         _metrics.RecordCommitted(result);
@@ -193,6 +199,20 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
         _metrics.RecordPublishFailures(failures);
 
         return result with { PublishFailures = failures };
+    }
+
+    // Good clocks only. The measurement subtracts two clocks, so a PLC two hours out would
+    // contribute a two-hour "lag" that says nothing about the pipeline, and one two hours fast would
+    // contribute a negative one. Either ruins a percentile in a way that is invisible in the result.
+    private void RecordLag(MeasurementRow[] rows)
+    {
+        foreach (var row in rows)
+        {
+            if (row.ClockQuality == ClockQuality.Good)
+            {
+                _lag.Record(row.RecordedAt - row.DeviceTimestamp);
+            }
+        }
     }
 
     private List<MeasurementRecorded> Announce(MeasurementRow[] rows)

@@ -14,7 +14,7 @@ SOLUTION := NovaVolt.Mes.slnx
 COMPOSE  := docker compose
 
 # `down` phải nêu đủ profile, nếu không container của profile không active sẽ bị bỏ lại.
-ALL_PROFILES := --profile probe --profile init --profile obs --profile tools --profile sim --profile ingestion
+ALL_PROFILES := --profile probe --profile init --profile obs --profile tools --profile sim --profile ingestion --profile load
 
 # Đọc RIÊNG một biến từ .env thay vì `include .env`.
 # `include` nạp mọi biến vào make — kể cả mật khẩu — và một khoá trùng tên với biến
@@ -22,7 +22,7 @@ ALL_PROFILES := --profile probe --profile init --profile obs --profile tools --p
 BACKUP_DIR := $(shell grep -E '^NVM_BACKUP_DIR=' .env 2>/dev/null | cut -d= -f2-)
 
 .DEFAULT_GOAL := help
-.PHONY: help up up-obs down down-v reset ps logs net-check dmz-shell build test ci hooks format format-check clean backup bus-fanout bus-dlq bus-chaos sim-up sim-down sim-logs sim-report sim-net-check edge-up edge-down edge-logs edge-net-check buffer-crash ingestion-up ingestion-down ingestion-logs ingestion-migrate outage-lab
+.PHONY: help up up-obs down down-v reset ps logs net-check dmz-shell build test ci hooks format format-check clean backup bus-fanout bus-dlq bus-chaos sim-up sim-down sim-logs sim-report sim-net-check edge-up edge-down edge-logs edge-net-check buffer-crash ingestion-up ingestion-down ingestion-logs ingestion-migrate outage-lab load load-net-check
 
 help:
 	@echo "NovaVolt MES"
@@ -58,6 +58,10 @@ help:
 	@echo "    make ingestion-logs Theo doi batch inserted/duplicate"
 	@echo "    make ingestion-migrate Chay rieng migration job PostgreSQL"
 	@echo "    make outage-lab    D3: tat backend 2 phut, do backlog va so row lech"
+	@echo ""
+	@echo "  Do tai (D2)"
+	@echo "    make load          Ban RATE msg/s trong DURATION giay tu ot-net, roi in lag"
+	@echo "    make load-net-check Kiem harness chi o ot-net, toi EMQX nhung khong toi RabbitMQ"
 	@echo ""
 	@echo "  Code"
 	@echo "    make build         Build solution"
@@ -253,6 +257,21 @@ ingestion-logs:
 ingestion-migrate: .env
 	@$(COMPOSE) --profile ingestion build ingestion
 	@$(COMPOSE) --profile ingestion run --rm ingestion-migrate
+
+# D2. Harness chay TRONG ot-net; lag doc tu ingestion o dmz-net qua dmz-shell.
+# `make load RATE=5000 DURATION=600` la con so cua DoD; de nho hon khi dang dev.
+#
+# Hai ve cua phep do o hai mang khac nhau CO Y: harness khong duoc nhin thay ingestion,
+# vi thiet bi that cung khong nhin thay (K11).
+load: .env
+	@$(COMPOSE) --profile load build load-harness
+	@NVM_LOAD_RATE=$${RATE:-5000} NVM_LOAD_DURATION=$${DURATION:-600} 		$(COMPOSE) --profile load run --rm load-harness
+	@echo ""
+	@echo "  Ve NHAN — lag do chinh ingestion tinh (recorded_at - device_timestamp):"
+	@$(COMPOSE) --profile tools run --rm dmz-shell 		wget -qO- http://ingestion:8080/api/ingestion/v1/stats || 		echo "  Khong doc duoc stats. Ingestion dang chay chua? make ingestion-up"
+
+load-net-check: .env
+	@sh scripts/load-net-check.sh
 
 # Lab D3. Can `make up && make sim-up && make edge-up && make ingestion-up` truoc.
 # WARMUP/OUTAGE/DRAIN_BUDGET de chay nhanh luc dev; mac dinh la con so cua DoD.

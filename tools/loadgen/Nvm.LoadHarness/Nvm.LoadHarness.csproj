@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Harness đo N1/N2 của M2. Chạy TRONG ot-net như một thiết bị thật (scope.md §13.1):
+    không `dotnet run` trên Windows rồi nối localhost:1883 — đó là hoàn nguyên R1 của M0.
+  -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Nvm.LoadHarness</RootNamespace>
+    <AssemblyName>Nvm.LoadHarness</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MQTTnet" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../../src/Platform/Nvm.Sparkplug/Nvm.Sparkplug.csproj" />
+    <!-- Danh sách kênh lấy từ model của nhà máy, không bịa: topic bịa sẽ bị gateway từ chối (K3). -->
+    <ProjectReference Include="../../../src/FunctionalBlocks/FactoryModel/Nvm.FactoryModel.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -556,6 +556,16 @@ make test
 ```
 Test bắt buộc: lệch 2 giờ → `Drifted` và row **có mặt** (D5); lệch 10 giây → `Good`; thiếu `device_timestamp` → `Unknown`, không ném; cả ba cột đều có giá trị khác nhau trong cùng một row.
 
+> [!warning] Ca *"thiếu `device_timestamp`"* không đến được từ đường Sparkplug — phát hiện ở C02
+> C02 **ném** khi metric không có timestamp riêng **và** payload cũng không có, vì `device_timestamp`
+> nằm trong natural key (`scope.md` §7.2): một reading thiếu nó sẽ **không bao giờ** dedup được, và
+> ghi nó xuống là ghi một phép đo vĩnh viễn không nhận ra chính nó.
+>
+> Nên `clock_quality = Unknown` chỉ có nguồn thật là đường **file drop** ở C15, nơi không có đồng hồ
+> thiết bị nào cả. Khi làm C13, chọn một trong hai: viết test `Unknown` dựa trên C15, hoặc quyết
+> ngược lại rằng C02 phải trả `DeviceTimestamp` nullable — và nếu chọn vế sau thì C04 phải nói được
+> khoá dedup của một reading không có thời điểm trông như thế nào.
+
 #### C13.1 — Nghiệp vụ: vì sao không từ chối message lệch giờ
 
 Phản xạ kỹ thuật: dữ liệu sai thì không nhận.

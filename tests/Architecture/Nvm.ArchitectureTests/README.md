@@ -1,7 +1,7 @@
 # Nvm.ArchitectureTests — ranh giới phải đỏ được
 
 Sơ đồ ở [`scope.md`](../../../docs/scope.md) §5.4 chỉ có giá trị khi có thứ gì đó **đỏ** lúc ai đó vẽ
-một mũi tên mới. Sáu rule dưới đây là thứ đó.
+một mũi tên mới. Bảy rule dưới đây là thứ đó.
 
 | # | Rule | Ràng buộc |
 |---|---|---|
@@ -11,6 +11,7 @@ một mũi tên mới. Sáu rule dưới đây là thứ đó.
 | A4 | Không event nào chứa `DateTime`, kể cả lồng trong generic | K2 |
 | A5 | Mọi event có `SiteId` **không nullable**, có `[EventContract]` và `[EventVersion(n≥1)]` | K3, K6 |
 | A6 | `Nvm.FactoryModel` không reference `Nvm.Bus` | FB không tự chọn transport |
+| A7 | Type sinh từ `sparkplug_b.proto` không ra khỏi `Nvm.Sparkplug`, và không assembly nào khác reference `Google.Protobuf` | `ADR-026` — hình dạng của một file mình không được sửa |
 
 ## Vì sao A3 là allowlist chứ không phải denylist
 
@@ -37,7 +38,7 @@ Hai lớp bắt hai loại lách khác nhau. Không lớp nào thừa.
 
 ## Mỗi rule có một đối chứng dương
 
-Sáu test `*_Control_*` không kiểm code production. Chúng kiểm **chính phép kiểm của rule**, bằng cách
+Các test `*_Control_*` không kiểm code production. Chúng kiểm **chính phép kiểm của rule**, bằng cách
 áp nó lên một thứ *phải* bị bắt.
 
 Lý do: một rule nhìn nhầm chỗ — danh sách type rỗng, tiền tố namespace gõ sai — báo *"không có vi

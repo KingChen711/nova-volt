@@ -3,6 +3,7 @@ using Nvm.Bus;
 using Nvm.Contracts.Events;
 using Nvm.FactoryModel;
 using Nvm.Kernel.Commands;
+using Nvm.Sparkplug;
 
 namespace Nvm.ArchitectureTests;
 
@@ -22,10 +23,22 @@ internal static class NvmAssemblies
 
     internal static Assembly FactoryModel => typeof(FactoryModelServiceCollectionExtensions).Assembly;
 
+    internal static Assembly Sparkplug => typeof(SparkplugPayload).Assembly;
+
     /// <summary>Names an assembly is allowed to reference while still counting as "BCL only".</summary>
     internal static bool IsBcl(string name) =>
         name is "netstandard" or "mscorlib" or "System"
         || name.StartsWith("System.", StringComparison.Ordinal);
+
+    /// <summary>Every assembly name a given assembly references, in order.</summary>
+    /// <remarks>
+    /// The same caveat as <see cref="NvmReferencesOf"/>: this is what the runtime needs, not what the
+    /// csproj lists. A package used for one <c>const</c> is compiled away and does not appear.
+    /// </remarks>
+    internal static IReadOnlyList<string> NamesReferencedBy(Assembly assembly) =>
+        [.. assembly.GetReferencedAssemblies()
+            .Select(reference => reference.Name ?? string.Empty)
+            .Order(StringComparer.Ordinal)];
 
     /// <summary>The <c>Nvm.*</c> assemblies a given assembly references.</summary>
     /// <remarks>

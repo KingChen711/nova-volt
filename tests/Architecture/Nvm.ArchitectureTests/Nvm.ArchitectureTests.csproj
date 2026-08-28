@@ -31,6 +31,7 @@
     <ProjectReference Include="../../../src/Platform/Nvm.Kernel/Nvm.Kernel.csproj" />
     <ProjectReference Include="../../../src/Platform/Nvm.Bus/Nvm.Bus.csproj" />
     <ProjectReference Include="../../../src/Platform/Nvm.Hosting/Nvm.Hosting.csproj" />
+    <ProjectReference Include="../../../src/Platform/Nvm.Sparkplug/Nvm.Sparkplug.csproj" />
     <ProjectReference Include="../../../src/FunctionalBlocks/FactoryModel/Nvm.FactoryModel.csproj" />
   </ItemGroup>
 

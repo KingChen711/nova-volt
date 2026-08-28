@@ -1,3 +1,4 @@
+using System.Reflection;
 using NetArchTest.Rules;
 
 namespace Nvm.ArchitectureTests;
@@ -75,6 +76,96 @@ public sealed class PlatformBoundaryTests
             .GetResult()
             .IsSuccessful.ShouldBeFalse();
     }
+
+    [Fact]
+    public void A7_TheGeneratedSparkplugTypesDoNotLeaveNvmSparkplug()
+    {
+        // ADR-026 vendors sparkplug_b.proto and generates C# from it, which means Org.Eclipse.Tahu.*
+        // is a shape this repository does not control. One of those types in a public signature makes
+        // every caller depend on a file we are not allowed to edit, and the day the specification
+        // moves the change arrives everywhere at once.
+        var leaks = NvmAssemblies.Sparkplug
+            .GetExportedTypes()
+            .Where(type => string.Equals(type.Namespace, "Nvm.Sparkplug", StringComparison.Ordinal))
+            .SelectMany(MembersExposingGeneratedTypes)
+            .Order(StringComparer.Ordinal)
+            .ToList();
+
+        leaks.ShouldBeEmpty(
+            $"generated Sparkplug types reach callers through: {string.Join(", ", leaks)}");
+    }
+
+    [Fact]
+    public void A7_Control_TheGeneratedTypeWalkCanActuallyFindOne()
+    {
+        // Applied to a generated type, the same walk must come back full. Without this, a misspelled
+        // namespace in either the filter or the predicate reports "no leaks" and stays green.
+        var generated = NvmAssemblies.Sparkplug.GetType("Org.Eclipse.Tahu.Protobuf.Payload", throwOnError: true)!;
+
+        MembersExposingGeneratedTypes(generated).ShouldNotBeEmpty();
+    }
+
+    [Fact]
+    public void A7_OnlyNvmSparkplugKnowsThereIsProtobufAtAll()
+    {
+        // The reference-level half. A6 stops a Functional Block choosing its own transport; this stops
+        // one choosing its own device codec — C08 and C12 consume readings, not payloads.
+        foreach (var assembly in new[]
+        {
+            NvmAssemblies.Contracts,
+            NvmAssemblies.Kernel,
+            NvmAssemblies.Bus,
+            NvmAssemblies.FactoryModel,
+        })
+        {
+            NvmAssemblies.NamesReferencedBy(assembly).ShouldNotContain(
+                "Google.Protobuf",
+                $"{assembly.GetName().Name} references Google.Protobuf; decoding belongs to Nvm.Sparkplug");
+        }
+
+        // Doubles as the control: the one assembly that is supposed to reference it, does.
+        NvmAssemblies.NamesReferencedBy(NvmAssemblies.Sparkplug).ShouldContain("Google.Protobuf");
+    }
+
+    /// <summary>Names the public members of a type whose signature mentions a generated type.</summary>
+    private static IEnumerable<string> MembersExposingGeneratedTypes(Type type)
+    {
+        const BindingFlags Public = BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static;
+
+        foreach (var property in type.GetProperties(Public).Where(p => IsGenerated(p.PropertyType)))
+        {
+            yield return $"{type.Name}.{property.Name}";
+        }
+
+        foreach (var method in type.GetMethods(Public | BindingFlags.DeclaredOnly))
+        {
+            if (IsGenerated(method.ReturnType))
+            {
+                yield return $"{type.Name}.{method.Name}() returns";
+            }
+
+            foreach (var parameter in method.GetParameters().Where(p => IsGenerated(p.ParameterType)))
+            {
+                yield return $"{type.Name}.{method.Name}({parameter.Name})";
+            }
+        }
+
+        foreach (var parameter in type.GetConstructors().SelectMany(c => c.GetParameters()).Where(p => IsGenerated(p.ParameterType)))
+        {
+            yield return $"{type.Name}..ctor({parameter.Name})";
+        }
+    }
+
+    /// <summary>Whether a type comes from the vendored schema, however deeply nested.</summary>
+    /// <remarks>
+    /// The recursion matters more than the direct case: <c>MessageParser&lt;Payload&gt;</c> lives in
+    /// <c>Google.Protobuf</c> and would pass a check that only looked at the outermost namespace,
+    /// while handing the caller a <c>Payload</c> all the same.
+    /// </remarks>
+    private static bool IsGenerated(Type type) =>
+        (type.Namespace?.StartsWith("Org.Eclipse.Tahu", StringComparison.Ordinal) ?? false)
+        || (type.IsArray && IsGenerated(type.GetElementType()!))
+        || (type.IsGenericType && type.GetGenericArguments().Any(IsGenerated));
 
     private static string Describe(NetArchTest.Rules.TestResult result) =>
         result.FailingTypeNames is null

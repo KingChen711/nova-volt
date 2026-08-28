@@ -3,6 +3,7 @@ using Nvm.FactoryModel.Seeding;
 using Nvm.Hosting;
 using Nvm.Kernel.Identity;
 using Nvm.Simulator;
+using Nvm.Simulator.Faults;
 using Nvm.Simulator.Formation;
 using Nvm.Simulator.Publishing;
 
@@ -36,7 +37,16 @@ options.Validate();
 // eighteen-hour cycle finishes in milliseconds with the same measurements (K1).
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton(options);
-builder.Services.AddSingleton<ISparkplugPublisher, MqttSparkplugPublisher>();
+
+// The broker client, and the fault injector wrapped round it. The injector is always in the path,
+// even with every rate at zero: the run report then states what the faults did instead of leaving it
+// to be inferred from whether anybody remembered to switch them on (R-M2-1).
+builder.Services.AddSingleton<MqttSparkplugPublisher>();
+builder.Services.AddSingleton(serviceProvider => new FaultInjectingPublisher(
+    serviceProvider.GetRequiredService<MqttSparkplugPublisher>(),
+    options.Faults,
+    serviceProvider.GetRequiredService<TimeProvider>(),
+    serviceProvider.GetRequiredService<ILogger<FaultInjectingPublisher>>()));
 
 builder.Services.AddSingleton(serviceProvider =>
 {
@@ -56,7 +66,8 @@ builder.Services.AddSingleton(serviceProvider =>
         FormationChannels.Under(model, linePath),
         new FormationProfile(options.CycleDuration),
         serviceProvider.GetRequiredService<TimeProvider>().GetUtcNow(),
-        options.BirthDeathSequence);
+        options.BirthDeathSequence,
+        new DeviceClockDrift(options.Faults.DriftedDeviceRate, options.Faults.ClockDrift));
 });
 
 builder.Services.AddHostedService<SimulatorWorker>();

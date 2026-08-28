@@ -734,7 +734,7 @@ make bus-fanout && make bus-dlq && make bus-chaos
 | C03 | topic ↔ equipment path | ☑ | 2026-08-28 | |
 | C04 | source event id từ natural key | ☑ | 2026-08-28 | Dùng lại `DeterministicGuid` của M1/C04 |
 | C05 | formation cycler, nén thời gian | ☑ | 2026-08-28 | |
-| C06 | fault: trùng, dropout, lệch đồng hồ | ☐ | | |
+| C06 | fault: trùng, dropout, lệch đồng hồ | ☑ | 2026-08-28 | Bật bằng config; lab bật ở C07 |
 | C07 | simulator trong `ot-net` | ☐ | | `make net-check` phải vẫn 9/9 |
 | C08 | gateway subscribe EMQX | ☐ | | ADR-027 |
 | C09 | buffer store-and-forward | ☐ | | ADR-028 |

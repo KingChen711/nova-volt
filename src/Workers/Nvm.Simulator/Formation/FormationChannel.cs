@@ -165,22 +165,7 @@ public sealed class FormationChannel
         new(name, alias, value, at);
 
     /// <summary>A stable per-channel offset in [-1, 1].</summary>
-    /// <remarks>
-    /// FNV-1a over the channel code rather than <see cref="string.GetHashCode()"/>, which is
-    /// randomised per process: a simulator whose channels swapped personalities on every restart would
-    /// make every comparison between two runs meaningless.
-    /// </remarks>
-    private static double SpreadOf(string code)
-    {
-        var hash = 2166136261u;
-
-        foreach (var character in code)
-        {
-            hash = (hash ^ character) * 16777619u;
-        }
-
-        return ((hash % 2001) / 1000.0) - 1.0;
-    }
+    private static double SpreadOf(string code) => ((StableHash.Of(code) % 2001) / 1000.0) - 1.0;
 
     // Two cells are never identical, and a line where every channel reads exactly the same number is a
     // line where a grouping bug downstream is invisible. The spread is small enough to stay inside

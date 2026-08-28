@@ -22,7 +22,7 @@ ALL_PROFILES := --profile probe --profile init --profile obs --profile tools --p
 BACKUP_DIR := $(shell grep -E '^NVM_BACKUP_DIR=' .env 2>/dev/null | cut -d= -f2-)
 
 .DEFAULT_GOAL := help
-.PHONY: help up up-obs down down-v reset ps logs net-check dmz-shell build test ci hooks format format-check clean backup bus-fanout bus-dlq bus-chaos sim-up sim-down sim-logs sim-report sim-net-check edge-up edge-down edge-logs edge-net-check
+.PHONY: help up up-obs down down-v reset ps logs net-check dmz-shell build test ci hooks format format-check clean backup bus-fanout bus-dlq bus-chaos sim-up sim-down sim-logs sim-report sim-net-check edge-up edge-down edge-logs edge-net-check buffer-crash
 
 help:
 	@echo "NovaVolt MES"
@@ -48,8 +48,9 @@ help:
 	@echo "  Edge gateway"
 	@echo "    make edge-up       Build va chay gateway trong dmz-net"
 	@echo "    make edge-down     Dung gateway"
-	@echo "    make edge-logs     Theo doi decoded/forwarded/dropped"
+	@echo "    make edge-logs     Theo doi decoded/buffered/forwarded"
 	@echo "    make edge-net-check Kiem gateway chi o dmz-net, toi EMQX nhung khong toi RabbitMQ"
+	@echo "    make buffer-crash  200 vong kill -9 + reopen buffer (ROUNDS de chay nhanh luc dev)"
 	@echo ""
 	@echo "  Code"
 	@echo "    make build         Build solution"
@@ -148,6 +149,7 @@ ci:
 	dotnet format $(SOLUTION) --verify-no-changes --no-restore
 	dotnet build $(SOLUTION) -c Release --no-restore --nologo
 	dotnet test --solution $(SOLUTION) -c Release --no-build
+	$(MAKE) buffer-crash
 
 # Hook KHONG tu cai khi clone — Git bo qua .git/hooks tu repo vi ly do bao mat.
 # core.hooksPath la cach chinh thuc de tro sang thu muc duoc version hoa.
@@ -221,6 +223,10 @@ edge-logs:
 
 edge-net-check:
 	@sh scripts/edge-net-check.sh
+
+buffer-crash:
+	@$(COMPOSE) build edge-gateway
+	@ROUNDS=$${ROUNDS:-200} sh scripts/buffer-crash.sh
 
 # ─────────────────────────────────────────────────────────
 # Bus — bang chung cua M1/C13

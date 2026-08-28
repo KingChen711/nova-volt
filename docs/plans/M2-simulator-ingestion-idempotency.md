@@ -2,7 +2,7 @@
 title: "M2 — Simulator, Ingestion & Idempotency"
 milestone: M2
 duration: "2,5 tuần (24 giờ 45 phút ước lượng)"
-status: planned
+status: in_progress
 created: 2026-08-28
 depends_on: [M0, M1]
 unlocks: [M3]
@@ -737,7 +737,7 @@ make bus-fanout && make bus-dlq && make bus-chaos
 | C06 | fault: trùng, dropout, lệch đồng hồ | ☑ | 2026-08-28 | Bật bằng config; lab bật ở C07 |
 | C07 | simulator trong `ot-net` | ☑ | 2026-08-28 | `net-check` 9/9 + `sim-net-check` 3/3 |
 | C08 | gateway subscribe EMQX | ☑ | 2026-08-28 | ADR-027; `edge-net-check` 3/3 |
-| C09 | buffer store-and-forward | ☐ | | ADR-028 |
+| C09 | buffer store-and-forward | ☑ | 2026-08-28 | ADR-028; crash **0/200** (dự đoán 20/200) |
 | C10 | rate limit + backpressure | ☐ | | ADR-029. **D3**. Lab #3 (xả 30 phút) |
 | C11 | NBIRTH / NDEATH / seq gap | ☐ | | **D4** |
 | C12 | processed_message + dedup | ☐ | | |

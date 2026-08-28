@@ -30,6 +30,7 @@ networks:
 volumes:
   pgdata:
   simdata:
+  edgedata:
   mssqldata:
   rabbitmqdata:
   emqxdata:
@@ -376,8 +377,8 @@ services:
   # thiết bị qua ranh giới; gateway không đứng cạnh thiết bị và không nhìn thấy RabbitMQ.
   # `scripts/edge-net-check.sh` đo trên network namespace thật của container.
   #
-  # Ingestion chưa xuất hiện tới C12. Trong C08 POST thất bại được đếm là dropped; đó là giới
-  # hạn có chủ đích mà C09 thay bằng buffer bền vững, không phải một lỗi bị log rồi quên.
+  # Ingestion chưa xuất hiện tới C12. Từ C09, POST thất bại giữ nguyên cursor của buffer; message
+  # đã fsync không bị biến thành loss chỉ vì backend chưa tồn tại.
   # ─────────────────────────────────────────────────────────
   edge-gateway:
     build:
@@ -395,6 +396,9 @@ services:
       NVM_EDGE__BrokerHost: emqx
       NVM_EDGE__IngestionUrl: http://ingestion:8080/api/ingestion/v1/sparkplug-batches
       NVM_EDGE__LogEvery: "1000"
+      NVM_EDGE__Buffer__DirectoryPath: /var/lib/nvm-edge-gateway/buffer
+    volumes:
+      - edgedata:/var/lib/nvm-edge-gateway
     networks: [dmz-net]
 
   # Hai container rỗng, chỉ tồn tại để chứng minh ranh giới mạng có thật.

@@ -1,30 +1,36 @@
 namespace Nvm.EdgeGateway;
 
-/// <summary>Process counters that make loss in C08 visible instead of implicit.</summary>
+/// <summary>Process counters around MQTT acceptance and durable forwarding.</summary>
 public sealed class GatewayCounters
 {
     private long _decodedMessages;
+    private long _bufferedMessages;
     private long _forwardedMessages;
-    private long _droppedMessages;
     private long _rejectedMessages;
+    private long _bufferFullEvents;
 
     /// <summary>Birth/data messages decoded successfully.</summary>
     public long DecodedMessages => Interlocked.Read(ref _decodedMessages);
 
-    /// <summary>Messages accepted by ingestion.</summary>
-    public long ForwardedMessages => Interlocked.Read(ref _forwardedMessages);
+    /// <summary>Messages fsynced before MQTT acknowledgement.</summary>
+    public long BufferedMessages => Interlocked.Read(ref _bufferedMessages);
 
-    /// <summary>Decoded messages lost because C08 has no store-and-forward yet.</summary>
-    public long DroppedMessages => Interlocked.Read(ref _droppedMessages);
+    /// <summary>Messages accepted by ingestion and crossed by the durable cursor.</summary>
+    public long ForwardedMessages => Interlocked.Read(ref _forwardedMessages);
 
     /// <summary>Malformed or unknown-site messages refused before forwarding.</summary>
     public long RejectedMessages => Interlocked.Read(ref _rejectedMessages);
 
+    /// <summary>Times the hard disk cap stopped MQTT acceptance.</summary>
+    public long BufferFullEvents => Interlocked.Read(ref _bufferFullEvents);
+
     internal long CountDecoded() => Interlocked.Increment(ref _decodedMessages);
 
-    internal long CountForwarded() => Interlocked.Increment(ref _forwardedMessages);
+    internal long CountBuffered(int count = 1) => Interlocked.Add(ref _bufferedMessages, count);
 
-    internal long CountDropped() => Interlocked.Increment(ref _droppedMessages);
+    internal long CountForwarded(int count = 1) => Interlocked.Add(ref _forwardedMessages, count);
 
     internal long CountRejected() => Interlocked.Increment(ref _rejectedMessages);
+
+    internal long CountBufferFull() => Interlocked.Increment(ref _bufferFullEvents);
 }

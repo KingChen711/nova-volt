@@ -53,7 +53,11 @@ internal static class SparkplugPayloads
     /// Enough for the tests that are about <i>which</i> aliases a table holds rather than about
     /// datatypes; <c>SparkplugValueTests</c> builds metrics one at a time when the type is the point.
     /// </remarks>
-    internal static byte[] BirthDeclaring(params (string Name, ulong Alias)[] metrics)
+    internal static byte[] BirthDeclaring(params (string Name, ulong Alias)[] metrics) =>
+        BirthDeclaring(seq: 0, metrics);
+
+    /// <summary>The same birth at a chosen sequence number, for tests about <c>seq</c> continuity.</summary>
+    internal static byte[] BirthDeclaring(ulong seq, params (string Name, ulong Alias)[] metrics)
     {
         var built = Array.ConvertAll(metrics, metric => new SparkplugMetric
         {
@@ -64,6 +68,39 @@ internal static class SparkplugPayloads
             FloatValue = 0f,
         });
 
-        return Encode(DefaultTimestampMs, seq: 0, built);
+        return Encode(DefaultTimestampMs, seq, built);
     }
+
+    /// <summary>An <c>NBIRTH</c> declaring a session number and nothing else of interest.</summary>
+    internal static byte[] NodeBirth(ulong birthDeathSequence) =>
+        Encode(DefaultTimestampMs, seq: 0, BirthDeathSequenceMetric(birthDeathSequence));
+
+    /// <summary>An <c>NDEATH</c> as a broker publishes it from a registered will.</summary>
+    internal static byte[] NodeDeath(ulong? birthDeathSequence) =>
+        birthDeathSequence is { } session
+            ? Encode(DefaultTimestampMs, seq: null, BirthDeathSequenceMetric(session))
+            : Encode(DefaultTimestampMs, seq: null);
+
+    /// <summary>A data payload for one declared alias, at a chosen sequence number.</summary>
+    internal static byte[] DataAt(ulong seq, ulong alias, float value) =>
+        Encode(
+            DefaultTimestampMs,
+            seq,
+            new SparkplugMetric
+            {
+                Alias = alias,
+                Timestamp = DefaultTimestampMs,
+                FloatValue = value,
+            });
+
+    private static SparkplugMetric BirthDeathSequenceMetric(ulong birthDeathSequence) =>
+        new()
+        {
+            // No alias, by specification: a will is composed at connect time, before the birth that
+            // would have assigned one.
+            Name = "bdSeq",
+            Datatype = (uint)DataType.Int64,
+            Timestamp = DefaultTimestampMs,
+            LongValue = birthDeathSequence,
+        };
 }

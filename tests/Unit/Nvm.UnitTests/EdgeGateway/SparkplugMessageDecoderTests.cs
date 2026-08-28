@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Time.Testing;
 using Nvm.EdgeGateway;
 using Nvm.EdgeGateway.Decoding;
+using Nvm.EdgeGateway.Sessions;
 using Nvm.Kernel.Identity;
 using Nvm.Sparkplug;
 using Nvm.UnitTests.Sparkplug;
@@ -23,7 +24,7 @@ public sealed class SparkplugMessageDecoderTests
     public void Decode_BirthThenAliasOnlyData_JoinsTopicPayloadAndGatewayClock()
     {
         var clock = new FakeTimeProvider(ReceivedAt);
-        var decoder = new SparkplugMessageDecoder(new OneDeviceDirectory(Channel), clock);
+        var decoder = Decoder(new OneDeviceDirectory(Channel), clock);
 
         var birth = decoder.Decode(BirthTopic, SparkplugFixture.ReadBytes(SparkplugFixture.DeviceBirth));
 
@@ -50,9 +51,7 @@ public sealed class SparkplugMessageDecoderTests
     [Fact]
     public void Decode_DataBeforeBirth_RefusesUnknownAlias()
     {
-        var decoder = new SparkplugMessageDecoder(
-            new OneDeviceDirectory(Channel),
-            new FakeTimeProvider(ReceivedAt));
+        var decoder = Decoder(new OneDeviceDirectory(Channel), new FakeTimeProvider(ReceivedAt));
 
         Should.Throw<UnknownMetricAliasException>(() =>
             decoder.Decode(DataTopic, SparkplugFixture.ReadBytes(SparkplugFixture.DeviceData)));
@@ -61,9 +60,7 @@ public sealed class SparkplugMessageDecoderTests
     [Fact]
     public void Decode_TopicOutsideActiveModel_RejectsAtServerBoundary()
     {
-        var decoder = new SparkplugMessageDecoder(
-            new OneDeviceDirectory(knownDevice: null),
-            new FakeTimeProvider(ReceivedAt));
+        var decoder = Decoder(new OneDeviceDirectory(knownDevice: null), new FakeTimeProvider(ReceivedAt));
 
         var thrown = Should.Throw<UnknownEquipmentTopicException>(() =>
             decoder.Decode(BirthTopic, SparkplugFixture.ReadBytes(SparkplugFixture.DeviceBirth)));
@@ -74,12 +71,13 @@ public sealed class SparkplugMessageDecoderTests
     [Fact]
     public void Decode_HostStateTopic_IsIgnoredRatherThanReportedMalformed()
     {
-        var decoder = new SparkplugMessageDecoder(
-            new OneDeviceDirectory(Channel),
-            new FakeTimeProvider(ReceivedAt));
+        var decoder = Decoder(new OneDeviceDirectory(Channel), new FakeTimeProvider(ReceivedAt));
 
         decoder.Decode("spBv1.0/STATE/scada-primary", []).ShouldBeNull();
     }
+
+    private static SparkplugMessageDecoder Decoder(IEquipmentDirectory directory, TimeProvider clock) =>
+        new(new NodeSessionTracker(new GatewayCounters(), clock), directory, clock);
 
     private sealed class OneDeviceDirectory(EquipmentPath? knownDevice) : IEquipmentDirectory
     {

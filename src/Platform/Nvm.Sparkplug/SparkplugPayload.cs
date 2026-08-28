@@ -27,6 +27,34 @@ namespace Nvm.Sparkplug;
 /// </remarks>
 public static class SparkplugPayload
 {
+    /// <summary>Name of the metric carrying the session number in a birth or a death.</summary>
+    public const string BirthDeathSequenceMetric = "bdSeq";
+
+    private const string NodeControlPrefix = "Node Control/";
+    private const string DeviceControlPrefix = "Device Control/";
+
+    /// <summary>Whether a metric belongs to the protocol rather than to the plant.</summary>
+    /// <param name="metricName">The metric name as declared.</param>
+    /// <remarks>
+    /// <para>
+    /// <c>bdSeq</c> and the <c>Control/</c> metrics are Sparkplug talking about its own session:
+    /// which connection this is, and whether a rebirth has been asked for. They travel as ordinary
+    /// metrics because the specification has nowhere else to put them, and that is exactly the trap.
+    /// </para>
+    /// <para>
+    /// Stored as telemetry they would be measurements no instrument took, on a channel no cell sat
+    /// in — and D1 counts logical measurements against rows, so every node birth would put the
+    /// reconciliation out by the number of control metrics it carried. A total that is off by a
+    /// fixed amount is the hardest kind to notice, because it looks like a rounding argument rather
+    /// than like data that should not exist.
+    /// </para>
+    /// </remarks>
+    public static bool IsProtocolMetric(string? metricName) =>
+        metricName is not null
+        && (string.Equals(metricName, BirthDeathSequenceMetric, StringComparison.Ordinal)
+            || metricName.StartsWith(NodeControlPrefix, StringComparison.Ordinal)
+            || metricName.StartsWith(DeviceControlPrefix, StringComparison.Ordinal));
+
     /// <summary>Decodes a birth payload: every metric names and declares itself.</summary>
     /// <param name="payload">The raw Sparkplug B bytes.</param>
     /// <returns>The readings the birth carried and the alias table it establishes.</returns>
@@ -87,7 +115,11 @@ public static class SparkplugPayload
                 ReadTimestamp(metric, payloadTimestamp, metric.Name)));
         }
 
-        return new SparkplugBirth(readings.DrainToImmutable(), MetricAliasTable.From(definitions));
+        return new SparkplugBirth(
+            readings.DrainToImmutable(),
+            MetricAliasTable.From(definitions),
+            message.HasSeq ? message.Seq : null,
+            ReadBirthDeathSequence(message));
     }
 
     /// <summary>Decodes a data payload against the aliases its birth established.</summary>
@@ -100,11 +132,34 @@ public static class SparkplugPayload
     /// <exception cref="SparkplugDecodeException">
     /// The bytes are not a Sparkplug payload, or a metric carries no identity, value or timestamp.
     /// </exception>
-    public static ImmutableArray<DeviceReading> DecodeData(ReadOnlySpan<byte> payload, MetricAliasTable aliases)
+    public static ImmutableArray<DeviceReading> DecodeData(ReadOnlySpan<byte> payload, MetricAliasTable aliases) =>
+        DecodeData(payload, aliases, out _);
+
+    /// <summary>Decodes a data payload and reports the <c>seq</c> that came with it.</summary>
+    /// <param name="payload">The raw Sparkplug B bytes.</param>
+    /// <param name="aliases">The table from the birth of this session of this node.</param>
+    /// <param name="sequence">The payload <c>seq</c>, or null when the payload omitted it.</param>
+    /// <returns>The readings that changed.</returns>
+    /// <remarks>
+    /// An overload rather than a richer return type, so that reading the sequence costs one parse
+    /// rather than two. At five thousand messages a second the difference is not academic, and the
+    /// sequence is exactly the field a caller must see on the message it is already decoding.
+    /// </remarks>
+    /// <exception cref="UnknownMetricAliasException">
+    /// A metric is identified only by an alias the table does not hold. Ask for a rebirth.
+    /// </exception>
+    /// <exception cref="SparkplugDecodeException">
+    /// The bytes are not a Sparkplug payload, or a metric carries no identity, value or timestamp.
+    /// </exception>
+    public static ImmutableArray<DeviceReading> DecodeData(
+        ReadOnlySpan<byte> payload,
+        MetricAliasTable aliases,
+        out ulong? sequence)
     {
         ArgumentNullException.ThrowIfNull(aliases);
 
         var message = Parse(payload);
+        sequence = message.HasSeq ? message.Seq : null;
         var payloadTimestamp = message.HasTimestamp ? message.Timestamp : (ulong?)null;
 
         var readings = ImmutableArray.CreateBuilder<DeviceReading>(message.Metrics.Count);
@@ -164,6 +219,19 @@ public static class SparkplugPayload
 
         return readings.DrainToImmutable();
     }
+
+    /// <summary>Decodes an <c>NDEATH</c> and reports which session it ends.</summary>
+    /// <param name="payload">The raw Sparkplug B bytes of the last will.</param>
+    /// <returns>The session identifier the death names.</returns>
+    /// <exception cref="SparkplugDecodeException">The bytes are not a Sparkplug payload.</exception>
+    /// <remarks>
+    /// Deliberately tolerant where the birth is strict. A death is published by the <b>broker</b>
+    /// from a will registered at connect time; the node is not there to correct it, and refusing a
+    /// death for a malformed metric would leave a node marked alive forever — the one outcome
+    /// <c>NDEATH</c> exists to prevent.
+    /// </remarks>
+    public static SparkplugDeath DecodeDeath(ReadOnlySpan<byte> payload) =>
+        new(ReadBirthDeathSequence(Parse(payload)));
 
     /// <summary>Encodes a birth: every metric declares its name, alias and type.</summary>
     /// <param name="readings">The current value of every metric the device offers.</param>
@@ -249,6 +317,28 @@ public static class SparkplugPayload
         }
 
         return payload.ToByteArray();
+    }
+
+    // bdSeq travels as an ordinary metric rather than a payload field, so it is read by name. The
+    // spelling is fixed by the Sparkplug specification and is case-sensitive there too.
+    private static ulong? ReadBirthDeathSequence(Payload message)
+    {
+        foreach (var metric in message.Metrics)
+        {
+            if (!metric.HasName || !string.Equals(metric.Name, BirthDeathSequenceMetric, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            return metric.ValueCase switch
+            {
+                ValueCase.LongValue => metric.LongValue,
+                ValueCase.IntValue => metric.IntValue,
+                _ => null,
+            };
+        }
+
+        return null;
     }
 
     private static Payload NewPayload(ulong sequence, DateTimeOffset timestamp) =>

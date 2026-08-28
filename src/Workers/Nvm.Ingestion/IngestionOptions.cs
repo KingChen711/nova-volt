@@ -40,6 +40,36 @@ public sealed class IngestionOptions
     /// <summary>How far a device clock may disagree with the gateway's before a reading is flagged.</summary>
     public TimeSpan ClockDriftThreshold { get; set; } = ClockQualityClassifier.DefaultThreshold;
 
+    /// <summary>Signal codes whose readings are announced on the bus (scope.md §5.5).</summary>
+    /// <remarks>
+    /// Empty means telemetry only, which is the safe default: the reading is stored either way, and
+    /// the whitelist decides only whether anything is told about it. See
+    /// <see cref="Publishing.PublishedSignals"/> for why this is not a heuristic.
+    /// </remarks>
+    public IList<string> PublishedSignals { get; } = [];
+
+    /// <summary>RabbitMQ host. Reached from this service's <c>it-net</c> leg only.</summary>
+    public string BusHost { get; set; } = "rabbitmq";
+
+    /// <summary>AMQP port.</summary>
+    public ushort BusPort { get; set; } = 5672;
+
+    /// <summary>Broker user. Never <c>guest</c>.</summary>
+    public string BusUsername { get; set; } = string.Empty;
+
+    /// <summary>Broker password.</summary>
+    public string BusPassword { get; set; } = string.Empty;
+
+    /// <summary>Whether this process should connect to the bus at all.</summary>
+    /// <remarks>
+    /// False when no signal is whitelisted and no credentials are configured. A migration job has
+    /// neither, and a bus it never uses is a dependency that can only fail.
+    /// </remarks>
+    public bool PublishesToBus =>
+        PublishedSignals.Count > 0
+        && !string.IsNullOrWhiteSpace(BusUsername)
+        && !string.IsNullOrWhiteSpace(BusPassword);
+
     /// <summary>Builds options, using the repo's separate PostgreSQL variables for local development.</summary>
     public static IngestionOptions FromConfiguration(IConfiguration configuration)
     {

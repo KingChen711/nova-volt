@@ -1,5 +1,7 @@
 using Npgsql;
 using NpgsqlTypes;
+using Nvm.Contracts.Events.Quality;
+using Nvm.Ingestion.Publishing;
 using Nvm.Sparkplug;
 
 namespace Nvm.Ingestion.Persistence;
@@ -62,12 +64,16 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
     private readonly NpgsqlDataSource _dataSource;
     private readonly TimeProvider _timeProvider;
     private readonly IngestionMetrics _metrics;
+    private readonly IMeasurementEventPublisher _publisher;
+    private readonly PublishedSignals _publishedSignals;
     private readonly TimeSpan _clockDriftThreshold;
 
     /// <summary>Creates the transaction boundary used by HTTP and file drop alike.</summary>
     /// <param name="dataSource">Connection source for the one transaction per batch.</param>
     /// <param name="timeProvider">Stamps <c>recorded_at</c> (K1).</param>
     /// <param name="metrics">Counters updated only after the transaction commits.</param>
+    /// <param name="publisher">Where committed business facts go next. Null publishes nothing.</param>
+    /// <param name="publishedSignals">Which signal codes are business facts (scope.md §5.5).</param>
     /// <param name="clockDriftThreshold">
     /// How far the device and gateway clocks may disagree before a reading is flagged. Defaults to
     /// <see cref="ClockQualityClassifier.DefaultThreshold"/>.
@@ -76,11 +82,15 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
         NpgsqlDataSource dataSource,
         TimeProvider timeProvider,
         IngestionMetrics metrics,
+        IMeasurementEventPublisher? publisher = null,
+        PublishedSignals? publishedSignals = null,
         TimeSpan? clockDriftThreshold = null)
     {
         _dataSource = dataSource ?? throw new ArgumentNullException(nameof(dataSource));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _metrics = metrics ?? throw new ArgumentNullException(nameof(metrics));
+        _publisher = publisher ?? NullMeasurementEventPublisher.Instance;
+        _publishedSignals = publishedSignals ?? PublishedSignals.None;
         _clockDriftThreshold = clockDriftThreshold ?? ClockQualityClassifier.DefaultThreshold;
     }
 
@@ -128,7 +138,41 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
         var drifted = claimedRows.Count(row => row.ClockQuality != ClockQuality.Good);
         var result = new IngestionResult(claimedRows.Length, rawCount - claimedRows.Length, drifted);
         _metrics.RecordCommitted(result);
-        return result;
+
+        // After the commit, and outside it. A publish failure must leave the rows where they are:
+        // this is the dual-write ADR-022 already measured at 18/200, and M2 counts it rather than
+        // pretending the outbox that closes it (M6) is already here.
+        var announced = Announce(claimedRows);
+
+        if (announced.Count == 0)
+        {
+            return result;
+        }
+
+        var failures = await _publisher.PublishAsync(announced, cancellationToken);
+        _metrics.RecordPublishFailures(failures);
+
+        return result with { PublishFailures = failures };
+    }
+
+    private List<MeasurementRecorded> Announce(MeasurementRow[] rows)
+    {
+        if (_publishedSignals.Count == 0)
+        {
+            return [];
+        }
+
+        var announced = new List<MeasurementRecorded>();
+
+        foreach (var row in rows)
+        {
+            if (_publishedSignals.Includes(row.SignalCode))
+            {
+                announced.Add(row.ToEvent());
+            }
+        }
+
+        return announced;
     }
 
     private static async Task<HashSet<Guid>> ClaimAsync(

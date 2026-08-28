@@ -40,7 +40,7 @@ public sealed class IngestionClockQualityTests
             dataSource,
             clock,
             metrics,
-            ClockQualityClassifier.DefaultThreshold);
+            clockDriftThreshold: ClockQualityClassifier.DefaultThreshold);
 
         // The gateway received both at the same instant. One device is two hours behind; the other
         // is ten seconds out, which is an ordinary healthy clock.

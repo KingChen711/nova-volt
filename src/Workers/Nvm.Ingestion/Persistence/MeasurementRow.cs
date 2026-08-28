@@ -1,3 +1,4 @@
+using Nvm.Contracts.Events.Quality;
 using Nvm.Sparkplug;
 
 namespace Nvm.Ingestion.Persistence;
@@ -56,4 +57,25 @@ internal sealed record MeasurementRow(
             value.Boolean,
             value.Text);
     }
+
+    // The event's EventId is the row's SourceEventId, unchanged. That single assignment is what
+    // joins device deduplication to command deduplication (scope.md §7.2); deriving a fresh id here
+    // would leave both mechanisms working and keying on different values, which is R-M1-6.
+    internal MeasurementRecorded ToEvent() =>
+        new(
+            SourceEventId,
+            RecordedAt,
+            SiteId,
+            EquipmentId,
+            UnitId,
+            StepCode,
+            SignalCode,
+            DeviceTimestamp,
+            GatewayTimestamp,
+            ClockQuality.ToColumnValue(),
+            ValueKind,
+            RealValue,
+            IntegerValue,
+            BooleanValue,
+            TextValue);
 }

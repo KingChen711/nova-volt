@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using Nvm.Contracts.CloudEvents;
 using Nvm.Contracts.Events.FactoryModel;
+using Nvm.Contracts.Events.Quality;
 
 namespace Nvm.Contracts;
 
@@ -40,4 +41,5 @@ namespace Nvm.Contracts;
     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     WriteIndented = false)]
 [JsonSerializable(typeof(CloudEventEnvelope<FactoryModelRevisionActivated>))]
+[JsonSerializable(typeof(CloudEventEnvelope<MeasurementRecorded>))]
 public sealed partial class NvmJsonSerializerContext : JsonSerializerContext;

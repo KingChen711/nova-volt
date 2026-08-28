@@ -18,6 +18,8 @@
 
   <ItemGroup>
     <ProjectReference Include="../../Platform/Nvm.Hosting/Nvm.Hosting.csproj" />
+    <!-- Đường publish DUY NHẤT: envelope CloudEvents của M1, không dựng đường thứ hai (C14). -->
+    <ProjectReference Include="../../Platform/Nvm.Bus/Nvm.Bus.csproj" />
     <ProjectReference Include="../../Platform/Nvm.Sparkplug/Nvm.Sparkplug.csproj" />
   </ItemGroup>
 

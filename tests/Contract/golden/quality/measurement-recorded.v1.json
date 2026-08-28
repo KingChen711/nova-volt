@@ -1,0 +1,24 @@
+{
+  "specversion": "1.0",
+  "id": "5f2b8e41-9c3d-53a7-8b16-2d4e7a9c1b08",
+  "type": "com.novavolt.quality.measurement-recorded.v1",
+  "source": "urn:novavolt:nv1:ingestion",
+  "subject": "urn:equipment:NOVAVOLT/NV1/FORMATION/F1/FORM-01/FORM-01-CH-0142",
+  "time": "2026-08-28T09:30:04.512+00:00",
+  "datacontenttype": "application/json",
+  "correlationid": "NV1C0142-CELL-000042",
+  "partitionkey": "NV1",
+  "data": {
+    "eventId": "5f2b8e41-9c3d-53a7-8b16-2d4e7a9c1b08",
+    "occurredAt": "2026-08-28T09:30:04.512+00:00",
+    "siteId": "NV1",
+    "equipmentPath": "NOVAVOLT/NV1/FORMATION/F1/FORM-01/FORM-01-CH-0142",
+    "stepCode": "FORM-01",
+    "signalCode": "Formation/Capacity",
+    "deviceTimestamp": "2026-08-28T09:28:11.004+00:00",
+    "gatewayTimestamp": "2026-08-28T09:30:03.987+00:00",
+    "clockQuality": "Good",
+    "valueKind": "real",
+    "realValue": 4.812
+  }
+}

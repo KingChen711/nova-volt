@@ -23,6 +23,17 @@ Nguồn: [`scope.md`](scope.md) §6.5. Bốn cột bên phải là phần thêm,
 4. **Version tăng theo luật `scope.md` §7.4**: thêm field optional → không tăng; đổi ý nghĩa / xoá
    field / đổi kiểu → tăng, và viết upcaster. Golden file cũ **không bao giờ sửa**, chỉ thêm file mới.
 
+
+¹ **`MeasurementRecorded` — ai phát, và vì sao không phát mọi reading.**
+Schema thuộc bounded context **Quality**; **Ingestion** là bên *phát* từ M2, còn Quality *nhận và
+đánh giá* từ M5 (K8: đi qua contract + bus, không reference trực tiếp).
+
+Ingestion **không** phát mọi phép đo. `scope.md` §5.5 vạch ranh giới: quan trắc liên tục là
+**telemetry** và dừng ở TimescaleDB; giá trị **đã đánh giá** mới là domain event. Cơ chế là một
+**whitelist signal code** (`NVM_INGEST__PublishedSignals`), mặc định **rỗng**. Phát mọi reading ở
+tốc độ N1 là 5.000 event/giây lên một bus dựng để chở quyết định — và nó hỏng **âm thầm**: không có
+lỗi nào, broker chỉ đầy dần, và event store biến thành đúng cái TSDB nằm cạnh nó.
+
 ---
 
 ## Bảng
@@ -42,7 +53,7 @@ Nguồn: [`scope.md`](scope.md) §6.5. Bốn cột bên phải là phần thêm,
 | `DuplicateSerialDetected` | Traceability | Trùng mã — luồng ngoại lệ có thật | — | ☐ | ☐ | M5 |
 | `ProcessStepStarted` | ProductionExecution | Bắt đầu một bước | — | ☐ | ☐ | M5 |
 | `ProcessStepCompleted` | ProductionExecution | Kết thúc, kèm actual | — | ☐ | ☐ | M5 |
-| `MeasurementRecorded` | Quality | OCV, ACIR, torque, áp suất hàn… | — | ☐ | ☐ | M5 |
+| **`MeasurementRecorded`** | **Quality** | **OCV, ACIR, torque, áp suất hàn… — giá trị ĐÃ ĐÁNH GIÁ, không phải đường cong thô** | **v1** | **✅** | **✅** | **M2** ¹ |
 | `FormationRunStarted` | ProductionExecution | Vào máy formation, gắn tray/channel | — | ☐ | ☐ | M7 |
 | `FormationRunCompleted` | ProductionExecution | Xong, kèm summary + URI đường cong | — | ☐ | ☐ | M7 |
 | `AgingPeriodElapsed` | ProductionExecution | Saga timeout — đủ ngày aging | — | ☐ | ☐ | M7 |

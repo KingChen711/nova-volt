@@ -2,9 +2,11 @@ using System.Globalization;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Npgsql;
+using Nvm.Bus;
 using Nvm.Hosting;
 using Nvm.Ingestion;
 using Nvm.Ingestion.Persistence;
+using Nvm.Ingestion.Publishing;
 
 if (HealthProbe.IsRequested(args))
 {
@@ -46,10 +48,34 @@ builder.Services.AddSingleton(options);
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton(dataSource);
 builder.Services.AddSingleton<IngestionMetrics>();
+builder.Services.AddSingleton(new PublishedSignals(options.PublishedSignals));
+
+if (options.PublishesToBus)
+{
+    // The M1 bus, unchanged. Ingestion adds no consumers — it only publishes — and it reaches
+    // RabbitMQ on its it-net leg, never from dmz-net (K11).
+    builder.Services.AddNvmBus(bus =>
+    {
+        bus.Host = options.BusHost;
+        bus.Port = options.BusPort;
+        bus.Username = options.BusUsername;
+        bus.Password = options.BusPassword;
+        bus.ApplicationName = "ingestion";
+    });
+
+    builder.Services.AddSingleton<IMeasurementEventPublisher, BusMeasurementEventPublisher>();
+}
+else
+{
+    builder.Services.AddSingleton<IMeasurementEventPublisher>(NullMeasurementEventPublisher.Instance);
+}
+
 builder.Services.AddSingleton<IMeasurementIngestor>(services => new PostgresMeasurementIngestor(
     services.GetRequiredService<NpgsqlDataSource>(),
     services.GetRequiredService<TimeProvider>(),
     services.GetRequiredService<IngestionMetrics>(),
+    services.GetRequiredService<IMeasurementEventPublisher>(),
+    services.GetRequiredService<PublishedSignals>(),
     options.ClockDriftThreshold));
 builder.Services.AddIngestionAdmissionControl(options);
 builder.Services

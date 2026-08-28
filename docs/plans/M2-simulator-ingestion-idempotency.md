@@ -744,7 +744,7 @@ make bus-fanout && make bus-dlq && make bus-chaos
 | C11 | NBIRTH / NDEATH / seq gap | ☑ | 2026-08-28 | **D4** xanh bằng test; 510 test. Simulator chưa trả lời rebirth — xem commit |
 | C12 | processed_message + dedup | ☑ | 2026-08-28 | ADR-030; 480 test xanh |
 | C13 | clock quality classifier | ☐ | 2026-08-28 | **D5** xanh bằng test; 521 test. **Chưa tick**: lab #1 và #2 chưa chạy |
-| C14 | publish cloudevents lên bus | ☐ | | |
+| C14 | publish cloudevents lên bus | ☑ | 2026-08-28 | 530 test. Whitelist signal thay vì publish mọi reading — xem `event-catalog.md` ¹ |
 | C15 | CSV file-drop adapter | ☐ | | |
 | C16 | load harness 5.000 msg/s | ☐ | | **D2** |
 | C17 | reconciliation 1 giờ | ☐ | | **★ D1** |

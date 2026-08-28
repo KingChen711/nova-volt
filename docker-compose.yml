@@ -430,6 +430,13 @@ services:
     environment:
       DOTNET_ENVIRONMENT: Production
       NVM_INGEST__ConnectionString: "Host=timescale;Port=5432;Database=${NVM_POSTGRES_DB};Username=${NVM_POSTGRES_USER};Password=${NVM_POSTGRES_PASSWORD};Application Name=Nvm.Ingestion"
+      NVM_INGEST__BusHost: rabbitmq
+      NVM_INGEST__BusUsername: ${NVM_RABBITMQ_USER}
+      NVM_INGEST__BusPassword: ${NVM_RABBITMQ_PASSWORD}
+      # Whitelist tín hiệu lên bus (scope.md §5.5): quan trắc liên tục là telemetry và dừng ở
+      # TimescaleDB; giá trị ĐÃ ĐÁNH GIÁ mới là domain event. Capacity là thứ chấm điểm một cell.
+      # Publish mọi reading là đẩy hàng nghìn event/giây lên một bus dựng để chở quyết định.
+      NVM_INGEST__PublishedSignals__0: Formation/Capacity
     networks: [dmz-net, it-net]
     healthcheck:
       test: ["CMD", "dotnet", "Nvm.Ingestion.dll", "--health-probe", "http://127.0.0.1:8080/health/ready"]

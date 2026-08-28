@@ -13,6 +13,7 @@ internal sealed record MeasurementRow(
     DateTimeOffset DeviceTimestamp,
     DateTimeOffset GatewayTimestamp,
     DateTimeOffset RecordedAt,
+    ClockQuality ClockQuality,
     string ValueKind,
     double? RealValue,
     long? IntegerValue,
@@ -22,7 +23,8 @@ internal sealed record MeasurementRow(
     internal static MeasurementRow From(
         DecodedSparkplugMessage message,
         DeviceReading reading,
-        DateTimeOffset recordedAt)
+        DateTimeOffset recordedAt,
+        TimeSpan clockDriftThreshold)
     {
         var key = reading.NaturalKey(message.EquipmentPath);
 
@@ -47,6 +49,7 @@ internal sealed record MeasurementRow(
             key.DeviceTimestamp,
             message.GatewayTimestamp,
             recordedAt,
+            ClockQualityClassifier.Classify(key.DeviceTimestamp, message.GatewayTimestamp, clockDriftThreshold),
             value.Kind,
             value.Real,
             value.Integer,

@@ -37,6 +37,9 @@ public sealed class IngestionOptions
     /// <summary>Delay handed back in <c>Retry-After</c> when a batch is refused.</summary>
     public TimeSpan RetryAfter { get; set; } = TimeSpan.FromSeconds(2);
 
+    /// <summary>How far a device clock may disagree with the gateway's before a reading is flagged.</summary>
+    public TimeSpan ClockDriftThreshold { get; set; } = ClockQualityClassifier.DefaultThreshold;
+
     /// <summary>Builds options, using the repo's separate PostgreSQL variables for local development.</summary>
     public static IngestionOptions FromConfiguration(IConfiguration configuration)
     {
@@ -83,6 +86,11 @@ public sealed class IngestionOptions
         if (RetryAfter <= TimeSpan.Zero)
         {
             throw new InvalidOperationException($"{SectionName}:RetryAfter must be positive.");
+        }
+
+        if (ClockDriftThreshold < TimeSpan.Zero)
+        {
+            throw new InvalidOperationException($"{SectionName}:ClockDriftThreshold cannot be negative.");
         }
     }
 

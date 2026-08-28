@@ -37,6 +37,7 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
                 @device_timestamps::timestamptz[],
                 @gateway_timestamps::timestamptz[],
                 @recorded_ats::timestamptz[],
+                @clock_qualities::text[],
                 @value_kinds::text[],
                 @real_values::float8[],
                 @integer_values::bigint[],
@@ -44,16 +45,16 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
                 @text_values::text[])
             AS input(
                 source_event_id, site_id, equipment_id, unit_id, step_code, signal_code,
-                device_timestamp, gateway_timestamp, recorded_at, value_kind,
+                device_timestamp, gateway_timestamp, recorded_at, clock_quality, value_kind,
                 real_value, integer_value, boolean_value, text_value)
         )
         INSERT INTO ts.telemetry_measurement (
             source_event_id, site_id, equipment_id, unit_id, step_code, signal_code,
-            device_timestamp, gateway_timestamp, recorded_at, value_kind,
+            device_timestamp, gateway_timestamp, recorded_at, clock_quality, value_kind,
             real_value, integer_value, boolean_value, text_value)
         SELECT
             source_event_id, site_id, equipment_id, unit_id, step_code, signal_code,
-            device_timestamp, gateway_timestamp, recorded_at, value_kind,
+            device_timestamp, gateway_timestamp, recorded_at, clock_quality, value_kind,
             real_value, integer_value, boolean_value, text_value
         FROM incoming;
         """;
@@ -61,16 +62,26 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
     private readonly NpgsqlDataSource _dataSource;
     private readonly TimeProvider _timeProvider;
     private readonly IngestionMetrics _metrics;
+    private readonly TimeSpan _clockDriftThreshold;
 
-    /// <summary>Creates the transaction boundary used by HTTP and, later, file drop.</summary>
+    /// <summary>Creates the transaction boundary used by HTTP and file drop alike.</summary>
+    /// <param name="dataSource">Connection source for the one transaction per batch.</param>
+    /// <param name="timeProvider">Stamps <c>recorded_at</c> (K1).</param>
+    /// <param name="metrics">Counters updated only after the transaction commits.</param>
+    /// <param name="clockDriftThreshold">
+    /// How far the device and gateway clocks may disagree before a reading is flagged. Defaults to
+    /// <see cref="ClockQualityClassifier.DefaultThreshold"/>.
+    /// </param>
     public PostgresMeasurementIngestor(
         NpgsqlDataSource dataSource,
         TimeProvider timeProvider,
-        IngestionMetrics metrics)
+        IngestionMetrics metrics,
+        TimeSpan? clockDriftThreshold = null)
     {
         _dataSource = dataSource ?? throw new ArgumentNullException(nameof(dataSource));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _metrics = metrics ?? throw new ArgumentNullException(nameof(metrics));
+        _clockDriftThreshold = clockDriftThreshold ?? ClockQualityClassifier.DefaultThreshold;
     }
 
     /// <inheritdoc />
@@ -91,7 +102,7 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
             foreach (var reading in message.Readings)
             {
                 rawCount++;
-                var row = MeasurementRow.From(message, reading, recordedAt);
+                var row = MeasurementRow.From(message, reading, recordedAt, _clockDriftThreshold);
                 distinct.TryAdd(row.SourceEventId, row);
             }
         }
@@ -114,7 +125,8 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
 
         await transaction.CommitAsync(cancellationToken);
 
-        var result = new IngestionResult(claimedRows.Length, rawCount - claimedRows.Length);
+        var drifted = claimedRows.Count(row => row.ClockQuality != ClockQuality.Good);
+        var result = new IngestionResult(claimedRows.Length, rawCount - claimedRows.Length, drifted);
         _metrics.RecordCommitted(result);
         return result;
     }
@@ -158,6 +170,7 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
         AddArray(command, "device_timestamps", NpgsqlDbType.TimestampTz, rows.Select(row => row.DeviceTimestamp).ToArray());
         AddArray(command, "gateway_timestamps", NpgsqlDbType.TimestampTz, rows.Select(row => row.GatewayTimestamp).ToArray());
         AddArray(command, "recorded_ats", NpgsqlDbType.TimestampTz, rows.Select(row => row.RecordedAt).ToArray());
+        AddArray(command, "clock_qualities", NpgsqlDbType.Text, rows.Select(row => row.ClockQuality.ToColumnValue()).ToArray());
         AddArray(command, "value_kinds", NpgsqlDbType.Text, rows.Select(row => row.ValueKind).ToArray());
         AddArray(command, "real_values", NpgsqlDbType.Double, rows.Select(row => row.RealValue).ToArray());
         AddArray(command, "integer_values", NpgsqlDbType.Bigint, rows.Select(row => row.IntegerValue).ToArray());

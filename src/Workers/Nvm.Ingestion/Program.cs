@@ -46,7 +46,11 @@ builder.Services.AddSingleton(options);
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton(dataSource);
 builder.Services.AddSingleton<IngestionMetrics>();
-builder.Services.AddSingleton<IMeasurementIngestor, PostgresMeasurementIngestor>();
+builder.Services.AddSingleton<IMeasurementIngestor>(services => new PostgresMeasurementIngestor(
+    services.GetRequiredService<NpgsqlDataSource>(),
+    services.GetRequiredService<TimeProvider>(),
+    services.GetRequiredService<IngestionMetrics>(),
+    options.ClockDriftThreshold));
 builder.Services.AddIngestionAdmissionControl(options);
 builder.Services
     .AddHealthChecks()

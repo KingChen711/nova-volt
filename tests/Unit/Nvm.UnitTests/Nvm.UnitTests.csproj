@@ -35,6 +35,11 @@
     <ProjectReference Include="../../../src/Workers/Nvm.Simulator/Nvm.Simulator.csproj" />
     <!-- Gateway: decode + gateway timestamp + protobuf HTTP body được kiểm trước khi chạy container. -->
     <ProjectReference Include="../../../src/Workers/Nvm.EdgeGateway/Nvm.EdgeGateway.csproj" />
+    <!--
+      Ingestion: phân loại clock_quality là logic thuần trên hai timestamp, không cần database.
+      Phần chạm PostgreSQL nằm ở tests/Integration.
+    -->
+    <ProjectReference Include="../../../src/Workers/Nvm.Ingestion/Nvm.Ingestion.csproj" />
   </ItemGroup>
 
   <ItemGroup>

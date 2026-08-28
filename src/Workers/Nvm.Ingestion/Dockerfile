@@ -15,8 +15,12 @@ RUN --mount=type=cache,id=novavolt-nuget,target=/root/.nuget/packages \
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0.3-noble AS final
 WORKDIR /app
-COPY --from=build /app .
 
+# The CSV file drop checks equipment_path against the plant model, exactly as the MQTT path does (K3).
+COPY --from=build /app .
+COPY deploy/seed/ seed/
+
+RUN mkdir -p /var/lib/nvm-ingestion && chown "$APP_UID" /var/lib/nvm-ingestion
 USER $APP_UID
 EXPOSE 8080
 ENTRYPOINT ["dotnet", "Nvm.Ingestion.dll"]

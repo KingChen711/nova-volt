@@ -21,6 +21,8 @@
     <!-- Đường publish DUY NHẤT: envelope CloudEvents của M1, không dựng đường thứ hai (C14). -->
     <ProjectReference Include="../../Platform/Nvm.Bus/Nvm.Bus.csproj" />
     <ProjectReference Include="../../Platform/Nvm.Sparkplug/Nvm.Sparkplug.csproj" />
+    <!-- Chỉ để đọc seed factory model: file drop phải kiểm equipment_path đúng như đường MQTT (K3). -->
+    <ProjectReference Include="../../FunctionalBlocks/FactoryModel/Nvm.FactoryModel.csproj" />
   </ItemGroup>
 
   <ItemGroup>

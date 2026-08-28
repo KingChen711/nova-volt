@@ -32,6 +32,7 @@ volumes:
   pgdata:
   simdata:
   edgedata:
+  ingestdata:
   mssqldata:
   rabbitmqdata:
   emqxdata:
@@ -437,6 +438,13 @@ services:
       # TimescaleDB; giá trị ĐÃ ĐÁNH GIÁ mới là domain event. Capacity là thứ chấm điểm một cell.
       # Publish mọi reading là đẩy hàng nghìn event/giây lên một bus dựng để chở quyết định.
       NVM_INGEST__PublishedSignals__0: Formation/Capacity
+      # File drop của C15: máy EOL cũ xuất CSV lên share. Cùng cửa dedup với đường MQTT.
+      NVM_INGEST__FileDrop__Enabled: "true"
+      NVM_INGEST__FileDrop__InboxPath: /var/lib/nvm-ingestion/inbox
+      NVM_INGEST__FileDrop__ProcessedPath: /var/lib/nvm-ingestion/processed
+      NVM_INGEST__FileDrop__RejectedPath: /var/lib/nvm-ingestion/rejected
+    volumes:
+      - ingestdata:/var/lib/nvm-ingestion
     networks: [dmz-net, it-net]
     healthcheck:
       test: ["CMD", "dotnet", "Nvm.Ingestion.dll", "--health-probe", "http://127.0.0.1:8080/health/ready"]

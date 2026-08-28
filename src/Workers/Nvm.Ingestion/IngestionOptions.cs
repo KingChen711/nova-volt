@@ -40,6 +40,15 @@ public sealed class IngestionOptions
     /// <summary>How far a device clock may disagree with the gateway's before a reading is flagged.</summary>
     public TimeSpan ClockDriftThreshold { get; set; } = ClockQualityClassifier.DefaultThreshold;
 
+    /// <summary>Directory holding the immutable factory-model documents.</summary>
+    public string SeedDirectory { get; set; } = "seed";
+
+    /// <summary>Revision this service reads; null selects the newest published document.</summary>
+    public int? Revision { get; set; }
+
+    /// <summary>The CSV file-drop adapter (C15). Off unless a plant has an old machine.</summary>
+    public FileDrop.FileDropOptions FileDrop { get; set; } = new();
+
     /// <summary>Signal codes whose readings are announced on the bus (scope.md §5.5).</summary>
     /// <remarks>
     /// Empty means telemetry only, which is the safe default: the reading is stored either way, and
@@ -122,6 +131,13 @@ public sealed class IngestionOptions
         {
             throw new InvalidOperationException($"{SectionName}:ClockDriftThreshold cannot be negative.");
         }
+
+        if (Revision is < 1)
+        {
+            throw new InvalidOperationException($"{SectionName}:Revision must be at least 1.");
+        }
+
+        FileDrop.Validate();
     }
 
     private static string BuildDevelopmentConnectionString(IConfiguration configuration)

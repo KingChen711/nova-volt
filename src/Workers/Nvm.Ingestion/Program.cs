@@ -3,8 +3,10 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Npgsql;
 using Nvm.Bus;
+using Nvm.FactoryModel.Seeding;
 using Nvm.Hosting;
 using Nvm.Ingestion;
+using Nvm.Ingestion.FileDrop;
 using Nvm.Ingestion.Persistence;
 using Nvm.Ingestion.Publishing;
 
@@ -49,6 +51,19 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton(dataSource);
 builder.Services.AddSingleton<IngestionMetrics>();
 builder.Services.AddSingleton(new PublishedSignals(options.PublishedSignals));
+
+if (options.FileDrop.Enabled)
+{
+    // Same ingestor, same transaction, same natural key. The adapter differs only in how it reads
+    // (C15.1) — a second dedup definition would drift from this one within months.
+    var seedDirectory = Path.Combine(builder.Environment.ContentRootPath, options.SeedDirectory);
+
+    builder.Services.AddSingleton(options.FileDrop);
+    builder.Services.AddSingleton(SeededEquipmentDirectory.Load(seedDirectory, options.Revision));
+    builder.Services.AddSingleton<CsvMeasurementReader>();
+    builder.Services.AddSingleton<FileDropProcessor>();
+    builder.Services.AddHostedService<FileDropWatcher>();
+}
 
 if (options.PublishesToBus)
 {

@@ -745,7 +745,7 @@ make bus-fanout && make bus-dlq && make bus-chaos
 | C12 | processed_message + dedup | ☑ | 2026-08-28 | ADR-030; 480 test xanh |
 | C13 | clock quality classifier | ☐ | 2026-08-28 | **D5** xanh bằng test; 521 test. **Chưa tick**: lab #1 và #2 chưa chạy |
 | C14 | publish cloudevents lên bus | ☑ | 2026-08-28 | 530 test. Whitelist signal thay vì publish mọi reading — xem `event-catalog.md` ¹ |
-| C15 | CSV file-drop adapter | ☐ | | |
+| C15 | CSV file-drop adapter | ☑ | 2026-08-28 | 547 test. `clock_quality = Unknown` của C13 tới từ đây, đúng như ghi chú C13 |
 | C16 | load harness 5.000 msg/s | ☐ | | **D2** |
 | C17 | reconciliation 1 giờ | ☐ | | **★ D1** |
 | C18 | chuyển bus lab, xoá probe | ☐ | | Bảo vệ DoD của M1 |

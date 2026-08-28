@@ -1,6 +1,7 @@
 using Npgsql;
 using NpgsqlTypes;
 using Nvm.Contracts.Events.Quality;
+using Nvm.Ingestion.FileDrop;
 using Nvm.Ingestion.Publishing;
 using Nvm.Sparkplug;
 
@@ -112,11 +113,50 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
             foreach (var reading in message.Readings)
             {
                 rawCount++;
-                var row = MeasurementRow.From(message, reading, recordedAt, _clockDriftThreshold);
+                var row = MeasurementRow.FromSparkplug(message, reading, recordedAt, _clockDriftThreshold);
                 distinct.TryAdd(row.SourceEventId, row);
             }
         }
 
+        return await StoreAsync(distinct, rawCount, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<IngestionResult> IngestAsync(
+        IReadOnlyCollection<FileMeasurement> measurements,
+        DateTimeOffset readAt,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(measurements);
+
+        var recordedAt = _timeProvider.GetUtcNow();
+        var rawCount = 0;
+        var distinct = new Dictionary<Guid, MeasurementRow>();
+
+        foreach (var measurement in measurements)
+        {
+            ArgumentNullException.ThrowIfNull(measurement);
+
+            rawCount++;
+            var row = MeasurementRow.FromFileDrop(
+                measurement.Reading,
+                measurement.EquipmentPath,
+                measurement.UnitId,
+                readAt,
+                recordedAt);
+            distinct.TryAdd(row.SourceEventId, row);
+        }
+
+        return await StoreAsync(distinct, rawCount, cancellationToken);
+    }
+
+    // The one transaction both adapters commit through. Neither of them gets to decide what dedup
+    // means; they only decide how to read.
+    private async Task<IngestionResult> StoreAsync(
+        Dictionary<Guid, MeasurementRow> distinct,
+        int rawCount,
+        CancellationToken cancellationToken)
+    {
         if (rawCount == 0)
         {
             return new IngestionResult(0, 0);

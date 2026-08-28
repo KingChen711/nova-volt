@@ -291,10 +291,11 @@ outage-lab: .env
 # Ba muc tieu nay KHONG nam trong `make ci`: chung can RabbitMQ dang chay va moi
 # lan chay mat tu 30 giay den hon mot phut. Chung la lab, khong phai test.
 #
-# Kich ban nam trong src/Workers/Nvm.BusProbe/bus-lab.sh, canh worker ma no dieu
-# khien — de khi M2 xoa worker thi khong con mot script mo coi trong tools/.
+# C18 chuyen ca ba sang duong THAT: ben publish la Nvm.Ingestion, kich bang mot file CSV tha
+# vao inbox cua C15 — khong con dev endpoint nao. Ben nhan la tools/buslab/Nvm.BusLab, process
+# rieng (dieu kien cua D1). Nvm.BusProbe da bi xoa.
 # ─────────────────────────────────────────────────────────
-BUS_LAB := src/Workers/Nvm.BusProbe/bus-lab.sh
+BUS_LAB := scripts/bus-lab.sh
 
 bus-fanout: .env
 	@sh $(BUS_LAB) fanout

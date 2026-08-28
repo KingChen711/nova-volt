@@ -82,6 +82,7 @@ internal static class IngestionEndpoints
             metrics.InsertedCount,
             metrics.DuplicateCount,
             metrics.DriftedCount,
+            metrics.PublishedCount,
             metrics.PublishFailureCount,
             snapshot.Samples,
             snapshot.P50,
@@ -131,6 +132,7 @@ internal static class IngestionEndpoints
 /// <param name="Inserted">New logical readings stored.</param>
 /// <param name="Duplicates">Repeated deliveries the dedup key swallowed.</param>
 /// <param name="Drifted">Readings stored with a device clock that could not be trusted.</param>
+/// <param name="Published">Events handed to the broker without an error.</param>
 /// <param name="PublishFailures">Events whose row is stored and whose announcement was lost.</param>
 /// <param name="LagSamples">Readings sampled for lag — good clocks only.</param>
 /// <param name="LagP50Seconds">Median device-to-database lag.</param>
@@ -141,6 +143,7 @@ internal sealed record IngestionStats(
     long Inserted,
     long Duplicates,
     long Drifted,
+    long Published,
     long PublishFailures,
     long LagSamples,
     double LagP50Seconds,

@@ -1,7 +1,7 @@
 using System.Globalization;
 using Nvm.Bus;
-using Nvm.BusProbe;
-using Nvm.BusProbe.Consumers;
+using Nvm.BusLab;
+using Nvm.BusLab.Consumers;
 using Nvm.Hosting;
 
 // Same reasoning as Nvm.Host.All: deterministic formatting regardless of machine locale, without
@@ -12,7 +12,6 @@ CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
 var builder = Host.CreateApplicationBuilder(args);
 
 // One source of truth for ports and credentials: the same .env docker-compose reads.
-// Development only — see DotEnvLoader.
 if (builder.Environment.IsDevelopment())
 {
     DotEnvLoader.Load(builder.Environment.ContentRootPath);
@@ -36,47 +35,47 @@ builder.Services.AddNvmBus(
         bus.Port = ushort.Parse(DotEnvLoader.Required("NVM_PORT_RABBITMQ"), CultureInfo.InvariantCulture);
         bus.Username = DotEnvLoader.Required("NVM_RABBITMQ_USER");
         bus.Password = DotEnvLoader.Required("NVM_RABBITMQ_PASSWORD");
-        // This worker never publishes, so the name only reaches the log. It is stated anyway: an
+        // This instrument never publishes, so the name only reaches the log. It is stated anyway: an
         // application name that is only filled in where it is used is the one that is wrong on the
         // day something starts publishing.
-        bus.ApplicationName = "bus-probe";
+        bus.ApplicationName = "bus-lab";
     },
     consumers =>
     {
         // Two registrations, two receive endpoints, two queues. Register both on one endpoint and
         // each message reaches exactly one of them — competing consumers, not fan-out, and the
         // difference does not show up until somebody notices half the audit trail is missing.
-        if (ProbeSelection.Includes(ProbeSelection.Cache))
+        if (LabConsumerSelection.Includes(LabConsumerSelection.Cache))
         {
-            consumers.AddNvmConsumer<FactoryModelCacheProbe>();
+            consumers.AddNvmConsumer<MeasurementCacheConsumer>();
         }
 
-        if (ProbeSelection.Includes(ProbeSelection.Audit))
+        if (LabConsumerSelection.Includes(LabConsumerSelection.Audit))
         {
-            consumers.AddNvmConsumer<FactoryModelAuditProbe>();
+            consumers.AddNvmConsumer<MeasurementAuditConsumer>();
         }
 
-        // Off unless asked for. See ProbeSelection.
-        if (ProbeSelection.Includes(ProbeSelection.Failing))
+        // Off unless asked for. See LabConsumerSelection.
+        if (LabConsumerSelection.Includes(LabConsumerSelection.Failing))
         {
-            consumers.AddNvmConsumer<FailingProbe>();
+            consumers.AddNvmConsumer<FailingMeasurementConsumer>();
         }
     });
 
 var host = builder.Build();
 
-var startup = host.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Nvm.BusProbe");
+var startup = host.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Nvm.BusLab");
 
 // Read before the call: Describe() goes to the environment, and CA1873 is right that an argument
 // doing that inside a log call pays for it whether or not the line is written.
-var roles = ProbeSelection.Describe();
+var roles = LabConsumerSelection.Describe();
 
 StartupLog.Starting(startup, roles);
 
-// A worker that fails every message on purpose is worth a warning rather than a line in the middle of
-// the startup noise — somebody who left the switch on wants to be told, not to find out from an error
-// queue tomorrow.
-if (ProbeSelection.Includes(ProbeSelection.Failing))
+// An instrument that fails every message on purpose is worth a warning rather than a line in the
+// middle of the startup noise — somebody who left the switch on wants to be told, not to find out
+// from an error queue tomorrow.
+if (LabConsumerSelection.Includes(LabConsumerSelection.Failing))
 {
     StartupLog.FailingConsumerIsOn(startup);
 }

@@ -129,5 +129,8 @@ không có traffic nào để chỉnh ba con số đó, và chỉnh một circui
 đoán — trái [`AGENTS.md`](../../../AGENTS.md) §1.3. Một kill switch chỉnh sai sẽ tạm dừng một
 endpoint đang hoàn toàn khoẻ.
 
-**Bật ở M2**, khi load harness 5.000 msg/s đã tồn tại và có số thật để chỉnh. Ghi ngưỡng đã chọn
-vào `benchmarks.md` cùng lý do.
+**M2 không phải chỗ bật nó.** Load harness M2 đi theo đường raw telemetry
+MQTT → Edge Gateway → HTTP → TimescaleDB; nó không tạo failure traffic cho một bus consumer, nên
+dùng N1 để chỉnh kill switch là trộn hai đường dữ liệu khác nhau. Đánh giá/bật ở **M6**, khi outbox
+và projection consumer tạo workload domain-event thật. Chỉ bật sau khi có số lỗi, cửa sổ và recovery
+time; ghi các ngưỡng vào `benchmarks.md`.

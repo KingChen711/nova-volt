@@ -14,11 +14,14 @@ public sealed class IngestionMetrics
         Meter.CreateCounter<long>("nvm.ingest.drifted", unit: "{reading}");
     private static readonly Counter<long> PublishFailureCounter =
         Meter.CreateCounter<long>("nvm.ingest.publish_failures", unit: "{event}");
+    private static readonly Counter<long> PublishedCounter =
+        Meter.CreateCounter<long>("nvm.ingest.published", unit: "{event}");
 
     private long _insertedCount;
     private long _duplicateCount;
     private long _driftedCount;
     private long _publishFailureCount;
+    private long _publishedCount;
 
     /// <summary>Rows committed during this process lifetime.</summary>
     public long InsertedCount => Interlocked.Read(ref _insertedCount);
@@ -43,8 +46,25 @@ public sealed class IngestionMetrics
     /// </remarks>
     public long PublishFailureCount => Interlocked.Read(ref _publishFailureCount);
 
-    internal void RecordPublishFailures(int failures)
+    /// <summary>Events handed to the broker without an error.</summary>
+    /// <remarks>
+    /// The publisher-side half of the chaos lab. Without it, "how many were lost" can only be
+    /// answered by counting rows and hoping every row produced an event — and the whitelist of
+    /// scope.md §5.5 means most rows deliberately do not. A lab that has to assume its own input
+    /// count measures nothing when the assumption breaks.
+    /// </remarks>
+    public long PublishedCount => Interlocked.Read(ref _publishedCount);
+
+    internal void RecordPublishOutcome(int attempted, int failures)
     {
+        var published = attempted - failures;
+
+        if (published > 0)
+        {
+            Interlocked.Add(ref _publishedCount, published);
+            PublishedCounter.Add(published);
+        }
+
         if (failures <= 0)
         {
             return;

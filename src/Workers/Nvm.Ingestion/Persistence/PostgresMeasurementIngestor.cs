@@ -196,7 +196,7 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
         }
 
         var failures = await _publisher.PublishAsync(announced, cancellationToken);
-        _metrics.RecordPublishFailures(failures);
+        _metrics.RecordPublishOutcome(announced.Count, failures);
 
         return result with { PublishFailures = failures };
     }

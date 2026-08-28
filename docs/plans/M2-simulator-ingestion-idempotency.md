@@ -748,7 +748,7 @@ make bus-fanout && make bus-dlq && make bus-chaos
 | C15 | CSV file-drop adapter | ☑ | 2026-08-28 | 547 test. `clock_quality = Unknown` của C13 tới từ đây, đúng như ghi chú C13 |
 | C16 | load harness 5.000 msg/s | ☐ | 2026-08-28 | 557 test; `load-net-check` 4/4. **Chưa tick**: D2 chưa chạy ở 5.000 msg/s |
 | C17 | reconciliation 1 giờ | ☐ | 2026-08-28 | `make reconcile` xong; 5 phút thật cho **lệch 0** (282=282, 69 duplicate bị chặn). **Chưa tick**: chưa chạy đủ 1 giờ |
-| C18 | chuyển bus lab, xoá probe | ☐ | | Bảo vệ DoD của M1 |
+| C18 | chuyển bus lab, xoá probe | ☑ | 2026-08-29 | Ba lab chạy lại xanh trên đường thật: fanout 2/2, dlq **6** header `ce_*`, chaos **0 mất** trên 1874 event |
 | C19 | benchmarks + đóng M2 | ☐ | | |
 
 **Definition of Done**

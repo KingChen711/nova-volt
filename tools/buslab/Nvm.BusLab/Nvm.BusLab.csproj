@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <!--
+    Dụng cụ đo của lab bus, không phải một deployable.
+
+    Nó thay `src/Workers/Nvm.BusProbe` bị xoá ở C18, và nó nằm ở `tools/` chứ không ở
+    `src/Workers/` vì đó mới là chỗ đúng: một consumer NÉM EXCEPTION CÓ CHỦ Ý không bao giờ là
+    dịch vụ production, và để nó cạnh EdgeGateway với Ingestion là nói dối về vai trò của nó.
+
+    Process RIÊNG với Nvm.Ingestion — vẫn là lý do của M1: D1 đòi "2 consumer ở process khác
+    nhận độc lập"; chạy chung một process thì không phân biệt được fan-out thật với hai handler
+    cùng nằm trong một container DI.
+
+    Ba lệnh DoD của M1 — `make bus-fanout`, `make bus-dlq`, `make bus-chaos` — chạy lại được là
+    tài sản: nó là thứ phát hiện regression ở M5 khi ai đó đổi topology (plan M2 §2.4).
+  -->
+
+  <PropertyGroup>
+    <RootNamespace>Nvm.BusLab</RootNamespace>
+    <AssemblyName>Nvm.BusLab</AssemblyName>
+    <UserSecretsId>nvm-bus-lab</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../../src/Platform/Nvm.Bus/Nvm.Bus.csproj" />
+    <ProjectReference Include="../../../src/Platform/Nvm.Hosting/Nvm.Hosting.csproj" />
+  </ItemGroup>
+
+</Project>

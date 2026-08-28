@@ -14,7 +14,7 @@ SOLUTION := NovaVolt.Mes.slnx
 COMPOSE  := docker compose
 
 # `down` phải nêu đủ profile, nếu không container của profile không active sẽ bị bỏ lại.
-ALL_PROFILES := --profile probe --profile init --profile obs --profile tools
+ALL_PROFILES := --profile probe --profile init --profile obs --profile tools --profile sim
 
 # Đọc RIÊNG một biến từ .env thay vì `include .env`.
 # `include` nạp mọi biến vào make — kể cả mật khẩu — và một khoá trùng tên với biến
@@ -22,7 +22,7 @@ ALL_PROFILES := --profile probe --profile init --profile obs --profile tools
 BACKUP_DIR := $(shell grep -E '^NVM_BACKUP_DIR=' .env 2>/dev/null | cut -d= -f2-)
 
 .DEFAULT_GOAL := help
-.PHONY: help up up-obs down down-v reset ps logs net-check dmz-shell build test ci hooks format format-check clean backup bus-fanout bus-dlq bus-chaos
+.PHONY: help up up-obs down down-v reset ps logs net-check dmz-shell build test ci hooks format format-check clean backup bus-fanout bus-dlq bus-chaos sim-up sim-down sim-logs sim-report sim-net-check
 
 help:
 	@echo "NovaVolt MES"
@@ -37,6 +37,13 @@ help:
 	@echo "    make logs          Theo doi log"
 	@echo "    make net-check     Kiem ranh gioi OT/IT (K11) - 9 phep do"
 	@echo "    make dmz-shell     Mo shell trong dmz-net de dung MQTT"
+	@echo ""
+	@echo "  Simulator (can 'make up' truoc)"
+	@echo "    make sim-up        Build va chay simulator trong ot-net, fault BAT"
+	@echo "    make sim-down      Dung simulator"
+	@echo "    make sim-logs      Theo doi log simulator"
+	@echo "    make sim-report    In bao cao run - ve trai cua phep doi chieu D1"
+	@echo "    make sim-net-check Kiem simulator chi o ot-net, toi EMQX nhung khong toi RabbitMQ"
 	@echo ""
 	@echo "  Code"
 	@echo "    make build         Build solution"
@@ -161,6 +168,35 @@ backup:
 	@git bundle create "$(BACKUP_DIR)/novavolt-mes.bundle" --all
 	@git bundle verify "$(BACKUP_DIR)/novavolt-mes.bundle" >/dev/null
 	@echo "Backup OK: $(BACKUP_DIR)/novavolt-mes.bundle"
+
+# ─────────────────────────────────────────────────────────
+# Simulator — nguon du lieu thiet bi cua M2
+#
+# Profile rieng: `make up` thuong KHONG keo no len. Ha tang va nguon tai la hai
+# quyet dinh khac nhau, va gop lai thi moi lan khoi dong ha tang de doc mot cai gi
+# do lai kem theo mot dong message chay nen.
+#
+# Fault BAT trong docker-compose.yml, TAT trong code. Xem C06.
+# ─────────────────────────────────────────────────────────
+sim-up: .env
+	@$(COMPOSE) --profile sim up -d --build simulator
+	@sh scripts/sim-net-check.sh
+	@echo ""
+	@echo "Simulator dang chay trong ot-net. Theo doi: make sim-logs"
+
+sim-down:
+	@$(COMPOSE) --profile sim rm -sf simulator
+
+sim-logs:
+	@$(COMPOSE) --profile sim logs -f --tail 100 simulator
+
+# Ve TRAI cua phep doi chieu D1. Doc tu trong container vi bao cao nam tren volume,
+# khong nam tren o dia cua host.
+sim-report:
+	@docker exec nvm-simulator cat /var/lib/nvm-simulator/simulator-run.json
+
+sim-net-check:
+	@sh scripts/sim-net-check.sh
 
 # ─────────────────────────────────────────────────────────
 # Bus — bang chung cua M1/C13

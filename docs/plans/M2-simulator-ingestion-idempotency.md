@@ -353,7 +353,7 @@ Test bắt buộc: bật fault trùng 10% trên 10.000 message → đếm đư�
 
 **Kiểm chứng**
 ```bash
-make net-check
+make net-check && make sim-net-check
 ```
 **9/9 vẫn phải xanh** sau khi thêm service. Và một phép đo mới: từ container simulator, `connects emqx 1883` phải **mở**, `connects rabbitmq 5672` phải **đóng**.
 
@@ -735,7 +735,7 @@ make bus-fanout && make bus-dlq && make bus-chaos
 | C04 | source event id từ natural key | ☑ | 2026-08-28 | Dùng lại `DeterministicGuid` của M1/C04 |
 | C05 | formation cycler, nén thời gian | ☑ | 2026-08-28 | |
 | C06 | fault: trùng, dropout, lệch đồng hồ | ☑ | 2026-08-28 | Bật bằng config; lab bật ở C07 |
-| C07 | simulator trong `ot-net` | ☐ | | `make net-check` phải vẫn 9/9 |
+| C07 | simulator trong `ot-net` | ☑ | 2026-08-28 | `net-check` 9/9 + `sim-net-check` 3/3 |
 | C08 | gateway subscribe EMQX | ☐ | | ADR-027 |
 | C09 | buffer store-and-forward | ☐ | | ADR-028 |
 | C10 | rate limit + backpressure | ☐ | | ADR-029. **D3**. Lab #3 (xả 30 phút) |

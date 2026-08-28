@@ -9,6 +9,7 @@
 #   (mặc định)  service cần cho M0-M12
 #   obs         observability stack, bật từ M13 hoặc khi cần debug  (xem plan §2.2)
 #   probe       container rỗng chỉ để kiểm chứng ranh giới mạng
+#   sim         simulator thiết bị của M2 — `make up` thường KHÔNG kéo nó lên
 #
 # Mọi service PHẢI khai báo mem_limit: máy chỉ có 15,4 GB và cần biết cái nào ngốn.
 
@@ -28,6 +29,7 @@ networks:
 
 volumes:
   pgdata:
+  simdata:
   mssqldata:
   rabbitmqdata:
   emqxdata:
@@ -322,6 +324,50 @@ services:
       timeout: 5s
       retries: 20
       start_period: 40s
+
+  # ─────────────────────────────────────────────────────────
+  # Nvm.Simulator — thiết bị giả của M2
+  #
+  # `networks: [ot-net]` VÀ CHỈ THẾ. Đây là ràng buộc, không phải cấu hình: một
+  # simulator có thêm chân it-net sẽ publish thẳng lên RabbitMQ được, và đó là dựng
+  # lại đúng lỗ hổng M0/R1 đã bịt (K11). `scripts/sim-net-check.sh` kiểm đúng dòng này —
+  # nó đọc danh sách network của container, không chỉ đo định tuyến, vì thêm một
+  # network vào đây là thay đổi không phép đo định tuyến nào từ probe khác thấy được.
+  #
+  # Chạy trong container chứ không `dotnet run` trên Windows: máy Windows là tầng IT,
+  # và nối `localhost:1883` từ đó là tự tay mở lại đường vòng qua port host
+  # (docs/scope.md §13.1, R-M2-2). Bất tiện lúc dev thì dùng `make dmz-shell`.
+  #
+  # Fault BẬT ở đây, tắt trong code. Đây là "lab" mà C06 nói tới: một fault bật mặc
+  # định trong code sẽ bị quên, và rồi mọi con số của M2 có một thành phần không ai khai.
+  # ─────────────────────────────────────────────────────────
+  simulator:
+    profiles: [sim]
+    build:
+      context: .
+      dockerfile: src/Workers/Nvm.Simulator/Dockerfile
+    image: novavolt/nvm-simulator:dev
+    container_name: nvm-simulator
+    restart: unless-stopped
+    mem_limit: 256m
+    depends_on:
+      emqx:
+        condition: service_healthy
+    environment:
+      DOTNET_ENVIRONMENT: Production
+      # Tên service trên ot-net. Không có host, không có IP, không có port host.
+      NVM_SIM__BrokerHost: emqx
+      NVM_SIM__LinePath: NOVAVOLT/NV1/FORMATION/F1
+      # 60x: một phút thời gian nhà máy mỗi giây đồng hồ, nên chu kỳ 18 giờ xong trong
+      # 18 phút và một buổi lab nhìn thấy được cả birth lẫn vòng cell mới.
+      NVM_SIM__TimeCompression: "60"
+      NVM_SIM__Faults__DuplicateRate: "0.10"
+      NVM_SIM__Faults__DriftedDeviceRate: "0.10"
+      NVM_SIM__Faults__DropoutMeanInterval: "00:05:00"
+      NVM_SIM__Faults__DropoutDuration: "00:00:30"
+    volumes:
+      - simdata:/var/lib/nvm-simulator
+    networks: [ot-net]
 
   # Hai container rỗng, chỉ tồn tại để chứng minh ranh giới mạng có thật.
   # Không chạy trong `make up` thường — cần `--profile probe`.

@@ -1,0 +1,30 @@
+# Build context của mọi image trong repo này là GỐC repo, không phải thư mục chứa
+# Dockerfile: central package management đặt Directory.Packages.props ở gốc, và
+# Directory.Build.targets nối analyzer từ tools/ vào mọi project.
+#
+# Hệ quả: không có file này thì Docker gửi cả artifacts/ (hàng trăm MB bin/obj của
+# mọi project) sang daemon trước khi chạy dòng lệnh đầu tiên. Chậm là chuyện nhỏ —
+# chuyện lớn là bin/obj của host lẫn vào layer build và image có thể mang theo
+# assembly build bằng SDK khác, một sai khác chỉ lộ ra lúc chạy.
+
+artifacts/
+**/bin/
+**/obj/
+
+.git/
+.github/
+.githooks/
+.vs/
+.vscode/
+.idea/
+
+# Bí mật. Không có lý do nào để một image cần chúng, và một biến môi trường đi lạc
+# vào layer thì nằm lại đó vĩnh viễn — kể cả khi layer sau xoá file đi.
+.env
+*.env
+!.env.example
+
+docs/
+tests/
+*.md
+LICENSE

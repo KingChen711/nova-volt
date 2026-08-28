@@ -120,6 +120,25 @@ Máy đo: Windows 11, Docker Desktop, quota RAM 8 GB (xem `docs/plans/M0-bootstr
 
 ---
 
+## M2 — Simulator, Ingestion & Idempotency
+
+| Ngày | Commit | Chỉ số | Giá trị | Điều kiện đo |
+|---|---|---|---|---|
+| 2026-08-28 | `3a5ef0e` | ★ **Test đỏ khi sửa một field number trong `sparkplug_b.proto`** | **5 / 290** | Lab phá hoại của C01: `Metric.alias` từ `2` thành `20`. Chạy riêng `Nvm.UnitTests` (290 test). `dotnet build` vẫn **0 error, 0 warning** — compiler không có gì để nói. 3 trong 5 test đỏ là test decode payload thật, nên phép kiểm không chỉ dựa vào digest. Cây làm việc C01, chưa commit. `ADR-026` |
+| 2026-08-28 | `3a5ef0e` | Alias decode được sau khi sửa field number | **0** (mong đợi 1, 2, 3, 4, 5) | Cùng lần chạy. `metric.HasAlias` = `False` và payload vẫn **parse thành công** — protobuf đọc field number lạ thành *unknown field* rồi đi tiếp |
+| 2026-08-28 | `3a5ef0e` | `make ci` sau C01 | **336 / 336 xanh** | 328 sau M1 + **8** test của C01 (5 pin, 3 decode payload thật). Phân bố: 290 unit · 23 analyzer · 17 architecture · 6 contract |
+
+> [!note] Vì sao con số 5/290 quan trọng hơn nó trông có vẻ
+> Nó không đo chất lượng của protobuf. Protobuf làm đúng việc của mình: field number lạ thì bỏ qua,
+> vì đó là cách một schema tiến hoá được mà không phá bên đọc cũ.
+>
+> Nó đo **khoảng mù**: sửa đặc tả của tầng thiết bị là một thay đổi mà **build không thấy, test cũ
+> không thấy, và runtime không ném gì**. Triệu chứng duy nhất là số metric ít đi. Trên một dây
+> chuyền thật, triệu chứng đó là *"kênh sạc này không có dữ liệu"* — và người ta sẽ đi kiểm cáp
+> trước khi nghĩ tới một file `.proto`.
+
+---
+
 ## Mục tiêu SLO — còn phải đo
 
 Khung lấy từ `docs/scope.md` Phụ lục A. Điền khi tới milestone tương ứng; mỗi ô điền xong phải

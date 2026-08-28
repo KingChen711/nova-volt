@@ -11,6 +11,7 @@
     <Project Path="src/Platform/Nvm.Contracts/Nvm.Contracts.csproj" />
     <Project Path="src/Platform/Nvm.Hosting/Nvm.Hosting.csproj" />
     <Project Path="src/Platform/Nvm.Kernel/Nvm.Kernel.csproj" />
+    <Project Path="src/Platform/Nvm.Sparkplug/Nvm.Sparkplug.csproj" />
   </Folder>
   <Folder Name="/src/Workers/">
     <Project Path="src/Workers/Nvm.BusProbe/Nvm.BusProbe.csproj" />

@@ -29,6 +29,8 @@
     <ProjectReference Include="../../../src/Platform/Nvm.Bus/Nvm.Bus.csproj" />
     <ProjectReference Include="../../../src/Platform/Nvm.Kernel/Nvm.Kernel.csproj" />
     <ProjectReference Include="../../../src/FunctionalBlocks/FactoryModel/Nvm.FactoryModel.csproj" />
+    <!-- Nvm.Sparkplug kéo theo Google.Protobuf; test pin đọc assembly qua đường này. -->
+    <ProjectReference Include="../../../src/Platform/Nvm.Sparkplug/Nvm.Sparkplug.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -37,6 +39,21 @@
       seed sẽ làm test đếm node đỏ — đó là hành vi đúng (deploy/seed/README.md).
     -->
     <Content Include="../../../deploy/seed/**/*.json" LinkBase="seed" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      Payload Sparkplug B thật, nằm ngoài project vì từ C08 trở đi gateway và integration test
+      cũng đọc chúng — cùng lý do golden file nằm ở tests/Contract/golden/.
+      Xem tests/Fixtures/sparkplug/README.md để biết chúng được sinh bằng gì và vì sao.
+    -->
+    <Content Include="../../Fixtures/sparkplug/*.bin" LinkBase="sparkplug" CopyToOutputDirectory="PreserveNewest" />
+    <!--
+      File .proto vendored, để SparkplugPinTests băm được nó. Đọc bản copy chứ không lần ngược
+      lên gốc repo từ AppContext.BaseDirectory: đường lần ngược đó hỏng ngay khi ai đó đổi
+      ArtifactsPath, và hỏng theo kiểu "không tìm thấy file" chứ không phải "hash sai".
+    -->
+    <Content Include="../../../src/Platform/Nvm.Sparkplug/proto/sparkplug_b.proto" LinkBase="sparkplug" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

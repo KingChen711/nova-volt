@@ -1840,7 +1840,8 @@ SELECT add_continuous_aggregate_policy('ts.process_signal_1m',
 **Definition of Done**
 - [ ] Chạy 1 giờ với 10% duplicate: **số bản ghi trong DB khớp chính xác số phép đo logic** — không dư, không thiếu (T1, N4).
 - [ ] **≥ 5.000 msg/s duy trì 10 phút**, p95 lag < 5 s (N1, N2).
-- [ ] Tắt toàn bộ backend 2 phút → simulator vẫn chạy bình thường; bật lại → **0 message mất**, backlog tiêu hết trong < 3 phút (N3, N15).
+- [ ] Tắt toàn bộ backend 2 phút → simulator vẫn chạy bình thường; bật lại → **0 message mất trên chặng thiết bị → ingestion**, backlog tiêu hết trong < 3 phút (**N15**).
+  > **Chặng ingestion → bus vẫn có thể mất**, và M2 không đóng được điều đó: chưa có transactional outbox (M6), nên đó vẫn là dual-write — `ADR-022` đã đo **18/200 event mất** khi broker chết 30 giây. M2 **đếm** số mất ở chặng này thay vì tuyên bố nó bằng 0. **N3** (*0 message mất toàn hệ thống*) giữ ở **M13**, đo lại sau khi outbox có ở M6. Lý do đầy đủ: `plans/M2-simulator-ingestion-idempotency.md` §2.3.
 - [ ] `NDEATH` làm mọi metric của node chuyển `STALE` mà không xoá dữ liệu lịch sử.
 - [ ] Message có `device_timestamp` lệch 2 giờ vẫn được nhận, gắn cờ `Drifted`.
 
@@ -1849,7 +1850,7 @@ SELECT add_continuous_aggregate_policy('ts.process_signal_1m',
 2. Đổi natural key thiếu `device_timestamp` → xem hai phép đo khác nhau bị nuốt mất một.
 3. Cho gateway buffer 30 phút rồi flush cùng lúc → đo xem ingestion có sập không, có cần backpressure không.
 
-**Học được** (T1): at-least-once là mặc định của thế giới thật; idempotency là **điều kiện đúng đắn**, không phải tối ưu hoá.
+**Học được** (T1): at-least-once là mặc định của thế giới thật; idempotency là **điều kiện đúng đắn**, không phải tối ưu hoá. Và nó cần **hai tầng**, không phải một (§7.2) — M2 đóng tầng ingestion, nơi khoá dedup commit được cùng transaction với dữ liệu nó bảo vệ; tầng command handler phải chờ event store ở M5 (`ADR-023`).
 
 ---
 

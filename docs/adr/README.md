@@ -60,6 +60,10 @@ việc khác.
 | [023](ADR-023-claim-truoc-khi-chay-handler.md) | Giành chỗ trước khi chạy handler; K7 chỉ đúng trong một process cho tới M5 | **Accepted** 2026-08-27 | M1 |
 | [024](ADR-024-revision-la-tai-lieu-catalog-thay-cho-mot-snapshot.md) | Revision là tài liệu bất biến; hệ thống giữ cả catalog, không giữ một snapshot | **Accepted** 2026-08-27 | M1 |
 | [025](ADR-025-immutablearray-cho-collection-lo-ra-ngoai.md) | Collection lộ ra ngoài dùng `ImmutableArray<T>`, không dùng `IReadOnlyList<T>` | **Accepted** 2026-08-27 | M1 |
+| [026](ADR-026-sinh-c-sharp-tu-sparkplug-proto.md) | Sinh C# từ `sparkplug_b.proto` đã vendored, không dùng thư viện Sparkplug | **Accepted** 2026-08-28 | M2 · C01 |
+| 027 | Chặng gateway → ingestion trong `dmz-net` | Chưa viết | M2 · C08 |
+| 028 | Store-and-forward trên đĩa của edge gateway | Chưa viết | M2 · C09 |
+| 029 | Backpressure và rate limit khi flush buffer | Chưa viết | M2 · C10 |
 
 Cột **Ra ở** là milestone dự kiến, không phải cam kết. Quyết định đến sớm hơn thì viết sớm hơn.
 

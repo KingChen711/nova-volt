@@ -58,6 +58,36 @@
     <PackageVersion Include="MassTransit.RabbitMQ" Version="8.5.10" />
   </ItemGroup>
 
+  <ItemGroup Label="Sparkplug B / protobuf — M2/C01 trở đi">
+    <!--
+      HAI GÓI, HAI VAI TRÒ. Google.Protobuf là runtime (app nạp lúc chạy); Grpc.Tools chỉ là
+      build-time — nó mang theo protoc.exe và móc vào MSBuild để sinh C# từ .proto.
+
+      LICENSE, kiểm 2026-08-28 trước khi pin (§2.2 của plan M2, cùng quy trình đã dùng cho
+      MassTransit ở M1/C09):
+        google.protobuf 3.35.1 → <license type="expression">BSD-3-Clause</license>
+        grpc.tools      2.83.0 → <license type="expression">Apache-2.0</license>
+      Cả hai permissive, không có bẫy như FluentAssertions v8 hay MassTransit v9.
+
+      VÌ SAO 3.35.1 CHỨ KHÔNG PHẢI 3.36.0 (bản stable mới nhất lúc pin) — cùng loại lý do với
+      Microsoft.CodeAnalysis ở dưới: pin theo thứ TOOLCHAIN ĐANG SHIP, không pin theo "mới nhất".
+
+      Đo ngày 2026-08-28:
+        tools/windows_x64/protoc.exe trong grpc.tools 2.83.0  → `libprotoc 35.1`
+        nuspec google.protobuf 3.35.1 → repository commit 35cd01f9fe9afbeea38cc7b979a3b6bfcde82c03
+        protobuf tag v35.1            → cùng commit 35cd01f9fe9afbeea38cc7b979a3b6bfcde82c03
+      Tức runtime 3.35.1 và protoc 35.1 build ra từ ĐÚNG một commit. Không còn chiều nào để
+      phải suy luận.
+
+      Quy tắc chung nếu sau này lệch: runtime phải >= protoc, không bao giờ thấp hơn. Code do
+      protoc mới sinh ra có thể gọi API mà runtime cũ chưa có; chiều ngược lại thì an toàn.
+
+      KHÔNG nâng lên 4.0.0-rc*: prerelease.
+    -->
+    <PackageVersion Include="Google.Protobuf" Version="3.35.1" />
+    <PackageVersion Include="Grpc.Tools" Version="2.83.0" />
+  </ItemGroup>
+
   <ItemGroup Label="Dependency injection — C04 trở đi">
     <!--
       CHỈ Abstractions, không phải gói DI đầy đủ. Nvm.Kernel cần IServiceCollection để đăng ký

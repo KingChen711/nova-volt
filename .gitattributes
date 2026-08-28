@@ -22,6 +22,9 @@ makefile      text eol=lf
 *.slnx      text eol=crlf
 *.props     text
 *.targets   text
+# .proto vendored: SHA-256 của nó bị pin trong SparkplugPinTests, và digest tính trên LF.
+# Checkout ra CRLF thì test đỏ vì lý do không liên quan gì tới nội dung file.
+*.proto     text eol=lf
 
 # Cấu hình
 *.json  text
@@ -47,6 +50,10 @@ makefile      text eol=lf
 *.dll  binary
 *.exe  binary
 *.bundle binary
+# Payload Sparkplug B trong tests/Fixtures/. `text=auto` thường đoán đúng là nhị phân, nhưng
+# "thường" không đủ: một lần chuẩn hoá CRLF là payload hỏng, và triệu chứng là test decode đỏ
+# chứ không phải một cảnh báo nào.
+*.bin  binary
 
 # Không tính vào thống kê ngôn ngữ của repo
 docs/**    linguist-documentation

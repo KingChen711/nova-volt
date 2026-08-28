@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Giải mã payload Sparkplug B của tầng thiết bị.
+
+    Ở tầng PLATFORM chứ không phải Functional Block, và đó là một quyết định chứ không phải chỗ
+    trống tiện tay: Sparkplug không phải nghiệp vụ của một bounded context nào. Nó là định dạng
+    dây của tầng OT, và cả `Nvm.EdgeGateway` (C08) lẫn `Nvm.Ingestion` (C12) lẫn test đều cần
+    đọc được nó. Đặt nó trong một FB thì FB thứ hai phải reference FB thứ nhất — đúng thứ K8 cấm.
+
+    Ở C01 project này CỐ Ý chưa có file .cs nào viết tay. Toàn bộ type sinh ra từ
+    proto/sparkplug_b.proto lúc build. Ánh xạ sang kiểu của mình là C02, không phải ở đây.
+
+    ADR-026 (tự sinh từ .proto thay vì dùng thư viện Sparkplug).
+  -->
+
+  <PropertyGroup>
+    <RootNamespace>Nvm.Sparkplug</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!--
+      Google.Protobuf là RUNTIME (app nạp), Grpc.Tools là BUILD-TIME (MSBuild gọi protoc).
+      Hai vai trò khác nhau nên PrivateAssets khác nhau: Grpc.Tools không được chảy sang
+      project nào reference project này — nó không có gì để chảy, và để nó chảy là mời một
+      protoc thứ hai vào một build khác.
+
+      Version và license pin ở Directory.Packages.props.
+    -->
+    <PackageReference Include="Google.Protobuf" />
+    <PackageReference Include="Grpc.Tools" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      GrpcServices="None": file .proto này không khai `service` nào, và nói thẳng ra thì rẻ hơn
+      là để Grpc.Tools nạp grpc_csharp_plugin rồi sinh ra không gì cả.
+
+      Namespace C# sinh ra là Org.Eclipse.Tahu.Protobuf — lấy từ `package` trong chính file .proto,
+      KHÔNG đổi thành Nvm.*. Đổi được (thêm `option csharp_namespace`), nhưng làm vậy là sửa file
+      vendored, và mọi lần cập nhật upstream sau này lại phải vá tay đúng một dòng đó. Đổi lại,
+      namespace lạ trong code đọc thành một câu đúng: kiểu này đến từ đặc tả, không phải của mình.
+    -->
+    <Protobuf Include="proto/sparkplug_b.proto" ProtoRoot="proto" GrpcServices="None" />
+  </ItemGroup>
+
+</Project>

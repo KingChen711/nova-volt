@@ -14,7 +14,7 @@ SOLUTION := NovaVolt.Mes.slnx
 COMPOSE  := docker compose
 
 # `down` phải nêu đủ profile, nếu không container của profile không active sẽ bị bỏ lại.
-ALL_PROFILES := --profile probe --profile init --profile obs --profile tools --profile sim
+ALL_PROFILES := --profile probe --profile init --profile obs --profile tools --profile sim --profile ingestion
 
 # Đọc RIÊNG một biến từ .env thay vì `include .env`.
 # `include` nạp mọi biến vào make — kể cả mật khẩu — và một khoá trùng tên với biến
@@ -22,7 +22,7 @@ ALL_PROFILES := --profile probe --profile init --profile obs --profile tools --p
 BACKUP_DIR := $(shell grep -E '^NVM_BACKUP_DIR=' .env 2>/dev/null | cut -d= -f2-)
 
 .DEFAULT_GOAL := help
-.PHONY: help up up-obs down down-v reset ps logs net-check dmz-shell build test ci hooks format format-check clean backup bus-fanout bus-dlq bus-chaos sim-up sim-down sim-logs sim-report sim-net-check edge-up edge-down edge-logs edge-net-check buffer-crash
+.PHONY: help up up-obs down down-v reset ps logs net-check dmz-shell build test ci hooks format format-check clean backup bus-fanout bus-dlq bus-chaos sim-up sim-down sim-logs sim-report sim-net-check edge-up edge-down edge-logs edge-net-check buffer-crash ingestion-up ingestion-down ingestion-logs ingestion-migrate
 
 help:
 	@echo "NovaVolt MES"
@@ -51,6 +51,12 @@ help:
 	@echo "    make edge-logs     Theo doi decoded/buffered/forwarded"
 	@echo "    make edge-net-check Kiem gateway chi o dmz-net, toi EMQX nhung khong toi RabbitMQ"
 	@echo "    make buffer-crash  200 vong kill -9 + reopen buffer (ROUNDS de chay nhanh luc dev)"
+	@echo ""
+	@echo "  Ingestion"
+	@echo "    make ingestion-up  Migrate, build va chay bridge tren dmz-net + it-net"
+	@echo "    make ingestion-down Dung ingestion"
+	@echo "    make ingestion-logs Theo doi batch inserted/duplicate"
+	@echo "    make ingestion-migrate Chay rieng migration job PostgreSQL"
 	@echo ""
 	@echo "  Code"
 	@echo "    make build         Build solution"
@@ -227,6 +233,25 @@ edge-net-check:
 buffer-crash:
 	@$(COMPOSE) build edge-gateway
 	@ROUNDS=$${ROUNDS:-200} sh scripts/buffer-crash.sh
+
+# ─────────────────────────────────────────────────────────
+# Ingestion — migration job tách khỏi app startup (scope.md §8.4)
+# ─────────────────────────────────────────────────────────
+ingestion-up: .env
+	@$(COMPOSE) --profile ingestion build ingestion
+	@$(COMPOSE) --profile ingestion run --rm ingestion-migrate
+	@$(COMPOSE) --profile ingestion up -d --wait ingestion
+	@echo "Ingestion healthy tren dmz-net + it-net. Theo doi: make ingestion-logs"
+
+ingestion-down:
+	@$(COMPOSE) --profile ingestion rm -sf ingestion
+
+ingestion-logs:
+	@$(COMPOSE) --profile ingestion logs -f --tail 100 ingestion
+
+ingestion-migrate: .env
+	@$(COMPOSE) --profile ingestion build ingestion
+	@$(COMPOSE) --profile ingestion run --rm ingestion-migrate
 
 # ─────────────────────────────────────────────────────────
 # Bus — bang chung cua M1/C13

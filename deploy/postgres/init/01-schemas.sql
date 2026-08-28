@@ -26,7 +26,7 @@ CREATE SCHEMA IF NOT EXISTS rm;
 CREATE SCHEMA IF NOT EXISTS trace;
 
 -- Dedup của ingestion: bảng khoá tự nhiên -> source_event_id.
--- Partition theo tháng từ M2, có retention riêng.
+-- Khoá sống toàn cục, không partition theo thời gian (ADR-030).
 CREATE SCHEMA IF NOT EXISTS ingest;
 
 COMMENT ON SCHEMA ts     IS 'Telemetry thô tu thiet bi (hypertable)';

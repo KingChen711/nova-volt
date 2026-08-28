@@ -1226,16 +1226,24 @@ public static Guid CreateVersion5(Guid namespaceId, string name)
 }
 ```
 
-**Bảng dedup** (PostgreSQL, partition theo tháng):
+**Bảng dedup** (PostgreSQL, uniqueness toàn cục):
 
 ```sql
 CREATE TABLE ingest.processed_message (
-    source_event_id UUID        NOT NULL,
+    source_event_id UUID        PRIMARY KEY,
+    site_id         TEXT        NOT NULL,
     natural_key     TEXT        NOT NULL,
-    first_seen_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
-    PRIMARY KEY (source_event_id, first_seen_at)
-) PARTITION BY RANGE (first_seen_at);
+    first_seen_at   TIMESTAMPTZ NOT NULL
+);
+
+CREATE INDEX ix_processed_message_site_seen
+    ON ingest.processed_message (site_id, first_seen_at DESC);
 ```
+
+Không partition theo `first_seen_at`: PostgreSQL buộc partition key xuất hiện trong mọi unique
+constraint, nên primary key `(source_event_id, first_seen_at)` sẽ cho cùng `source_event_id` lọt lại
+khi replay ở tháng khác. Dedup key phải sống toàn cục; telemetry mới là dữ liệu partition theo thời
+gian. Xem `ADR-030`.
 
 > [!important] Dedup ở đâu là đủ?
 > Dedup ở **ingestion** chặn duplicate từ thiết bị. Nhưng bus cũng at-least-once → **command handler cũng phải idempotent**. Hai tầng, không phải một.

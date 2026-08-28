@@ -528,7 +528,9 @@ Một kênh formation ngừng gửi dữ liệu. Ba cách hệ thống có thể
 
 **Việc làm**
 - `src/Workers/Nvm.Ingestion/`, `networks: [dmz-net, it-net]` — điểm bắc cầu duy nhất (§2.1).
-- Bảng `ingest.processed_message` theo DDL ở `scope.md` §7.2, partition theo tháng.
+- Bảng `ingest.processed_message` theo DDL đã sửa ở `scope.md` §7.2: primary key toàn cục trên
+  `source_event_id`, **không** partition theo tháng (`ADR-030`). PostgreSQL không thể ép uniqueness
+  toàn cục của id nếu `first_seen_at` là partition key.
 - `INSERT ... ON CONFLICT DO NOTHING` trên `source_event_id`, **cùng transaction** với insert telemetry. Số row bị `ON CONFLICT` nuốt được **đếm** và expose thành metric.
 
 **Kiểm chứng**
@@ -537,7 +539,7 @@ make test
 ```
 Test bắt buộc (Testcontainers PostgreSQL): gửi cùng message 3 lần → **1** row telemetry, counter duplicate = **2**; hai message **khác nhau** chỉ lệch `device_timestamp` → **2** row; giết transaction giữa chừng → **không** còn khoá dedup lẫn telemetry (cùng transaction, cùng số phận).
 
-> Test thứ ba là thứ M1 **không** làm được và `ADR-023` đã ghi rõ là chưa đóng. Ở đây đóng được, vì effect là một `INSERT` chứ không phải một dictionary trong RAM. Nhắc lại điều này trong `ADR-023` §Consequences khi C12 xong.
+> Test thứ ba là thứ M1 **không** làm được và `ADR-023` đã ghi rõ là chưa đóng. Ở đây đóng được, vì effect là một `INSERT` chứ không phải một dictionary trong RAM. `ADR-023` đã Accepted nên không sửa ảnh chụp quyết định cũ; bằng chứng tầng ingestion và ranh giới còn lại của command handler được ghi ở `ADR-030` §Consequences.
 
 ---
 
@@ -740,7 +742,7 @@ make bus-fanout && make bus-dlq && make bus-chaos
 | C09 | buffer store-and-forward | ☑ | 2026-08-28 | ADR-028; crash **0/200** (dự đoán 20/200) |
 | C10 | rate limit + backpressure | ☐ | | ADR-029. **D3**. Lab #3 (xả 30 phút) |
 | C11 | NBIRTH / NDEATH / seq gap | ☐ | | **D4** |
-| C12 | processed_message + dedup | ☐ | | |
+| C12 | processed_message + dedup | ☑ | 2026-08-28 | ADR-030; 480 test xanh |
 | C13 | clock quality classifier | ☐ | | **D5**. Lab #1 và #2 |
 | C14 | publish cloudevents lên bus | ☐ | | |
 | C15 | CSV file-drop adapter | ☐ | | |

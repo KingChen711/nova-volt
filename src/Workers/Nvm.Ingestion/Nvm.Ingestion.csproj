@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!--
+    Điểm bắc cầu DMZ -> IT của M2. Process chỉ nhận batch đã decode qua HTTP và ghi PostgreSQL;
+    nó không biết MQTT, còn gateway không biết database hay RabbitMQ (K11, K12).
+  -->
+
+  <PropertyGroup>
+    <RootNamespace>Nvm.Ingestion</RootNamespace>
+    <AssemblyName>Nvm.Ingestion</AssemblyName>
+    <UserSecretsId>nvm-ingestion</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Npgsql" />
+    <PackageReference Include="dbup-postgresql" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Platform/Nvm.Hosting/Nvm.Hosting.csproj" />
+    <ProjectReference Include="../../Platform/Nvm.Sparkplug/Nvm.Sparkplug.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Migrations/Up/*.sql" />
+    <!-- Down script là artefact review/rollback, không được DbUp nhặt vào chuỗi forward. -->
+    <Content Include="Migrations/Down/*.sql" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

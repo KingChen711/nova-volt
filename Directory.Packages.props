@@ -103,6 +103,22 @@
     <PackageVersion Include="MQTTnet" Version="5.2.0.1603" />
   </ItemGroup>
 
+  <ItemGroup Label="PostgreSQL ingestion — M2/C12 trở đi">
+    <!--
+      Npgsql là driver runtime; dbup-postgresql chỉ chạy trong migration job riêng và trong
+      integration test. App phục vụ HTTP KHÔNG tự migrate lúc startup (scope.md §8.4).
+
+      LICENSE, kiểm 2026-08-28 trước khi pin:
+        Npgsql                    10.0.3  → PostgreSQL License
+        dbup-postgresql            7.0.1  → MIT
+        Testcontainers.PostgreSql  4.14.0 → MIT
+      Cả ba có asset tương thích net10.0; Testcontainers chỉ xuất hiện trong test.
+    -->
+    <PackageVersion Include="Npgsql" Version="10.0.3" />
+    <PackageVersion Include="dbup-postgresql" Version="7.0.1" />
+    <PackageVersion Include="Testcontainers.PostgreSql" Version="4.14.0" />
+  </ItemGroup>
+
   <ItemGroup Label="Dependency injection — C04 trở đi">
     <!--
       CHỈ Abstractions, không phải gói DI đầy đủ. Nvm.Kernel cần IServiceCollection để đăng ký

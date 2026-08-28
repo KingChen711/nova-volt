@@ -16,6 +16,7 @@
   <Folder Name="/src/Workers/">
     <Project Path="src/Workers/Nvm.BusProbe/Nvm.BusProbe.csproj" />
     <Project Path="src/Workers/Nvm.EdgeGateway/Nvm.EdgeGateway.csproj" />
+    <Project Path="src/Workers/Nvm.Ingestion/Nvm.Ingestion.csproj" />
     <Project Path="src/Workers/Nvm.Simulator/Nvm.Simulator.csproj" />
   </Folder>
   <Folder Name="/tools/">
@@ -30,6 +31,9 @@
   </Folder>
   <Folder Name="/tests/Contract/">
     <Project Path="tests/Contract/Nvm.ContractTests/Nvm.ContractTests.csproj" />
+  </Folder>
+  <Folder Name="/tests/Integration/">
+    <Project Path="tests/Integration/Nvm.IntegrationTests/Nvm.IntegrationTests.csproj" />
   </Folder>
   <Folder Name="/tests/Unit/">
     <Project Path="tests/Unit/Nvm.UnitTests/Nvm.UnitTests.csproj" />

@@ -10,6 +10,7 @@
 #   obs         observability stack, bật từ M13 hoặc khi cần debug  (xem plan §2.2)
 #   probe       container rỗng chỉ để kiểm chứng ranh giới mạng
 #   sim         simulator thiết bị của M2 — `make up` thường KHÔNG kéo nó lên
+#   ingestion   HTTP bridge + migration job của M2
 #
 # Mọi service PHẢI khai báo mem_limit: máy chỉ có 15,4 GB và cần biết cái nào ngốn.
 
@@ -377,8 +378,8 @@ services:
   # thiết bị qua ranh giới; gateway không đứng cạnh thiết bị và không nhìn thấy RabbitMQ.
   # `scripts/edge-net-check.sh` đo trên network namespace thật của container.
   #
-  # Ingestion chưa xuất hiện tới C12. Từ C09, POST thất bại giữ nguyên cursor của buffer; message
-  # đã fsync không bị biến thành loss chỉ vì backend chưa tồn tại.
+  # POST thất bại giữ nguyên cursor của buffer; message đã fsync không bị biến thành loss chỉ vì
+  # ingestion chưa sẵn sàng.
   # ─────────────────────────────────────────────────────────
   edge-gateway:
     build:
@@ -400,6 +401,51 @@ services:
     volumes:
       - edgedata:/var/lib/nvm-edge-gateway
     networks: [dmz-net]
+
+  # ─────────────────────────────────────────────────────────
+  # Nvm.Ingestion — cầu DMZ -> IT duy nhất của đường telemetry
+  #
+  # Service phục vụ HTTP KHÔNG tự đổi schema lúc startup. `make ingestion-up` chạy job migration
+  # riêng trước, đúng scope.md §8.4. Không publish port ra host: gateway gọi bằng service DNS trên
+  # dmz-net, còn PostgreSQL chỉ nhìn thấy từ chân it-net.
+  # ─────────────────────────────────────────────────────────
+  ingestion:
+    profiles: [ingestion]
+    build:
+      context: .
+      dockerfile: src/Workers/Nvm.Ingestion/Dockerfile
+    image: novavolt/nvm-ingestion:dev
+    container_name: nvm-ingestion
+    restart: unless-stopped
+    mem_limit: 256m
+    depends_on:
+      timescale:
+        condition: service_healthy
+    environment:
+      DOTNET_ENVIRONMENT: Production
+      NVM_INGEST__ConnectionString: "Host=timescale;Port=5432;Database=${NVM_POSTGRES_DB};Username=${NVM_POSTGRES_USER};Password=${NVM_POSTGRES_PASSWORD};Application Name=Nvm.Ingestion"
+    networks: [dmz-net, it-net]
+    healthcheck:
+      test: ["CMD", "dotnet", "Nvm.Ingestion.dll", "--health-probe", "http://127.0.0.1:8080/health/ready"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  ingestion-migrate:
+    profiles: [ingestion]
+    image: novavolt/nvm-ingestion:dev
+    container_name: nvm-ingestion-migrate
+    restart: "no"
+    mem_limit: 256m
+    depends_on:
+      timescale:
+        condition: service_healthy
+    environment:
+      DOTNET_ENVIRONMENT: Production
+      NVM_INGEST__ConnectionString: "Host=timescale;Port=5432;Database=${NVM_POSTGRES_DB};Username=${NVM_POSTGRES_USER};Password=${NVM_POSTGRES_PASSWORD};Application Name=Nvm.Ingestion.Migrate"
+    networks: [it-net]
+    command: ["--migrate"]
 
   # Hai container rỗng, chỉ tồn tại để chứng minh ranh giới mạng có thật.
   # Không chạy trong `make up` thường — cần `--profile probe`.

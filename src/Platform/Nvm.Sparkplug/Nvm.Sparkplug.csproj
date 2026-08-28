@@ -19,6 +19,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- EquipmentPath và IEquipmentDirectory. Kernel không kéo theo package nào ngoài
+         DI Abstractions, nên ranh giới K9 không bị đụng. -->
+    <ProjectReference Include="../Nvm.Kernel/Nvm.Kernel.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!--
       Google.Protobuf là RUNTIME (app nạp), Grpc.Tools là BUILD-TIME (MSBuild gọi protoc).
       Hai vai trò khác nhau nên PrivateAssets khác nhau: Grpc.Tools không được chảy sang

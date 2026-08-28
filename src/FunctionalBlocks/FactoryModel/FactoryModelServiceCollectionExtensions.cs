@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Nvm.FactoryModel.Seeding;
 using Nvm.FactoryModel.Storage;
+using Nvm.Kernel.Identity;
 
 namespace Nvm.FactoryModel;
 
@@ -37,6 +38,11 @@ public static class FactoryModelServiceCollectionExtensions
 
         services.TryAddSingleton<IFactoryModelCatalog>(FactoryModelSeed.LoadCatalog(seedDirectoryPath));
         services.TryAddSingleton<IActiveFactoryModel, InMemoryActiveFactoryModel>();
+
+        // The block's answer to a Platform question (Nvm.Kernel.Identity.IEquipmentDirectory).
+        // Ingestion and the edge gateway resolve machine codes through the interface and never see
+        // this type, which is what keeps K8 intact while still letting them ask.
+        services.TryAddSingleton<IEquipmentDirectory, FactoryModelEquipmentDirectory>();
 
         return services;
     }

@@ -25,6 +25,47 @@ _gần như_ mọi lúc, và đó là tần suất tệ nhất để một phép
 Không có state nào ở đây. Bảng alias truyền vào và trả ra, nên vòng đời của nó — **một phiên của một
 edge node** — nằm ở phía người gọi. C11 là chỗ nó thành node state khoá theo `bdSeq`.
 
+## Topic: chỗ nối vào cây ISA-95
+
+Payload **không mang địa chỉ**. Máy nào gửi, và message là khai báo hay cập nhật, nằm hết ở topic.
+
+```
+spBv1.0/NOVAVOLT-NV1-FORMATION/DDATA/EDGE-F1/FORM-01-CH-0142
+        └ enterprise, site, area ┘     └line┘ └── device ──┘
+
+NOVAVOLT/NV1/FORMATION/F1/FORM-01/FORM-01-CH-0142
+                          └ work cell, lấy từ model ┘
+```
+
+```csharp
+var topic = SparkplugTopic.Parse(mqttTopic);              // ingestion / gateway
+var path  = topic.ResolveEquipmentPath(equipmentDirectory); // null = từ chối, K3
+var back  = SparkplugTopic.For(path, SparkplugMessageType.DeviceData); // simulator, C05
+```
+
+**Chiều ngược lại mất work cell.** Topic có 4 bậc nhà máy, path có tới 6. `For()` bỏ work cell đi và
+chỉ `ResolveEquipmentPath()` đưa nó về được — bằng cách hỏi model. Đó là lý do
+`IEquipmentDirectory` tồn tại, và lý do test round-trip phải đi qua **cả hai** nửa.
+
+Vì sao phải hỏi model chứ không cắt chuỗi: device trên dây **có khi là work cell** (`STACK-01` treo
+thẳng vào line `L1`), **có khi là equipment trong một work cell** (`FORM-01-CH-0142` nằm trong
+`FORM-01`). Topic không có manh mối nào phân biệt.
+
+`ResolveEquipmentPath` trả **null** — không ném — khi nhà máy không có chỗ đó: site chưa activate,
+line đã tháo, device thuộc revision chưa rollout tới. Đây là chỗ **K3** được ép, và câu trả lời là
+một quyết định định tuyến chứ không phải một sự cố: ingestion từ chối message đó, nói ra topic nào,
+rồi đi tiếp.
+
+> [!warning] HOA/thường: cùng bẫy của M1/C02.1
+> Cùng những cỗ máy đó còn được địa chỉ hoá bởi cây **Unified Namespace** viết thường —
+> `novavolt/nv1/formation/f1/form-01/ch-0142`. Nhận cả hai cách viết là cho một cycler **hai danh
+> tính**, và mọi phép đếm phía sau bị chia đôi dữ liệu. `EquipmentPath` đã từ chối chữ thường; parse
+> đi qua nó nên chỗ này không có ý kiến thứ hai.
+
+`spBv1.0/STATE/{host}` là hình dạng khác hẳn — nó gọi tên một SCADA host, không phải một chỗ trong
+nhà máy. `TryParse` từ chối nó, và `IsHostState()` cho gateway phân biệt *"không gửi cho mình"* với
+*"hỏng"*. Gộp hai thứ đó lại là dạy mọi người bỏ qua cảnh báo.
+
 ## Bảng alias: vì sao alias lạ phải ném
 
 Một máy formation có 1.000 kênh, mỗi kênh 6–8 metric. Gửi `Formation/Voltage` đầy đủ trong **mọi**

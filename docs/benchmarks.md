@@ -131,6 +131,7 @@ Máy đo: Windows 11, Docker Desktop, quota RAM 8 GB (xem `docs/plans/M0-bootstr
 | 2026-08-28 | `c80a905` | ★ **Test đỏ khi bảng alias chỉ nhớ tên, không nhớ datatype** | **1 / 318** | Lab phá hoại B của C02: bỏ `declared ??= definition.DataType`. Triệu chứng: một `Int32` giá trị **−1** decode ra **4.294.967.295** — cùng chuỗi byte, không exception, và con số đó vẫn vào lọt cột `DOUBLE PRECISION` |
 | 2026-08-28 | `c80a905` | ★ **Test đỏ khi type sinh từ `.proto` lọt ra public API** | **1 / 20** | Lab phá hoại C: thêm `public static Payload Raw(...)` vào `SparkplugPayload`. Rule **A7** đỏ và gọi tên đúng chỗ rò: `SparkplugPayload.Raw() returns`. Chạy riêng `Nvm.ArchitectureTests` |
 | 2026-08-28 | `c80a905` | `make ci` sau C02 | **368 / 368 xanh** | 336 sau C01 + **32** test của C02 (29 unit, 3 architecture). Phân bố: 319 unit · 23 analyzer · 20 architecture · 6 contract |
+| 2026-08-28 | `82f16b8` | `make ci` sau C03 | **401 / 401 xanh** | 368 sau C02 + **33** test của C03 (topic parse/format/round-trip, và resolve qua factory model thật). Phân bố: 352 unit · 23 analyzer · 20 architecture · 6 contract |
 
 > [!note] Vì sao con số 5/290 quan trọng hơn nó trông có vẻ
 > Nó không đo chất lượng của protobuf. Protobuf làm đúng việc của mình: field number lạ thì bỏ qua,

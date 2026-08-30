@@ -16,12 +16,15 @@ public sealed class IngestionMetrics
         Meter.CreateCounter<long>("nvm.ingest.publish_failures", unit: "{event}");
     private static readonly Counter<long> PublishedCounter =
         Meter.CreateCounter<long>("nvm.ingest.published", unit: "{event}");
+    private static readonly Counter<long> WriteRetryCounter =
+        Meter.CreateCounter<long>("nvm.ingest.write_retries", unit: "{transaction}");
 
     private long _insertedCount;
     private long _duplicateCount;
     private long _driftedCount;
     private long _publishFailureCount;
     private long _publishedCount;
+    private long _writeRetryCount;
 
     /// <summary>Rows committed during this process lifetime.</summary>
     public long InsertedCount => Interlocked.Read(ref _insertedCount);
@@ -54,6 +57,29 @@ public sealed class IngestionMetrics
     /// count measures nothing when the assumption breaks.
     /// </remarks>
     public long PublishedCount => Interlocked.Read(ref _publishedCount);
+
+    /// <summary>Write transactions PostgreSQL killed to break a deadlock, and this process retried.</summary>
+    /// <remarks>
+    /// <para>
+    /// Non-zero is normal and near-constant per day. Creating a chunk takes a
+    /// <c>ShareUpdateExclusiveLock</c> on the hypertable, so several writers reaching for the SAME
+    /// not-yet-existing chunk deadlock, PostgreSQL kills all but one, and the losers retry into the
+    /// chunk the winner made. Measured on 2.29.2-pg17: four writers, three killed on the first batch
+    /// of a day and zero on every batch after it.
+    /// </para>
+    /// <para>
+    /// It is counted rather than swallowed because the shape of the number is the diagnosis. A few per
+    /// chunk boundary is the mechanism working; a number that climbs with load is contention of some
+    /// other kind, and the two are indistinguishable if neither is counted.
+    /// </para>
+    /// </remarks>
+    public long WriteRetryCount => Interlocked.Read(ref _writeRetryCount);
+
+    internal void RecordWriteRetry()
+    {
+        Interlocked.Increment(ref _writeRetryCount);
+        WriteRetryCounter.Add(1);
+    }
 
     internal void RecordPublishOutcome(int attempted, int failures)
     {

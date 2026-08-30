@@ -62,6 +62,14 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
         FROM incoming;
         """;
 
+    /// <summary>How many times one chunk write may be retried after a deadlock before giving up.</summary>
+    /// <remarks>
+    /// Bounded, and low. Chunk creation deadlocks resolve on the first retry because the winner has
+    /// already made the chunk; a write still failing after several attempts is contending with
+    /// something else, and looping on it would hide that instead of reporting it.
+    /// </remarks>
+    private const int MaxWriteAttempts = 5;
+
     private readonly NpgsqlDataSource _dataSource;
     private readonly TimeProvider _timeProvider;
     private readonly IngestionMetrics _metrics;
@@ -249,6 +257,37 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
         MeasurementRow[] rows,
         CancellationToken cancellationToken)
     {
+        // Retried rather than surfaced, because a deadlock here is a scheduling accident and not a
+        // statement about the data. Since M3 made telemetry a hypertable, creating a chunk takes a
+        // ShareUpdateExclusiveLock on it, so several writers reaching for the SAME not-yet-existing
+        // chunk cycle and PostgreSQL kills all but one. Measured on 2.29.2-pg17: four writers, three
+        // killed on the first batch of a chunk and zero on every batch afterwards.
+        //
+        // Retrying is exactly safe here and nowhere else would it be so easy: the killed transaction
+        // rolled back BOTH statements together (ADR-030), so nothing was claimed and nothing was
+        // stored, and the claim insert is ON CONFLICT DO NOTHING, so a retry that races the winner
+        // simply reports its rows as duplicates.
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                return await WriteChunkOnceAsync(rows, cancellationToken);
+            }
+            catch (PostgresException failure)
+                when (attempt < MaxWriteAttempts && IsTransientWriteConflict(failure))
+            {
+                // No backoff. The deadlock detector has already killed one side, so by the time this
+                // line runs the winner is committing or has committed, and the chunk it created is
+                // there. Waiting would only hold a connection open.
+                _metrics.RecordWriteRetry();
+            }
+        }
+    }
+
+    private async Task<MeasurementRow[]> WriteChunkOnceAsync(
+        MeasurementRow[] rows,
+        CancellationToken cancellationToken)
+    {
         await using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
@@ -263,6 +302,12 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
         await transaction.CommitAsync(cancellationToken);
         return claimedRows;
     }
+
+    // Only the two states PostgreSQL raises when it has undone the whole transaction for a reason
+    // that will not repeat. A constraint violation is neither, and retrying one would turn a message
+    // this process must reject into an endless loop.
+    private static bool IsTransientWriteConflict(PostgresException failure) =>
+        failure.SqlState is PostgresErrorCodes.DeadlockDetected or PostgresErrorCodes.SerializationFailure;
 
     // Good clocks only. The measurement subtracts two clocks, so a PLC two hours out would
     // contribute a two-hour "lag" that says nothing about the pipeline, and one two hours fast would

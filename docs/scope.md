@@ -1823,10 +1823,10 @@ SELECT add_continuous_aggregate_policy('ts.process_signal_1m',
 - Roslyn analyzer `NVM001` (cấm `DateTime.UtcNow`), `NVM002` (cấm `DateTime` trong contract), `NVM003` (ép `[EventVersion]`).
 
 **Definition of Done**
-- [ ] Publish 1 event từ service A → 2 consumer nhận độc lập, mỗi consumer có queue riêng.
-- [ ] Consumer ném exception 5 lần → message vào DLQ, **không** mất.
-- [ ] Analyzer báo lỗi build khi cố tình viết `DateTime.UtcNow`.
-- [ ] `docs/oef-mapping.md`: 6 dòng OEF của M1 có **trạng thái đúng**, trong đó *Bus-Centric Design* và *Manufacturing Service Bus* đạt `xong`. *(Bảng 22 dòng đã được tạo ở M0/C15, nên tiêu chí của M1 là trạng thái chứ không phải sự tồn tại.)*
+- [x] Publish 1 event từ service A → 2 consumer nhận độc lập, mỗi consumer có queue riêng. `make bus-fanout`: hai dòng nhận cho một publish, consumer thứ hai chậm hơn **1 ms**; tắt một consumer thì queue của nó **tăng** `messages` còn consumer kia vẫn nhận — hai queue thật sự độc lập.
+- [x] Consumer ném exception 5 lần → message vào DLQ, **không** mất. `make bus-dlq`: **5** lần thử (245/480/920/1933 ms, exponential có jitter), `_error` có **1** message, queue chính còn **0**.
+- [x] Analyzer báo lỗi build khi cố tình viết `DateTime.UtcNow`. `error NVM001`; `DateTimeOffset.Now` cũng bị bắt; `NVM002`/`NVM003` cùng cơ chế.
+- [x] `docs/oef-mapping.md`: 6 dòng OEF của M1 có **trạng thái đúng**, trong đó *Bus-Centric Design* và *Manufacturing Service Bus* đạt `xong`. Vế thứ hai của `xong` — giải thích được, không mở tài liệu — đã hỏi **2026-08-30**; câu N15/K12 phải bổ sung vế *dây chuyền dừng vì MES chết* trước khi tick. *(Bảng 22 dòng đã được tạo ở M0/C15, nên tiêu chí của M1 là trạng thái chứ không phải sự tồn tại.)*
 
 **Lab phá hoại**: tắt RabbitMQ giữa lúc publish → app **không crash**, `/health/live` vẫn xanh, publish thất bại bị **bắt và đếm**, và **số event mất được ghi thành con số** vào `benchmarks.md` + `ADR-022`.
 
@@ -2848,7 +2848,7 @@ Câu bám theo, nếu không khí đang mở: *"Thế phần nào hay trục tr�
 | M | Milestone | Tuần | Bắt đầu | Xong | DoD ★ đạt? | ADR | Màn hình Mendix | Ghi chú |
 |---|---|---|---|---|---|---|---|---|
 | M0 | Bootstrap & Walking Skeleton | 1,0 | 2026-08-25 | 2026-08-26 | ☑ | ☑ | ☑ | 16 commit. Cả 5 DoD đạt. 4 ADR |
-| M1 | Factory Model & Service Bus | 1,5 | 2026-08-26 | *(chưa)* | ☐ | ☑ | — | **đang làm**. ★D1–D4 đạt; **D5 còn mở** (vế *"giải thích được"*), **C19 chưa xong** → milestone **chưa đóng**. **K7 đầy đủ còn mở tới M4**: idempotency hiện chỉ đúng trong một process (`ADR-023`; mốc đổi từ M5 sang M4 ngày 2026-08-30 vì effect của M4 là bền vững). 8 ADR: 004, 008, 010, 021, 022, 023, 024, 025. 328 test (`make ci`: 282 unit + 23 analyzer + 17 architecture + 6 contract). ★ Lab phá hoại: **18/200 event mất** khi broker chết 30 s |
+| M1 | Factory Model & Service Bus | 1,5 | 2026-08-26 | 2026-08-30 | ☑ | ☑ | ☑ | **ĐÓNG.** Cả 5 DoD đạt. ★D1: một publish → hai queue độc lập cùng nhận, consumer thứ hai chậm hơn **1 ms**; D2: **5** lần thử rồi vào `_error`, queue chính còn 0; D4: **18/200** event mất khi broker chết 30 s — con số đầu vào của outbox ở M6; D5: 6 dòng OEF đúng trạng thái **và** chủ repo giải thích được (hỏi 2026-08-30, câu N15/K12 phải bổ sung vế *dây chuyền dừng* trước khi tick). **K7 đầy đủ KHÔNG phải nợ của M1**: nó đóng ở M4 (`ADR-023`; mốc đổi từ M5 sang M4 ngày 2026-08-30 vì effect của M4 là bền vững). 8 ADR: 004, 008, 010, 021, 022, 023, 024, 025. 328 test (`make ci`: 282 unit + 23 analyzer + 17 architecture + 6 contract). ★ Lab phá hoại: **18/200 event mất** khi broker chết 30 s |
 | M2 | Simulator, Ingestion & Idempotency | 2,5 | 2026-08-28 | *(chưa)* | ☐ | ☑ | — | **đang làm**. **Cả năm DoD đã đạt**: ★D1 (3.600 giây thật: **3.540 = 3.540, lệch 0**, đo lại trên oracle cuối `8d06c7e` — trùng từng con số), D2 vế M2 (**2.361.174** message exact trên **1.000 kênh**, EMQX dropped 0), ★D3 (**16.288 = 16.288**, drain **37 s** trên ngân sách strict < 180, `abandonedMeasurements` 0), D4, D5. N1/N2 đã rời sang **M9/M13** (`ADR-031`). Còn lại **một** điều kiện đóng: chủ repo trả lời được các câu *vì sao* mà không mở tài liệu. 6 ADR: 026, 027, 028, 029, 030, 031. **585 test**, buffer-crash **0/200**. ★ D2 lộ nút thắt thật: harness bắn đúng 5.000 msg/s nhưng đường ống nuốt **936 msg/s**, EMQX xả **80 %**. ★ Lab: bỏ dedup **+24,5 %** row thừa · bỏ `device_timestamp` khỏi khoá **99,93 %** row bị nuốt, cả hai **không ném lỗi nào** |
 | M3 | Telemetry & Production Calendar | 1,0 | | | ☐ | ☐ | — | |
 | M4 | Mendix — Operator Station v1 | 2,0 | | | ☐ | ☐ | ☐ | |

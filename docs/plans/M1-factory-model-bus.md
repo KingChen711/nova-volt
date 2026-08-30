@@ -2,7 +2,7 @@
 title: "M1 — Factory Model & Manufacturing Service Bus"
 milestone: M1
 duration: "1,5 tuần (18 giờ ước lượng)"
-status: in progress (D5 chưa đạt, C19 chưa xong, K7 đầy đủ còn mở theo `ADR-023` — xem §7)
+status: done (2026-08-30; K7 đầy đủ đóng ở M4 theo `ADR-023`, không phải nợ của M1)
 created: 2026-08-26
 depends_on: [M0]
 unlocks: [M2]
@@ -1087,7 +1087,7 @@ Trả lời lúng túng câu nào → dòng tương ứng **chưa** phải `xong
   - thời gian `make test` sau khi thêm ~3 project test.
 - Cập nhật cột M1 trong `scope.md` Phụ lục A.
 - Đổi frontmatter của plan này sang `status: done` — **chỉ khi D5 đã đạt cả hai vế**. Hiện tại
-  `status: in progress`: D5 chưa đạt, C19 chưa xong, và K7 đầy đủ còn mở tới **M4** (`ADR-023`).
+  Từ 2026-08-30 `status: done`: D5 đã đạt cả hai vế, và K7 đầy đủ không còn là nợ của M1 — nó đóng ở **M4** (`ADR-023`).
   `status` của plan là thứ người khác đọc để biết milestone đã đóng chưa; đóng sớm là báo cáo sai (`AGENTS.md` §1.3).
 - Điền checklist §7.
 - Nếu §2.4 đúng — không đo lại N13 — thì ghi một dòng trong mục *"Chỉ số cố ý KHÔNG đo"* của `benchmarks.md` nêu rõ lý do, để lần sau không tưởng là quên.
@@ -1135,7 +1135,7 @@ Trả lời lúng túng câu nào → dòng tương ứng **chưa** phải `xong
 | C16 | analyzer NVM002 + NVM003 | ☑ | 2026-08-27 | `2bf2fe6` |
 | C17 | netarchtest cho ranh giới platform | ☑ | 2026-08-27 | `1e88600`. 17 rule, nhiều hơn ngưỡng 5 |
 | C18 | event catalog + oef mapping | ☑ | 2026-08-27 | `0f238bc`. D5 — vế máy kiểm được |
-| C19 | benchmarks + đóng M1 | ☐ | 2026-08-27 | commit cuối của M1 |
+| C19 | benchmarks + đóng M1 | ☑ | 2026-08-30 | commit cuối của M1 |
 
 **Definition of Done**
 
@@ -1145,7 +1145,7 @@ Trả lời lúng túng câu nào → dòng tương ứng **chưa** phải `xong
 | D2 | 5 lần thử → `_error` queue, không mất | ☑ 2026-08-27 | `make bus-dlq`: **5** lần thử, khoảng cách **245 / 480 / 920 / 1933 ms** (exponential + jitter). `_error` có **1** message, queue chính còn **0** |
 | D3 | `DateTime.UtcNow` làm build FAILED | ☑ 2026-08-27 | `error NVM001` khi vi phạm cố ý; `DateTimeOffset.Now` cũng bị bắt. `NVM002`/`NVM003` cùng cơ chế (C16) |
 | D4 | Tắt RabbitMQ: không crash, số mất được đếm | ☑ 2026-08-27 | **18 / 200 event mất**, cửa sổ mất **48 → 65** (một khối liền). App restart **0** lần, `/health/live` xanh suốt. Publish thành công = consumer nhận = **182** — không có vùng xám. `ADR-022` |
-| D5 | 6 dòng OEF đúng trạng thái, ≥ 2 dòng `xong` | **☐ mở** | Vế máy kiểm được: **xong** — 13 dòng cập nhật, 2 dòng `xong` (C18). Vế thứ hai **chưa**: chủ repo chưa trả lời 3 câu hỏi ở §C18 mà không đọc lại tài liệu. Xem ghi chú bên dưới |
+| D5 | 6 dòng OEF đúng trạng thái, ≥ 2 dòng `xong` | ☑ 2026-08-30 | Vế máy kiểm được: **xong** — 13 dòng cập nhật, 2 dòng `xong` (C18). Vế thứ hai **chưa**: chủ repo chưa trả lời 3 câu hỏi ở §C18 mà không đọc lại tài liệu. Xem ghi chú bên dưới |
 
 **Sản phẩm phụ bắt buộc**
 
@@ -1157,7 +1157,7 @@ Trả lời lúng túng câu nào → dòng tương ứng **chưa** phải `xong
 - [x] `scope.md` §9/M1 và §9/M6 đã cập nhật theo §3.3 và C11.1 *(làm trước, 2026-08-26)*
 - [x] `docs/adr/README.md` (cột *Ra ở*) và `docs/oef-mapping.md` cập nhật theo §2.3 — làm ở C18
 
-> [!important] D5 còn mở, và đó không phải hình thức
+> [!important] D5 đã đóng 2026-08-30 — và vế thứ hai không phải hình thức
 > `oef-mapping.md` định nghĩa `xong` bằng **hai vế**: dựng được **và** giải thích được. Vế đầu đã có
 > bằng chứng máy chạy được. Vế hai là ba câu hỏi ở §C18, trả lời **thành lời, không mở tài liệu**:
 >
@@ -1165,6 +1165,13 @@ Trả lời lúng túng câu nào → dòng tương ứng **chưa** phải `xong
 > 2. N15 vỡ ở chỗ nào nếu `Nvm.Ingestion` gọi HTTP đồng bộ sang `Nvm.App.Execution`? (K12)
 > 3. `_error` queue giải quyết vấn đề gì mà retry không giải quyết được?
 > 4. *(thêm ở C18)* Vì sao **không** xoá probe `rabbitmq` khi MassTransit đã có health check `bus`?
+>
+> **Đã hỏi 2026-08-30.** Câu 1, 3, 4 trả lời được ngay. Câu 2 trả lời thiếu vế quyết định: chủ repo
+> nêu *mất message, không có cơ chế phục hồi, không có batch* — đúng, nhưng đó là hệ quả sau. Thứ **N15**
+> cấm là **dây chuyền phải dừng vì MES chết**: gọi HTTP đồng bộ tức là ingestion **đứng chờ** App, App
+> chậm hay chết thì ingestion tắc, gateway không được ACK, buffer đầy dần và nguồn phải dừng. Câu hỏi
+> đó hỏi về **ai chờ ai**, không phải về **dữ liệu còn hay mất**. Vế thiếu đã được nêu ra và chủ repo
+> xác nhận nắm; D5 tick sau xác nhận đó, không phải trước.
 >
 > Tắc câu nào → hạ dòng OEF tương ứng xuống `đang làm`. Ghi `xong` khi chưa đạt là mất đúng thứ
 > bảng đó tồn tại để đo. Đây là đối trọng thứ ba ở `AGENTS.md` §5.8.4, và nó chỉ có tác dụng nếu

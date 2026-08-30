@@ -46,7 +46,7 @@ việc khác.
 | 009 | Ngữ nghĩa EPCIS cho genealogy edge | Chưa viết | M5 |
 | [010](ADR-010-idempotency-key-uuid-v5.md) | Idempotency key = UUIDv5 từ natural key | **Accepted** 2026-08-26 | M1 · C04 |
 | 011 | Ba loại timestamp | Chưa viết | M3 |
-| 012 | Production day & shift | Chưa viết | M3 |
+| [012](ADR-012-production-day-va-ca-tinh-trong-gio-local.md) | `production_day` và ca kíp tính trong giờ local của site | **Accepted** 2026-08-30 | M3 · C03 |
 | 013 | OData cho Public Object Model | Chưa viết | M4 |
 | 014 | Mendix là lớp UI duy nhất | Chưa viết | M4 |
 | 015 | Saga dùng Quartz store thay vì delayed exchange | Chưa viết | M7 |

@@ -250,6 +250,20 @@ Máy đo: Windows 11, Docker Desktop, quota RAM 8 GB (xem `docs/plans/M0-bootstr
 
 ---
 
+## M3 — Telemetry, TimescaleDB & Production Calendar
+
+| Ngày | Commit | Chỉ số | Giá trị | Điều kiện đo |
+|---|---|---|---|---|
+| 2026-08-30 | `857dd3b` | ★ **Độ dài thật ca C — `DE1`, 28/03/2026** | **7 giờ** | `ProductionCalendarDaylightSavingTests`. Ranh giới `2026-03-28T22:00+01:00` → `2026-03-29T06:00+02:00`. Đồng hồ nhảy 02:00 → 03:00 |
+| 2026-08-30 | `857dd3b` | ★ **Độ dài thật ca C — `DE1`, 24/10/2026** | **9 giờ** | Cùng bộ test. Ranh giới `2026-10-24T22:00+02:00` → `2026-10-25T06:00+01:00`. Đồng hồ lùi 03:00 → 02:00 |
+| 2026-08-30 | `857dd3b` | Độ dài thật ca C — `NV1`, cùng hai ngày | **8 giờ** và **8 giờ** | Cùng bộ test. `Asia/Ho_Chi_Minh` là UTC+7 cố định — đây là vế đối chứng, không phải vế chứng minh |
+| 2026-08-30 | `857dd3b` | Độ dài cả production day ở `DE1` | **23 giờ** (28/03) · **25 giờ** (24/10) | Cùng bộ test. Ba ca vẫn khớp nhau không hở không chồng ở cả hai ngày |
+| 2026-08-30 | `857dd3b` | ★ **Test đỏ khi hoàn nguyên về cách tính sai** | **8 / 564** | Lab phá hoại C03: thay `ProductionCalendar` bằng bản `BaseUtcOffset` + trừ `DayStart` trên UTC. 7 đỏ trong `ProductionCalendarDaylightSavingTests`, 1 là `D4` ở `DE1`. Cây làm việc C03, chưa commit |
+| 2026-08-30 | `857dd3b` | Test `NV1` vẫn xanh trong cùng lần chạy lab | **tất cả** | Cùng lần chạy. `D4` ở `NV1` và đối chứng D3 ở `NV1` không phát hiện được lỗi — một site không DST không chứng minh gì cho site kia |
+| 2026-08-30 | `857dd3b` | Số test D3 **không** bắt được lỗi ở bản đầu | **3 / 8** | Cùng lần chạy lab, trước khi siết. Bản sai cho ba ca 8 giờ **cố định** nên chúng vẫn khớp nhau và vẫn chứa instant ở giữa. Phải thêm khẳng định **tổng độ dài production day** (23/25 giờ) và **giờ đầu/cuối của ca** mới đỏ |
+
+---
+
 ## Mục tiêu SLO — còn phải đo
 
 Khung lấy từ `docs/scope.md` Phụ lục A. Điền khi tới milestone tương ứng; mỗi ô điền xong phải

@@ -142,3 +142,27 @@ ba ngày rơi vào **3** chunk; bốn writer tranh nhau tạo một chunk mới 
 **nguyên văn**, không sửa một dòng nào — 23/23 integration test xanh.
 
 **Mất mát do retention trên đồng hồ sai**: xem C06, ghi bổ sung vào `benchmarks.md` §M3.
+
+**Lab retention C06**, chạy ngày 2026-08-30 trên stack compose thật bằng
+`make telemetry-policy-lab` sau migration `004_telemetry_policies.sql`:
+
+- sentinel có `device_timestamp` chậm **500 ngày**: telemetry trước job = **1**, sau khi gọi đúng
+  `policy_retention` job = **0**;
+- claim tương ứng trong `ingest.processed_message` sau retention = **1** — retention không làm một
+  replay cũ trở thành dữ liệu mới;
+- thử insert lại chính claim đó: **0 claim mới**, nên telemetry không sống lại sau khi hết horizon;
+- năm cặp chunk độc lập, mỗi vế preload cùng **50.001 row**, rồi mới nén treatment và timing một lô
+  đến muộn **10.000 row**: median của năm tỉ số theo cặp = **1,132×**, tức chậm hơn **13,2 %** trong
+  lần lab này; hai median biên là **527,895 / 597,392 ms**;
+- trước mỗi lượt ghi treatment, `chunk_compression_stats` xác nhận **50.001 row** đã thành
+  `Compressed`: **21.430.272–21.479.424 byte** trước nén còn **1.564.672–1.572.864 byte** sau nén;
+- script tự chọn mười ngày chưa có chunk trong cửa sổ 30–300 ngày; mỗi trial có một control và một
+  treatment riêng, nên không trial nào timing phần delta chưa nén do trial trước để lại.
+- chạy lại trên bản script cuối có `SHARE` lock bảo vệ sentinel: median của năm tỉ số theo cặp =
+  **1,040×**; hai median biên **643,808 / 735,849 ms**; năm treatment
+  **21.413.888–21.512.192 → 1.572.864–1.581.056 byte** trước timing.
+
+Kết luận có giới hạn: bản 2.29.2 vẫn nhận dữ liệu về muộn đúng; hai lần năm cặp đại diện đo median
+theo cặp chậm hơn **13,2 %** và **4,0 %**. Đây là số của local stack và workload 10.000 row, không phải hằng
+số của TimescaleDB. Quan trọng hơn, sentinel `1 → 0` xác nhận rủi ro retention của trục
+`device_timestamp` là mất dữ liệu thật và im lặng, không chỉ là suy luận.

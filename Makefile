@@ -270,6 +270,12 @@ ingestion-migrate: .env
 telemetry-policy-lab: ingestion-migrate
 	@sh scripts/telemetry-policy-lab.sh
 
+# C07 recovery path for readings older than the regular five-hour refresh window. Defaults to a
+# paired, closed seven-day range; explicit UTC-minute boundaries must stay inside the 399-day raw
+# horizon and can cover at most 399 days.
+rollup-refresh-wide: ingestion-migrate
+	@sh scripts/rollup-refresh-wide.sh
+
 # D2. Harness chay TRONG ot-net; lag doc tu ingestion o dmz-net qua dmz-shell.
 # `make load` mac dinh OFFER 5.100 msg/s. Nguong DoD van la 5.000 va nam trong script, khong
 # phai o day: mot nguon phat dung bang nguong chi dat duoc no neu khong bao gio vap, vi mot

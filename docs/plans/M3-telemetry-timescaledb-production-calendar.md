@@ -73,8 +73,8 @@ Cả sáu đã kiểm bằng file thật trong repo hoặc bằng số đã đo 
 | | |
 |---|---|
 | **Phát hiện** | `scope.md` §8.3 đặt `add_continuous_aggregate_policy(..., start_offset => INTERVAL '3 hours')`. Cửa sổ đó quyết định **dữ liệu đến muộn bao lâu thì vẫn còn được gộp vào rollup**. |
-| **Vấn đề** | Chính `scope.md` §7.3 nói *"gateway buffer 2 tiếng rồi flush"* là **bình thường**, và ngưỡng `Drifted` là lệch đồng hồ **> 5 phút** — M2 test ở **2 giờ** (D5). Hai thứ đó cộng lại đã là **4 giờ** trên trục `device_timestamp`, vượt cửa sổ 3 giờ. M2 cũng đã **đo** đường buffer này chạy thật: outage 141 s sinh **7.717** phép đo về muộn thành một cục. |
-| **Hệ quả** | Row về muộn hơn cửa sổ vẫn **nằm trong bảng thô** nhưng **không bao giờ** vào rollup, và **không có lỗi nào được ném**. Đúng loại lỗi M2 đã gặp hai lần: *dữ liệu vào đúng hình dạng, sai ý nghĩa*, test xanh suốt. Ai đó ở M6 sẽ tính yield trên rollup và ra một con số nhỏ hơn sự thật đúng bằng phần dữ liệu về muộn. |
+| **Vấn đề** | `scope.md` §7.3 mô hình một lần gateway giữ **2 giờ**, còn simulator M2 cố ý lệch clock tới **2 giờ**. Hai hiệu ứng đó có thể cộng thành **4 giờ** trên trục `device_timestamp`, vượt cửa sổ 3 giờ. Ngưỡng `Drifted` **5 phút chỉ gắn nhãn**, không chặn hay giới hạn độ lệch. Gateway thật còn chỉ có trần **2 GiB**, không có trần tuổi dữ liệu, nên 4 giờ là phạm vi vận hành đã mô hình chứ không phải bảo đảm. M2 đã đo đường buffer chạy thật: outage 141 s sinh **7.717** phép đo về muộn thành một cục. |
+| **Hệ quả** | Row về muộn hơn cửa sổ vẫn **nằm trong bảng thô** và tạo invalidation, nhưng policy thường xuyên không quay lại vùng đó; rollup giữ số cũ cho tới explicit wide refresh, và **không có lỗi nào được ném**. Đúng loại lỗi M2 đã gặp hai lần: *dữ liệu vào đúng hình dạng, sai ý nghĩa*, test xanh suốt. Ai đó ở M6 sẽ tính yield trên rollup và ra một con số nhỏ hơn sự thật đúng bằng phần dữ liệu về muộn. |
 | **Xử lý** | Cửa sổ refresh phải **rộng hơn tổng ngân sách đến muộn**, cộng một job refresh rộng chạy thưa, cộng **một phép đối chiếu** biến "im lặng" thành "một con số". Đó là **D5**. Chốt ở §3.3, ghi `ADR-032`. |
 
 > Đây không phải lỗi của scope. `scope.md` §8.3 viết trước khi có một gateway biết buffer trên đĩa; M2 mới là chỗ hành vi đó thành thật và **đo được**. M3 là lần đầu hai trang tài liệu ấy gặp nhau.
@@ -170,7 +170,7 @@ Chốt theo hai tiêu chí, xếp theo thứ tự: **học được nghiệp v�
 
 **Chốt ba lớp, không một lớp:**
 
-1. **Cửa sổ refresh rộng hơn ngân sách đến muộn.** `start_offset` ≥ (ngân sách buffer của gateway) + (ngưỡng drift) + biên. `scope.md` để 3 giờ; ngân sách thật đã là 4 giờ (§2.2). Con số cuối chốt ở C07 và ghi vào `ADR-032` **kèm phép tính**, để milestone sau đổi ngân sách buffer thì biết phải đổi cả cái này.
+1. **Cửa sổ refresh rộng hơn phạm vi đến muộn đã mô hình.** `start_offset` = 2 giờ backlog + 2 giờ simulator clock skew + 1 giờ biên = **5 giờ**. Đây không phải upper bound: gateway có trần byte, không có trần tuổi. `ADR-032` ghi phép tính và điều kiện phải tính lại; hai lớp sau chịu trách nhiệm cho phần đuôi không bị chặn.
 2. **Một lần refresh rộng chạy thưa** (`CALL refresh_continuous_aggregate` trên vài ngày, mỗi ngày một lần) để nhặt thứ về muộn hơn cả cửa sổ. Refresh mỗi phút trên bảy ngày là trả tiền liên tục cho một chuyện hiếm.
 3. **Đối chiếu bằng số** — D5. So `sum(sample_count)` của rollup với `count(*)` thô trên một khoảng **đã đóng**. Đây là lớp duy nhất **phát hiện được** khi hai lớp trên sai.
 

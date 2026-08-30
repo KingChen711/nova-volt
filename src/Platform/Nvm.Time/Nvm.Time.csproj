@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Thời gian NGHIỆP VỤ của nhà máy: ca kíp, production day, múi giờ của site.
+    Khác với thời gian kỹ thuật (TimeProvider, DateTimeOffset) — cái đó là BCL.
+
+    BCL-only, cùng hạng với Nvm.Contracts: lịch sản xuất là một HÀM DOMAIN, không phải
+    một truy vấn. Không EF Core, không Npgsql, không MassTransit (AGENTS.md K9), và
+    không reference Nvm.FactoryModel — chiều phụ thuộc đi từ Functional Block XUỐNG đây,
+    không bao giờ ngược lại. Ép bằng NetArchTest rule A8.
+  -->
+
+  <PropertyGroup>
+    <RootNamespace>Nvm.Time</RootNamespace>
+  </PropertyGroup>
+
+</Project>

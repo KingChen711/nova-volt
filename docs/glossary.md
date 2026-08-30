@@ -101,8 +101,12 @@ Routing đầy đủ ở [`scope.md`](scope.md) §2.2.
 | **WIP** | *Work In Progress* — hàng đang dở trên chuyền |
 | **OEE** | *Overall Equipment Effectiveness* — chỉ số hiệu suất thiết bị |
 | **Ca (shift)** | 3 ca/ngày: `A` 06–14, `B` 14–22, `C` 22–06 |
+| **Bảng ca** *(shift table)* | Danh sách ca kèm giờ bắt đầu **giờ local** và độ dài danh nghĩa. Là **dữ liệu**, không phải `switch-case`: M10 có site dùng bảng khác. Phải phủ **đúng 24 giờ**, không hở không chồng — hở một phút là một phép đo không thuộc ca nào, chồng một phút là thuộc hai ca |
+| **Độ dài danh nghĩa** *(nominal length)* | Độ dài của ca **trên mặt đồng hồ**: 8 giờ cho cả ba ca. Khác **độ dài thật** (elapsed) đúng vào hai ngày đổi giờ ở `DE1` — 22:00 tới 06:00 là 8 giờ danh nghĩa nhưng 7 hoặc 9 giờ thật. Không con số nào sai; nhân độ dài danh nghĩa với công suất để tính OEE thì mới sai |
 | **Production day** | Ngày dương lịch mà **ca A của chu kỳ đó bắt đầu**. Ca C từ 22:00 ngày 25 tới 06:00 ngày 26 vẫn thuộc `production_day = 25` |
+| **Ranh giới ca** *(shift boundary)* | Cặp mốc **tuyệt đối** (`DateTimeOffset`) mở và đóng một ca: nửa mở `[start, end)`. Đóng-mở chứ không đóng-đóng, để hai ca liền nhau không cùng sở hữu một mili-giây |
 | **Site** | Một nhà máy. `NV1` Hải Phòng (không DST), `DE1` Leipzig (**có DST**, cố ý) |
+| **DST** *(daylight saving time)* | Quy ước đổi giờ theo mùa. Hệ quả trong nhà máy — không phải chuyện định dạng: mỗi năm có **một giờ local không tồn tại** (mùa xuân, 02:00 nhảy thẳng lên 03:00) và **một giờ local xảy ra hai lần** (mùa thu, 03:00 lùi về 02:00). `NV1` không có; `DE1` có, và đó là lý do site đó tồn tại trong dự án |
 | **Multiplant** | Một hệ thống chạy nhiều site cùng lúc, dữ liệu không được rò rỉ chéo |
 | **Retention** | Giữ dữ liệu bao lâu rồi mới được xoá. Ở đây: event store và genealogy **15 năm** (thực chất là không xoá), telemetry thô **400 ngày**, rollup 1 phút 15 năm |
 | **Legal hold** | Cờ chặn **mọi** retention policy. Đang có tranh chấp pháp lý thì không được xoá gì, kể cả dữ liệu đã quá hạn |
@@ -241,3 +245,28 @@ Một kênh formation thật lấy mẫu vài lần mỗi giây nên không bao 
 5.000 msg/s qua 8 kênh thì chạm: đo được **2,37 %** reading trùng mili-giây
 ([`benchmarks.md`](benchmarks.md)). Vì vậy mọi phép đối chiếu phải so **message với message** và
 **phép đo với row**, không trộn hai vế.
+
+## 10. Kho lưu trữ chuỗi thời gian (TimescaleDB)
+
+Từ vựng của M3. [`scope.md`](scope.md) §8.3, §8.4.
+
+| Từ | Nghĩa |
+|---|---|
+| **Hypertable** | Một bảng PostgreSQL trông như bảng thường nhưng **được chia tự động thành nhiều bảng con theo thời gian**. Ghi và đọc vẫn viết như bảng thường; TimescaleDB tự chọn bảng con. Điều kiện bắt buộc: **mọi unique index phải chứa cột phân mảnh** — nên đổi một bảng thường thành hypertable thường phải phát biểu lại primary key |
+| **Chunk** | Một bảng con của hypertable, chứa dữ liệu của một khoảng thời gian (ở đây: **1 ngày**). Là đơn vị mà nén và retention thao tác lên — không nén từng dòng, không xoá từng dòng, mà **cả chunk một lần** |
+| **Chunk exclusion** | Việc planner **loại bỏ hẳn** các chunk nằm ngoài khoảng thời gian của truy vấn, trước khi đọc dòng nào. Là lý do một truy vấn 7 ngày trên bảng 400 ngày không đắt gấp 57 lần. Truy vấn không có điều kiện trên cột phân mảnh thì mất nó — và mất im lặng, chỉ chậm đi |
+| **Trục phân mảnh** *(partitioning column)* | Cột thời gian mà hypertable chia chunk theo. Ở đây là **`device_timestamp`** — thời gian nghiệp vụ, không phải thời gian nhận (`ADR-011`). Đổi nó sau khi có dữ liệu nghĩa là viết lại cả bảng |
+| **Continuous aggregate** / **rollup** | Một materialized view **tự cập nhật theo lô**, gộp dữ liệu thô thành các bucket thời gian (ở đây: 1 phút, `avg`/`min`/`max`/`count`). Không phải cache: nó có bảng vật chất riêng, vòng đời riêng, và **retention riêng** — thô 400 ngày, rollup 15 năm |
+| **`time_bucket`** | Hàm gộp một timestamp về mốc đầu của bucket chứa nó. `time_bucket('1 minute', t)` biến 10:03:47 thành 10:03:00 |
+| **Watermark** / **cửa sổ refresh** | Mốc mà continuous aggregate coi là "đã tính tới đây". `start_offset` và `end_offset` của policy định ra khoảng **mỗi lần refresh nhìn lại**. Dữ liệu đến muộn hơn `start_offset` vẫn nằm trong bảng thô nhưng **không bao giờ** vào rollup — và không có lỗi nào được ném (`ADR-032`) |
+| **Real-time aggregation** | Chế độ mà truy vấn rollup tự nối thêm phần dữ liệu **mới hơn** watermark, tính trực tiếp từ bảng thô. Không cứu được dữ liệu đến muộn: row về muộn nằm **dưới** watermark, đúng chỗ nó không nhìn |
+| **`segmentby`** | Danh sách cột mà nén dùng để **nhóm các dòng giống nhau lại một chỗ** trước khi nén. Ở đây `site_id, equipment_id, signal_code`: một kênh, một tín hiệu, xếp theo thời gian thì điện áp kế tiếp gần điện áp trước. Trộn 1.000 kênh vào một segment là phá đúng tính chất khiến nén ăn tiền |
+| **`orderby`** *(của nén)* | Thứ tự các dòng **bên trong** một segment trước khi nén. `device_timestamp DESC` để dữ liệu mới nằm đầu — hướng mà hầu hết truy vấn đọc |
+| **Compression policy** | Job nền tự nén chunk cũ hơn một tuổi nhất định (ở đây **7 ngày**). Chunk đã nén vẫn `SELECT` được và vẫn `INSERT` vào được; giá phải trả nằm ở tốc độ ghi, không ở tính đúng đắn |
+| **Retention policy** | Job nền tự **drop chunk** cũ hơn một tuổi nhất định (thô: **400 ngày**). Đây là một **cam kết pháp lý**, không phải tối ưu dung lượng: nó quyết định câu hỏi nào của auditor còn trả lời được |
+| **Cardinality** | Số chuỗi thời gian phân biệt trong bảng — ở đây xấp xỉ *số kênh × số signal*. Quyết định tỉ số nén và kích thước rollup, nên **mọi con số nén phải ghi kèm cardinality**, nếu không thì không kiểm lại được |
+| **Backfill** | Ghi dữ liệu của **quá khứ** vào bảng, thay vì nhận nó theo thời gian thực. Ở M3 dùng để có bộ dữ liệu đo D1/D2 trong vài phút thay vì 6 giờ chạy rig. Điều kiện để số đo có nghĩa: **cùng code đường cong** với simulator, nếu không thì tỉ số nén nói về một nhà máy không tồn tại |
+| **`COPY`** | Đường ghi hàng loạt của PostgreSQL, nhanh hơn `INSERT` nhiều lần vì bỏ qua phần lớn chi phí phân tích câu lệnh. Dùng ở backfill; **không** dùng ở đường ingestion thật, nơi cần `ON CONFLICT` để dedup |
+| **Object lock** *(MinIO/S3)* | Chế độ khoá đối tượng ở mức bucket: object đã ghi **không xoá và không ghi đè được** cho tới hết thời hạn giữ. Phải bật **lúc tạo bucket** — không bật được sau. Đây là cách raw curve giữ được 15 năm mà không phụ thuộc vào việc không ai lỡ tay |
+| **Checksum** / `sha256` | Một chuỗi băm của nội dung file. Biến câu *"đây là bản gốc"* từ lời khẳng định thành **phép kiểm chạy được**: sửa một byte thì băm đổi. Tính **lúc ghi**, không tính lại lúc đọc — tính lại là băm chính thứ mình đang muốn kiểm |
+| **Raw curve** | File **gốc** của đường cong formation, đúng byte máy xuất ra, trước mọi bước decode/gán equipment path/phân loại `clock_quality`. Auditor có quyền đòi thứ này chứ không phải dữ liệu đã qua xử lý (`ADR-033`) |

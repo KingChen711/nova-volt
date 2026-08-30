@@ -1934,6 +1934,8 @@ SELECT add_continuous_aggregate_policy('ts.process_signal_1m',
 
 ### M3 — Telemetry, TimescaleDB & Production Calendar · 1 tuần
 
+> Plan chi tiết: [`docs/plans/M3-telemetry-timescaledb-production-calendar.md`](plans/M3-telemetry-timescaledb-production-calendar.md) — 15 commit. §2 liệt kê **sáu điều chỉnh** so với mục này (tên bảng telemetry, cửa sổ refresh, `DE1` không có formation, quy mô bộ dữ liệu, Grafana); §4 nói vì sao ước lượng là **1,6–2,0 tuần** chứ không phải 1 tuần.
+
 **Mục tiêu**: dữ liệu tần suất cao nằm đúng chỗ, và khái niệm "ngày sản xuất" đúng ngay từ đầu.
 
 **Việc làm**

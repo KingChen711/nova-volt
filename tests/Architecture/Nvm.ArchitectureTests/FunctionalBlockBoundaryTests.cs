@@ -19,7 +19,14 @@ namespace Nvm.ArchitectureTests;
 public sealed class FunctionalBlockBoundaryTests
 {
     /// <summary>The only <c>Nvm.*</c> assemblies a Functional Block may reference.</summary>
-    private static readonly string[] AllowedForFunctionalBlocks = ["Nvm.Contracts", "Nvm.Kernel"];
+    /// <remarks>
+    /// Three Platform layers, and the list grows only when a horizontal layer genuinely belongs to
+    /// every block. <c>Nvm.Time</c> was added at M3: a plant's time zone lives in the factory model,
+    /// so the block that owns the plant tree is the one that answers <c>ISiteCalendarDirectory</c>.
+    /// The dependency runs block → Platform, which is the direction that was already allowed.
+    /// </remarks>
+    private static readonly string[] AllowedForFunctionalBlocks =
+        ["Nvm.Contracts", "Nvm.Kernel", "Nvm.Time"];
 
     [Fact]
     public void A3_FactoryModel_ReferencesOnlyContractsAndKernel()

@@ -21,6 +21,11 @@
     <!-- EquipmentPath và FactoryNodeKind sống ở Kernel: chúng là định danh dùng chung, không
          phải tài sản riêng của FB này. Xem XML doc của EquipmentPath. -->
     <ProjectReference Include="../../Platform/Nvm.Kernel/Nvm.Kernel.csproj" />
+    <!--
+      Nvm.Time hỏi "site này ở múi giờ nào"; FB này là nơi biết câu trả lời, vì nó sở hữu cây nhà
+      máy. Chiều phụ thuộc đi một hướng: FB -> Nvm.Time, không bao giờ ngược. Ép bằng rule A8.
+    -->
+    <ProjectReference Include="../../Platform/Nvm.Time/Nvm.Time.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -2,7 +2,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Nvm.FactoryModel.Seeding;
 using Nvm.FactoryModel.Storage;
+using Nvm.FactoryModel.Time;
 using Nvm.Kernel.Identity;
+using Nvm.Time;
 
 namespace Nvm.FactoryModel;
 
@@ -43,6 +45,30 @@ public static class FactoryModelServiceCollectionExtensions
         // Ingestion and the edge gateway resolve machine codes through the interface and never see
         // this type, which is what keeps K8 intact while still letting them ask.
         services.TryAddSingleton<IEquipmentDirectory, FactoryModelEquipmentDirectory>();
+
+        return services;
+    }
+
+    /// <summary>Registers the production calendar, reading each plant's zone from the model.</summary>
+    /// <param name="services">The container being built.</param>
+    /// <remarks>
+    /// <para>
+    /// Separate from <see cref="AddNvmFactoryModel"/> and opt-in, because it needs one thing the block
+    /// itself does not: a registered <see cref="TimeProvider"/>. A host that has not decided what its
+    /// clock is has not earned a calendar (K1).
+    /// </para>
+    /// <para>
+    /// This is the only place <see cref="ISiteCalendarDirectory"/> should be registered in a host that
+    /// has a factory model. An <c>InMemorySiteCalendarDirectory</c> sitting beside it would be the
+    /// second lookup table this design exists to avoid.
+    /// </para>
+    /// </remarks>
+    public static IServiceCollection AddNvmProductionCalendar(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.TryAddSingleton<ISiteCalendarDirectory, FactoryModelSiteCalendarDirectory>();
+        services.TryAddSingleton<IProductionCalendar, ProductionCalendar>();
 
         return services;
     }

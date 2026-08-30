@@ -4,6 +4,7 @@ using Nvm.Contracts.Events;
 using Nvm.FactoryModel;
 using Nvm.Kernel.Commands;
 using Nvm.Sparkplug;
+using Nvm.Time;
 
 namespace Nvm.ArchitectureTests;
 
@@ -24,6 +25,8 @@ internal static class NvmAssemblies
     internal static Assembly FactoryModel => typeof(FactoryModelServiceCollectionExtensions).Assembly;
 
     internal static Assembly Sparkplug => typeof(SparkplugPayload).Assembly;
+
+    internal static Assembly Time => typeof(IProductionCalendar).Assembly;
 
     /// <summary>Names an assembly is allowed to reference while still counting as "BCL only".</summary>
     internal static bool IsBcl(string name) =>

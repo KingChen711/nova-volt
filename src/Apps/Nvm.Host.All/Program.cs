@@ -73,6 +73,11 @@ try
     builder.Services.AddNvmKernel(typeof(ActivateFactoryModelRevisionCommand).Assembly);
     builder.Services.AddNvmFactoryModel(SeedDirectoryLocator.Locate(builder.Environment.ContentRootPath));
 
+    // The production calendar, reading each plant's time zone from the model above rather than from a
+    // second lookup table. Registered here and only here — M4 is the first screen that asks it
+    // "what has this shift produced".
+    builder.Services.AddNvmProductionCalendar();
+
     builder.Services.AddDependencyHealthChecks();
 
     var app = builder.Build();

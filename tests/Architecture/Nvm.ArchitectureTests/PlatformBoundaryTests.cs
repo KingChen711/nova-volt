@@ -78,6 +78,41 @@ public sealed class PlatformBoundaryTests
     }
 
     [Fact]
+    public void A8_Time_ReferencesNothingButTheBcl()
+    {
+        // The production calendar is a domain function, not a query. One package reference here — an
+        // ORM, a client, a serializer — and a DST test would need infrastructure to run, which is
+        // exactly how the two days a year that matter stop being tested.
+        var outsiders = NvmAssemblies.Time
+            .GetReferencedAssemblies()
+            .Select(reference => reference.Name ?? string.Empty)
+            .Where(name => !NvmAssemblies.IsBcl(name))
+            .Order(StringComparer.Ordinal)
+            .ToList();
+
+        outsiders.ShouldBeEmpty(
+            $"Nvm.Time must stay BCL-only; it references {string.Join(", ", outsiders)}");
+    }
+
+    [Fact]
+    public void A8_Time_DoesNotReachBackIntoAFunctionalBlock()
+    {
+        // The dependency runs one way: Nvm.FactoryModel implements ISiteCalendarDirectory because it
+        // owns the plant tree. Reversing it would put a bounded context underneath a Platform layer
+        // and make the calendar untestable without a seed file.
+        NvmAssemblies.NvmReferencesOf(NvmAssemblies.Time).ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void A8_Control_TheFactoryModelReallyDoesAnswerTheCalendarQuestion()
+    {
+        // Guards the case where A8 passes because the edge does not exist at all: if nothing
+        // implemented ISiteCalendarDirectory, "Nvm.Time references no block" would be true and
+        // meaningless. The adapter has to be there, in the block, pointing this way.
+        NvmAssemblies.NvmReferencesOf(NvmAssemblies.FactoryModel).ShouldContain("Nvm.Time");
+    }
+
+    [Fact]
     public void A7_TheGeneratedSparkplugTypesDoNotLeaveNvmSparkplug()
     {
         // ADR-026 vendors sparkplug_b.proto and generates C# from it, which means Org.Eclipse.Tahu.*

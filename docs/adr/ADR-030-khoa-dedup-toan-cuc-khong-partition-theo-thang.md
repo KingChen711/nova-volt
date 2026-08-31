@@ -72,3 +72,45 @@ Integration test dùng container `timescale/timescaledb:2.29.2-pg17` và migrati
 
 Lệnh: `dotnet test --project tests/Integration/Nvm.IntegrationTests/Nvm.IntegrationTests.csproj` —
 **1/1 test xanh**, 2026-08-28.
+
+### M3/C08 — đường cong ghi của global key
+
+Backfill đo riêng thời gian binary `COPY` vào `ingest.processed_message`, không lấy tổng thời gian
+tool rồi gán hết cho btree. Lệnh tạo **3.063.893** row mới từ đúng `FormationLine`/RBE:
+
+```bash
+make telemetry-backfill CHANNELS=40 DAYS=7 SAMPLE_PERIOD_SECONDS=5 \
+  DRIFTED_RATE=0.25 END_AT=2026-08-08T00:00:00Z
+```
+
+`processed_message` có **6.127.588** key trước lượt và **9.191.481** key sau lượt. Ba interval
+đủ một triệu row cho kết quả:
+
+| Interval | Thời gian `COPY` claim | Tốc độ |
+|---|---:|---:|
+| triệu mới thứ 1 | 10,477296 s | 95.444,475 row/s |
+| triệu mới thứ 2 | 11,192841 s | 89.342,824 row/s |
+| triệu mới thứ 3 | 10,821686 s | 92.407,046 row/s |
+
+**Kết luận đo được**: ở dải **6,13 → 9,19 triệu key**, phase ghi global UUID btree chưa có
+đường giảm đơn điệu. Điểm thấp nhất thấp hơn điểm đầu **6,39 %**, nhưng điểm thứ ba hồi lại lên
+92.407 row/s. Chưa có bằng chứng để nói index đã “gãy”, và cũng không được ngoại suy rằng nó sẽ
+phẳng ở 100 triệu key. Phép đo này là batch `COPY`, nên không thay phép đo đường ingestion đồng thời
+ở tải ≥ 5.000 msg/s.
+
+Tổng end-to-end của ba triệu lại giảm 4.109 → 3.475 → 3.095 row/s. `pg_stat_activity` cho thấy
+backend đang chạy query verify 50.000 cặp ID–timestamp, không phải chờ phase `COPY`; telemetry
+`COPY` đồng thời gần như phẳng ở 21.769 → 21.388 → 21.896 row/s. Vì vậy C08 sửa verifier theo hai
+điều đã có bằng chứng:
+
+- row mới lấy chính row-count trả về từ hai lệnh `COPY`; foreign key và transaction vẫn bảo đảm
+  không có telemetry thiếu claim;
+- row trùng mới query lại telemetry, với min/max `device_timestamp` tường minh để TimescaleDB loại
+  chunk ngoài khoảng. Cùng 5.470 duplicate giảm từ **13,350 xuống 1,278 giây**, và vẫn verify đủ
+  5.470 claim cùng 5.470 telemetry.
+
+Dataset chuẩn 8 kênh × 7 ngày được chạy hai lần: lượt đầu **612.482 inserted**, lượt hai
+**0 inserted / 612.482 duplicate**; cả hai lượt đều báo claim và telemetry **612.482 / 612.482**.
+Integration test trên database trắng còn cố ý làm telemetry vi phạm constraint để transaction rollback
+cả claim. Các số chi tiết, điều kiện máy và dung lượng trước/sau nằm trong
+[`benchmarks.md`](../benchmarks.md) mục M3.

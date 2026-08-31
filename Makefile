@@ -276,6 +276,14 @@ telemetry-policy-lab: ingestion-migrate
 rollup-refresh-wide: ingestion-migrate
 	@sh scripts/rollup-refresh-wide.sh
 
+# C08 deterministic historical dataset. The defaults are deliberately small; every benchmark calls
+# the same target with explicit cardinality, interval and sample period so its evidence is rerunnable.
+telemetry-backfill: ingestion-migrate
+	@CHANNELS="$(CHANNELS)" DAYS="$(DAYS)" END_AT="$(END_AT)" \
+	  SAMPLE_PERIOD_SECONDS="$(SAMPLE_PERIOD_SECONDS)" DRIFTED_RATE="$(DRIFTED_RATE)" \
+	  CLOCK_DRIFT_HOURS="$(CLOCK_DRIFT_HOURS)" BATCH_SIZE="$(BATCH_SIZE)" \
+	  sh scripts/telemetry-backfill.sh
+
 # D2. Harness chay TRONG ot-net; lag doc tu ingestion o dmz-net qua dmz-shell.
 # `make load` mac dinh OFFER 5.100 msg/s. Nguong DoD van la 5.000 va nam trong script, khong
 # phai o day: mot nguon phat dung bang nguong chi dat duoc no neu khong bao gio vap, vi mot

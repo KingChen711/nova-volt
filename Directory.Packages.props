@@ -119,6 +119,22 @@
     <PackageVersion Include="Testcontainers.PostgreSql" Version="4.14.0" />
   </ItemGroup>
 
+  <ItemGroup Label="Raw formation curve archive — M3/C12">
+    <!--
+      AWSSDK.S3 chỉ là S3 client; server vẫn là MinIO image đã pin trong compose. Chọn client này
+      thay vì MinIO SDK vì PutObjectRequest có IfNoneMatch="*" công khai: trong bucket có versioning,
+      một lần HEAD rồi PUT không đủ chống hai uploader đồng thời tạo hai version WORM.
+
+      LICENSE, kiểm 2026-08-31 trước khi pin:
+        AWSSDK.S3           4.0.102.4 → Apache-2.0
+        Testcontainers.Minio 4.14.0  → MIT
+      Cả hai có asset dùng được từ net8.0 trở lên; repo chạy net10.0. Testcontainers.Minio chỉ có
+      trong integration test và chạy đúng image MinIO mà compose dùng, không dùng tag mặc định cũ.
+    -->
+    <PackageVersion Include="AWSSDK.S3" Version="4.0.102.4" />
+    <PackageVersion Include="Testcontainers.Minio" Version="4.14.0" />
+  </ItemGroup>
+
   <ItemGroup Label="ASP.NET Core test host — M2/C10">
     <!--
       TestHost dựng pipeline thật trong process, không mở socket. Cần để kiểm hợp đồng

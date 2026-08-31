@@ -67,6 +67,7 @@ việc khác.
 | [030](ADR-030-khoa-dedup-toan-cuc-khong-partition-theo-thang.md) | Khoá dedup toàn cục, không partition theo tháng | **Accepted** 2026-08-28 | M2 · C12 |
 | [031](ADR-031-nang-luc-N1-do-o-M13-khong-o-M2.md) | Năng lực N1 nghiệm thu ở M9, đo lại ở M13; M2 chỉ nghiệm thu tính đúng đắn dưới tải | **Accepted** 2026-08-30 | M2 |
 | [032](ADR-032-cua-so-refresh-rollup-khong-phai-bao-dam.md) | Cửa sổ rollup 5 giờ + wide refresh + reconciliation | **Accepted** 2026-08-30 | M3 · C07 |
+| [033](ADR-033-minio-object-lock-cho-ban-goc-duong-cong.md) | MinIO Object Lock + exact version cho bản gốc đường cong formation | **Accepted** 2026-08-31 | M3 · C12 |
 
 Cột **Ra ở** là milestone dự kiến, không phải cam kết. Quyết định đến sớm hơn thì viết sớm hơn.
 

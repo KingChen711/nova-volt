@@ -1,4 +1,6 @@
 using System.Globalization;
+using Amazon.Runtime;
+using Amazon.S3;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Npgsql;
@@ -9,6 +11,7 @@ using Nvm.Ingestion;
 using Nvm.Ingestion.FileDrop;
 using Nvm.Ingestion.Persistence;
 using Nvm.Ingestion.Publishing;
+using Nvm.Ingestion.RawCurves;
 
 if (HealthProbe.IsRequested(args))
 {
@@ -53,6 +56,37 @@ builder.Services.AddSingleton<IngestionMetrics>();
 builder.Services.AddSingleton<IngestionLag>();
 builder.Services.AddSingleton(new PublishedSignals(options.PublishedSignals));
 
+if (options.RawCurveArchive.Enabled)
+{
+    // The WORM half of C12, finally reachable from a running service rather than only from a test.
+    // ForcePathStyle because MinIO serves buckets as a path segment; the region is a formality the
+    // signer insists on and MinIO ignores.
+    builder.Services.AddSingleton<IAmazonS3>(_ => new AmazonS3Client(
+        new BasicAWSCredentials(options.RawCurveArchive.AccessKey, options.RawCurveArchive.SecretKey),
+        new AmazonS3Config
+        {
+            ServiceURL = options.RawCurveArchive.ServiceUrl,
+            ForcePathStyle = true,
+            AuthenticationRegion = "us-east-1",
+        }));
+    builder.Services.AddSingleton<IRawCurveArchive>(services => new RawCurveArchiveStore(
+        services.GetRequiredService<NpgsqlDataSource>(),
+        services.GetRequiredService<IAmazonS3>(),
+        services.GetRequiredService<TimeProvider>(),
+        options.RawCurveArchive.BucketName));
+}
+
+// Refuse to start rather than run a service that eats exports and keeps no originals. The previous
+// version passed a null archive into the processor and said so in a comment — which is a deployment
+// quietly losing the bytes an auditor is entitled to ask for, wearing the shape of a note (C12.1).
+if (options.FileDrop.Enabled && !options.RawCurveArchive.Enabled)
+{
+    throw new InvalidOperationException(
+        "NVM_INGEST__FileDrop__Enabled is true while NVM_INGEST__RawCurveArchive__Enabled is false. "
+        + "The file drop consumes an export and moves it out of the inbox, so with no archive its "
+        + "original bytes are gone for good. Enable the archive, or disable the file drop.");
+}
+
 if (options.FileDrop.Enabled)
 {
     // Same ingestor, same transaction, same natural key. The adapter differs only in how it reads
@@ -62,7 +96,17 @@ if (options.FileDrop.Enabled)
     builder.Services.AddSingleton(options.FileDrop);
     builder.Services.AddSingleton(SeededEquipmentDirectory.Load(seedDirectory, options.Revision));
     builder.Services.AddSingleton<CsvMeasurementReader>();
-    builder.Services.AddSingleton<FileDropProcessor>();
+
+    // Built by hand rather than by convention, and now with GetRequiredService: the guard above has
+    // already refused to start without an archive, so resolving it as optional here would only
+    // re-open the hole one refactor later.
+    builder.Services.AddSingleton(services => new FileDropProcessor(
+        services.GetRequiredService<CsvMeasurementReader>(),
+        services.GetRequiredService<IMeasurementIngestor>(),
+        services.GetRequiredService<FileDropOptions>(),
+        services.GetRequiredService<TimeProvider>(),
+        services.GetRequiredService<ILogger<FileDropProcessor>>(),
+        services.GetRequiredService<IRawCurveArchive>()));
     builder.Services.AddHostedService<FileDropWatcher>();
 }
 

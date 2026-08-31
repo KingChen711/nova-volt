@@ -62,13 +62,49 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
         FROM incoming;
         """;
 
+    private const string MissingChunkRangesSql = """
+        WITH incoming AS (
+            SELECT *
+            FROM unnest(
+                @source_event_ids::uuid[],
+                @site_ids::text[],
+                @device_timestamps::timestamptz[])
+            AS input(source_event_id, site_id, device_timestamp)
+        )
+        SELECT DISTINCT time_bucket(INTERVAL '1 day', input.device_timestamp) AS range_start
+        FROM incoming AS input
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM ingest.processed_message AS claims
+            WHERE claims.site_id = input.site_id
+              AND claims.source_event_id = input.source_event_id)
+        ORDER BY range_start;
+        """;
+
+    private const string EnsureChunkSql = """
+        SELECT created
+        FROM _timescaledb_functions.create_chunk(
+            'ts.telemetry_measurement'::regclass,
+            jsonb_build_object(
+                'device_timestamp',
+                jsonb_build_array(@range_start::timestamptz, @range_start::timestamptz + INTERVAL '1 day')));
+        """;
+
     /// <summary>How many times one chunk write may be retried after a deadlock before giving up.</summary>
     /// <remarks>
-    /// Bounded, and low. Chunk creation deadlocks resolve on the first retry because the winner has
-    /// already made the chunk; a write still failing after several attempts is contending with
-    /// something else, and looping on it would hide that instead of reporting it.
+    /// Bounded, and low. Chunk creation is kept outside the write transaction; a write still failing
+    /// after several attempts is contending with something else, and looping on it would hide that
+    /// instead of reporting it.
     /// </remarks>
     private const int MaxWriteAttempts = 5;
+
+    /// <summary>One chunk of the telemetry hypertable, as migration 003 declares it.</summary>
+    /// <remarks>
+    /// Written here rather than read from the database because it is the unit retention acts in, and
+    /// a counter that quietly re-derived it would stop meaning the same thing the day someone changed
+    /// <c>chunk_time_interval</c>. If that day comes, this line has to change with it — deliberately.
+    /// </remarks>
+    private static readonly TimeSpan ChunkInterval = TimeSpan.FromDays(1);
 
     private readonly NpgsqlDataSource _dataSource;
     private readonly TimeProvider _timeProvider;
@@ -188,6 +224,8 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
         }
 
         MeasurementRow[] rows = [.. distinct.Values];
+        await EnsureTelemetryChunksAsync(rows, cancellationToken);
+
         var chunks = SplitAcrossWriters(rows);
         MeasurementRow[] claimedRows;
 
@@ -209,7 +247,11 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
         RecordLag(claimedRows);
 
         var drifted = claimedRows.Count(row => row.ClockQuality != ClockQuality.Good);
-        var result = new IngestionResult(claimedRows.Length, rawCount - claimedRows.Length, drifted);
+        var result = new IngestionResult(
+            claimedRows.Length,
+            rawCount - claimedRows.Length,
+            drifted,
+            RetentionRisk: RecordRetentionRisk(claimedRows));
         _metrics.RecordCommitted(result);
 
         // After the commit, and outside it. A publish failure must leave the rows where they are:
@@ -257,16 +299,14 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
         MeasurementRow[] rows,
         CancellationToken cancellationToken)
     {
-        // Retried rather than surfaced, because a deadlock here is a scheduling accident and not a
-        // statement about the data. Since M3 made telemetry a hypertable, creating a chunk takes a
-        // ShareUpdateExclusiveLock on it, so several writers reaching for the SAME not-yet-existing
-        // chunk cycle and PostgreSQL kills all but one. Measured on 2.29.2-pg17: four writers, three
-        // killed on the first batch of a chunk and zero on every batch afterwards.
+        // Retried rather than surfaced, because a serialization failure or unrelated deadlock is a
+        // scheduling accident and not a statement about the data. Chunk creation is deliberately
+        // absent from this transaction: EnsureTelemetryChunksAsync completes it before any writer
+        // takes a RowExclusive lock on the claim table.
         //
-        // Retrying is exactly safe here and nowhere else would it be so easy: the killed transaction
-        // rolled back BOTH statements together (ADR-030), so nothing was claimed and nothing was
-        // stored, and the claim insert is ON CONFLICT DO NOTHING, so a retry that races the winner
-        // simply reports its rows as duplicates.
+        // Retrying remains exactly safe: PostgreSQL rolled back BOTH statements together (ADR-030),
+        // so nothing was claimed and nothing was stored, and the claim insert is ON CONFLICT DO
+        // NOTHING, so a retry that races another delivery simply reports its rows as duplicates.
         for (var attempt = 1; ; attempt++)
         {
             try
@@ -276,10 +316,55 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
             catch (PostgresException failure)
                 when (attempt < MaxWriteAttempts && IsTransientWriteConflict(failure))
             {
-                // No backoff. The deadlock detector has already killed one side, so by the time this
-                // line runs the winner is committing or has committed, and the chunk it created is
-                // there. Waiting would only hold a connection open.
                 _metrics.RecordWriteRetry();
+            }
+        }
+    }
+
+    // TimescaleDB copies the hypertable's foreign key onto a new chunk. If that DDL runs after this
+    // transaction has inserted claims, concurrent writers form a lock cycle: each holds
+    // RowExclusive on ingest.processed_message, one holds ShareUpdateExclusive on the hypertable,
+    // and chunk creation asks for ShareRowExclusive on the claim table. Pre-creating the slice in an
+    // autocommit statement removes that cycle while preserving the claim+telemetry transaction.
+    //
+    // create_chunk is concurrency-safe: exactly one caller reports created=true and callers racing
+    // for the same slice receive created=false. Do not cache the result indefinitely; retention may
+    // remove a chunk later. Replays whose global claim already exists are filtered first so they do
+    // not recreate an empty raw chunk after retention has legitimately removed it.
+    private async Task EnsureTelemetryChunksAsync(
+        MeasurementRow[] rows,
+        CancellationToken cancellationToken)
+    {
+        await using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
+        var ranges = new List<DateTimeOffset>();
+
+        await using (var command = new NpgsqlCommand(MissingChunkRangesSql, connection))
+        {
+            AddArray(command, "source_event_ids", NpgsqlDbType.Uuid, rows.Select(row => row.SourceEventId).ToArray());
+            AddArray(command, "site_ids", NpgsqlDbType.Text, rows.Select(row => row.SiteId).ToArray());
+            AddArray(
+                command,
+                "device_timestamps",
+                NpgsqlDbType.TimestampTz,
+                rows.Select(row => row.DeviceTimestamp).ToArray());
+
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                ranges.Add(await reader.GetFieldValueAsync<DateTimeOffset>(0, cancellationToken));
+            }
+        }
+
+        foreach (var rangeStart in ranges)
+        {
+            await using var command = new NpgsqlCommand(EnsureChunkSql, connection);
+            command.Parameters.AddWithValue("range_start", NpgsqlDbType.TimestampTz, rangeStart);
+
+            if (await command.ExecuteScalarAsync(cancellationToken) is not bool)
+            {
+                throw new InvalidOperationException(
+                    "TimescaleDB did not return the chunk-creation result for telemetry_measurement.");
             }
         }
     }
@@ -308,6 +393,54 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
     // this process must reject into an endless loop.
     private static bool IsTransientWriteConflict(PostgresException failure) =>
         failure.SqlState is PostgresErrorCodes.DeadlockDetected or PostgresErrorCodes.SerializationFailure;
+
+    /// <summary>Counts, per site, the committed rows that landed a chunk or more from their write.</summary>
+    /// <remarks>
+    /// <para>
+    /// ADR-011 owed this number and migration 007 is the reason it is now due: raw retention stays off
+    /// the schedule until legal hold exists, and this counter is what turns "should it come back on"
+    /// into a measurement. A gap wider than one chunk means the row is filed under a day the plant was
+    /// not producing it, so retention — which drops whole chunks by <c>device_timestamp</c> — would
+    /// judge it by a date nobody chose.
+    /// </para>
+    /// <para>
+    /// Absolute, not signed. A clock ahead by a week puts a row in a chunk that does not exist yet and
+    /// is just as wrong as one behind by a week; only one of the two is ever near the retention
+    /// horizon, but a plant that produces either has a clock problem worth seeing.
+    /// </para>
+    /// </remarks>
+    private int RecordRetentionRisk(MeasurementRow[] rows)
+    {
+        Dictionary<string, int>? bySite = null;
+
+        foreach (var row in rows)
+        {
+            var gap = row.RecordedAt - row.DeviceTimestamp;
+
+            if (gap.Duration() <= ChunkInterval)
+            {
+                continue;
+            }
+
+            bySite ??= new Dictionary<string, int>(StringComparer.Ordinal);
+            bySite[row.SiteId] = bySite.GetValueOrDefault(row.SiteId) + 1;
+        }
+
+        if (bySite is null)
+        {
+            return 0;
+        }
+
+        var total = 0;
+
+        foreach (var (siteId, count) in bySite)
+        {
+            _metrics.RecordRetentionRisk(siteId, count);
+            total += count;
+        }
+
+        return total;
+    }
 
     // Good clocks only. The measurement subtracts two clocks, so a PLC two hours out would
     // contribute a two-hour "lag" that says nothing about the pipeline, and one two hours fast would

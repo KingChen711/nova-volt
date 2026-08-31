@@ -12,6 +12,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="AWSSDK.S3" />
     <PackageReference Include="Npgsql" />
     <PackageReference Include="dbup-postgresql" />
   </ItemGroup>

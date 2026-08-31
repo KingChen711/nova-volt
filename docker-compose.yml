@@ -325,6 +325,9 @@ services:
         mc alias set nvm http://minio:9000 "$$NVM_MINIO_USER" "$$NVM_MINIO_PASSWORD" &&
         mc mb --ignore-existing nvm/evidence &&
         mc mb --ignore-existing nvm/vision &&
+        mc mb --ignore-existing --with-lock nvm/raw-curve &&
+        mc retention set --default COMPLIANCE 15y nvm/raw-curve &&
+        mc retention info --default nvm/raw-curve &&
         mc ls nvm
 
   # ─────────────────────────────────────────────────────────

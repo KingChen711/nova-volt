@@ -293,6 +293,55 @@ Máy đo: Windows 11, Docker Desktop, quota RAM 8 GB (xem `docs/plans/M0-bootstr
 | 2026-08-31 | `b570693` | C09 — rerun thứ nhất từ chunk đã nén, fixture 8 kênh | **161.579.008 → 13.549.568 byte · 8,385723 %** | Target tự `decompress_chunk` rồi nén lại; đây là lần đầu thấy compact rowstore boundary. Kết quả trùng byte-for-byte với lượt final ở dòng D1 8 kênh |
 | 2026-08-31 | `b570693` | C09 — rerun thứ nhất từ chunk đã nén, fixture 40 kênh | **778.739.712 → 63.389.696 byte · 8,140036 %** | Cùng rerun; kết quả trùng byte-for-byte với lượt final ở dòng D1 40 kênh. Target cuối chuẩn hoá cả trạng thái ban đầu chưa nén về boundary này |
 | 2026-08-31 | `b570693` | C09 — đối chứng gate phải đỏ được | **2 / 2 nhánh đỏ đúng** | Cùng transaction, gọi đúng hàm gate ở biên bằng ngưỡng: `ratio_equality` và `difference_equality` đều ném SQLSTATE riêng; gate thật sau đó xanh, commit giữ nguyên **437.798 / 2.186.459 row** |
+| 2026-08-31 | `4d25135` | C10/D2 — fingerprint fixture 100 kênh | **121.429 mẫu · 100 kênh · 10.080 bucket** | `make rollup-bench`; `NV1`, `Formation/Temperature`, `[2026-07-20, 2026-07-27)`, chu kỳ nguồn 5 s, `DriftedRate=0`; `CH-0001` có **1.172 mẫu / 965 bucket**; mẫu đầu/cuối `00:00:00` / `23:59:50` |
+| 2026-08-31 | `4d25135` | C10 — đối chiếu raw/rollup, một kênh | **965 = 965 bucket · 1.172 = 1.172 mẫu · delta 0** | Cùng target; `FULL JOIN` từng bucket, kiểm sample count và tổng có trọng số; missing/extra/mismatch đều **0** |
+| 2026-08-31 | `4d25135` | C10 — đối chiếu raw/rollup, cả `FORM-01` | **10.080 = 10.080 bucket · 121.429 = 121.429 mẫu · delta 0** | Cùng target; trung bình máy dùng `sum(avg_value * sample_count) / sum(sample_count)`, không dùng trung bình của các trung bình kênh |
+| 2026-08-31 | `4d25135` | C10 trial 01 — rollup, một kênh | **29,627 ms** | `make rollup-bench`; server clock, sau 1 warmup, thứ tự 1/4; query trả checksum cố định |
+| 2026-08-31 | `4d25135` | C10 trial 01 — rollup, 100 kênh | **109,598 ms** | Cùng lượt; thứ tự 2/4, cùng fixture và cửa sổ 7 ngày |
+| 2026-08-31 | `4d25135` | C10 trial 01 — raw, một kênh | **4,720 ms** | Cùng lượt; thứ tự 3/4, cùng checksum với rollup một kênh |
+| 2026-08-31 | `4d25135` | C10 trial 01 — raw, 100 kênh | **283,507 ms** | Cùng lượt; thứ tự 4/4, cùng checksum với rollup cả máy |
+| 2026-08-31 | `4d25135` | C10 trial 02 — rollup, 100 kênh | **144,061 ms** | Cùng benchmark; thứ tự 1/4 |
+| 2026-08-31 | `4d25135` | C10 trial 02 — raw, một kênh | **5,701 ms** | Cùng benchmark; thứ tự 2/4 |
+| 2026-08-31 | `4d25135` | C10 trial 02 — raw, 100 kênh | **262,673 ms** | Cùng benchmark; thứ tự 3/4 |
+| 2026-08-31 | `4d25135` | C10 trial 02 — rollup, một kênh | **26,328 ms** | Cùng benchmark; thứ tự 4/4 |
+| 2026-08-31 | `4d25135` | C10 trial 03 — raw, một kênh | **5,300 ms** | Cùng benchmark; thứ tự 1/4 |
+| 2026-08-31 | `4d25135` | C10 trial 03 — raw, 100 kênh | **256,221 ms** | Cùng benchmark; thứ tự 2/4 |
+| 2026-08-31 | `4d25135` | C10 trial 03 — rollup, một kênh | **23,987 ms** | Cùng benchmark; thứ tự 3/4 |
+| 2026-08-31 | `4d25135` | C10 trial 03 — rollup, 100 kênh | **103,382 ms** | Cùng benchmark; thứ tự 4/4 |
+| 2026-08-31 | `4d25135` | C10 trial 04 — raw, 100 kênh | **263,545 ms** | Cùng benchmark; thứ tự 1/4 |
+| 2026-08-31 | `4d25135` | C10 trial 04 — rollup, một kênh | **25,479 ms** | Cùng benchmark; thứ tự 2/4 |
+| 2026-08-31 | `4d25135` | C10 trial 04 — rollup, 100 kênh | **105,503 ms** | Cùng benchmark; thứ tự 3/4 |
+| 2026-08-31 | `4d25135` | C10 trial 04 — raw, một kênh | **4,685 ms** | Cùng benchmark; thứ tự 4/4 |
+| 2026-08-31 | `4d25135` | C10 trial 05 — rollup, một kênh | **23,503 ms** | Cùng benchmark; thứ tự 1/4 |
+| 2026-08-31 | `4d25135` | C10 trial 05 — rollup, 100 kênh | **109,411 ms** | Cùng benchmark; thứ tự 2/4 |
+| 2026-08-31 | `4d25135` | C10 trial 05 — raw, một kênh | **4,662 ms** | Cùng benchmark; thứ tự 3/4 |
+| 2026-08-31 | `4d25135` | C10 trial 05 — raw, 100 kênh | **251,195 ms** | Cùng benchmark; thứ tự 4/4 |
+| 2026-08-31 | `4d25135` | C10 trial 06 — rollup, 100 kênh | **103,438 ms** | Cùng benchmark; thứ tự 1/4 |
+| 2026-08-31 | `4d25135` | C10 trial 06 — raw, một kênh | **4,354 ms** | Cùng benchmark; thứ tự 2/4 |
+| 2026-08-31 | `4d25135` | C10 trial 06 — raw, 100 kênh | **261,047 ms** | Cùng benchmark; thứ tự 3/4 |
+| 2026-08-31 | `4d25135` | C10 trial 06 — rollup, một kênh | **26,248 ms** | Cùng benchmark; thứ tự 4/4 |
+| 2026-08-31 | `4d25135` | C10 trial 07 — raw, một kênh | **6,078 ms** | Cùng benchmark; thứ tự 1/4 |
+| 2026-08-31 | `4d25135` | C10 trial 07 — raw, 100 kênh | **250,925 ms** | Cùng benchmark; thứ tự 2/4 |
+| 2026-08-31 | `4d25135` | C10 trial 07 — rollup, một kênh | **22,855 ms** | Cùng benchmark; thứ tự 3/4 |
+| 2026-08-31 | `4d25135` | C10 trial 07 — rollup, 100 kênh | **102,369 ms** | Cùng benchmark; thứ tự 4/4 |
+| 2026-08-31 | `4d25135` | C10 trial 08 — raw, 100 kênh | **270,139 ms** | Cùng benchmark; thứ tự 1/4 |
+| 2026-08-31 | `4d25135` | C10 trial 08 — rollup, một kênh | **24,506 ms** | Cùng benchmark; thứ tự 2/4 |
+| 2026-08-31 | `4d25135` | C10 trial 08 — rollup, 100 kênh | **98,972 ms** | Cùng benchmark; thứ tự 3/4 |
+| 2026-08-31 | `4d25135` | C10 trial 08 — raw, một kênh | **4,887 ms** | Cùng benchmark; thứ tự 4/4 |
+| 2026-08-31 | `4d25135` | C10 trial 09 — rollup, một kênh | **23,690 ms** | Cùng benchmark; thứ tự 1/4 |
+| 2026-08-31 | `4d25135` | C10 trial 09 — rollup, 100 kênh | **99,425 ms** | Cùng benchmark; thứ tự 2/4 |
+| 2026-08-31 | `4d25135` | C10 trial 09 — raw, một kênh | **4,364 ms** | Cùng benchmark; thứ tự 3/4 |
+| 2026-08-31 | `4d25135` | C10 trial 09 — raw, 100 kênh | **247,302 ms** | Cùng benchmark; thứ tự 4/4 |
+| 2026-08-31 | `4d25135` | C10 trial 10 — rollup, 100 kênh | **99,570 ms** | Cùng benchmark; thứ tự 1/4 |
+| 2026-08-31 | `4d25135` | C10 trial 10 — raw, một kênh | **4,022 ms** | Cùng benchmark; thứ tự 2/4 |
+| 2026-08-31 | `4d25135` | C10 trial 10 — raw, 100 kênh | **239,024 ms** | Cùng benchmark; thứ tự 3/4 |
+| 2026-08-31 | `4d25135` | C10 trial 10 — rollup, một kênh | **23,157 ms** | Cùng benchmark; thứ tự 4/4 |
+| 2026-08-31 | `4d25135` | ★ C10/D2 — rollup một kênh, 10 trial | **p50 23,987 · p95/max 29,627 ms** | `percentile_disc`, nearest-rank; với 10 mẫu, p95 là mẫu chậm nhất; gate strict **29,627 < 200 ms** |
+| 2026-08-31 | `4d25135` | ★ C10/D2 — rollup cả máy 100 kênh, 10 trial | **p50 103,382 · p95/max 144,061 ms** | Cùng cách đo; gate strict **144,061 < 200 ms**. Chưa cần rollup tầng hai |
+| 2026-08-31 | `4d25135` | C10 control — raw một kênh, 10 trial | **p50 4,685 · p95/max 6,078 ms** | Raw là đối chứng, không gate. Ở cardinality một kênh, raw nhanh hơn rollup trên fixture đã nén và cache ấm |
+| 2026-08-31 | `4d25135` | C10 control — raw cả máy 100 kênh, 10 trial | **p50 256,221 · p95/max 283,507 ms** | Raw là đối chứng, không gate. Rollup giảm p95 máy từ **283,507** còn **144,061 ms** |
+| 2026-08-31 | `4d25135` | C10 — oracle chunk exclusion, hai query rollup | **2/2 materialization chunk · 0 ngoài cửa sổ · 0 raw chunk** | `EXPLAIN (ANALYZE, BUFFERS, VERBOSE, FORMAT JSON)`; map relation vật lý về logical chunk bằng catalog TimescaleDB; far control đã materialize |
+| 2026-08-31 | `4d25135` | C10 — oracle chunk exclusion, hai query raw | **7/7 raw chunk · 0 ngoài cửa sổ · 0 materialization chunk** | Cùng oracle; mỗi logical chunk đã nén có cả relation logic và relation compressed nên đối chiếu theo logical chunk id, không grep tên node |
 
 ---
 

@@ -22,7 +22,7 @@ ALL_PROFILES := --profile probe --profile init --profile obs --profile tools --p
 BACKUP_DIR := $(shell grep -E '^NVM_BACKUP_DIR=' .env 2>/dev/null | cut -d= -f2-)
 
 .DEFAULT_GOAL := help
-.PHONY: help up up-obs down down-v reset ps logs net-check dmz-shell build test ci hooks format format-check clean backup bus-fanout bus-dlq bus-chaos sim-up sim-down sim-logs sim-report sim-net-check edge-up edge-down edge-logs edge-net-check buffer-crash ingestion-up ingestion-down ingestion-logs ingestion-migrate telemetry-policy-lab rollup-refresh-wide telemetry-backfill compression-report outage-lab backpressure-lab load load-session-check load-net-check reconcile
+.PHONY: help up up-obs down down-v reset ps logs net-check dmz-shell build test ci hooks format format-check clean backup bus-fanout bus-dlq bus-chaos sim-up sim-down sim-logs sim-report sim-net-check edge-up edge-down edge-logs edge-net-check buffer-crash ingestion-up ingestion-down ingestion-logs ingestion-migrate telemetry-policy-lab rollup-refresh-wide telemetry-backfill compression-report rollup-bench outage-lab backpressure-lab load load-session-check load-net-check reconcile
 
 help:
 	@echo "NovaVolt MES"
@@ -61,6 +61,7 @@ help:
 	@echo "    make rollup-refresh-wide Refresh rollup trong mot cua so dong, co gioi han"
 	@echo "    make telemetry-backfill Sinh lich su tu dung duong cong simulator va binary COPY"
 	@echo "    make compression-report D1/M3: do nen o hai cardinality tren chunk that"
+	@echo "    make rollup-bench   D2/M3: do truy van nhiet do 1 phut trong 7 ngay"
 	@echo "    make outage-lab    D3 fail-closed: tat backend 2 phut, assert row delta = 0"
 	@echo "    make backpressure-lab  Lab #3: nap 30 phut roi xa 2 lan, A/B rate limit"
 	@echo ""
@@ -291,6 +292,12 @@ telemetry-backfill: ingestion-migrate
 # decompression, so every run measures the same compact rowstore before/after boundary.
 compression-report: ingestion-migrate
 	@sh scripts/compression-report.sh
+
+# C10 pins the seven-day 100-channel fixture and compares the one-minute aggregate with raw data.
+# Fixture generation is intentionally separate because replaying the full duplicate stream adds
+# substantial unrelated work and disturbs the benchmark cache on every invocation.
+rollup-bench: ingestion-migrate
+	@sh scripts/rollup-bench.sh
 
 # D2. Harness chay TRONG ot-net; lag doc tu ingestion o dmz-net qua dmz-shell.
 # `make load` mac dinh OFFER 5.100 msg/s. Nguong DoD van la 5.000 va nam trong script, khong

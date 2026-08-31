@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Nvm.CalendarLab</RootNamespace>
+    <AssemblyName>Nvm.CalendarLab</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Npgsql" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../../src/FunctionalBlocks/FactoryModel/Nvm.FactoryModel.csproj" />
+    <ProjectReference Include="../../../src/Platform/Nvm.Time/Nvm.Time.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The lab asks the same active factory model used by the application for each site's zone. -->
+    <Content Include="../../../deploy/seed/*.json" LinkBase="seed" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

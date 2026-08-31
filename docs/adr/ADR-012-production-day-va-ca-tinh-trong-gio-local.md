@@ -138,4 +138,21 @@ hai loại khẳng định mới bắt được:
 Đây là cùng một bài học M2/C17 đã ghi: một phép kiểm không bao giờ đỏ là một phép kiểm chưa kiểm gì.
 Bản gốc của lab: `ProductionCalendar.naive.cs`, dựng lại được từ mục Alternatives ở trên.
 
-**Sai số của `CAST(device_timestamp AS date)` trên dữ liệu thật**: xem `benchmarks.md` §M3 sau C14.
+**Lab C14 — `CAST(device_timestamp AS date)` vẫn trả lời hợp lệ nhưng gán sai ngày.** Đo ngày
+2026-08-31 bằng `make calendar-lab`. Lab lấy timezone từ factory model revision 3, đặt timezone của
+PostgreSQL session về đúng timezone site, rồi chạy đúng phép `CAST(... AS date)`. Việc đặt tường minh
+là quan trọng: cast một `timestamptz` phụ thuộc cấu hình session; để session ở UTC có thể vô tình che
+bớt lỗi tại `NV1`, chứ không biến ngày dương lịch thành `production_day`.
+
+| Nguồn | Site / cửa sổ | Row | Gán sai | Tỉ lệ |
+|---|---|---:|---:|---:|
+| **Thật** — fixture C10 | `NV1`, `Formation/Temperature`, `[2026-07-20, 2026-07-27)`, 100 kênh | **121.429** | **30.334** | **24,980853 %** |
+| **Dựng bằng code lịch** — ca C ngày thường | `DE1`, `production_day=2026-02-14`, mỗi phút trôi qua một row | **480** | **360** | **75,000000 %** |
+| **Dựng bằng code lịch** — ca C DST mùa xuân | `DE1`, `production_day=2026-03-28`, ca thật 7 giờ | **420** | **300** | **71,428571 %** |
+| **Dựng bằng code lịch** — ca C DST mùa thu | `DE1`, `production_day=2026-10-24`, ca thật 9 giờ | **540** | **420** | **77,777778 %** |
+
+So với ca C ngày thường, hai ngày DST làm tỉ lệ đổi **−3,571429** và **+2,777778 điểm phần trăm**.
+Không row nào hỏng định dạng và PostgreSQL không ném lỗi; phép sai chỉ chuyển số lượng giữa hai ngày
+liền kề. Target khóa fingerprint thật ở **121.429 row / 100 kênh / toàn bộ `clock_quality=Good` /
+đúng timestamp đầu-cuối**, đồng thời từ chối một phép kiểm rỗng. Ba unit test riêng khóa oracle ở hai
+phía nửa đêm và trường hợp không có row. Số chi tiết cũng nằm ở [`benchmarks.md`](../benchmarks.md) §M3.

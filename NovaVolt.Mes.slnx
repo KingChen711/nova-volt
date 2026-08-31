@@ -23,6 +23,7 @@
     <Project Path="tools/analyzers/Nvm.Analyzers/Nvm.Analyzers.csproj" />
     <Project Path="tools/buslab/Nvm.BusLab/Nvm.BusLab.csproj" />
     <Project Path="tools/loadgen/Nvm.LoadHarness/Nvm.LoadHarness.csproj" />
+    <Project Path="tools/telemetry/Nvm.CalendarLab/Nvm.CalendarLab.csproj" />
     <Project Path="tools/telemetry/Nvm.TelemetryBackfill/Nvm.TelemetryBackfill.csproj" />
   </Folder>
   <Folder Name="/tests/" />

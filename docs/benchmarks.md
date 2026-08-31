@@ -348,6 +348,11 @@ Máy đo: Windows 11, Docker Desktop, quota RAM 8 GB (xem `docs/plans/M0-bootstr
 | 2026-08-31 | `4732f71` | ★ C11/D5 — sau bounded wide refresh đúng một phút | **raw 3 · rollup 3 · delta 0** | Cùng lượt; `CALL refresh_continuous_aggregate` trên chính khoảng đóng, `force=false`; phép đối chiếu cuối xanh |
 | 2026-08-31 | `4732f71` | C11 — đối chứng phép đối chiếu phải đỏ được | **1 mismatch đúng SQLSTATE `P1101`** | Gọi checker khi delta còn **3**; chỉ bắt SQLSTATE riêng, mọi lỗi SQL khác rethrow. Sau bounded refresh, cùng checker xanh |
 | 2026-08-31 | `4732f71` | C11 — foreground `run_job` và `job_stats` | **652 → 652 run · 652 → 652 success** | Phép kiểm riêng trên TimescaleDB 2.29.2: `CALL run_job(1006)` chạy xong nhưng không tăng stats. Harness vì thế chờ scheduler thật, không gán nhầm bằng chứng cho foreground call |
+| 2026-08-31 | working tree C14 | ★ C14 — ngày dương lịch gán sai `production_day` trên dữ liệu **thật** | **30.334 / 121.429 row = 24,980853 %** | `make calendar-lab`; fixture C10 đã khóa: `NV1`, 100 kênh `Formation/Temperature`, `[2026-07-20, 2026-07-27)`, toàn bộ `clock_quality=Good`. PostgreSQL session lấy `Asia/Ho_Chi_Minh` từ factory model revision 3 rồi chạy đúng `CAST(device_timestamp AS date)` |
+| 2026-08-31 | working tree C14 | C14 — đối chứng ca C ngày thường ở `DE1` | **360 / 480 row = 75,000000 %** | Dữ liệu tổng hợp bằng code lịch, một row mỗi phút trôi qua; `production_day=2026-02-14`, ca thật 8 giờ. Vế này tách phần sai 00:00–06:00 khỏi hiệu ứng DST |
+| 2026-08-31 | working tree C14 | C14 — ca C qua DST mùa xuân ở `DE1` | **300 / 420 row = 71,428571 %** | Dữ liệu tổng hợp; `production_day=2026-03-28`, ca thật **7 giờ**. So với ngày thường: **−3,571429 điểm phần trăm** |
+| 2026-08-31 | working tree C14 | C14 — ca C qua DST mùa thu ở `DE1` | **420 / 540 row = 77,777778 %** | Dữ liệu tổng hợp; `production_day=2026-10-24`, ca thật **9 giờ**. So với ngày thường: **+2,777778 điểm phần trăm** |
+| 2026-08-31 | working tree C14 | C14 — độ nhạy của harness | **1 fixture thật + 3 fixture tổng hợp qua gate · 3/3 unit test xanh** | Target từ chối fingerprint C10 lệch, phép kiểm rỗng, ca DST không còn 7/9 giờ, hoặc cả bốn phép so sánh không tìm thấy row sai. `CAST` vẫn trả ngày hợp lệ và không ném lỗi — chính là hình dạng lỗi lab phải phơi ra |
 
 ---
 

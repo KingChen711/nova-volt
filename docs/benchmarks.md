@@ -342,6 +342,12 @@ Máy đo: Windows 11, Docker Desktop, quota RAM 8 GB (xem `docs/plans/M0-bootstr
 | 2026-08-31 | `4d25135` | C10 control — raw cả máy 100 kênh, 10 trial | **p50 256,221 · p95/max 283,507 ms** | Raw là đối chứng, không gate. Rollup giảm p95 máy từ **283,507** còn **144,061 ms** |
 | 2026-08-31 | `4d25135` | C10 — oracle chunk exclusion, hai query rollup | **2/2 materialization chunk · 0 ngoài cửa sổ · 0 raw chunk** | `EXPLAIN (ANALYZE, BUFFERS, VERBOSE, FORMAT JSON)`; map relation vật lý về logical chunk bằng catalog TimescaleDB; far control đã materialize |
 | 2026-08-31 | `4d25135` | C10 — oracle chunk exclusion, hai query raw | **7/7 raw chunk · 0 ngoài cửa sổ · 0 materialization chunk** | Cùng oracle; mỗi logical chunk đã nén có cả relation logic và relation compressed nên đối chiếu theo logical chunk id, không grep tên node |
+| 2026-08-31 | `4732f71` | C11 — baseline của probe dữ liệu đến muộn | **raw 0 · rollup 0 · delta 0** | `make rollup-reconcile`; `NV1`, equipment UUID riêng, `Formation/Temperature`, phút `[2026-08-30T21:33Z, 21:34Z)`; forced refresh trước khi append để baseline vừa được materialize |
+| 2026-08-31 | `4732f71` | C11/D5 — ngay sau khi append dữ liệu đến muộn | **raw 3 · rollup 0 · delta 3** | Cùng lượt; append atomically đúng **3 claim + 3 telemetry**, `device_timestamp` cũ 6 giờ, không `UPDATE`/`DELETE`/cleanup |
+| 2026-08-31 | `4732f71` | C11/D5 — sau refresh policy thật | **raw 3 · rollup 0 · delta 3** | Scheduler chạy job động `1006`: `total_runs +1`, `total_successes +1`, `total_failures +0`, status `Success`; mẫu nằm ngoài `start_offset=5h` nên policy không sửa bucket cũ |
+| 2026-08-31 | `4732f71` | ★ C11/D5 — sau bounded wide refresh đúng một phút | **raw 3 · rollup 3 · delta 0** | Cùng lượt; `CALL refresh_continuous_aggregate` trên chính khoảng đóng, `force=false`; phép đối chiếu cuối xanh |
+| 2026-08-31 | `4732f71` | C11 — đối chứng phép đối chiếu phải đỏ được | **1 mismatch đúng SQLSTATE `P1101`** | Gọi checker khi delta còn **3**; chỉ bắt SQLSTATE riêng, mọi lỗi SQL khác rethrow. Sau bounded refresh, cùng checker xanh |
+| 2026-08-31 | `4732f71` | C11 — foreground `run_job` và `job_stats` | **652 → 652 run · 652 → 652 success** | Phép kiểm riêng trên TimescaleDB 2.29.2: `CALL run_job(1006)` chạy xong nhưng không tăng stats. Harness vì thế chờ scheduler thật, không gán nhầm bằng chứng cho foreground call |
 
 ---
 

@@ -56,13 +56,12 @@ SELECT pg_temp.c07_require(
     'ROLLUP_FROM must remain inside the 399-day raw-telemetry horizon.');
 
 SELECT pg_temp.c07_require(
-    EXISTS (
-        SELECT 1
+    (SELECT count(*)
         FROM timescaledb_information.continuous_aggregates
         WHERE view_schema = 'ts'
-          AND view_name = 'process_signal_1m'
-          AND materialized_only),
-    'ts.process_signal_1m is missing or is not materialized-only. Run: make ingestion-migrate');
+          AND view_name IN ('process_signal_1m', 'process_signal_machine_1m')
+          AND materialized_only) = 2,
+    'the parent and machine rollups must both exist and be materialized-only. Run: make ingestion-migrate');
 
 \o
 
@@ -75,8 +74,18 @@ CALL refresh_continuous_aggregate(
     :'c07_rollup_to'::TIMESTAMPTZ,
     force => false);
 
+-- The machine rollup reads the channel-level rollup, not raw telemetry. Refreshing it first would
+-- materialize whatever stale parent state happened to exist and recreate the silent omission this
+-- recovery command exists to repair.
+CALL refresh_continuous_aggregate(
+    'ts.process_signal_machine_1m',
+    :'c07_rollup_from'::TIMESTAMPTZ,
+    :'c07_rollup_to'::TIMESTAMPTZ,
+    force => false);
+
 \set QUIET 1
 \pset format unaligned
 \pset tuples_only on
 SELECT 'refreshed_seconds|' ||
-       extract(epoch FROM :'c07_rollup_to'::TIMESTAMPTZ - :'c07_rollup_from'::TIMESTAMPTZ)::BIGINT;
+       extract(epoch FROM :'c07_rollup_to'::TIMESTAMPTZ - :'c07_rollup_from'::TIMESTAMPTZ)::BIGINT ||
+       '|refreshed_aggregates|2|order|parent_then_machine';

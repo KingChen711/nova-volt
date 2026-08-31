@@ -1,6 +1,7 @@
 #!/usr/bin/env sh
 #
-# Refreshes a closed historical interval of the one-minute process-signal rollup. Optional inputs:
+# Refreshes a closed historical interval of both one-minute process-signal rollups, parent then child.
+# Optional inputs:
 #   ROLLUP_FROM=2026-08-20T00:00:00Z ROLLUP_TO=2026-08-27T00:00:00Z make rollup-refresh-wide
 # Omitting both chooses a paired seven-day interval ending one complete minute behind now.
 

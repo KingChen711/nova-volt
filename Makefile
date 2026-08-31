@@ -22,7 +22,7 @@ ALL_PROFILES := --profile probe --profile init --profile obs --profile tools --p
 BACKUP_DIR := $(shell grep -E '^NVM_BACKUP_DIR=' .env 2>/dev/null | cut -d= -f2-)
 
 .DEFAULT_GOAL := help
-.PHONY: help up up-obs down down-v reset ps logs net-check dmz-shell build test ci hooks format format-check clean backup bus-fanout bus-dlq bus-chaos sim-up sim-down sim-logs sim-report sim-net-check edge-up edge-down edge-logs edge-net-check buffer-crash ingestion-up ingestion-down ingestion-logs ingestion-migrate telemetry-policy-lab outage-lab backpressure-lab load load-session-check load-net-check reconcile
+.PHONY: help up up-obs down down-v reset ps logs net-check dmz-shell build test ci hooks format format-check clean backup bus-fanout bus-dlq bus-chaos sim-up sim-down sim-logs sim-report sim-net-check edge-up edge-down edge-logs edge-net-check buffer-crash ingestion-up ingestion-down ingestion-logs ingestion-migrate telemetry-policy-lab rollup-refresh-wide telemetry-backfill compression-report outage-lab backpressure-lab load load-session-check load-net-check reconcile
 
 help:
 	@echo "NovaVolt MES"
@@ -58,6 +58,9 @@ help:
 	@echo "    make ingestion-logs Theo doi batch inserted/duplicate"
 	@echo "    make ingestion-migrate Chay rieng migration job PostgreSQL"
 	@echo "    make telemetry-policy-lab Do retention 500 ngay va gia ghi vao chunk da nen"
+	@echo "    make rollup-refresh-wide Refresh rollup trong mot cua so dong, co gioi han"
+	@echo "    make telemetry-backfill Sinh lich su tu dung duong cong simulator va binary COPY"
+	@echo "    make compression-report D1/M3: do nen o hai cardinality tren chunk that"
 	@echo "    make outage-lab    D3 fail-closed: tat backend 2 phut, assert row delta = 0"
 	@echo "    make backpressure-lab  Lab #3: nap 30 phut roi xa 2 lan, A/B rate limit"
 	@echo ""
@@ -283,6 +286,11 @@ telemetry-backfill: ingestion-migrate
 	  SAMPLE_PERIOD_SECONDS="$(SAMPLE_PERIOD_SECONDS)" DRIFTED_RATE="$(DRIFTED_RATE)" \
 	  CLOCK_DRIFT_HOURS="$(CLOCK_DRIFT_HOURS)" BATCH_SIZE="$(BATCH_SIZE)" \
 	  sh scripts/telemetry-backfill.sh
+
+# C09 compares two exclusive five-day windows. The SQL first normalizes selected chunks through
+# decompression, so every run measures the same compact rowstore before/after boundary.
+compression-report: ingestion-migrate
+	@sh scripts/compression-report.sh
 
 # D2. Harness chay TRONG ot-net; lag doc tu ingestion o dmz-net qua dmz-shell.
 # `make load` mac dinh OFFER 5.100 msg/s. Nguong DoD van la 5.000 va nam trong script, khong

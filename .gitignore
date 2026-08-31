@@ -27,6 +27,10 @@ coverage*.info
 StrykerOutput/
 BenchmarkDotNet.Artifacts/
 
+# Browser verification artifacts (Playwright CLI skill)
+.playwright-cli/
+output/playwright/
+
 # ─────────────────────────────────────────────────────────
 # IDE
 # ─────────────────────────────────────────────────────────

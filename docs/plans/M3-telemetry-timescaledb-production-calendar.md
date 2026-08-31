@@ -536,16 +536,21 @@ Mỗi bước đó đều **có thể có bug**, và bug ấy có thể mới đ
 - Grafana vào profile `obs` (§2.6), `it-net`, datasource PostgreSQL trỏ `timescale`, provisioning **bằng file trong repo** — không cấu hình bằng tay trong UI.
 - Dashboard `formation-overview.json` **commit vào repo**, panel:
   - Đường cong formation của một kênh: `Formation/Voltage`, `Formation/Current`, `Formation/Temperature` (đọc từ rollup, chuyển sang bảng thô khi zoom hẹp).
-  - Throughput ingestion tính từ rollup — `sum(sample_count)` mỗi phút (§2.6).
+  - Sample volume theo device time tính từ rollup — `sum(sample_count)` mỗi phút (§2.6). **Không**
+    gọi nó là ingestion throughput: đại lượng đó phải nhóm theo `recorded_at`, không phải bucket của
+    `device_timestamp`.
   - Đếm row `clock_quality <> 'Good'` theo giờ — badge cảnh báo mà `scope.md` §7.3 nói tới.
 - Biến dashboard `site` bắt buộc, mặc định `NV1`. Một dashboard trộn site là phiên bản đọc của thứ K3 cấm.
 - Kiểm license Grafana **trước khi pin** (nó là AGPL từ v8) và ghi vào commit message hoặc ADR — dùng nguyên container, không nhúng vào sản phẩm.
 
 **Kiểm chứng**
 ```bash
-make up-obs && make net-check
+make up-obs && make net-check && make grafana-net-check
 ```
-`net-check` vẫn **9/9**; thêm một phép kiểm rằng Grafana **tới được** `timescale` và **không** tới được `emqx` (K11). Dashboard mở lên phải thấy **chỗ gãy CC → CV** trên đường cong — [`glossary.md`](../glossary.md) nói thẳng: *"biểu đồ không có nó là biểu đồ của một máy chưa sạc thật"*. Đây là phép kiểm bằng mắt mà không test nào thay được.
+`net-check` vẫn **9/9**; target riêng của Grafana phải **3/3**: container chỉ ở `it-net`, **tới được**
+`timescale` và **không** tới được `emqx` (K11). Dashboard mở lên phải thấy **chỗ gãy CC → CV** trên
+đường cong — [`glossary.md`](../glossary.md) nói thẳng: *"biểu đồ không có nó là biểu đồ của một máy
+chưa sạc thật"*. Đây là phép kiểm bằng mắt mà không test nào thay được.
 
 > [!warning] Grafana ở M3 **chưa có phân quyền**, và đó là một khoảng trống có thật
 > Ai vào được Grafana thì đọc được dữ liệu **mọi site** — biến `site` là bộ lọc hiển thị, không phải authorization. Đúng thứ mà `scope.md` §7.5 phân biệt rạch ròi ở phía Mendix.

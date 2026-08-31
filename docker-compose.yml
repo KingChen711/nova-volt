@@ -31,6 +31,7 @@ networks:
 
 volumes:
   pgdata:
+  grafanadata:
   simdata:
   edgedata:
   ingestdata:
@@ -106,6 +107,85 @@ services:
       timeout: 3s
       retries: 20
       start_period: 20s
+
+  # One-shot: tạo/rotate role chỉ-đọc sau khi migration đã dựng schema ts. Không
+  # nhét password vào SQL hay provisioning file; .env local là nguồn duy nhất.
+  # Cố ý dùng lại image TimescaleDB đã pin để không thêm một image psql trôi version.
+  grafana-db-init:
+    profiles: [init]
+    image: timescale/timescaledb:2.29.2-pg17
+    container_name: nvm-grafana-db-init
+    restart: "no"
+    mem_limit: 128m
+    depends_on:
+      timescale:
+        condition: service_healthy
+    environment:
+      NVM_POSTGRES_DB: ${NVM_POSTGRES_DB}
+      NVM_POSTGRES_USER: ${NVM_POSTGRES_USER}
+      NVM_POSTGRES_PASSWORD: ${NVM_POSTGRES_PASSWORD}
+      NVM_GRAFANA_DB_PASSWORD: ${NVM_GRAFANA_DB_PASSWORD}
+    networks: [it-net]
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - |
+        export PGPASSWORD="$$NVM_POSTGRES_PASSWORD"
+        psql --host timescale --username "$$NVM_POSTGRES_USER" --dbname "$$NVM_POSTGRES_DB" \
+          --set ON_ERROR_STOP=1 \
+          --set database="$$NVM_POSTGRES_DB" \
+          --set owner="$$NVM_POSTGRES_USER" \
+          --set grafana_password="$$NVM_GRAFANA_DB_PASSWORD" <<'SQL'
+        DO $$$$
+        BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nvm_grafana') THEN
+                CREATE ROLE nvm_grafana LOGIN;
+            END IF;
+        END
+        $$$$;
+        ALTER ROLE nvm_grafana WITH LOGIN PASSWORD :'grafana_password' CONNECTION LIMIT 10;
+        ALTER ROLE nvm_grafana SET statement_timeout = '30s';
+        ALTER ROLE nvm_grafana SET default_transaction_read_only = on;
+        GRANT CONNECT ON DATABASE :"database" TO nvm_grafana;
+        GRANT USAGE ON SCHEMA ts TO nvm_grafana;
+        GRANT SELECT ON ALL TABLES IN SCHEMA ts TO nvm_grafana;
+        ALTER DEFAULT PRIVILEGES FOR ROLE :"owner" IN SCHEMA ts
+            GRANT SELECT ON TABLES TO nvm_grafana;
+        SQL
+
+  # Grafana OSS 13.2.0, AGPL-3.0-only, chạy nguyên container chính thức. C13 chỉ
+  # dựng dashboard-as-code; OIDC/authorization theo site được làm cùng Keycloak ở M13.
+  grafana:
+    profiles: [obs]
+    image: grafana/grafana:13.2.0
+    container_name: nvm-grafana
+    restart: unless-stopped
+    mem_limit: 512m
+    depends_on:
+      timescale:
+        condition: service_healthy
+    environment:
+      GF_SECURITY_ADMIN_USER: ${NVM_GRAFANA_ADMIN_USER}
+      GF_SECURITY_ADMIN_PASSWORD: ${NVM_GRAFANA_ADMIN_PASSWORD}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      NVM_POSTGRES_DB: ${NVM_POSTGRES_DB}
+      NVM_GRAFANA_DB_PASSWORD: ${NVM_GRAFANA_DB_PASSWORD}
+    ports:
+      - "${NVM_PORT_GRAFANA}:3000"
+    volumes:
+      - grafanadata:/var/lib/grafana
+      - ./deploy/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./deploy/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./deploy/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    networks: [it-net]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:3000/api/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 15s
 
   # ─────────────────────────────────────────────────────────
   # SQL Server — event store và write model

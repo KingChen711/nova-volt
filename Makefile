@@ -22,20 +22,21 @@ ALL_PROFILES := --profile probe --profile init --profile obs --profile tools --p
 BACKUP_DIR := $(shell grep -E '^NVM_BACKUP_DIR=' .env 2>/dev/null | cut -d= -f2-)
 
 .DEFAULT_GOAL := help
-.PHONY: help up up-obs down down-v reset ps logs net-check dmz-shell build test ci hooks format format-check clean backup bus-fanout bus-dlq bus-chaos sim-up sim-down sim-logs sim-report sim-net-check edge-up edge-down edge-logs edge-net-check buffer-crash ingestion-up ingestion-down ingestion-logs ingestion-migrate telemetry-policy-lab rollup-refresh-wide telemetry-backfill compression-report rollup-bench rollup-reconcile outage-lab backpressure-lab load load-session-check load-net-check reconcile
+.PHONY: help up up-obs down down-v reset ps logs net-check grafana-net-check dmz-shell build test ci hooks format format-check clean backup bus-fanout bus-dlq bus-chaos sim-up sim-down sim-logs sim-report sim-net-check edge-up edge-down edge-logs edge-net-check buffer-crash ingestion-up ingestion-down ingestion-logs ingestion-migrate telemetry-policy-lab rollup-refresh-wide telemetry-backfill compression-report rollup-bench rollup-reconcile outage-lab backpressure-lab load load-session-check load-net-check reconcile
 
 help:
 	@echo "NovaVolt MES"
 	@echo ""
 	@echo "  Ha tang"
 	@echo "    make up            Khoi dong ha tang + chay init, cho den khi tat ca healthy"
-	@echo "    make up-obs        Nhu tren, kem profile obs (trong cho den M13)"
+	@echo "    make up-obs        Nhu tren, kem Grafana va role PostgreSQL read-only"
 	@echo "    make down          Dung, GIU nguyen du lieu"
 	@echo "    make down-v        Dung va XOA volume - mat sach du lieu"
 	@echo "    make reset         down-v roi up lai tu dau"
 	@echo "    make ps            Trang thai container"
 	@echo "    make logs          Theo doi log"
 	@echo "    make net-check     Kiem ranh gioi OT/IT (K11) - 9 phep do"
+	@echo "    make grafana-net-check Kiem Grafana toi TimescaleDB, khong toi EMQX"
 	@echo "    make dmz-shell     Mo shell trong dmz-net de dung MQTT"
 	@echo ""
 	@echo "  Simulator (can 'make up' truoc)"
@@ -101,6 +102,9 @@ help:
 net-check: .env
 	@sh scripts/net-check.sh
 
+grafana-net-check: .env
+	@sh scripts/grafana-net-check.sh
+
 # Duong HOP LE de mot con nguoi cham toi MQTT sau khi EMQX bo `ports:`.
 dmz-shell: .env
 	@echo "Dang o trong dmz-net. Broker la 'emqx'. Vi du:"
@@ -129,11 +133,13 @@ up: .env
 	echo ""; \
 	echo "All healthy in $$(($$(date +%s)-start))s"
 
-# Profile `obs` con trong cho den M13. Giu target o day de duong dan da co san,
-# nhung dung tuong no dang bat them gi.
+# M3/C13 bat Grafana som de nhin duong cong formation. Migration phai chay truoc
+# grant: role read-only khong duoc tu suy ra quyen tren table da ton tai.
 up-obs: .env
 	@start=$$(date +%s); \
 	$(COMPOSE) --profile obs up -d --wait || exit 1; \
+	$(COMPOSE) --profile ingestion run --rm ingestion-migrate || exit 1; \
+	$(COMPOSE) run --rm grafana-db-init || exit 1; \
 	$(COMPOSE) run --rm mssql-init || exit 1; \
 	$(COMPOSE) run --rm minio-init || exit 1; \
 	echo ""; \

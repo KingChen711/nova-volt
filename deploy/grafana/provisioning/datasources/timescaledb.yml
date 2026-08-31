@@ -1,0 +1,27 @@
+apiVersion: 1
+
+deleteDatasources:
+  - name: NovaVolt TimescaleDB
+    orgId: 1
+
+datasources:
+  - name: NovaVolt TimescaleDB
+    uid: novavolt-timescale
+    orgId: 1
+    type: postgres
+    access: proxy
+    url: timescale:5432
+    user: nvm_grafana
+    isDefault: true
+    editable: false
+    jsonData:
+      database: ${NVM_POSTGRES_DB}
+      sslmode: disable
+      postgresVersion: 1700
+      timescaledb: true
+      maxOpenConns: 10
+      maxIdleConns: 2
+      connMaxLifetime: 14400
+      minTimeInterval: 5s
+    secureJsonData:
+      password: ${NVM_GRAFANA_DB_PASSWORD}

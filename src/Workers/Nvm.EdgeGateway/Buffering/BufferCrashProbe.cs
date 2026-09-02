@@ -4,10 +4,11 @@ using System.Text;
 
 namespace Nvm.EdgeGateway.Buffering;
 
-/// <summary>Child-process modes used by <c>make buffer-crash</c>.</summary>
+/// <summary>Các mode child-process dùng bởi <c>make buffer-crash</c>.</summary>
 /// <remarks>
-/// The writer is intentionally killed from outside. No shutdown hook, finally block or Dispose path
-/// participates in the proof. The verifier then opens the same files through production recovery.
+/// Writer bị kill từ bên ngoài một cách cố ý. Không shutdown hook, finally block hay Dispose path
+/// nào được tham gia vào phép chứng minh này. Verifier sau đó mở lại đúng những file đó qua
+/// đường phục hồi (recovery) của production.
 /// </remarks>
 internal static class BufferCrashProbe
 {
@@ -41,9 +42,9 @@ internal static class BufferCrashProbe
         Directory.CreateDirectory(options.DirectoryPath);
         await using var buffer = new FileStoreAndForwardBuffer(options);
 
-        // Seed and acknowledge a prefix before the crash window. Every reopen therefore exercises
-        // a durable, non-zero cursor as well as the append tail; a cursor beyond valid data makes
-        // the verifier fail while reading through the production recovery path.
+        // Seed và acknowledge một đoạn prefix trước cửa sổ crash. Nhờ vậy mỗi lần reopen đều
+        // luyện tới cả cursor bền (durable, khác 0) lẫn phần đuôi mới append; cursor vượt quá
+        // dữ liệu hợp lệ sẽ khiến verifier fail khi đọc qua đường phục hồi của production.
         var preludeCount = 1 + ((round * 29) % 17);
         await buffer.AppendBatchAsync(
             Enumerable
@@ -75,9 +76,9 @@ internal static class BufferCrashProbe
             DurableFlush(ready);
         }
 
-        // The host waits for ReadyFile and then creates StartFile. This removes container startup
-        // time from the random kill offset; without the handshake a fast writer can finish every
-        // round while `docker exec test -f` is still starting.
+        // Host chờ ReadyFile rồi mới tạo StartFile. Việc này loại thời gian khởi động container
+        // ra khỏi offset kill ngẫu nhiên; không có bắt tay (handshake) này thì một writer chạy
+        // nhanh có thể xong hết mọi round trong khi `docker exec test -f` vẫn còn đang khởi động.
         var startPath = Path.Combine(options.DirectoryPath, StartFile);
 
         while (!File.Exists(startPath))
@@ -108,12 +109,13 @@ internal static class BufferCrashProbe
             DurableFlush(confirmations);
             next += batchSize;
 
-            // Keep a real crash window open across many fsync boundaries. Without this probe-only
-            // pause, a fast machine can finish all 500 records before Docker delivers SIGKILL.
+            // Giữ cửa sổ crash thật mở xuyên qua nhiều ranh giới fsync. Không có khoảng dừng
+            // chỉ-dùng-cho-probe này, một máy chạy nhanh có thể xong cả 500 record trước khi
+            // Docker kịp gửi SIGKILL.
             await Task.Delay(1 + ((round + next) % 4));
         }
 
-        // The harness must deliver SIGKILL even when all records happened to finish quickly.
+        // Harness phải gửi được SIGKILL kể cả khi mọi record tình cờ xong hết rất nhanh.
         await Task.Delay(Timeout.InfiniteTimeSpan);
         return 0;
     }
@@ -210,7 +212,8 @@ internal static class BufferCrashProbe
             : throw new ArgumentException($"Crash probe requires {name} <value>.", nameof(args));
     }
 
-    // There is no asynchronous API for fsync. FlushAsync above empties managed buffers; this call
-    // is the physical durability boundary whose completion is written to confirmed.txt.
+    // Không có API bất đồng bộ nào cho fsync. FlushAsync ở trên chỉ làm rỗng managed buffer;
+    // lệnh gọi này mới là ranh giới bền vật lý (physical durability), và việc nó hoàn tất mới
+    // được ghi vào confirmed.txt.
     private static void DurableFlush(FileStream stream) => stream.Flush(flushToDisk: true);
 }

@@ -1,33 +1,33 @@
 namespace Nvm.Sparkplug;
 
-/// <summary>One metric of one device, decoded out of a Sparkplug payload.</summary>
+/// <summary>Một metric của một device, được decode ra từ một Sparkplug payload.</summary>
 /// <param name="MetricName">
-/// The metric's full name, for example <c>Formation/Voltage</c>. Always present, even when the
-/// payload carried only an alias — resolving it is what <see cref="MetricAliasTable"/> is for.
+/// Tên đầy đủ của metric, ví dụ <c>Formation/Voltage</c>. Luôn có mặt, kể cả khi payload chỉ mang
+/// alias — resolve alias thành tên chính là việc của <see cref="MetricAliasTable"/>.
 /// </param>
-/// <param name="Alias">The number this metric travels under, or null when it has none.</param>
-/// <param name="Value">What was measured.</param>
+/// <param name="Alias">Con số mà metric này được truyền dưới dạng, hoặc null nếu không có.</param>
+/// <param name="Value">Giá trị đã đo được.</param>
 /// <param name="DeviceTimestamp">
-/// When the <b>device</b> says it took the reading. Not when the gateway received it and not when we
-/// stored it — those are two other columns, and docs/scope.md §7.3 is emphatic that the three are
-/// never merged.
+/// Thời điểm mà <b>device</b> nói rằng nó lấy reading. Không phải lúc gateway nhận, cũng không phải
+/// lúc ta lưu — đó là hai cột khác, và docs/scope.md §7.3 nhấn mạnh rằng ba mốc thời gian này không
+/// bao giờ được gộp lại.
 /// </param>
 /// <remarks>
 /// <para>
-/// <see cref="DateTimeOffset"/>, never <see cref="DateTime"/> (AGENTS.md K2). Site DE1 observes
-/// daylight saving, so one hour every autumn happens twice there; a wall-clock reading with no offset
-/// cannot say which of the two it was, and telemetry is retained 400 days — long enough for that
-/// October hour to still be in the table when somebody investigates it.
+/// <see cref="DateTimeOffset"/>, không bao giờ dùng <see cref="DateTime"/> (AGENTS.md K2). Site DE1
+/// theo daylight saving, nên mỗi mùa thu có một giờ xảy ra hai lần; một reading kiểu wall-clock không
+/// có offset thì không thể nói được đó là lần nào trong hai lần, và telemetry được giữ 400 ngày — đủ
+/// lâu để giờ tháng Mười đó vẫn còn trong bảng khi có ai đó điều tra lại.
 /// </para>
 /// <para>
-/// The analyzers do not cover this. NVM002 refuses <see cref="DateTime"/> across
-/// <c>Nvm.Contracts</c>, and this type is in <c>Nvm.Sparkplug</c>, so the guard here is
-/// <c>SparkplugTimeTypeTests</c> instead.
+/// Các analyzer không bao quát trường hợp này. NVM002 từ chối <see cref="DateTime"/> trong phạm vi
+/// <c>Nvm.Contracts</c>, còn type này lại nằm trong <c>Nvm.Sparkplug</c>, nên lưới chắn ở đây là
+/// <c>SparkplugTimeTypeTests</c> thay vào đó.
 /// </para>
 /// <para>
-/// A reading is deliberately <b>not</b> an event. It has no <c>SiteId</c> and no equipment path yet,
-/// because a Sparkplug payload does not carry them — they live in the MQTT topic, and C03 is what
-/// joins the two.
+/// Một reading cố tình <b>không phải</b> là một event. Nó chưa có <c>SiteId</c> và chưa có equipment
+/// path, vì Sparkplug payload không mang hai thứ đó — chúng nằm trong MQTT topic, và C03 là bước ghép
+/// hai thứ lại với nhau.
 /// </para>
 /// </remarks>
 public sealed record DeviceReading(

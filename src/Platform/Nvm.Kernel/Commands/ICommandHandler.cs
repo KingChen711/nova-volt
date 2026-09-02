@@ -1,33 +1,34 @@
 namespace Nvm.Kernel.Commands;
 
 /// <summary>
-/// The one piece of code that knows how to carry out <typeparamref name="TCommand"/>.
+/// Đoạn code duy nhất biết cách thực hiện <typeparamref name="TCommand"/>.
 /// </summary>
-/// <typeparam name="TCommand">The command handled.</typeparam>
-/// <typeparam name="TResult">What handling it yields.</typeparam>
+/// <typeparam name="TCommand">Command được xử lý.</typeparam>
+/// <typeparam name="TResult">Kết quả trả về khi xử lý.</typeparam>
 /// <remarks>
 /// <para>
-/// One command, one handler. This is what separates a command from an event: an event may be
-/// consumed by nobody or by five services, and the publisher neither knows nor cares. A command has a
-/// single addressee, and a command nobody handles is an error rather than a no-op — see
+/// Một command, một handler. Đây là điều phân biệt command với event: một event có thể không được ai
+/// consume hoặc được năm service consume, và publisher không biết cũng không quan tâm. Một command có
+/// đúng một người nhận, và một command không ai xử lý là một lỗi chứ không phải một no-op — xem
 /// <see cref="CommandHandlerNotFoundException"/>.
 /// </para>
 /// <para>
-/// Handlers hold business rules and nothing else. Validation, deduplication, auditing and transaction
-/// scope are pipeline behaviours wrapped around this call, so that they are written once instead of
-/// remembered forty times. That composition arrives with the behaviours themselves.
+/// Handler chỉ chứa business rule và không gì khác. Validation, deduplication, auditing và
+/// transaction scope là các pipeline behaviour bọc quanh lời gọi này, để chúng chỉ được viết một lần
+/// thay vì phải nhớ cài lại bốn mươi lần. Sự kết hợp đó đến cùng với chính các behaviour.
 /// </para>
 /// <para>
-/// A handler must be safe to run twice on the same command (AGENTS.md K7). The idempotency behaviour
-/// removes most repeats, but "most" is not a guarantee, and a handler that quietly assumes it runs
-/// once is a handler that double-counts under exactly the conditions nobody tests.
+/// Một handler phải an toàn khi chạy hai lần trên cùng một command (AGENTS.md K7). Idempotency
+/// behaviour loại bỏ phần lớn các lần lặp lại, nhưng "phần lớn" không phải là một đảm bảo, và một
+/// handler âm thầm giả định rằng nó chỉ chạy một lần là một handler sẽ đếm trùng đúng vào những điều
+/// kiện mà không ai test tới.
 /// </para>
 /// </remarks>
 public interface ICommandHandler<in TCommand, TResult>
     where TCommand : ICommand<TResult>
 {
-    /// <summary>Carries out the command.</summary>
-    /// <param name="command">The command to handle.</param>
-    /// <param name="cancellationToken">Cancellation for the whole operation.</param>
+    /// <summary>Thực hiện command.</summary>
+    /// <param name="command">Command cần xử lý.</param>
+    /// <param name="cancellationToken">Cancellation cho toàn bộ thao tác.</param>
     Task<TResult> HandleAsync(TCommand command, CancellationToken cancellationToken);
 }

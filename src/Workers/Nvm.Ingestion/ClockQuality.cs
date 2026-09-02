@@ -1,56 +1,57 @@
 namespace Nvm.Ingestion;
 
-/// <summary>How much the device's own clock can be trusted for this reading.</summary>
+/// <summary>Đồng hồ của thiết bị đáng tin đến mức nào cho lần đo này.</summary>
 /// <remarks>
 /// <para>
-/// A flag rather than a filter. The technical reflex is to refuse data that is wrong, and applied
-/// here it means a dead twenty-thousand-dong CMOS battery erases a line's entire traceability
-/// record — silently, until an auditor asks. PLC clocks drift constantly: batteries die, NTP does
-/// not reach the OT layer, a board is replaced and comes up at its factory default.
+/// Đây là một cờ đánh dấu (flag) chứ không phải bộ lọc. Phản xạ kỹ thuật thường là từ chối dữ liệu
+/// sai, nhưng áp dụng ở đây nghĩa là một cục pin CMOS hai chục nghìn đồng chết đi sẽ xoá sạch toàn bộ
+/// hồ sơ truy vết (traceability) của một dòng dữ liệu — âm thầm, cho tới khi auditor hỏi tới. Đồng hồ
+/// PLC trôi liên tục: pin hết, NTP không tới được tầng OT, board bị thay và khởi động lại ở giá trị
+/// mặc định nhà máy.
 /// </para>
 /// <para>
-/// What makes the flag safe is that <c>gateway_timestamp</c> exists and is trustworthy. The reading
-/// is stored, marked, and shown with a badge; a person fixes the clock, and the system loses nothing
-/// while it waits (N15).
+/// Điều khiến cờ này an toàn là <c>gateway_timestamp</c> luôn tồn tại và đáng tin. Reading vẫn được
+/// lưu, được đánh dấu, và hiển thị kèm badge; người vận hành sửa đồng hồ, còn hệ thống không mất gì
+/// trong lúc chờ (N15).
 /// </para>
 /// </remarks>
 public enum ClockQuality
 {
-    /// <summary>Device and gateway clocks agree within the threshold.</summary>
+    /// <summary>Đồng hồ thiết bị và gateway khớp nhau trong ngưỡng cho phép.</summary>
     Good,
 
-    /// <summary>They disagree by more than the threshold. The reading is kept and flagged.</summary>
+    /// <summary>Chênh lệch vượt ngưỡng. Reading vẫn được giữ lại và gắn cờ.</summary>
     Drifted,
 
-    /// <summary>The source has no device clock at all, so there is nothing to compare.</summary>
+    /// <summary>Nguồn dữ liệu không có đồng hồ thiết bị nào cả, nên không có gì để so sánh.</summary>
     /// <remarks>
-    /// Not reachable from the Sparkplug path: C02 refuses a metric with no timestamp anywhere,
-    /// because <c>device_timestamp</c> is part of the natural key (scope.md §7.2) and a reading
-    /// without one could never recognise itself as a duplicate. The real source is the CSV file drop
-    /// in C15, where an end-of-line tester exports rows and no device clock was ever involved.
+    /// Không thể xảy ra trên đường Sparkplug: C02 từ chối một metric không có timestamp ở bất kỳ đâu,
+    /// vì <c>device_timestamp</c> là một phần của natural key (scope.md §7.2) và một reading thiếu nó
+    /// sẽ không bao giờ tự nhận ra mình là bản trùng lặp. Nguồn thực sự là CSV file drop ở C15, nơi
+    /// một máy test cuối chuyền (end-of-line tester) xuất dòng dữ liệu mà chưa từng có đồng hồ thiết
+    /// bị nào liên quan.
     /// </remarks>
     Unknown,
 }
 
-/// <summary>Compares the device clock against the gateway clock.</summary>
+/// <summary>So sánh đồng hồ thiết bị với đồng hồ gateway.</summary>
 public static class ClockQualityClassifier
 {
-    /// <summary>The default tolerance before a device clock is called drifted (scope.md §7.3).</summary>
+    /// <summary>Ngưỡng dung sai mặc định trước khi một đồng hồ thiết bị bị coi là drifted (scope.md §7.3).</summary>
     /// <remarks>
-    /// Five minutes is wide enough that ordinary NTP wander and network latency never trip it, and
-    /// narrow enough that the failures worth naming — a battery-dead PLC sitting hours or years off
-    /// — cannot hide inside it. It is a threshold on <b>disagreement</b>, not on lateness: a reading
-    /// buffered for an hour by store-and-forward is still Good, because the two clocks still agree
-    /// about when it was taken.
+    /// Năm phút đủ rộng để độ trôi NTP thông thường và độ trễ mạng không bao giờ chạm ngưỡng, và đủ
+    /// hẹp để những lỗi đáng nêu tên — một PLC chết pin lệch hàng giờ hoặc hàng năm — không thể ẩn
+    /// bên trong. Đây là ngưỡng trên độ <b>chênh lệch</b>, không phải trên độ trễ: một reading bị đệm
+    /// lại một giờ do store-and-forward vẫn là Good, vì hai đồng hồ vẫn đồng ý về thời điểm nó được đo.
     /// </remarks>
     public static readonly TimeSpan DefaultThreshold = TimeSpan.FromMinutes(5);
 
-    /// <summary>Classifies one reading.</summary>
-    /// <param name="deviceTimestamp">When the device says it took the reading, if it says.</param>
-    /// <param name="gatewayTimestamp">When the gateway received the publish carrying it.</param>
-    /// <param name="threshold">How far apart the two may be and still be called Good.</param>
-    /// <returns>The quality to store alongside all three timestamps.</returns>
-    /// <exception cref="ArgumentOutOfRangeException">The threshold is negative.</exception>
+    /// <summary>Phân loại một reading.</summary>
+    /// <param name="deviceTimestamp">Thời điểm thiết bị nói rằng nó đã đo, nếu có nói.</param>
+    /// <param name="gatewayTimestamp">Thời điểm gateway nhận được publish mang reading này.</param>
+    /// <param name="threshold">Hai thời điểm được lệch nhau bao xa mà vẫn coi là Good.</param>
+    /// <returns>Chất lượng để lưu cùng cả ba timestamp.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Threshold âm.</exception>
     public static ClockQuality Classify(
         DateTimeOffset? deviceTimestamp,
         DateTimeOffset gatewayTimestamp,
@@ -69,9 +70,9 @@ public static class ClockQualityClassifier
             return ClockQuality.Unknown;
         }
 
-        // Absolute, so a clock running fast is as visible as one running slow. Only comparing one
-        // direction would call a PLC stamping readings two hours into the future Good, and that is
-        // the shape a freshly replaced board actually arrives in.
+        // Lấy giá trị tuyệt đối, để một đồng hồ chạy nhanh cũng lộ rõ như một đồng hồ chạy chậm. Nếu
+        // chỉ so sánh một chiều thì một PLC đóng dấu reading vào hai giờ trong tương lai sẽ bị coi là
+        // Good, trong khi đó chính là hình dạng thực tế của một board vừa được thay mới.
         var disagreement = device > gatewayTimestamp
             ? device - gatewayTimestamp
             : gatewayTimestamp - device;
@@ -79,13 +80,13 @@ public static class ClockQualityClassifier
         return disagreement > threshold ? ClockQuality.Drifted : ClockQuality.Good;
     }
 
-    /// <summary>The value stored in <c>ts.telemetry_measurement.clock_quality</c>.</summary>
-    /// <param name="quality">The classification.</param>
-    /// <exception cref="ArgumentOutOfRangeException">The value is not a classification.</exception>
+    /// <summary>Giá trị được lưu trong <c>ts.telemetry_measurement.clock_quality</c>.</summary>
+    /// <param name="quality">Kết quả phân loại.</param>
+    /// <exception cref="ArgumentOutOfRangeException">Giá trị không phải một phân loại hợp lệ.</exception>
     /// <remarks>
-    /// Written out rather than taken from <c>ToString</c>. The column has a CHECK constraint on
-    /// these three spellings, and renaming an enum member is a refactor nobody expects to break a
-    /// database write.
+    /// Viết tường minh ra chuỗi thay vì lấy từ <c>ToString</c>. Cột này có ràng buộc CHECK trên đúng
+    /// ba cách viết này, và đổi tên một thành viên enum là một việc refactor mà không ai ngờ có thể
+    /// làm gãy một lệnh ghi database.
     /// </remarks>
     public static string ToColumnValue(this ClockQuality quality) =>
         quality switch

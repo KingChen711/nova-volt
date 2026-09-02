@@ -1,34 +1,34 @@
 namespace Nvm.Simulator.Faults;
 
-/// <summary>Which devices have a wrong clock, and by how much.</summary>
+/// <summary>Device nào có đồng hồ sai, và sai bao nhiêu.</summary>
 /// <remarks>
 /// <para>
-/// A PLC clock is wrong for reasons that do not go away between messages: a flat CMOS battery, no
-/// route from the OT floor to an NTP server, a board swapped in with the factory default on it. So
-/// the choice is made <b>per device and once</b>, from the device code, and stays put for the life of
-/// the plant — the same channel is the broken one this morning and this afternoon.
+/// Đồng hồ PLC sai vì những lý do không tự hết giữa các message: pin CMOS hết, không có đường tới
+/// NTP server từ tầng OT, board vừa thay vào còn để giờ mặc định của nhà sản xuất. Vì vậy lựa chọn
+/// được chốt <b>theo từng device, một lần duy nhất</b>, dựa trên device code, và giữ nguyên suốt
+/// vòng đời của nhà máy — cùng một channel là cái bị hỏng cả sáng lẫn chiều.
 /// </para>
 /// <para>
-/// Only <c>device_timestamp</c> moves. The reading itself, the cell serial, the sequence number and
-/// the topic are all correct, because they are correct on the real thing too: the cell in the channel
-/// does not change identity when the clock on the front panel is wrong. That is the whole difficulty
-/// of the case — nothing about the message looks broken, and the only way to know is to compare it
-/// against a clock you trust, which is what the gateway timestamp is for (C13).
+/// Chỉ <c>device_timestamp</c> bị lệch. Bản thân reading, serial của cell, sequence number và topic
+/// đều đúng, vì trên thiết bị thật chúng cũng đúng: cell trong channel không đổi danh tính chỉ vì
+/// đồng hồ trên mặt máy bị sai. Đó chính là cái khó của trường hợp này — không có gì trong message
+/// trông có vẻ hỏng cả, và cách duy nhất để biết là so nó với một đồng hồ đáng tin, và đó chính là
+/// việc của gateway timestamp (C13).
 /// </para>
 /// </remarks>
 public sealed class DeviceClockDrift
 {
-    /// <summary>Every clock correct, which is what a plant with no fault injected looks like.</summary>
+    /// <summary>Mọi đồng hồ đều đúng, đây là hình ảnh của một nhà máy chưa bị inject fault nào.</summary>
     public static DeviceClockDrift None { get; } = new(0, TimeSpan.Zero);
 
     private const uint Buckets = 10_000;
 
     private readonly uint _threshold;
 
-    /// <summary>Creates the fault.</summary>
-    /// <param name="driftedDeviceRate">Share of devices whose clock is wrong, 0 to 1.</param>
-    /// <param name="magnitude">How far wrong. Applied as plus on some devices and minus on others.</param>
-    /// <exception cref="ArgumentOutOfRangeException">The rate is not a share.</exception>
+    /// <summary>Tạo fault này.</summary>
+    /// <param name="driftedDeviceRate">Tỉ lệ device có đồng hồ sai, từ 0 đến 1.</param>
+    /// <param name="magnitude">Sai bao xa. Áp dụng dạng cộng trên một số device và trừ trên số còn lại.</param>
+    /// <exception cref="ArgumentOutOfRangeException">Tỉ lệ không phải là một tỉ lệ hợp lệ.</exception>
     public DeviceClockDrift(double driftedDeviceRate, TimeSpan magnitude)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(driftedDeviceRate, 0);
@@ -39,14 +39,14 @@ public sealed class DeviceClockDrift
         _threshold = (uint)Math.Round(driftedDeviceRate * Buckets);
     }
 
-    /// <summary>Share of devices whose clock is wrong.</summary>
+    /// <summary>Tỉ lệ device có đồng hồ sai.</summary>
     public double DriftedDeviceRate { get; }
 
-    /// <summary>How far a wrong clock is wrong.</summary>
+    /// <summary>Đồng hồ sai thì sai bao xa.</summary>
     public TimeSpan Magnitude { get; }
 
-    /// <summary>How far this device's clock is out. Zero for a device whose clock is right.</summary>
-    /// <param name="deviceCode">The device, for example <c>FORM-01-CH-0142</c>.</param>
+    /// <summary>Đồng hồ của device này lệch bao xa. Bằng 0 nếu đồng hồ device đúng.</summary>
+    /// <param name="deviceCode">Device, ví dụ <c>FORM-01-CH-0142</c>.</param>
     public TimeSpan For(string deviceCode)
     {
         ArgumentNullException.ThrowIfNull(deviceCode);
@@ -63,10 +63,10 @@ public sealed class DeviceClockDrift
             return TimeSpan.Zero;
         }
 
-        // A different slice of the same hash decides the sign, so which devices are wrong and which
-        // way they are wrong are independent. Taking both from the low bits would make every drifted
-        // clock lean the same way, and a test that only ever saw a late clock would not notice code
-        // that assumed the device is never ahead of the gateway.
+        // Một lát khác của cùng hash quyết định dấu, nên việc device nào bị lệch và lệch theo
+        // hướng nào là độc lập với nhau. Nếu lấy cả hai từ các bit thấp thì mọi đồng hồ lệch sẽ
+        // nghiêng cùng một hướng, và một test chỉ từng thấy đồng hồ chạy chậm sẽ không phát hiện
+        // được code lỡ giả định rằng device không bao giờ chạy nhanh hơn gateway.
         return (hash >> 20 & 1) == 0 ? Magnitude.Negate() : Magnitude;
     }
 }

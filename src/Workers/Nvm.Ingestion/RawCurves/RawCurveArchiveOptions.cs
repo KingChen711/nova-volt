@@ -2,9 +2,9 @@ namespace Nvm.Ingestion.RawCurves;
 
 /// <summary>Where the original bytes of a machine export are kept.</summary>
 /// <remarks>
-/// Off by default. A plant with no object store still ingests, and the file-drop adapter says once
-/// per file that it is keeping nothing — a loud absence rather than a silent one, because "we have
-/// the originals" is the claim C12.1 says an auditor will actually test.
+/// Off by default because the archive belongs to file-drop ingestion. Program startup fails when
+/// file drop is enabled without it; MQTT-only ingestion can run without an object store because it
+/// never consumes a machine-export file whose original bytes must be retained.
 /// </remarks>
 public sealed class RawCurveArchiveOptions
 {

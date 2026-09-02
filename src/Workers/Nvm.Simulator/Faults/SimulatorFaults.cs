@@ -1,64 +1,65 @@
 namespace Nvm.Simulator.Faults;
 
-/// <summary>The three ways this plant is allowed to misbehave, and how hard.</summary>
+/// <summary>Ba kiểu mà nhà máy này được phép hành xử sai, và sai nặng tới đâu.</summary>
 /// <remarks>
 /// <para>
-/// Every rate defaults to <b>zero</b>: a simulator nobody configured produces a well-behaved plant.
-/// The labs turn them on, which is the arrangement M2 needs — a fault that is on by default gets
-/// forgotten, and then every number the milestone produces has an unstated ingredient in it.
+/// Mọi rate mặc định là <b>0</b>: một simulator không ai cấu hình gì sẽ tạo ra một nhà máy hành xử
+/// đúng đắn. Các lab tự bật chúng lên, đây chính là cách sắp xếp M2 cần — một fault mặc định bật sẵn
+/// sẽ bị quên mất, và khi đó mọi con số milestone tạo ra đều mang một thành phần không ai khai báo.
 /// </para>
 /// <para>
-/// The opposite mistake is the one <c>R-M2-1</c> warns about: running the reconciliation with the
-/// faults still off, watching it come out even, and marking D1 done having checked nothing. That is
-/// why the run report writes these counts down next to the totals — a run with zero duplicates
-/// blocked is visible rather than merely unremarkable.
+/// Sai lầm ngược lại là điều <c>R-M2-1</c> cảnh báo: chạy phép đối chiếu trong khi fault vẫn đang
+/// tắt, thấy nó khớp, rồi đánh dấu D1 đã xong mà không kiểm tra được gì cả. Đó là lý do run report
+/// ghi lại các con số này ngay bên cạnh tổng số — một run không chặn được duplicate nào thì vẫn hiện
+/// rõ ra thay vì trông chỉ đơn giản là không có gì đáng chú ý.
 /// </para>
 /// </remarks>
 public sealed class SimulatorFaults
 {
-    /// <summary>Share of published messages that are sent a second time. The lab uses <c>0.10</c>.</summary>
+    /// <summary>Tỉ lệ message được publish bị gửi lần thứ hai. Lab dùng <c>0.10</c>.</summary>
     /// <remarks>
-    /// The <b>same</b> message, not another one like it. See
-    /// <see cref="FaultInjectingPublisher"/> for why the difference decides whether D1 measures
-    /// anything.
+    /// Là <b>cùng một</b> message, không phải một message khác giống nó. Xem
+    /// <see cref="FaultInjectingPublisher"/> để biết vì sao sự khác biệt này quyết định D1 có đo
+    /// được gì hay không.
     /// </remarks>
     public double DuplicateRate { get; set; }
 
-    /// <summary>Share of devices whose clock is wrong. The lab uses <c>0.10</c>.</summary>
+    /// <summary>Tỉ lệ device có đồng hồ sai. Lab dùng <c>0.10</c>.</summary>
     /// <remarks>
-    /// Of <b>devices</b>, not of messages. A dead CMOS battery is wrong on every reading that channel
-    /// ever takes, and a fault that drifted a random tenth of the messages would be a fault no
-    /// hardware has — worse, it would be one the <c>Drifted</c> flag could not usefully group by.
+    /// Tính theo <b>device</b>, không phải theo message. Một pin CMOS hỏng thì sai trên mọi reading
+    /// mà channel đó từng lấy, và một fault làm lệch ngẫu nhiên một phần mười số message sẽ là một
+    /// fault không phần cứng nào có — tệ hơn, nó sẽ là một fault mà cờ <c>Drifted</c> không thể dùng
+    /// để nhóm lại một cách có ích.
     /// </remarks>
     public double DriftedDeviceRate { get; set; }
 
-    /// <summary>How far a wrong clock is wrong. Applied as plus or minus, per device.</summary>
+    /// <summary>Đồng hồ sai thì sai bao xa. Áp dụng dạng cộng hoặc trừ, theo từng device.</summary>
     public TimeSpan ClockDrift { get; set; } = TimeSpan.FromHours(2);
 
-    /// <summary>Average gap between two connection losses. Zero switches the fault off.</summary>
+    /// <summary>Khoảng cách trung bình giữa hai lần mất kết nối. Bằng 0 thì tắt fault này.</summary>
     /// <remarks>
-    /// A mean rather than a period. Network blips arrive as a Poisson process, so the gaps are
-    /// exponential; a fixed interval would let a run settle into a rhythm and let anything downstream
-    /// accidentally depend on it.
+    /// Là một giá trị trung bình chứ không phải một chu kỳ cố định. Các lần rớt mạng xảy ra theo một
+    /// Poisson process, nên khoảng cách giữa chúng theo phân phối mũ; một khoảng cố định sẽ khiến
+    /// một run rơi vào một nhịp điệu và để cho bất cứ thứ gì phía sau vô tình phụ thuộc vào nó.
     /// </remarks>
     public TimeSpan DropoutMeanInterval { get; set; }
 
-    /// <summary>How long a connection loss lasts.</summary>
+    /// <summary>Một lần mất kết nối kéo dài bao lâu.</summary>
     public TimeSpan DropoutDuration { get; set; } = TimeSpan.FromSeconds(30);
 
-    /// <summary>Seed for the fault dice, so a run can be repeated exactly.</summary>
+    /// <summary>Seed cho xúc xắc fault, để một run có thể chạy lại y hệt.</summary>
     /// <remarks>
-    /// A lab that cannot be re-run with the same faults is a lab whose surprising result cannot be
-    /// investigated — only re-rolled until it goes away.
+    /// Một lab không thể chạy lại với đúng các fault như cũ là một lab mà kết quả bất ngờ của nó
+    /// không thể điều tra được — chỉ có thể roll lại cho tới khi nó biến mất.
     /// </remarks>
     public int Seed { get; set; } = 20260828;
 
-    /// <summary>Whether anything is switched on at all.</summary>
+    /// <summary>Có bất cứ thứ gì đang được bật lên hay không.</summary>
     public bool AnyEnabled =>
         DuplicateRate > 0 || DriftedDeviceRate > 0 || DropoutMeanInterval > TimeSpan.Zero;
 
-    /// <summary>Refuses settings that do not describe a fault.</summary>
-    /// <exception cref="InvalidOperationException">A value is out of range.</exception>
+    /// <summary>Từ chối những cấu hình không mô tả một fault hợp lệ.</summary>
+    /// <exception cref="InvalidOperationException">Một giá trị nằm ngoài phạm vi cho phép.</exception>
     public void Validate()
     {
         if (DuplicateRate is < 0 or > 1)

@@ -4,15 +4,15 @@ using Nvm.Sparkplug.Topics;
 
 namespace Nvm.Sparkplug;
 
-/// <summary>A Sparkplug message after its topic and payload have been joined at the gateway.</summary>
+/// <summary>Một message Sparkplug sau khi topic và payload của nó đã được ghép lại ở gateway.</summary>
 /// <remarks>
-/// The payload alone has readings but no plant address; the topic has an address but no values.
-/// Keeping both plus an explicit <see cref="SiteId"/> makes the server-side site boundary visible
-/// on every object handed toward ingestion (K3).
+/// Riêng payload thì có readings nhưng không có địa chỉ nhà máy; riêng topic thì có địa chỉ nhưng
+/// không có giá trị. Giữ cả hai cộng thêm một <see cref="SiteId"/> tường minh giúp ranh giới site
+/// phía server hiện rõ trên mọi object được đưa vào ingestion (K3).
 /// </remarks>
 public sealed record DecodedSparkplugMessage
 {
-    /// <summary>Creates a message that is safe to hand across the DMZ.</summary>
+    /// <summary>Tạo một message an toàn để đưa qua DMZ.</summary>
     public DecodedSparkplugMessage(
         string siteId,
         EquipmentPath equipmentPath,
@@ -44,22 +44,22 @@ public sealed record DecodedSparkplugMessage
         Readings = readings;
     }
 
-    /// <summary>The plant this data belongs to (K3).</summary>
+    /// <summary>Nhà máy mà dữ liệu này thuộc về (K3).</summary>
     public string SiteId { get; }
 
-    /// <summary>The full ISA-95 address resolved against the active factory model.</summary>
+    /// <summary>Địa chỉ ISA-95 đầy đủ, được resolve dựa trên factory model đang hoạt động.</summary>
     public EquipmentPath EquipmentPath { get; }
 
-    /// <summary>The MQTT address exactly as received.</summary>
+    /// <summary>Địa chỉ MQTT đúng như lúc nhận được.</summary>
     public SparkplugTopic Topic { get; }
 
-    /// <summary>When the gateway received the MQTT publish.</summary>
+    /// <summary>Thời điểm gateway nhận được MQTT publish.</summary>
     public DateTimeOffset GatewayTimestamp { get; }
 
-    /// <summary>The decoded readings carried by the publish.</summary>
+    /// <summary>Các reading đã decode mà publish này mang theo.</summary>
     public ImmutableArray<DeviceReading> Readings { get; }
 
-    /// <summary>Compares values rather than the backing identity of two immutable arrays.</summary>
+    /// <summary>So sánh theo giá trị thay vì theo identity nội bộ của hai immutable array.</summary>
     public bool Equals(DecodedSparkplugMessage? other) =>
         other is not null
         && string.Equals(SiteId, other.SiteId, StringComparison.Ordinal)

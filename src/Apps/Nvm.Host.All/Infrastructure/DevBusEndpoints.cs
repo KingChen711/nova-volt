@@ -10,19 +10,19 @@ using Nvm.Kernel.Commands.Validation;
 namespace Nvm.Host.Infrastructure;
 
 /// <summary>
-/// The two development-only endpoints that put a real event on the bus.
+/// Hai endpoint chỉ dùng khi phát triển, đưa một event thật lên bus.
 /// </summary>
 /// <remarks>
 /// <para>
-/// Registered only when the environment is Development, the same rule <c>DotEnvLoader</c> follows.
-/// An endpoint that publishes arbitrary events on request is a fine thing to have on a laptop and an
-/// open door in a plant.
+/// Chỉ đăng ký khi environment là Development, cùng quy tắc <c>DotEnvLoader</c> tuân theo. Một
+/// endpoint publish event tuỳ ý theo yêu cầu là điều tốt để có trên laptop nhưng lại là một cánh
+/// cửa mở toang trong nhà máy.
 /// </para>
 /// <para>
-/// They exist because the fan-out, retry and outage evidence for M1 has to come from a publisher
-/// outside the consuming process. A test that published from within the worker would exercise the
-/// bus library and skip the part being claimed: that a message crosses a process boundary and lands
-/// in two queues.
+/// Chúng tồn tại vì bằng chứng về fan-out, retry và outage cho M1 phải đến từ một publisher nằm
+/// ngoài process đang consume. Một test publish từ bên trong worker sẽ chỉ chạy qua thư viện bus
+/// và bỏ qua đúng phần cần chứng minh: rằng một message vượt qua ranh giới process và đến được hai
+/// queue.
 /// </para>
 /// </remarks>
 internal static partial class DevBusEndpoints
@@ -30,21 +30,21 @@ internal static partial class DevBusEndpoints
     private const string LoggerName = "Nvm.Host.DevBus";
 
     /// <summary>
-    /// Says out loud that <c>published</c> is not the same as <c>received</c>.
+    /// Nói thẳng ra rằng <c>published</c> không giống <c>received</c>.
     /// </summary>
     /// <remarks>
-    /// A publish that returned without throwing means the broker acknowledged the frame, not that any
-    /// consumer will ever see the message. Reading the two as the same number is the mistake this lab
-    /// is built to expose, so the answer carries the warning with it.
+    /// Một publish trả về mà không ném exception nghĩa là broker đã acknowledge frame, không có
+    /// nghĩa là consumer nào đó sẽ thấy message. Đọc hai con số này như một là sai lầm mà lab này
+    /// dựng ra để lộ mặt, nên câu trả lời phải mang theo cảnh báo đó.
     /// </remarks>
     private const string LostEventsNote =
         "Events lost = requested - what the consumers actually received. Count the consumer log.";
 
-    /// <summary>Default time allowed for one publish before it is counted as failed.</summary>
+    /// <summary>Thời gian mặc định cho phép một lần publish trước khi bị tính là thất bại.</summary>
     /// <remarks>
-    /// A publish to a broker that is not there does not fail quickly by itself — MassTransit holds the
-    /// message while it tries to reconnect, which is the behaviour that makes recovery seamless and
-    /// makes an outage lab run forever. Bounding each attempt turns "eventually" into a number.
+    /// Một publish tới broker không có ở đó sẽ không tự thất bại nhanh — MassTransit giữ message lại
+    /// trong lúc cố kết nối lại, đây chính là hành vi làm cho việc phục hồi liền mạch nhưng cũng làm
+    /// một outage lab chạy mãi không dừng. Giới hạn mỗi lần thử biến "rồi cũng xong" thành một con số.
     /// </remarks>
     private static readonly TimeSpan DefaultPublishTimeout = TimeSpan.FromSeconds(2);
 
@@ -61,13 +61,13 @@ internal static partial class DevBusEndpoints
     }
 
     /// <summary>
-    /// Dispatches the real command and publishes whatever event it produced.
+    /// Dispatch command thật và publish bất kỳ event nào nó tạo ra.
     /// </summary>
     /// <remarks>
-    /// Publishing here, in the caller, rather than inside the handler. The handler stays free of
-    /// MassTransit (AGENTS.md K9), and the seam where an outbox will go in M6 is visible: right now
-    /// the state change and the publish are two steps with nothing joining them, which is exactly the
-    /// dual-write the outage lab measures.
+    /// Publish diễn ra ở đây, phía caller, chứ không phải bên trong handler. Handler được giữ sạch
+    /// khỏi MassTransit (AGENTS.md K9), và chỗ nối mà outbox sẽ chiếm ở M6 lộ rõ ra: hiện tại thay
+    /// đổi trạng thái và publish là hai bước rời nhau không có gì gắn kết, đúng là dual-write mà
+    /// outage lab đang đo.
     /// </remarks>
     private static async Task<IResult> ActivateRevisionAsync(
         string site,
@@ -96,8 +96,8 @@ internal static partial class DevBusEndpoints
         }
         catch (FactoryModelActivationException exception)
         {
-            // 409, not 400. The request was well formed and the answer is still no, which is a
-            // different thing for the caller to do something about.
+            // 409, không phải 400. Request đúng định dạng nhưng câu trả lời vẫn là không, đó là một
+            // chuyện khác mà caller cần xử lý.
             return Results.Conflict(new { error = exception.Message });
         }
 
@@ -116,20 +116,19 @@ internal static partial class DevBusEndpoints
     }
 
     /// <summary>
-    /// Publishes a numbered run of events and reports how many made it onto the bus.
+    /// Publish một loạt event được đánh số và báo cáo bao nhiêu event đã lên được bus.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// The sequence number is carried in <c>Revision</c>, so every event in a run is distinguishable
-    /// in the consumer log and the gap left by an outage can be counted rather than estimated. The
-    /// events are real <c>FactoryModelRevisionActivated</c> contracts and go through the real
-    /// topology and the real CloudEvents filter; what they skip is the command handler, because the
-    /// handler refuses to move a plant backwards and a run of two hundred activations is not a thing
-    /// a plant can do.
+    /// Số thứ tự được mang trong <c>Revision</c>, nên mỗi event trong một loạt đều phân biệt được
+    /// trong consumer log, và khoảng trống do outage để lại có thể đếm được thay vì phải ước lượng.
+    /// Các event là contract <c>FactoryModelRevisionActivated</c> thật, đi qua đúng topology thật và
+    /// đúng CloudEvents filter thật; phần chúng bỏ qua là command handler, vì handler từ chối đưa một
+    /// nhà máy lùi lại và một loạt hai trăm lần activation không phải điều một nhà máy có thể làm.
     /// </para>
     /// <para>
-    /// It returns counts rather than logging them only. A number that exists solely in a log line is
-    /// a number somebody has to find, and this one goes straight into <c>benchmarks.md</c>.
+    /// Nó trả về số đếm chứ không chỉ ghi log. Một con số chỉ tồn tại trong một dòng log là con số ai
+    /// đó phải đi tìm, còn con số này đi thẳng vào <c>benchmarks.md</c>.
     /// </para>
     /// </remarks>
     private static async Task<IResult> PublishBurstAsync(
@@ -148,8 +147,8 @@ internal static partial class DevBusEndpoints
             return Results.BadRequest(new { error = "count must be at least 1." });
         }
 
-        // The newest document on the shelf. This endpoint is a publisher for the chaos lab, not an
-        // activation, so "which revision" only has to be a real one.
+        // Tài liệu mới nhất trên kệ. Endpoint này là một publisher cho chaos lab, không phải một lần
+        // activation, nên "revision nào" chỉ cần là một revision có thật.
         var model = catalog.Find(catalog.LatestRevision)!;
 
         if (model.FindSite(site) is null)
@@ -175,8 +174,8 @@ internal static partial class DevBusEndpoints
             cancellationToken.ThrowIfCancellationRequested();
 
             var activated = new FactoryModelRevisionActivated(
-                // Derived, not generated: the same run publishes the same ids, so a duplicate arriving
-                // after the broker recovers is recognisable as one (ADR-010).
+                // Suy ra, không phải tạo mới: cùng một lần chạy sẽ publish cùng id, nên một bản trùng
+                // đến sau khi broker phục hồi vẫn nhận ra được là bản trùng (ADR-010).
                 EventId: ActivateFactoryModelRevisionCommand.KeyFor(site, sequence).Value,
                 OccurredAt: clock.GetUtcNow(),
                 SiteId: site,
@@ -195,9 +194,9 @@ internal static partial class DevBusEndpoints
             }
             catch (Exception exception)
             {
-                // Caught and counted, never swallowed. A publish that fails silently is how a plant
-                // finds out about an outage from a customer rather than from a dashboard — and it is
-                // half of what D4 asks to be shown.
+                // Bắt lại và đếm lại, không bao giờ nuốt lỗi. Một publish thất bại âm thầm là cách một
+                // nhà máy biết về một outage từ khách hàng thay vì từ dashboard — và đó là một nửa
+                // điều D4 yêu cầu phải cho thấy.
                 failed++;
                 firstFailure ??= sequence;
                 lastFailure = sequence;
@@ -228,9 +227,9 @@ internal static partial class DevBusEndpoints
         });
     }
 
-    // Source-generated. CA1873, new in .NET 10, refuses an Information-level call carrying more than
-    // one property: the arguments are boxed into an array before anything asks whether the level is
-    // switched on. The generator emits the IsEnabled check first.
+    // Sinh từ source. CA1873, mới trong .NET 10, từ chối một lệnh gọi mức Information mang nhiều hơn
+    // một property: các argument bị boxed vào một array trước khi có gì hỏi xem mức log đó có bật
+    // hay không. Generator phát ra kiểm tra IsEnabled trước.
     [LoggerMessage(
         EventId = 1,
         Level = LogLevel.Information,

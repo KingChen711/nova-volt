@@ -2,34 +2,34 @@ using Nvm.Kernel.Identity;
 
 namespace Nvm.Sparkplug;
 
-/// <summary>Gives a decoded reading the identity the rest of the system deduplicates on.</summary>
+/// <summary>Gán cho một reading đã decode cái identity mà phần còn lại của hệ thống dùng để deduplicate.</summary>
 /// <remarks>
-/// The join between what came off the wire and <see cref="MeasurementNaturalKey"/>. It sits here
-/// rather than in <c>Nvm.Kernel</c> because the key is shared and the Sparkplug reading is not — C15
-/// builds the same key from a CSV row, and the two must land on the same value for the same reading
-/// or a batch delivered twice by two routes is stored twice.
+/// Mối nối giữa dữ liệu lấy từ wire và <see cref="MeasurementNaturalKey"/>. Nó nằm ở đây thay vì
+/// trong <c>Nvm.Kernel</c> vì key là thứ dùng chung còn Sparkplug reading thì không — C15 xây cùng
+/// một key đó từ một dòng CSV, và hai bên phải ra cùng một giá trị cho cùng một reading, nếu không
+/// một batch được giao hai lần qua hai route sẽ bị lưu hai lần.
 /// </remarks>
 public static class DeviceReadingIdentity
 {
-    /// <summary>Derives the natural key of a reading taken at a known place in the plant.</summary>
-    /// <param name="reading">The decoded reading.</param>
-    /// <param name="equipmentPath">Where it was taken — the resolved path, not the topic.</param>
-    /// <param name="unitId">The unit under the machine, when one is known.</param>
+    /// <summary>Suy ra natural key của một reading được lấy tại một vị trí đã biết trong nhà máy.</summary>
+    /// <param name="reading">Reading đã decode.</param>
+    /// <param name="equipmentPath">Nơi reading được lấy — path đã resolve, không phải topic.</param>
+    /// <param name="unitId">Unit bên dưới máy, khi biết được.</param>
     /// <exception cref="ArgumentException">
-    /// The path names no plant, or is shallower than a work cell and so performs no step.
+    /// Path không đặt tên cho nhà máy nào, hoặc nông hơn một work cell nên không thực hiện bước nào.
     /// </exception>
     /// <remarks>
     /// <para>
-    /// The <b>resolved</b> path, deliberately. A topic carries a device code and no work cell, so
-    /// keying on anything the topic can produce on its own would give
-    /// <c>NOVAVOLT/NV1/FORMATION/F1/FORM-01-CH-0142</c> — a place that does not exist — and the key
-    /// would change the day somebody fixed it.
+    /// Cố tình dùng path <b>đã resolve</b>. Một topic mang device code chứ không mang work cell, nên
+    /// nếu keying dựa trên bất cứ thứ gì topic tự sinh ra được sẽ cho ra
+    /// <c>NOVAVOLT/NV1/FORMATION/F1/FORM-01-CH-0142</c> — một chỗ không tồn tại — và key sẽ đổi ngay
+    /// cái ngày ai đó sửa lại nó.
     /// </para>
     /// <para>
-    /// The signal code is the metric name as the device declared it. Not normalised, not
-    /// upper-cased: it is the plant's own vocabulary, it goes into
-    /// <c>ts.process_signal.signal_code</c> as it stands, and a normalisation applied here and not
-    /// there would make the key and the stored row disagree about what was measured.
+    /// Signal code chính là tên metric đúng như device khai báo. Không chuẩn hoá, không viết hoa: đó
+    /// là từ vựng riêng của nhà máy, nó đi thẳng vào <c>ts.process_signal.signal_code</c> nguyên trạng,
+    /// và nếu chuẩn hoá được áp ở đây mà không áp ở chỗ kia thì key và dòng đã lưu sẽ không còn khớp
+    /// nhau về việc cái gì đã được đo.
     /// </para>
     /// </remarks>
     public static MeasurementNaturalKey NaturalKey(

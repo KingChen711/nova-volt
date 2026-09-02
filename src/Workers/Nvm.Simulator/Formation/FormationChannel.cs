@@ -4,23 +4,23 @@ using Nvm.Sparkplug;
 
 namespace Nvm.Simulator.Formation;
 
-/// <summary>One charging channel of a formation cycler, with a cell in it.</summary>
+/// <summary>Một channel sạc của một formation cycler, có một cell nằm trong đó.</summary>
 /// <remarks>
 /// <para>
-/// Holds the two pieces of state a real channel has: which cell is loaded, and what it last told
-/// anybody. The second is what makes report-by-exception possible — a reading is only sent when it
-/// has moved further than the deadband, which is why an idle channel is silent and a channel in the
-/// CV tail is nearly silent too.
+/// Giữ hai mảnh state mà một channel thật có: cell nào đang được nạp vào, và lần cuối nó báo gì cho
+/// ai đó. Mảnh thứ hai là thứ khiến report-by-exception khả thi — một reading chỉ được gửi khi nó đã
+/// di chuyển đủ xa qua khỏi deadband, đó là lý do một channel đang rảnh thì im lặng và một channel
+/// đang ở đuôi CV thì gần như im lặng luôn.
 /// </para>
 /// <para>
-/// The channel produces readings, not messages. Assembling a Sparkplug message needs the edge node's
-/// sequence number, and that belongs to the node rather than to any one device under it — see
+/// Channel tạo ra reading, không tạo ra message. Dựng một Sparkplug message cần tới sequence number
+/// của edge node, và số đó thuộc về node chứ không thuộc về bất kỳ device nào bên dưới nó — xem
 /// <see cref="FormationLine"/>.
 /// </para>
 /// </remarks>
 public sealed class FormationChannel
 {
-    /// <summary>Metric names and the aliases the birth gives them.</summary>
+    /// <summary>Tên metric và alias mà birth gán cho chúng.</summary>
     private const string VoltageMetric = "Formation/Voltage";
     private const string CurrentMetric = "Formation/Current";
     private const string TemperatureMetric = "Formation/Temperature";
@@ -35,8 +35,9 @@ public sealed class FormationChannel
     private const ulong StepAlias = 5;
     private const ulong CellSerialAlias = 6;
 
-    // Deadbands, in the unit of each signal. Chosen so that the CC leg reports steadily and the rests
-    // report almost nothing, which is the traffic shape a real line has: quiet channels are the norm.
+    // Deadband, theo đơn vị của từng signal. Chọn sao cho chặng CC báo đều đặn còn các đoạn rest thì
+    // gần như không báo gì, đó chính là hình dạng traffic của một line thật: channel im lặng mới là
+    // chuyện bình thường.
     private const double VoltageDeadband = 0.001;
     private const double CurrentDeadband = 0.001;
     private const double TemperatureDeadband = 0.05;
@@ -51,12 +52,12 @@ public sealed class FormationChannel
     private double _lastAmpHours;
     private FormationStep _lastStep;
 
-    // The instant of the last declaration, which is what tells a rebirth from a new cell.
+    // Thời điểm của lần declare gần nhất, đây là thứ giúp phân biệt một rebirth với một cell mới.
     private DateTimeOffset? _lastDeclaredAt;
 
-    /// <summary>Creates a channel that is empty until a cell is loaded into it.</summary>
-    /// <param name="path">Where the channel is, for example <c>…/FORM-01/FORM-01-CH-0001</c>.</param>
-    /// <param name="profile">The cycle shape every cell in this channel follows.</param>
+    /// <summary>Tạo một channel trống cho tới khi có cell được nạp vào.</summary>
+    /// <param name="path">Channel nằm ở đâu, ví dụ <c>…/FORM-01/FORM-01-CH-0001</c>.</param>
+    /// <param name="profile">Hình dạng cycle mà mọi cell trong channel này đi theo.</param>
     public FormationChannel(EquipmentPath path, FormationProfile profile)
     {
         ArgumentNullException.ThrowIfNull(path);
@@ -67,40 +68,41 @@ public sealed class FormationChannel
         _spread = SpreadOf(path.Code);
     }
 
-    /// <summary>Where this channel is.</summary>
+    /// <summary>Channel này nằm ở đâu.</summary>
     public EquipmentPath Path { get; }
 
-    /// <summary>The cell currently in the channel, or null when it is empty.</summary>
+    /// <summary>Cell hiện đang nằm trong channel, hoặc null nếu channel đang trống.</summary>
     public string? CellSerial { get; private set; }
 
-    /// <summary>How many readings this channel has taken since it was created.</summary>
+    /// <summary>Channel này đã lấy bao nhiêu reading kể từ khi được tạo.</summary>
     /// <remarks>
     /// <para>
-    /// The left-hand side of the reconciliation in D1, and it counts what the <b>instrument did</b>:
-    /// every metric a <c>DBIRTH</c> declares, and every signal a sample found past its deadband. The
-    /// cell serial is in it, because the gateway forwards it and the pipeline stores a row for it
-    /// like any other declared metric; only the protocol metrics are left out, and those belong to
-    /// the node rather than to a channel.
+    /// Vế trái của phép đối chiếu trong D1, và nó đếm những gì <b>thiết bị đã làm</b>: mọi metric mà
+    /// một <c>DBIRTH</c> khai báo, và mọi signal mà một sample tìm thấy vượt qua deadband. Cell
+    /// serial cũng nằm trong đó, vì gateway forward nó và pipeline lưu một dòng cho nó giống như bất
+    /// kỳ metric khai báo nào khác; chỉ có protocol metric là bị loại ra, và chúng thuộc về node chứ
+    /// không thuộc về một channel.
     /// </para>
     /// <para>
-    /// Counted where the reading is <b>taken</b>, before any transport. Counting on the far side of
-    /// a publish looks stricter and is the opposite: a batch the worker then abandons would leave
-    /// this side of the reconciliation at the same moment the rows it owed left the other side, and
-    /// the two would balance over a loss nobody could see. What the link then did with a reading is
-    /// the link's number to keep — <see cref="SimulatorWorker.AbandonedMeasurements"/>.
+    /// Được đếm tại nơi reading <b>được lấy</b>, trước bất kỳ bước transport nào. Đếm ở phía bên kia
+    /// của một lần publish trông có vẻ chặt chẽ hơn nhưng lại là điều ngược lại: một batch mà worker
+    /// sau đó bỏ dở sẽ khiến vế này của phép đối chiếu dừng lại đúng lúc số dòng nó nợ rời khỏi vế
+    /// kia, và hai vế sẽ khớp nhau qua một mất mát mà không ai nhìn thấy được. Việc đường truyền sau
+    /// đó làm gì với một reading là con số riêng của đường truyền phải giữ —
+    /// <see cref="SimulatorWorker.AbandonedMeasurements"/>.
     /// </para>
     /// </remarks>
     public long MeasurementCount { get; private set; }
 
-    /// <summary>Declares the channel: every metric, by name, alias and current value.</summary>
-    /// <param name="cellSerial">The cell in the channel.</param>
-    /// <param name="elapsed">How far into its cycle that cell is.</param>
-    /// <param name="at">The device clock for this declaration.</param>
+    /// <summary>Khai báo channel: mọi metric, kèm tên, alias và giá trị hiện tại.</summary>
+    /// <param name="cellSerial">Cell đang nằm trong channel.</param>
+    /// <param name="elapsed">Cell đó đã đi được bao xa trong cycle của nó.</param>
+    /// <param name="at">Đồng hồ device cho lần khai báo này.</param>
     /// <remarks>
-    /// Covers both occasions a <c>DBIRTH</c> is published, because they are the same message: a new
-    /// cell going in, and the node reconnecting and having to restate everything. The elapsed time is
-    /// a parameter for exactly that reason — a reconnect happens wherever the cycle happens to be.
-    /// It also resets the deadband state, so the first reading after a birth is always sent.
+    /// Bao trùm cả hai dịp một <c>DBIRTH</c> được publish, vì chúng là cùng một message: một cell
+    /// mới được nạp vào, và node kết nối lại nên phải khai báo lại mọi thứ. Elapsed time là một
+    /// tham số chính vì lý do đó — một lần reconnect xảy ra ở bất cứ đâu trên cycle mà nó đang rơi
+    /// vào. Nó cũng reset trạng thái deadband, nên reading đầu tiên sau một birth luôn được gửi.
     /// </remarks>
     public ImmutableArray<DeviceReading> Declare(string cellSerial, TimeSpan elapsed, DateTimeOffset at)
     {
@@ -122,15 +124,16 @@ public sealed class FormationChannel
             Reading(CellSerialMetric, CellSerialAlias, new MetricValue.Text(cellSerial), at),
         ];
 
-        // Counted from the array beside it, never from a literal. A hard-coded "five" next to six
-        // readings made the run report claim one fewer per DBIRTH, on every channel, for a whole run
-        // — and nothing failed: the reconciliation simply came out short and read as data loss.
+        // Đếm từ chính mảng bên cạnh, không bao giờ từ một con số literal. Một con "năm" hard-code
+        // đứng cạnh sáu reading từng khiến run report báo thiếu mất một cái mỗi DBIRTH, trên mọi
+        // channel, suốt cả một run — và không có gì fail cả: phép đối chiếu đơn giản là ra thiếu và
+        // đọc như thể mất dữ liệu.
         //
-        // And only when the instant is new. A rebirth restates this channel: same cell, same values,
-        // same device clock, therefore the same natural key — deduplication is right to store it
-        // once, and a second count here would put the left side of D1 above the right by one full
-        // DBIRTH per rebirth. Measured at exactly -48 on an eight-channel line. A restatement of a
-        // measurement is not another measurement.
+        // Và chỉ đếm khi thời điểm này là mới. Một rebirth chỉ nhắc lại channel này: cùng cell, cùng
+        // giá trị, cùng đồng hồ device, do đó cùng natural key — deduplication có quyền chỉ lưu nó
+        // một lần, và đếm thêm ở đây sẽ đẩy vế trái của D1 vượt vế phải đúng một DBIRTH trọn vẹn mỗi
+        // lần rebirth. Đo được chính xác -48 trên một line tám channel. Một lần nhắc lại của một
+        // measurement không phải là một measurement khác.
         if (at != _lastDeclaredAt)
         {
             MeasurementCount += declared.Length;
@@ -140,11 +143,11 @@ public sealed class FormationChannel
         return declared;
     }
 
-    /// <summary>Reads the channel and returns only what has moved since the last time.</summary>
-    /// <param name="elapsed">How far into the cycle the cell is.</param>
-    /// <param name="at">The device clock for this sample.</param>
-    /// <returns>The changed readings, which is often none at all.</returns>
-    /// <exception cref="InvalidOperationException">The channel is empty.</exception>
+    /// <summary>Đọc channel và chỉ trả về những gì đã thay đổi kể từ lần trước.</summary>
+    /// <param name="elapsed">Cell đã đi được bao xa trong cycle.</param>
+    /// <param name="at">Đồng hồ device cho lần sample này.</param>
+    /// <returns>Các reading đã thay đổi, mà nhiều khi chẳng có cái nào cả.</returns>
+    /// <exception cref="InvalidOperationException">Channel đang trống.</exception>
     public ImmutableArray<DeviceReading> Sample(TimeSpan elapsed, DateTimeOffset at)
     {
         if (CellSerial is null)
@@ -181,15 +184,16 @@ public sealed class FormationChannel
             changed.Add(Reading(StepMetric, StepAlias, new MetricValue.Integral((long)sample.Step), at));
         }
 
-        // Only the signals that were actually sent are remembered. Remembering the sample instead
-        // would let a value creep past the deadband one sub-threshold step at a time and never be
-        // reported — the classic report-by-exception bug, where a slow drift is invisible.
+        // Chỉ những signal thực sự được gửi mới được ghi nhớ. Nếu ghi nhớ theo sample thay vì vậy
+        // thì một giá trị có thể trôi qua khỏi deadband từng bước nhỏ dưới ngưỡng một mà không bao
+        // giờ bị báo cáo — đúng kiểu bug kinh điển của report-by-exception, nơi một độ trôi chậm trở
+        // nên vô hình.
         RememberSent(changed, sample);
 
-        // The reading exists at this point and cannot be taken again: the deadband state has already
-        // moved with it, so the next sample compares against a value this one reported. Deferring the
-        // count until a publish succeeded would leave a reading the channel really took describable
-        // by nothing at all.
+        // Reading đã tồn tại tại thời điểm này và không thể lấy lại lần nữa: trạng thái deadband đã
+        // di chuyển theo nó rồi, nên sample kế tiếp sẽ so với một giá trị mà lần này đã báo cáo. Nếu
+        // hoãn việc đếm cho tới khi publish thành công thì sẽ để lại một reading mà channel thực sự
+        // đã lấy nhưng không có gì mô tả được nó cả.
         MeasurementCount += changed.Count;
 
         return changed.DrainToImmutable();
@@ -198,12 +202,13 @@ public sealed class FormationChannel
     private static DeviceReading Reading(string name, ulong alias, MetricValue value, DateTimeOffset at) =>
         new(name, alias, value, at);
 
-    /// <summary>A stable per-channel offset in [-1, 1].</summary>
+    /// <summary>Một độ lệch ổn định theo từng channel, nằm trong [-1, 1].</summary>
     private static double SpreadOf(string code) => ((StableHash.Of(code) % 2001) / 1000.0) - 1.0;
 
-    // Two cells are never identical, and a line where every channel reads exactly the same number is a
-    // line where a grouping bug downstream is invisible. The spread is small enough to stay inside
-    // what a real cycler would pass and large enough to tell channels apart.
+    // Hai cell không bao giờ giống hệt nhau, và một line mà channel nào cũng đọc ra đúng một con số
+    // là một line mà một bug gộp nhóm ở phía sau sẽ không thể nào bị phát hiện. Độ lệch này đủ nhỏ
+    // để vẫn nằm trong phạm vi một cycler thật có thể chấp nhận và đủ lớn để phân biệt được các
+    // channel với nhau.
     private FormationSample Shift(FormationSample sample) =>
         sample with
         {

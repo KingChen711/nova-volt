@@ -4,16 +4,16 @@ using System.Globalization;
 
 namespace Nvm.EdgeGateway.Buffering;
 
-/// <summary>An append-only segmented queue with a separately fsynced read cursor.</summary>
+/// <summary>Một hàng đợi append-only chia segment, với read cursor được fsync riêng.</summary>
 /// <remarks>
-/// Data records are <c>[length:int32 little-endian][payload][crc32]</c>. A tail cut by power loss is
-/// truncated to the preceding record boundary. A full record whose CRC fails is crossed but never
-/// returned. The cursor is appended only after ingestion accepts a batch, so replay is possible and
-/// duplicate delivery is preferable to loss.
+/// Data record có dạng <c>[length:int32 little-endian][payload][crc32]</c>. Phần đuôi bị cắt cụt do
+/// mất điện sẽ bị truncate về ranh giới record hoàn chỉnh liền trước. Một record đầy đủ nhưng CRC sai
+/// vẫn bị đi qua (crossed) nhưng không bao giờ được trả về. Cursor chỉ được append sau khi ingestion
+/// chấp nhận một batch, nên replay là khả thi, và gửi trùng vẫn thà hơn là mất dữ liệu.
 /// </remarks>
 public sealed class FileStoreAndForwardBuffer : IAsyncDisposable
 {
-    /// <summary>Length plus CRC bytes around every payload.</summary>
+    /// <summary>Số byte của length cộng CRC bao quanh mỗi payload.</summary>
     public const int RecordOverhead = sizeof(int) + sizeof(uint);
 
     private const uint CursorMagic = 0x4e564d43; // NVMC
@@ -39,7 +39,7 @@ public sealed class FileStoreAndForwardBuffer : IAsyncDisposable
     private long _dataFsyncs;
     private bool _disposed;
 
-    /// <summary>Opens an existing queue or creates an empty first segment.</summary>
+    /// <summary>Mở một hàng đợi đã tồn tại, hoặc tạo segment đầu tiên rỗng.</summary>
     public FileStoreAndForwardBuffer(PersistentBufferOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
@@ -59,7 +59,7 @@ public sealed class FileStoreAndForwardBuffer : IAsyncDisposable
         _tailStream.Position = tail.Value.ValidLength;
     }
 
-    /// <summary>Current depth, disk bytes and recovery counters.</summary>
+    /// <summary>Depth hiện tại, số byte trên đĩa và các bộ đếm phục hồi (recovery).</summary>
     public BufferSnapshot Snapshot =>
         new(
             Interlocked.Read(ref _depth),
@@ -69,10 +69,11 @@ public sealed class FileStoreAndForwardBuffer : IAsyncDisposable
             Interlocked.Read(ref _dataFsyncs),
             _options.MaxBytes);
 
-    /// <summary>Appends one fsync batch. The method returns only after the data reaches disk.</summary>
+    /// <summary>Append một batch cho một lần fsync. Phương thức chỉ trả về sau khi dữ liệu đã tới đĩa.</summary>
     /// <remarks>
-    /// The entire batch is capacity-checked before its first byte is written. Crossing the hard cap
-    /// therefore produces no partial acceptance and never overwrites an older record.
+    /// Cả batch được kiểm tra capacity trước khi byte đầu tiên được ghi. Vì vậy vượt trần cứng sẽ
+    /// không bao giờ tạo ra chấp nhận một phần (partial acceptance), và không bao giờ ghi đè lên
+    /// một record cũ hơn.
     /// </remarks>
     public async ValueTask AppendBatchAsync(
         IReadOnlyList<ReadOnlyMemory<byte>> payloads,
@@ -128,8 +129,8 @@ public sealed class FileStoreAndForwardBuffer : IAsyncDisposable
                 _depth++;
             }
 
-            // FlushAsync only moves managed buffers to the OS. Flush(true) is the durability
-            // boundary the MQTT acknowledgement waits for; there is no asynchronous fsync API.
+            // FlushAsync chỉ chuyển managed buffer sang OS. Flush(true) mới là ranh giới bền
+            // (durability boundary) mà MQTT acknowledgement chờ đợi; không có API fsync bất đồng bộ.
             await _tailStream.FlushAsync(cancellationToken);
             DurableDataFlush(_tailStream);
         }
@@ -139,7 +140,7 @@ public sealed class FileStoreAndForwardBuffer : IAsyncDisposable
         }
     }
 
-    /// <summary>Reads without advancing the durable cursor.</summary>
+    /// <summary>Đọc mà không làm dịch cursor bền (durable cursor).</summary>
     public async ValueTask<BufferedBatch> ReadBatchAsync(
         int maxRecords,
         int maxPayloadBytes,
@@ -227,8 +228,9 @@ public sealed class FileStoreAndForwardBuffer : IAsyncDisposable
                 }
             }
 
-            // Move a checkpoint at an exact segment end onto the next segment. This lets the old
-            // file be deleted after the cursor is fsynced, while an empty active tail stays put.
+            // Dịch checkpoint đang nằm đúng tại cuối một segment sang segment kế tiếp. Nhờ vậy file
+            // cũ có thể bị xoá sau khi cursor được fsync, trong khi một tail đang hoạt động mà rỗng
+            // thì vẫn giữ nguyên tại chỗ.
             TryNormalizePosition(position, out position);
 
             if (traversed == 0)
@@ -245,7 +247,7 @@ public sealed class FileStoreAndForwardBuffer : IAsyncDisposable
         }
     }
 
-    /// <summary>Moves the cursor after all valid payloads in an offered batch were accepted.</summary>
+    /// <summary>Dịch cursor sau khi toàn bộ payload hợp lệ trong một batch đã đề xuất được chấp nhận.</summary>
     public async ValueTask AcknowledgeAsync(
         BufferedBatch batch,
         CancellationToken cancellationToken = default)
@@ -283,7 +285,7 @@ public sealed class FileStoreAndForwardBuffer : IAsyncDisposable
         }
     }
 
-    /// <summary>Releases file handles. Correctness must never depend on this path being called.</summary>
+    /// <summary>Giải phóng file handle. Tính đúng đắn không bao giờ được phép phụ thuộc vào việc đường này có được gọi hay không.</summary>
     public async ValueTask DisposeAsync()
     {
         await _gate.WaitAsync();
@@ -447,7 +449,7 @@ public sealed class FileStoreAndForwardBuffer : IAsyncDisposable
 
         if (_head.SegmentId < first.Key)
         {
-            // Segments below the cursor were deleted only after the cursor was fsynced.
+            // Các segment nằm dưới cursor chỉ bị xoá sau khi cursor đã được fsync.
             _head = _head with { SegmentId = first.Key, Offset = 0 };
             return;
         }
@@ -457,9 +459,10 @@ public sealed class FileStoreAndForwardBuffer : IAsyncDisposable
             || _head.Offset > segment.ValidLength
             || !IsRecordBoundary(segment.Path, _head.Offset))
         {
-            // A cursor we cannot prove points between records is ignored conservatively. Replaying
-            // can duplicate; guessing past bytes can lose them. The journal must also be reset:
-            // appending sequence 1 after a higher valid sequence would poison every later restart.
+            // Một cursor mà ta không chứng minh được là trỏ đúng giữa hai record thì bị bỏ qua theo
+            // hướng an toàn (conservative). Replay lại thì có thể trùng; đoán bừa qua byte thì có
+            // thể mất chúng. Journal cũng phải được reset: append sequence 1 sau một sequence hợp lệ
+            // cao hơn sẽ đầu độc mọi lần restart về sau.
             _head = new BufferCheckpoint(first.Key, 0, 0);
             _cursorSequence = 0;
             ResetCursorJournal();
@@ -509,9 +512,9 @@ public sealed class FileStoreAndForwardBuffer : IAsyncDisposable
             return;
         }
 
-        // A one-segment configuration can fill exactly to its cap. Once every record is accepted,
-        // make a new empty tail before persisting the cursor; otherwise no append can trigger normal
-        // rotation and capacity would remain paused forever.
+        // Cấu hình chỉ một segment có thể lấp đầy đúng tới trần. Một khi mọi record đã được chấp
+        // nhận, tạo một tail rỗng mới trước khi persist cursor; nếu không thì không append nào có
+        // thể kích hoạt rotation bình thường, và capacity sẽ bị treo (paused) vĩnh viễn.
         await _tailStream.FlushAsync(cancellationToken);
         DurableDataFlush(_tailStream);
         await _tailStream.DisposeAsync();
@@ -733,8 +736,9 @@ public sealed class FileStoreAndForwardBuffer : IAsyncDisposable
             bufferSize: 64 * 1024,
             FileOptions.Asynchronous | FileOptions.SequentialScan);
 
-    // Stream.FlushAsync has no flush-to-physical-disk equivalent. Callers await it first to empty
-    // managed buffers, then this narrow helper invokes the durability primitive MQTT ACK depends on.
+    // Stream.FlushAsync không có phiên bản tương đương flush-xuống-đĩa-vật-lý. Caller await nó
+    // trước để làm rỗng managed buffer, rồi helper hẹp này mới gọi tới nguyên hàm bền (durability
+    // primitive) mà MQTT ACK phụ thuộc vào.
     private void DurableDataFlush(FileStream stream)
     {
         stream.Flush(flushToDisk: true);

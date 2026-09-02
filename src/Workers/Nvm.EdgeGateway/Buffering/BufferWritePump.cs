@@ -3,7 +3,7 @@ using Nvm.Sparkplug;
 
 namespace Nvm.EdgeGateway.Buffering;
 
-/// <summary>Combines concurrent MQTT deliveries behind one file fsync.</summary>
+/// <summary>Gom các lượt gửi MQTT chạy đồng thời lại sau một lần fsync file duy nhất.</summary>
 public sealed partial class BufferWritePump : BackgroundService, IGatewayBufferWriter
 {
     private readonly FileStoreAndForwardBuffer _buffer;
@@ -12,7 +12,7 @@ public sealed partial class BufferWritePump : BackgroundService, IGatewayBufferW
     private readonly ILogger<BufferWritePump> _logger;
     private readonly Channel<WriteRequest> _requests;
 
-    /// <summary>Creates a bounded handoff so RAM cannot become a second unbounded buffer.</summary>
+    /// <summary>Tạo một handoff có giới hạn (bounded) để RAM không thể trở thành một buffer không giới hạn thứ hai.</summary>
     public BufferWritePump(
         FileStoreAndForwardBuffer buffer,
         PersistentBufferOptions options,
@@ -71,7 +71,7 @@ public sealed partial class BufferWritePump : BackgroundService, IGatewayBufferW
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
         {
-            // Host shutdown. Any MQTT callback still waiting gets cancellation through its own token.
+            // Host đang shutdown. Callback MQTT nào còn đang chờ sẽ nhận cancellation qua chính token của nó.
         }
         finally
         {

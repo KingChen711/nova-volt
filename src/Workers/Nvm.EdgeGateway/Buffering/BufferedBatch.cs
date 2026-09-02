@@ -2,25 +2,25 @@ using System.Collections.Immutable;
 
 namespace Nvm.EdgeGateway.Buffering;
 
-/// <summary>Records read without moving the durable cursor.</summary>
-/// <param name="Payloads">CRC-valid payloads; corrupt records are deliberately absent.</param>
-/// <param name="Checkpoint">Where the cursor may move after the valid payloads are accepted.</param>
-/// <param name="RecordsTraversed">Physical records crossed, including corrupt records skipped.</param>
+/// <summary>Các record đọc được mà không làm dịch chuyển cursor bền (durable cursor).</summary>
+/// <param name="Payloads">Các payload có CRC hợp lệ; record hỏng bị loại khỏi đây một cách cố ý.</param>
+/// <param name="Checkpoint">Vị trí cursor có thể dịch tới sau khi các payload hợp lệ được chấp nhận.</param>
+/// <param name="RecordsTraversed">Số record vật lý đã đi qua, kể cả các record hỏng bị bỏ qua.</param>
 public sealed record BufferedBatch(
     ImmutableArray<byte[]> Payloads,
     BufferCheckpoint Checkpoint,
     int RecordsTraversed)
 {
-    /// <summary>No data and no cursor progress.</summary>
+    /// <summary>Không có dữ liệu và cursor không tiến.</summary>
     public static BufferedBatch Empty(BufferCheckpoint checkpoint) =>
         new(ImmutableArray<byte[]>.Empty, checkpoint, 0);
 
-    /// <summary>Whether an acknowledgement would advance the cursor.</summary>
+    /// <summary>Việc acknowledge liệu có làm cursor tiến lên hay không.</summary>
     public bool HasProgress => RecordsTraversed > 0;
 }
 
-/// <summary>A durable location between two framed records.</summary>
-/// <param name="SegmentId">Monotonic segment number.</param>
-/// <param name="Offset">Byte offset at a record boundary.</param>
-/// <param name="AcknowledgedRecords">Total physical records passed since this queue was created.</param>
+/// <summary>Một vị trí bền (durable) nằm giữa hai record đã được framed.</summary>
+/// <param name="SegmentId">Số segment tăng đơn điệu (monotonic).</param>
+/// <param name="Offset">Offset byte tại một ranh giới record.</param>
+/// <param name="AcknowledgedRecords">Tổng số record vật lý đã đi qua kể từ khi hàng đợi này được tạo.</param>
 public sealed record BufferCheckpoint(long SegmentId, long Offset, long AcknowledgedRecords);

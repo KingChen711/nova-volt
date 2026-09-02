@@ -7,33 +7,33 @@ using Nvm.Hosting;
 namespace Nvm.Host.Infrastructure;
 
 /// <summary>
-/// Registers the readiness probes for every dependency an App actually needs.
+/// Đăng ký readiness probe cho mọi dependency mà một App thực sự cần.
 /// </summary>
 /// <remarks>
 /// <para>
-/// Six probes answer <c>/health/ready</c>, and only five of them are registered here. The sixth,
-/// <c>bus</c>, is added by <c>AddNvmBus</c> because MassTransit brings its own and the sensible thing
-/// is to name and tag that one rather than register a second alongside it. Counting probes by reading
-/// this file alone therefore gives five, and the endpoint returns six — the missing one is not
-/// missing.
+/// Sáu probe trả lời <c>/health/ready</c>, nhưng chỉ năm trong số đó được đăng ký ở đây. Cái thứ
+/// sáu, <c>bus</c>, được thêm bởi <c>AddNvmBus</c> vì MassTransit tự mang theo probe của nó, và cách
+/// hợp lý là đặt tên và gắn tag cho cái đó thay vì đăng ký thêm một cái nữa bên cạnh. Vì vậy đếm
+/// probe chỉ bằng cách đọc file này sẽ ra năm, còn endpoint trả về sáu — cái thiếu không phải bị mất.
 /// </para>
 /// <para>
-/// <b><c>rabbitmq</c> and <c>bus</c> are not duplicates.</b> <c>rabbitmq</c> asks the broker's
-/// management API whether the broker is up and not blocking publishers; <c>bus</c> asks whether this
-/// process's own bus started and its receive endpoints are ready. A host that only publishes has no
-/// receive endpoints, so <c>bus</c> stays green through a broker outage that <c>rabbitmq</c> catches
-/// (measured in M1/C14) — deleting either one leaves a real failure with nothing watching it.
+/// <b><c>rabbitmq</c> và <c>bus</c> không phải hai bản trùng.</b> <c>rabbitmq</c> hỏi management API
+/// của broker xem broker có đang chạy và không chặn publisher hay không; <c>bus</c> hỏi xem bus của
+/// chính process này đã khởi động và receive endpoint của nó đã sẵn sàng chưa. Một host chỉ publish
+/// thì không có receive endpoint nào, nên <c>bus</c> vẫn xanh xuyên suốt một đợt broker outage mà
+/// <c>rabbitmq</c> bắt được (đo ở M1/C14) — xoá bỏ một trong hai để lại một sự cố thật mà không ai
+/// theo dõi.
 /// </para>
 /// <para>
-/// EMQX is deliberately absent. The MQTT broker sits on <c>ot-net</c> and <c>dmz-net</c> only;
-/// nothing on the IT tier talks to it, and <c>Nvm.EdgeGateway</c> — the service that does — arrives
-/// in M2. A readiness probe for a dependency the process does not use would take the app out of
-/// rotation for an outage that cannot affect it.
+/// EMQX cố ý không có mặt. MQTT broker chỉ nằm trên <c>ot-net</c> và <c>dmz-net</c>; không có gì ở
+/// tầng IT nói chuyện với nó, và <c>Nvm.EdgeGateway</c> — service làm việc đó — sẽ đến ở M2. Một
+/// readiness probe cho một dependency mà process không dùng sẽ đưa app ra khỏi rotation vì một
+/// outage vốn không thể ảnh hưởng tới nó.
 /// </para>
 /// <para>
-/// Every probe is lazy: it opens its connection when the endpoint is called, never at startup.
-/// Constructing a connection during registration would stop the host from starting whenever a
-/// database is briefly unavailable, which is the opposite of what N15 requires.
+/// Mọi probe đều lazy: nó mở connection khi endpoint được gọi, không bao giờ lúc startup. Dựng
+/// connection ngay lúc đăng ký sẽ khiến host không khởi động được mỗi khi một database tạm thời
+/// không sẵn sàng, ngược hẳn với điều N15 yêu cầu.
 /// </para>
 /// </remarks>
 internal static class HealthCheckRegistration
@@ -89,8 +89,8 @@ internal static class HealthCheckRegistration
                 tags: [HealthTags.Ready],
                 timeout: ProbeTimeout)
             .AddUrlGroup(
-                // The alarms endpoint, not the overview one: a broker that has blocked publishers
-                // on a memory or disk alarm still answers /api/overview with 200.
+                // Endpoint alarms, không phải endpoint overview: một broker đã chặn publisher vì
+                // alarm bộ nhớ hoặc đĩa vẫn trả lời /api/overview bằng 200.
                 uri: rabbitManagement,
                 configureClient: (_, client) =>
                     client.DefaultRequestHeaders.Authorization =

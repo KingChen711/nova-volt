@@ -4,26 +4,27 @@ using Org.Eclipse.Tahu.Protobuf;
 
 namespace Nvm.Sparkplug;
 
-/// <summary>What a birth declared: which number stands for which metric, and of what type.</summary>
+/// <summary>Những gì một birth đã khai báo: số nào ứng với metric nào, và kiểu gì.</summary>
 /// <remarks>
 /// <para>
-/// A formation machine has a thousand channels and six to eight metrics on each. Spelling
-/// <c>Formation/Voltage</c> out in every message would be a few hundred bytes of name for four bytes
-/// of reading, five thousand times a second, over the narrowest link in the plant. Sparkplug answers
-/// that with aliases: the birth says <i>"metric 1 is Formation/Voltage, a Float"</i> once, and every
-/// message afterwards sends <c>1</c>.
+/// Một máy formation có cả nghìn channel và mỗi channel sáu đến tám metric. Nếu viết đầy đủ
+/// <c>Formation/Voltage</c> trong từng message thì sẽ tốn vài trăm byte tên cho bốn byte reading, năm
+/// nghìn lần một giây, trên đường truyền hẹp nhất của nhà máy. Sparkplug giải quyết việc đó bằng
+/// alias: birth nói <i>"metric 1 là Formation/Voltage, kiểu Float"</i> một lần duy nhất, rồi mọi
+/// message sau đó chỉ gửi <c>1</c>.
 /// </para>
 /// <para>
-/// So this table is not a cache. It is the only copy of the meaning of every later message, and it is
-/// scoped to <b>one session of one node</b> — a node that reconnects publishes a new birth and is free
-/// to hand 1 to something else. C11 is what throws the table away on a new <c>bdSeq</c>; until then it
-/// is passed in explicitly, which keeps the lifetime visible rather than hidden in a static.
+/// Vậy nên bảng này không phải là cache. Nó là bản sao duy nhất chứa ý nghĩa của mọi message về sau,
+/// và nó có phạm vi trong <b>một session của một node</b> — một node kết nối lại sẽ publish một birth
+/// mới và được tự do gán số 1 cho một thứ khác. C11 là nơi hủy bảng này khi có <c>bdSeq</c> mới; cho
+/// tới lúc đó nó được truyền vào một cách tường minh, giữ cho vòng đời có thể nhìn thấy được thay vì
+/// giấu trong một static.
 /// </para>
 /// <para>
-/// The datatype is kept alongside the name and is not exposed, deliberately: it is the wire's
-/// vocabulary, not the plant's, and letting <c>Org.Eclipse.Tahu.Protobuf</c> types out of this
-/// assembly is the boundary ADR-026 asks to hold. It is needed internally because
-/// <c>int_value</c> carries both <c>Int32</c> and <c>UInt32</c> and only the declaration says which.
+/// Datatype được giữ kèm theo tên nhưng cố tình không expose ra ngoài: đó là từ vựng của wire, không
+/// phải của nhà máy, và để lộ type của <c>Org.Eclipse.Tahu.Protobuf</c> ra khỏi assembly này là phá
+/// ranh giới mà ADR-026 yêu cầu giữ vững. Nó cần thiết ở bên trong vì trường <c>int_value</c> mang cả
+/// <c>Int32</c> lẫn <c>UInt32</c>, và chỉ có khai báo mới nói được đó là loại nào.
 /// </para>
 /// </remarks>
 public sealed class MetricAliasTable
@@ -36,27 +37,29 @@ public sealed class MetricAliasTable
         Aliases = [.. byAlias.Keys.Order()];
     }
 
-    /// <summary>The table before any birth has been seen.</summary>
+    /// <summary>Bảng trước khi có bất kỳ birth nào được thấy.</summary>
     /// <remarks>
-    /// Not a null object that quietly resolves everything: every alias-only metric decoded against it
-    /// throws, which is the correct answer to "a data message arrived before its birth".
+    /// Không phải một null object âm thầm resolve được mọi thứ: mọi metric chỉ có alias mà decode dựa
+    /// trên bảng này đều throw, đó là câu trả lời đúng cho tình huống "một data message đến trước cả
+    /// birth của nó".
     /// </remarks>
     public static MetricAliasTable Empty { get; } = new(FrozenDictionary<ulong, MetricDefinition>.Empty);
 
-    /// <summary>The aliases this table can resolve, ascending.</summary>
+    /// <summary>Các alias mà bảng này có thể resolve, theo thứ tự tăng dần.</summary>
     /// <remarks>
-    /// Precomputed rather than projected on each read — a property that allocates is a property that
-    /// gets called in a loop. <see cref="ImmutableArray{T}"/> for the reason in ADR-025.
+    /// Được tính trước thay vì project lại mỗi lần đọc — một property mà cấp phát bộ nhớ là một
+    /// property sẽ bị gọi trong vòng lặp. Dùng <see cref="ImmutableArray{T}"/> vì lý do nêu trong
+    /// ADR-025.
     /// </remarks>
     public ImmutableArray<ulong> Aliases { get; }
 
-    /// <summary>How many aliases the birth declared.</summary>
+    /// <summary>Birth đã khai báo bao nhiêu alias.</summary>
     public int Count => _byAlias.Count;
 
-    /// <summary>Looks up the metric name behind an alias.</summary>
-    /// <param name="alias">The number the payload used.</param>
-    /// <param name="metricName">The declared name, when the alias is known.</param>
-    /// <returns><see langword="true"/> when the alias was declared by the birth.</returns>
+    /// <summary>Tra tên metric đứng sau một alias.</summary>
+    /// <param name="alias">Con số mà payload đã dùng.</param>
+    /// <param name="metricName">Tên đã khai báo, khi alias đã biết.</param>
+    /// <returns><see langword="true"/> khi alias đã được birth khai báo.</returns>
     public bool TryGetMetricName(ulong alias, out string? metricName)
     {
         if (_byAlias.TryGetValue(alias, out var definition))
@@ -69,9 +72,9 @@ public sealed class MetricAliasTable
         return false;
     }
 
-    // Frozen rather than a plain Dictionary: built once per birth, then read for every message of the
-    // session that follows — the exact shape FrozenDictionary is faster at, and the same choice the
-    // factory model's flat index made in M1.
+    // Dùng Frozen thay vì Dictionary thường: được build một lần cho mỗi birth, rồi được đọc cho mọi
+    // message trong session tiếp theo — đúng cái hình dạng mà FrozenDictionary nhanh hơn, và cũng là
+    // lựa chọn mà flat index của factory model đã dùng ở M1.
     internal static MetricAliasTable From(IReadOnlyDictionary<ulong, MetricDefinition> definitions) =>
         definitions.Count == 0
             ? Empty
@@ -81,5 +84,5 @@ public sealed class MetricAliasTable
         _byAlias.TryGetValue(alias, out definition!);
 }
 
-/// <summary>One line of a birth: what a metric is called and what type it carries.</summary>
+/// <summary>Một dòng của birth: metric được gọi tên gì và mang kiểu gì.</summary>
 internal sealed record MetricDefinition(string Name, DataType DataType);

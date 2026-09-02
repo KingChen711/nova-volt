@@ -4,20 +4,20 @@ using Nvm.Contracts.CloudEvents;
 
 namespace Nvm.Bus.CloudEvents;
 
-/// <summary>The CloudEvents attributes read back off a received message.</summary>
-/// <param name="SpecVersion">Specification version the publisher used.</param>
-/// <param name="Id">Event identity — the value deduplication keys on.</param>
-/// <param name="Type">What happened, and which schema version says so.</param>
-/// <param name="Source">Which deployable, at which plant, asserted it.</param>
-/// <param name="Time">When the publisher recorded the fact.</param>
+/// <summary>Các thuộc tính CloudEvents đọc lại từ một message nhận được.</summary>
+/// <param name="SpecVersion">Phiên bản đặc tả mà publisher đã dùng.</param>
+/// <param name="Id">Định danh event — giá trị mà deduplication dùng làm khóa.</param>
+/// <param name="Type">Chuyện gì đã xảy ra, và schema version nào nói lên điều đó.</param>
+/// <param name="Source">Deployable nào, ở nhà máy nào, đã khẳng định điều này.</param>
+/// <param name="Time">Khi nào publisher ghi nhận sự kiện này.</param>
 /// <param name="DataContentType">
-/// How the payload is encoded, for example <c>application/json</c>.
+/// Payload được mã hóa theo kiểu gì, ví dụ <c>application/json</c>.
 /// </param>
 /// <remarks>
-/// All six are mandatory and are read as one set, because the message this type is most useful for is
-/// the one nobody can deserialize — sitting in an <c>_error</c> queue while somebody works out what it
-/// was. Reporting the other five and leaving the encoding out invites the reader to assume JSON, which
-/// is the assumption that put the message there in the first place.
+/// Cả sáu thuộc tính đều bắt buộc và được đọc như một tập hợp duy nhất, vì message mà type này hữu ích
+/// nhất là message mà không ai deserialize được — đang nằm trong một queue <c>_error</c> trong lúc ai
+/// đó cố tìm hiểu nó là gì. Nếu chỉ báo cáo năm thuộc tính kia và bỏ qua encoding thì sẽ khiến người đọc
+/// mặc định là JSON — mà chính cái giả định đó đã đưa message vào đây ngay từ đầu.
 /// </remarks>
 public sealed record CloudEventAttributes(
     string SpecVersion,
@@ -27,48 +27,48 @@ public sealed record CloudEventAttributes(
     DateTimeOffset Time,
     string DataContentType);
 
-/// <summary>Reads CloudEvents attributes off a consumed message.</summary>
+/// <summary>Đọc các thuộc tính CloudEvents từ một message đã consume.</summary>
 /// <remarks>
 /// <para>
-/// An extension over the consume context rather than a filter feeding a scoped service. A filter
-/// would have to run for every message whether anyone looked at the attributes or not, and would add
-/// a registration that has to stay in step with the send side. Reading on demand does the same job
-/// with nothing to keep in sync.
+/// Đây là một extension trên consume context chứ không phải một filter đổ vào một scoped service. Một
+/// filter sẽ phải chạy cho mọi message dù có ai xem thuộc tính hay không, và sẽ thêm một registration
+/// phải luôn đồng bộ với phía send. Đọc theo yêu cầu (on demand) làm đúng việc đó mà không có gì cần giữ
+/// đồng bộ cả.
 /// </para>
 /// <para>
-/// A message carrying <b>no</b> <c>ce_</c> header at all is not an error. Not everything on a bus
-/// comes from this system's publish path, and MassTransit routed and deserialized this one using its
-/// own envelope; refusing it here would reject a message the system had already understood. Absent
-/// attributes are a fact about the message, so they are reported as <see langword="null"/>.
+/// Một message <b>không mang</b> header <c>ce_</c> nào cả không phải là lỗi. Không phải mọi thứ trên bus
+/// đều đi qua publish path của hệ thống này, và MassTransit đã route và deserialize message đó bằng
+/// envelope riêng của nó; từ chối nó ở đây sẽ là từ chối một message mà hệ thống đã hiểu rồi. Thuộc tính
+/// vắng mặt là một dữ kiện về message, nên chúng được báo cáo là <see langword="null"/>.
 /// </para>
 /// <para>
-/// A <b>partial</b> set is a different thing, and it is refused. The six attributes are written
-/// together by one filter, so anything between one and five of them means the message was stamped by
-/// something that does not agree with this system about what the set is. Reporting the ones present
-/// invites the reader to default the rest — and the default for the missing encoding is exactly the
-/// JSON assumption this envelope exists to prevent.
+/// Một tập hợp <b>không đầy đủ</b> lại là chuyện khác, và bị từ chối. Sáu thuộc tính được ghi cùng nhau
+/// bởi một filter duy nhất, nên có từ một đến năm thuộc tính nghĩa là message đã được đóng dấu bởi thứ gì
+/// đó không thống nhất với hệ thống này về việc tập hợp đó gồm những gì. Chỉ báo cáo những cái đang có sẽ
+/// khiến người đọc mặc định phần còn lại — và giá trị mặc định cho encoding bị thiếu chính là giả định
+/// JSON mà envelope này tồn tại để ngăn chặn.
 /// </para>
 /// </remarks>
 public static class CloudEventContextExtensions
 {
     private const int MandatoryHeaderCount = 6;
 
-    /// <summary>Reads the CloudEvents attributes, or null when the message carries none.</summary>
-    /// <param name="context">The consume context.</param>
+    /// <summary>Đọc các thuộc tính CloudEvents, hoặc null khi message không mang thuộc tính nào.</summary>
+    /// <param name="context">Consume context.</param>
     /// <returns>
-    /// The six attributes when all six headers are present; <see langword="null"/> when none of them
-    /// is.
+    /// Sáu thuộc tính khi cả sáu header đều có mặt; <see langword="null"/> khi không header nào có mặt
+    /// cả.
     /// </returns>
     /// <exception cref="InvalidOperationException">
-    /// The message carries some of the mandatory headers but not all of them.
+    /// Message mang một số header bắt buộc nhưng không đủ cả sáu.
     /// </exception>
     public static CloudEventAttributes? CloudEvent(this ConsumeContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        // All six are read before any of them is judged. Picking one as a sentinel — specversion is
-        // the tempting choice — makes that one header decide between "no attributes" and "a broken
-        // set", so a message missing only the sentinel reads as a message carrying nothing at all.
+        // Cả sáu đều được đọc trước khi bất kỳ cái nào bị đánh giá. Chọn một cái làm sentinel — specversion
+        // là lựa chọn hấp dẫn — sẽ khiến riêng header đó quyết định giữa "không có thuộc tính nào" và "một
+        // tập hợp bị hỏng", nên một message chỉ thiếu mỗi sentinel sẽ bị đọc thành message không mang gì cả.
         var specVersion = Read(context, CloudEventHeaders.SpecVersion);
         var id = Read(context, CloudEventHeaders.Id);
         var type = Read(context, CloudEventHeaders.Type);
@@ -111,10 +111,10 @@ public static class CloudEventContextExtensions
             dataContentType);
     }
 
-    // Present-but-unreadable is not the same as absent, and `value as string` collapses the two: a
-    // header carrying the wrong type comes back null and the message reads as though it never had
-    // that attribute. That is the same defect as the specversion sentinel one layer down — the reader
-    // reports "nothing here" while the header is sitting on the message saying otherwise.
+    // Có mặt nhưng không đọc được không giống với vắng mặt, và `value as string` lại gộp hai trường hợp
+    // này làm một: một header mang sai kiểu sẽ trả về null và message sẽ bị đọc như thể chưa từng có
+    // thuộc tính đó. Đó là lỗi giống hệt vấn đề sentinel specversion ở lớp bên dưới — reader báo cáo
+    // "không có gì ở đây" trong khi header vẫn đang nằm trên message nói điều ngược lại.
     private static string? Read(ConsumeContext context, string header)
     {
         if (!context.Headers.TryGetHeader(header, out var value) || value is null)
@@ -130,10 +130,10 @@ public static class CloudEventContextExtensions
                 + "metadata.");
         }
 
-        // CloudEvents states that an absent attribute and a present-but-empty one are different
-        // claims, which is why the optional five are omitted rather than written empty (ADR-008). The
-        // same rule read backwards: an empty mandatory header is a publisher asserting an encoding of
-        // "" — malformed — not a publisher staying silent.
+        // CloudEvents quy định rằng một thuộc tính vắng mặt và một thuộc tính có mặt nhưng rỗng là hai
+        // khẳng định khác nhau, đó là lý do năm thuộc tính tùy chọn bị bỏ qua thay vì ghi rỗng (ADR-008).
+        // Đọc ngược lại cùng quy tắc đó: một header bắt buộc mà rỗng nghĩa là publisher đang khẳng định
+        // encoding là "" — sai định dạng — chứ không phải publisher im lặng không nói gì.
         if (string.IsNullOrWhiteSpace(text))
         {
             throw new InvalidOperationException(
@@ -144,12 +144,12 @@ public static class CloudEventContextExtensions
         return text;
     }
 
-    // Half a set of attributes is worse than none: a reader would take the ones present and silently
-    // assume defaults for the rest. Either the publisher stamped the message or it did not.
+    // Một tập hợp thuộc tính chỉ có một nửa còn tệ hơn là không có gì cả: reader sẽ lấy những cái đang có
+    // rồi âm thầm mặc định phần còn lại. Hoặc publisher đã đóng dấu message, hoặc không.
     //
-    // The message names every header that is missing, not just the first one found. Someone reading
-    // this off a message in an _error queue is trying to work out which publisher produced it, and
-    // "three of the six are absent" narrows that down in a way "the first one is absent" does not.
+    // Thông báo nêu tên mọi header đang thiếu, không chỉ cái đầu tiên tìm thấy. Người đọc thứ này từ một
+    // message trong queue _error đang cố tìm ra publisher nào đã tạo ra nó, và "ba trong sáu cái đang
+    // thiếu" thu hẹp phạm vi tốt hơn nhiều so với "cái đầu tiên đang thiếu".
     private static InvalidOperationException PartialSet(
         params (string Header, string? Value)[] attributes)
     {

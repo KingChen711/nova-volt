@@ -4,24 +4,24 @@ using Nvm.Sparkplug;
 
 namespace Nvm.Ingestion.FileDrop;
 
-/// <summary>Reads the CSV an end-of-line tester exports onto a share.</summary>
+/// <summary>Đọc file CSV mà một máy test cuối chuyền xuất lên một share.</summary>
 /// <remarks>
 /// <para>
-/// Hand-written rather than a CSV library, and the reason is the shape of the input: six fixed
-/// columns of plant identifiers, no quoting, no embedded newlines, produced by a machine from 2011
-/// that will never change its format. A dependency here would buy flexibility this file has no use
-/// for and would put a parser between an operator and the line they need to fix.
+/// Tự viết tay thay vì dùng thư viện CSV, và lý do nằm ở hình dạng của input: sáu cột cố định là
+/// định danh nhà máy, không có quoting, không có newline nhúng bên trong, do một máy từ năm 2011
+/// tạo ra và sẽ không bao giờ đổi định dạng. Một dependency ở đây sẽ mua về sự linh hoạt mà file này
+/// không cần, và đặt một parser chắn giữa người vận hành với dây chuyền họ cần sửa.
 /// </para>
 /// <para>
-/// <b>One bad line does not reject the file.</b> A hundred cells were tested; ninety-nine of those
-/// results are good data, and throwing them away because a hundredth row has a malformed number
-/// means an operator either loses ninety-nine measurements or hand-edits an export. Each line
-/// stands or falls alone, and the ones that fall say why.
+/// <b>Một dòng hỏng không làm cả file bị từ chối.</b> Một trăm cell đã được test; chín mươi chín kết
+/// quả trong số đó là dữ liệu tốt, và vứt bỏ chúng chỉ vì dòng thứ một trăm có một con số dị dạng
+/// nghĩa là người vận hành hoặc mất chín mươi chín lần đo, hoặc phải tự tay sửa file export. Mỗi dòng
+/// đứng hay đổ một mình, và những dòng đổ sẽ nói rõ vì sao.
 /// </para>
 /// </remarks>
 public sealed class CsvMeasurementReader
 {
-    /// <summary>The header every accepted file starts with, verbatim.</summary>
+    /// <summary>Header mà mọi file được chấp nhận phải bắt đầu bằng, nguyên văn.</summary>
     public const string Header = "equipment_path,unit_id,signal_code,measured_at,value_kind,value";
 
     private const char Separator = ',';
@@ -29,8 +29,8 @@ public sealed class CsvMeasurementReader
 
     private readonly IEquipmentDirectory _equipment;
 
-    /// <summary>Creates a reader that resolves paths against the plant's active model.</summary>
-    /// <param name="equipment">The model each plant is currently running.</param>
+    /// <summary>Tạo một reader để phân giải path dựa trên model đang chạy của nhà máy.</summary>
+    /// <param name="equipment">Model mà nhà máy đang chạy tại thời điểm hiện tại.</param>
     public CsvMeasurementReader(IEquipmentDirectory equipment)
     {
         ArgumentNullException.ThrowIfNull(equipment);
@@ -38,12 +38,12 @@ public sealed class CsvMeasurementReader
         _equipment = equipment;
     }
 
-    /// <summary>Parses a whole file, line by line.</summary>
-    /// <param name="lines">Every line of the file, header first.</param>
-    /// <returns>The measurements that parsed and the lines that did not.</returns>
+    /// <summary>Đọc toàn bộ một file, từng dòng một.</summary>
+    /// <param name="lines">Mọi dòng của file, header đứng đầu.</param>
+    /// <returns>Những measurement đã đọc được và những dòng không đọc được.</returns>
     /// <exception cref="FileDropFormatException">
-    /// The file has no header or the wrong one. That is a fault of the whole file rather than of a
-    /// line, and there is no safe way to guess which column is which.
+    /// File không có header hoặc header sai. Đây là lỗi của cả file chứ không phải của một dòng, và
+    /// không có cách nào an toàn để đoán cột nào là cột nào.
     /// </exception>
     public FileDropParseResult Read(IReadOnlyList<string> lines)
     {
@@ -69,10 +69,10 @@ public sealed class CsvMeasurementReader
                 continue;
             }
 
-            // Identity first, and remembered outside the try. A line that fails on its VALUE has
-            // already told us whose machine it is, and that fact has to survive the failure: the
-            // single-machine check downstream is only sound if it sees every machine the file names,
-            // not only the machines whose lines happened to parse all the way through.
+            // Đọc identity trước, và nhớ giá trị ở ngoài khối try. Một dòng lỗi ở cột VALUE thì đã
+            // cho biết trước nó là máy nào, và thông tin đó phải sống sót qua thất bại: phép kiểm
+            // single-machine phía sau chỉ đúng khi nó thấy mọi máy mà file có nêu tên, chứ không chỉ
+            // những máy mà dòng của chúng đọc trót lọt.
             EquipmentPath? identity = null;
 
             try
@@ -103,14 +103,15 @@ public sealed class CsvMeasurementReader
         return columns;
     }
 
-    /// <summary>Reads only who the line is about, before anything about what it measured.</summary>
+    /// <summary>Chỉ đọc dòng này nói về ai, trước khi đọc nó đo được cái gì.</summary>
     private EquipmentPath ParseIdentity(string[] columns)
     {
         var equipmentPath = EquipmentPath.Parse(columns[0].Trim());
 
-        // The same server-side check the MQTT path makes (K3). A file naming a plant nobody activated,
-        // or a machine that was decommissioned, is refused here rather than stored under a path that
-        // resolves to nothing — a row no query will ever find and no report will ever miss.
+        // Cùng một phép kiểm phía server mà đường MQTT thực hiện (K3). Một file nêu tên một nhà máy
+        // chưa ai kích hoạt, hoặc một máy đã ngừng vận hành, sẽ bị từ chối ở đây thay vì được lưu dưới
+        // một path trỏ tới hư không — một dòng dữ liệu mà không truy vấn nào tìm ra và không báo cáo
+        // nào phát hiện thiếu.
         if (_equipment.FindDevice(LineOf(equipmentPath), equipmentPath.Code) is null
             && !_equipment.Contains(equipmentPath))
         {
@@ -131,9 +132,9 @@ public sealed class CsvMeasurementReader
             throw new FormatException("The signal code is empty, so the reading names nothing measured.");
         }
 
-        // Round-trip, offset required. A tester exporting a local wall-clock time with no offset is
-        // ambiguous for one hour every autumn at DE1, and measured_at is part of the natural key —
-        // an ambiguous key deduplicates two different measurements into one.
+        // Round-trip, bắt buộc có offset. Một máy test xuất giờ tường (local wall-clock) không kèm
+        // offset là mập mờ trong đúng một giờ mỗi mùa thu tại DE1, và measured_at là một phần của
+        // natural key — một khoá mập mờ sẽ gộp hai measurement khác nhau thành một qua dedup.
         if (!DateTimeOffset.TryParse(
                 columns[3].Trim(),
                 CultureInfo.InvariantCulture,
@@ -153,8 +154,9 @@ public sealed class CsvMeasurementReader
             new DeviceReading(signalCode, Alias: null, value, measuredAt));
     }
 
-    // TryParse accepts a bare "2026-08-28T09:28:11" and quietly assumes the machine's local zone.
-    // The check is on the text because by the time it is a DateTimeOffset that assumption is invisible.
+    // TryParse chấp nhận một chuỗi trần "2026-08-28T09:28:11" và âm thầm giả định múi giờ local của
+    // máy. Phép kiểm nằm trên chuỗi văn bản vì đến khi nó đã thành DateTimeOffset thì giả định đó
+    // không còn nhìn thấy được nữa.
     private static bool HasExplicitOffset(string text)
     {
         var trimmed = text.Trim();
@@ -181,9 +183,9 @@ public sealed class CsvMeasurementReader
             "integer" when long.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var integer) =>
                 new MetricValue.Integral(integer),
 
-            // Written out rather than bool.TryParse: the tester writes "true"/"false" lower case, and
-            // accepting "True" as well would let two spellings of the same file coexist until one of
-            // them met a stricter reader.
+            // Viết tường minh thay vì bool.TryParse: máy test ghi "true"/"false" chữ thường, và nếu
+            // chấp nhận cả "True" thì hai cách viết của cùng một file có thể cùng tồn tại cho tới khi
+            // một trong hai gặp phải một reader khắt khe hơn.
             "boolean" when raw is "true" or "false" => new MetricValue.Flag(raw == "true"),
 
             "text" => new MetricValue.Text(raw),
@@ -196,6 +198,6 @@ public sealed class CsvMeasurementReader
         };
 }
 
-/// <summary>The file as a whole cannot be read, so no line in it can be trusted.</summary>
-/// <param name="message">What is wrong with the file.</param>
+/// <summary>Cả file không đọc được, nên không dòng nào trong đó đáng tin.</summary>
+/// <param name="message">File có vấn đề gì.</param>
 public sealed class FileDropFormatException(string message) : Exception(message);

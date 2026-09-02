@@ -1,9 +1,9 @@
 namespace Nvm.EdgeGateway.Buffering;
 
-/// <summary>The durable edge queue reached its configured disk boundary.</summary>
+/// <summary>Hàng đợi bền của edge đã chạm giới hạn đĩa đã cấu hình.</summary>
 public sealed class BufferCapacityExceededException : IOException
 {
-    /// <summary>Creates a hard-stop result that reports measured and configured bytes.</summary>
+    /// <summary>Tạo kết quả dừng cứng, báo cả số byte đo được lẫn số byte đã cấu hình.</summary>
     public BufferCapacityExceededException(long bytesOnDisk, long bytesRequested, long maxBytes)
         : base(
             $"Store-and-forward holds {bytesOnDisk} bytes and cannot append {bytesRequested}: "
@@ -14,12 +14,12 @@ public sealed class BufferCapacityExceededException : IOException
         MaxBytes = maxBytes;
     }
 
-    /// <summary>Data-file bytes present before the refused append.</summary>
+    /// <summary>Số byte của data-file có sẵn trước khi bị từ chối append.</summary>
     public long BytesOnDisk { get; }
 
-    /// <summary>Framed bytes the caller tried to add.</summary>
+    /// <summary>Số byte đã được framed mà caller cố thêm vào.</summary>
     public long BytesRequested { get; }
 
-    /// <summary>The configured hard boundary.</summary>
+    /// <summary>Giới hạn cứng đã cấu hình.</summary>
     public long MaxBytes { get; }
 }

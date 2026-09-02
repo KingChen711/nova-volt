@@ -3,16 +3,16 @@ using Nvm.Sparkplug;
 
 namespace Nvm.Simulator.Faults;
 
-/// <summary>Sits between the line and the broker and misbehaves on purpose.</summary>
+/// <summary>Đứng giữa line và broker rồi cố tình hành xử sai.</summary>
 /// <remarks>
 /// <para>
-/// Always in the path, even with every rate at zero, so that a run report can state what the faults
-/// did rather than leave it to be inferred from whether anybody remembered to configure them.
+/// Luôn nằm trên đường đi, kể cả khi mọi rate đều bằng 0, để run report có thể nói rõ các fault đã
+/// làm gì thay vì để người đọc phải tự suy ra từ việc có ai nhớ cấu hình chúng hay không.
 /// </para>
 /// <para>
-/// Two faults live here because both are properties of the <b>link</b>, not of the plant: a message
-/// sent twice and a connection that comes and goes. The third — a wrong clock — belongs to the device
-/// and is applied where the reading is taken (<see cref="DeviceClockDrift"/>).
+/// Hai fault nằm ở đây vì cả hai đều là thuộc tính của <b>đường truyền</b>, không phải của nhà máy:
+/// một message bị gửi hai lần và một kết nối chập chờn. Fault thứ ba — đồng hồ sai — thuộc về device
+/// và được áp dụng ngay tại nơi reading được lấy (<see cref="DeviceClockDrift"/>).
 /// </para>
 /// </remarks>
 public sealed partial class FaultInjectingPublisher : ISparkplugPublisher
@@ -28,10 +28,10 @@ public sealed partial class FaultInjectingPublisher : ISparkplugPublisher
     private DateTimeOffset _reconnectAt;
     private bool _offline;
 
-    /// <summary>Wraps a publisher.</summary>
-    /// <param name="inner">Where messages go when the link is behaving.</param>
-    /// <param name="faults">Which faults are on.</param>
-    /// <param name="time">The clock the dropout schedule runs on.</param>
+    /// <summary>Bọc quanh một publisher.</summary>
+    /// <param name="inner">Nơi message đi tới khi đường truyền hoạt động bình thường.</param>
+    /// <param name="faults">Fault nào đang bật.</param>
+    /// <param name="time">Đồng hồ mà lịch dropout chạy theo.</param>
     /// <param name="logger">Log.</param>
     public FaultInjectingPublisher(
         ISparkplugPublisher inner,
@@ -53,33 +53,33 @@ public sealed partial class FaultInjectingPublisher : ISparkplugPublisher
         _dice = new Random(faults.Seed);
     }
 
-    /// <summary>How many messages were sent a second time.</summary>
+    /// <summary>Bao nhiêu message bị gửi lần thứ hai.</summary>
     public long DuplicateMessages { get; private set; }
 
-    /// <summary>How many messages the inner publisher accepted, duplicates included.</summary>
+    /// <summary>Bao nhiêu message publisher bên trong đã chấp nhận, kể cả bản duplicate.</summary>
     /// <remarks>
-    /// The boundary is exact and it is not the same one <see cref="PublishAsync"/> returns from: a
-    /// message being <see cref="Held"/> through a simulated dropout has not been published and is not
-    /// in this number until the flush that releases it. Under MQTT QoS 1 the inner publisher returns
-    /// when the broker has acknowledged, so past that point "the broker has it" is a claim this can
-    /// make.
+    /// Ranh giới ở đây rất chính xác và không giống với ranh giới <see cref="PublishAsync"/> trả
+    /// về: một message đang bị <see cref="Held"/> qua một dropout giả lập thì chưa được publish và
+    /// chưa nằm trong con số này cho tới lần flush giải phóng nó. Dưới MQTT QoS 1, publisher bên
+    /// trong chỉ trả về khi broker đã acknowledge, nên qua mốc đó thì "broker đã có nó" là điều số
+    /// này có quyền khẳng định.
     /// </remarks>
     public long PublishedMessages { get; private set; }
 
-    /// <summary>How many times the link went down.</summary>
+    /// <summary>Đường truyền đã rớt bao nhiêu lần.</summary>
     public long Dropouts { get; private set; }
 
-    /// <summary>The most messages ever waiting at once for the link to come back.</summary>
+    /// <summary>Số message chờ đường truyền quay lại nhiều nhất từng có tại một thời điểm.</summary>
     public int HeldHighWater { get; private set; }
 
-    /// <summary>How many are waiting right now.</summary>
+    /// <summary>Đang có bao nhiêu message chờ ngay lúc này.</summary>
     public int Held => _held.Count;
 
     /// <inheritdoc />
     /// <remarks>
-    /// Forwarded straight through. A rebirth request is a fault-free control message from the host;
-    /// dropping it during a simulated dropout would model a link that loses commands but not data,
-    /// which no real link does.
+    /// Chuyển thẳng xuống dưới. Một rebirth request là control message không dính fault từ host;
+    /// việc bỏ nó trong lúc dropout giả lập sẽ mô phỏng một đường truyền mất command nhưng không
+    /// mất data, và không đường truyền thật nào hành xử như vậy.
     /// </remarks>
     public Func<CancellationToken, Task>? RebirthRequested
     {
@@ -89,8 +89,8 @@ public sealed partial class FaultInjectingPublisher : ISparkplugPublisher
 
     /// <inheritdoc />
     /// <remarks>
-    /// Forwarded, for the same reason as a rebirth: opening a session is the transport's business and
-    /// a fault that swallowed it would model a link no cable can be.
+    /// Chuyển thẳng xuống dưới, cùng lý do như rebirth: mở session là việc của transport, và một
+    /// fault nuốt mất nó sẽ mô phỏng một đường truyền mà không dây cáp nào có thể là.
     /// </remarks>
     public Func<ulong>? BeginSession
     {
@@ -115,12 +115,12 @@ public sealed partial class FaultInjectingPublisher : ISparkplugPublisher
 
     /// <inheritdoc />
     /// <remarks>
-    /// Returning without throwing does <b>not</b> mean the broker has the message. While the link is
-    /// down this holds it in memory and returns, exactly as a device with a small internal buffer
-    /// behaves, and the message goes out on the flush that follows the reconnect. A caller that
-    /// treated a successful return as delivery would be counting messages that are still on the
-    /// device — which is why the run report counts measurements where the channel takes them and
-    /// leaves delivery to <see cref="PublishedMessages"/>.
+    /// Trả về mà không throw <b>không</b> có nghĩa là broker đã nhận được message. Trong lúc đường
+    /// truyền rớt, hàm này giữ message trong bộ nhớ rồi trả về, đúng như cách một device có buffer
+    /// nội bộ nhỏ hành xử, và message được gửi đi ở lần flush ngay sau khi kết nối lại. Nếu caller
+    /// coi việc trả về thành công là đã delivery thì sẽ đếm nhầm những message vẫn còn nằm trên
+    /// device — đó là lý do run report đếm measurement tại nơi channel lấy chúng và để việc
+    /// delivery lại cho <see cref="PublishedMessages"/>.
     /// </remarks>
     public async Task PublishAsync(SparkplugMessage message, CancellationToken cancellationToken)
     {
@@ -140,11 +140,11 @@ public sealed partial class FaultInjectingPublisher : ISparkplugPublisher
             ScheduleNextDropout(now);
             LinkRestored(_logger, _held.Count);
 
-            // The whole backlog at once, which is the point of the fault rather than an accident of
-            // how it is written. A link coming back does not trickle: every gateway in the area
-            // reconnects within the same second and empties itself into an ingestion service that has
-            // just restarted. That burst is what C10's rate limit exists to survive, and a fault that
-            // released the backlog gently would leave nothing for it to prove.
+            // Toàn bộ backlog cùng một lúc, đây là chủ đích của fault chứ không phải tình cờ do
+            // cách viết code. Một đường truyền quay lại thì không nhỏ giọt: mọi gateway trong khu
+            // vực kết nối lại trong cùng một giây và đổ hết vào một ingestion service vừa mới khởi
+            // động lại. Cú dồn đó chính là thứ rate limit của C10 tồn tại để chịu được, và một fault
+            // thả backlog ra từ từ thì sẽ chẳng còn gì để chứng minh điều đó.
             await FlushAsync(cancellationToken).ConfigureAwait(false);
         }
         else if (now >= _nextDropout)
@@ -162,20 +162,19 @@ public sealed partial class FaultInjectingPublisher : ISparkplugPublisher
 
     /// <inheritdoc />
     /// <remarks>
-    /// Straight through. Whether a session exists is the transport's business, and a fault that
-    /// answered this question itself would let a run publish into a link this class only pretends is
-    /// there.
+    /// Chuyển thẳng xuống dưới. Có session hay không là việc của transport, và một fault tự trả lời
+    /// câu hỏi này sẽ để một run publish vào một đường truyền mà class này chỉ đang giả vờ là có.
     /// </remarks>
     public Task WaitForSessionAsync(CancellationToken cancellationToken) =>
         _inner.WaitForSessionAsync(cancellationToken);
 
-    /// <summary>Sends everything held, whether or not the link is due back.</summary>
-    /// <param name="cancellationToken">Cancels the flush.</param>
+    /// <summary>Gửi mọi thứ đang bị giữ, bất kể đường truyền đã tới hạn quay lại hay chưa.</summary>
+    /// <param name="cancellationToken">Hủy lần flush.</param>
     /// <remarks>
-    /// Called at the end of a run. A dropout is a <b>gap</b>, not a loss — the messages are on the
-    /// device and the device will send them — so a run that ended mid-dropout and dropped its backlog
-    /// would report more measurements taken than were ever offered, and D1 would be measuring the
-    /// shutdown rather than the pipeline.
+    /// Được gọi ở cuối một run. Một dropout là một <b>khoảng trống</b>, không phải một mất mát —
+    /// message vẫn nằm trên device và device sẽ gửi chúng — nên một run kết thúc giữa lúc dropout
+    /// mà bỏ luôn backlog sẽ báo cáo số measurement đã lấy nhiều hơn số thực sự từng được gửi ra, và
+    /// D1 lúc đó sẽ đo cái shutdown chứ không phải cái pipeline.
     /// </remarks>
     public async Task FlushAsync(CancellationToken cancellationToken)
     {
@@ -187,14 +186,15 @@ public sealed partial class FaultInjectingPublisher : ISparkplugPublisher
 
     /// <inheritdoc />
     /// <remarks>
-    /// The inner publisher is owned by whoever built it, not by this wrapper, so it is not disposed
-    /// here. Anything still held is the caller's to flush — see <see cref="FlushAsync"/>, which the
-    /// worker calls where the ordering against the broker's own shutdown is visible.
+    /// Publisher bên trong thuộc quyền sở hữu của bên đã tạo ra nó, không phải của wrapper này, nên
+    /// nó không bị dispose ở đây. Bất cứ thứ gì còn đang bị giữ là việc của caller phải flush — xem
+    /// <see cref="FlushAsync"/>, nơi worker gọi tới, chỗ mà thứ tự so với shutdown của chính broker
+    /// có thể quan sát được.
     /// </remarks>
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
-    // Source-generated for the reason CA1873 gives: a TimeSpan argument boxes, and these fire on a
-    // path that runs thousands of times a second.
+    // Source-generated vì lý do CA1873 đưa ra: một tham số TimeSpan sẽ bị box, và đường code này
+    // chạy hàng nghìn lần mỗi giây.
     [LoggerMessage(Level = LogLevel.Warning, Message = "Link lost, holding messages for {Duration}")]
     private static partial void LinkLost(ILogger logger, TimeSpan duration);
 
@@ -211,11 +211,12 @@ public sealed partial class FaultInjectingPublisher : ISparkplugPublisher
             return;
         }
 
-        // The same object, sent again. Not a second message built from the same readings: that one
-        // would carry a fresh seq and, if the clock had moved, a fresh device_timestamp — and a
-        // reading at a new instant is a different measurement, which deduplication is right to keep.
-        // The reconciliation would then come out even while never having deduplicated anything, and
-        // D1 would report success on a test that ran nothing. This is R-M2-1.
+        // Cùng một object, được gửi lại lần nữa. Không phải một message thứ hai được dựng từ cùng
+        // các reading đó: một message như vậy sẽ mang một seq mới và, nếu đồng hồ đã trôi, một
+        // device_timestamp mới — và một reading tại một thời điểm mới là một measurement khác, mà
+        // deduplication có quyền giữ lại. Khi đó phép đối chiếu sẽ ra khớp trong khi chưa hề
+        // deduplicate được gì cả, và D1 sẽ báo cáo thành công cho một test chưa chạy gì hết. Đây là
+        // R-M2-1.
         await _inner.PublishAsync(message, cancellationToken).ConfigureAwait(false);
 
         DuplicateMessages++;
@@ -240,9 +241,10 @@ public sealed partial class FaultInjectingPublisher : ISparkplugPublisher
             return;
         }
 
-        // Exponential gaps, which is what a Poisson process produces and what an intermittent link
-        // looks like. 1 - NextDouble() lands in (0, 1] so the logarithm is always defined; the clamp
-        // keeps a very unlucky draw from scheduling the next dropout past the end of time.
+        // Khoảng cách theo phân phối mũ (exponential), đây là kết quả của một Poisson process và
+        // cũng là hình dạng của một đường truyền chập chờn. 1 - NextDouble() rơi vào (0, 1] nên
+        // logarithm luôn xác định; giá trị clamp giữ cho một lần rút số quá xui không lên lịch
+        // dropout kế tiếp vượt quá tận cùng thời gian.
         var mean = _faults.DropoutMeanInterval.TotalSeconds;
         var gap = Math.Min(-Math.Log(1 - _dice.NextDouble()) * mean, mean * 100);
 

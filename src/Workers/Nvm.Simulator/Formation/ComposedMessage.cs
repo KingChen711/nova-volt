@@ -4,38 +4,39 @@ using Nvm.Sparkplug.Topics;
 
 namespace Nvm.Simulator.Formation;
 
-/// <summary>A message the line has composed, and how much of D1's left-hand side is riding on it.</summary>
-/// <param name="Message">The Sparkplug message, exactly as it will be published.</param>
+/// <summary>Một message mà line đã soạn xong, và nó gánh bao nhiêu phần của vế trái D1.</summary>
+/// <param name="Message">Sparkplug message, đúng y như lúc nó sẽ được publish.</param>
 /// <param name="Measurements">
-/// How many measurements this message added to <see cref="FormationLine.MeasurementCount"/> when it
-/// was composed. Zero for the node's own birth, which carries protocol metrics only, and zero for a
-/// rebirth's <c>DBIRTH</c>, which restates readings that were counted the first time they were taken.
+/// Message này thêm bao nhiêu measurement vào <see cref="FormationLine.MeasurementCount"/> tại thời
+/// điểm nó được soạn. Bằng 0 cho birth của chính node, vì birth đó chỉ mang protocol metric, và bằng
+/// 0 cho <c>DBIRTH</c> của một rebirth, vì nó chỉ nhắc lại các reading đã được đếm từ lần đầu chúng
+/// được lấy.
 /// </param>
 /// <remarks>
 /// <para>
-/// The count itself is taken where the channel is read, not here — see
-/// <see cref="FormationChannel.MeasurementCount"/> for why that side of the reconciliation has to
-/// describe the plant rather than the link. What this type carries is the number a message is
-/// <b>responsible</b> for, so that a batch the worker could not finish can be named exactly:
-/// <see cref="SimulatorWorker.AbandonedMeasurements"/> is that sum, and D1 and D3 require it to be
-/// zero rather than subtracting it from anything.
+/// Bản thân con số này được lấy tại nơi channel được đọc, không phải ở đây — xem
+/// <see cref="FormationChannel.MeasurementCount"/> để biết vì sao vế đó của phép đối chiếu phải mô
+/// tả nhà máy chứ không phải đường truyền. Thứ type này mang theo là con số một message
+/// <b>chịu trách nhiệm</b>, để một batch mà worker không hoàn thành được có thể gọi tên chính xác:
+/// <see cref="SimulatorWorker.AbandonedMeasurements"/> chính là tổng đó, và D1 với D3 đòi hỏi nó
+/// phải bằng 0 chứ không phải bị trừ đi khỏi bất cứ thứ gì.
 /// </para>
 /// <para>
-/// Deliberately a separate type from <see cref="SparkplugMessage"/>: the wire message is a contract
-/// shared with the gateway, and the accounting beside it belongs to the simulator alone.
+/// Cố tình tách thành một type riêng khỏi <see cref="SparkplugMessage"/>: message trên dây là một
+/// contract chia sẻ với gateway, còn phần đếm đi kèm là của riêng simulator.
 /// </para>
 /// </remarks>
 public sealed record ComposedMessage(SparkplugMessage Message, int Measurements)
 {
-    /// <summary>Where the message is going. Reads through to <see cref="Message"/>.</summary>
+    /// <summary>Message đang đi đâu. Đọc xuyên qua <see cref="Message"/>.</summary>
     /// <remarks>
-    /// A facade over the two parts of the message a caller ever wants, so that carrying the
-    /// accounting alongside does not force every reader to unwrap it. Publishing still takes
-    /// <see cref="Message"/> explicitly — the one place that must not be able to forget which of the
-    /// two things it is holding.
+    /// Một facade phủ lên hai phần của message mà caller từng cần đến, để việc mang theo phần đếm
+    /// bên cạnh không bắt mọi nơi đọc phải unwrap nó. Việc publish vẫn nhận
+    /// <see cref="Message"/> một cách tường minh — nơi duy nhất không được phép quên mình đang cầm
+    /// cái nào trong hai thứ này.
     /// </remarks>
     public SparkplugTopic Topic => Message.Topic;
 
-    /// <summary>The encoded payload. Reads through to <see cref="Message"/>.</summary>
+    /// <summary>Payload đã encode. Đọc xuyên qua <see cref="Message"/>.</summary>
     public ImmutableArray<byte> Payload => Message.Payload;
 }

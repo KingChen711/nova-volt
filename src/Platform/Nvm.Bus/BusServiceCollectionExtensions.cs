@@ -11,26 +11,26 @@ using RabbitMQ.Client;
 
 namespace Nvm.Bus;
 
-/// <summary>Wires the Manufacturing Service Bus into a host.</summary>
+/// <summary>Kết nối (wire) Manufacturing Service Bus vào một host.</summary>
 public static class BusServiceCollectionExtensions
 {
-    /// <summary>The name this process's bus reports under on <c>/health/ready</c>.</summary>
+    /// <summary>Tên mà bus của tiến trình này báo cáo dưới <c>/health/ready</c>.</summary>
     /// <remarks>
-    /// <c>bus</c>, not <c>masstransit-bus</c>. Every other probe in this system is named after what it
-    /// checks — <c>sqlserver</c>, <c>postgres</c>, <c>rabbitmq</c> — and this one checks the bus, not
-    /// the library that implements it. Whoever reads a red line at 3 a.m. needs to know which
-    /// dependency is unhappy, and would then look for a second, differently named probe for RabbitMQ
-    /// — which is exactly the right thing to look for, because it exists and means something else.
+    /// Là <c>bus</c>, không phải <c>masstransit-bus</c>. Mọi probe khác trong hệ thống này đều được đặt
+    /// tên theo thứ nó kiểm tra — <c>sqlserver</c>, <c>postgres</c>, <c>rabbitmq</c> — và probe này kiểm
+    /// tra bus, không phải thư viện triển khai nó. Ai đọc thấy dòng đỏ lúc 3 giờ sáng cần biết dependency
+    /// nào đang gặp vấn đề, rồi sẽ đi tìm một probe khác, tên khác, cho RabbitMQ
+    /// — và đó chính xác là thứ nên tìm, vì nó tồn tại và mang ý nghĩa khác.
     /// </remarks>
     public const string HealthCheckName = "bus";
 
-    /// <summary>Registers MassTransit against RabbitMQ with this system's topology.</summary>
-    /// <param name="services">The container being built.</param>
-    /// <param name="configureOptions">Connection settings.</param>
+    /// <summary>Đăng ký MassTransit với RabbitMQ theo topology của hệ thống này.</summary>
+    /// <param name="services">Container đang được xây dựng.</param>
+    /// <param name="configureOptions">Cấu hình kết nối.</param>
     /// <param name="registerConsumers">
-    /// Where a host adds its consumers. Left empty by a host that only publishes.
+    /// Nơi một host thêm các consumer của nó. Để trống nếu host chỉ publish.
     /// </param>
-    /// <exception cref="InvalidOperationException">The options cannot describe a reachable broker.</exception>
+    /// <exception cref="InvalidOperationException">Các option không mô tả được một broker có thể kết nối tới.</exception>
     public static IServiceCollection AddNvmBus(
         this IServiceCollection services,
         Action<NvmBusOptions> configureOptions,
@@ -45,24 +45,24 @@ public static class BusServiceCollectionExtensions
 
         services.AddMassTransit(bus =>
         {
-            // Queue names come from what a consumer is for, not from what its class is called.
+            // Tên queue xuất phát từ việc consumer dùng để làm gì, không phải từ tên class của nó.
             bus.SetEndpointNameFormatter(NvmEndpointNameFormatter.Instance);
 
             ConfigureHealthCheck(bus);
 
             registerConsumers?.Invoke(bus);
 
-            // Applied to every receive endpoint, including ones a Functional Block adds later. Put on
-            // one endpoint at a time, this is the sort of thing that gets copied four times and
-            // forgotten on the fifth.
+            // Áp dụng cho mọi receive endpoint, kể cả những cái một Functional Block thêm vào sau này.
+            // Nếu đặt riêng lẻ trên từng endpoint, đây là kiểu thứ hay bị copy bốn lần rồi
+            // quên mất ở lần thứ năm.
             bus.AddConfigureEndpointsCallback((_, _, endpoint) =>
             {
                 endpoint.UseMessageRetry(retry => retry.Intervals(NvmRetryPolicy.Intervals(Random.Shared)));
 
-                // RabbitMQ 4 removed classic queue mirroring; quorum queues are what replaced it. On a
-                // single development node both kinds behave identically, so choosing wrong here stays
-                // invisible until a second node exists — and by then it cannot be corrected in place.
-                // Changing a queue's type means deleting it, along with whatever is still inside.
+                // RabbitMQ 4 đã bỏ classic queue mirroring; quorum queue là thứ thay thế nó. Trên một
+                // node development duy nhất, cả hai loại hoạt động giống hệt nhau, nên chọn sai ở đây sẽ
+                // không lộ ra cho tới khi có node thứ hai — và lúc đó thì không thể sửa tại chỗ được nữa.
+                // Đổi loại queue nghĩa là phải xóa nó, cùng với bất cứ thứ gì còn nằm bên trong.
                 if (endpoint is IRabbitMqReceiveEndpointConfigurator rabbit)
                 {
                     rabbit.SetQuorumQueue();
@@ -77,10 +77,10 @@ public static class BusServiceCollectionExtensions
                     host.Password(options.Password);
                 });
 
-                // Topology first, and the order is not cosmetic. MassTransit locks a message's entity
-                // name the moment anything reads it, and installing the publish and send filters reads
-                // it — so calling UseNvmCloudEvents first makes the SetEntityName below throw
-                // "entity name was already evaluated" and the process never starts.
+                // Topology trước, và thứ tự này không phải để cho đẹp. MassTransit khóa entity name của
+                // một message ngay khi có gì đó đọc nó, và việc cài đặt publish/send filter sẽ đọc
+                // giá trị đó — nên nếu gọi UseNvmCloudEvents trước, SetEntityName bên dưới sẽ ném lỗi
+                // "entity name was already evaluated" và tiến trình sẽ không bao giờ khởi động được.
                 ApplyEventTopology(configurator);
                 configurator.UseNvmCloudEvents(options.ApplicationName);
 
@@ -91,14 +91,14 @@ public static class BusServiceCollectionExtensions
         return services;
     }
 
-    /// <summary>Registers a consumer together with the queue and bindings this system gives it.</summary>
-    /// <typeparam name="TConsumer">The consumer to place on the bus.</typeparam>
-    /// <param name="bus">The registration being built inside <see cref="AddNvmBus"/>.</param>
+    /// <summary>Đăng ký một consumer cùng với queue và binding mà hệ thống này gán cho nó.</summary>
+    /// <typeparam name="TConsumer">Consumer cần đặt lên bus.</typeparam>
+    /// <param name="bus">Phần registration đang được xây dựng bên trong <see cref="AddNvmBus"/>.</param>
     /// <remarks>
-    /// The only sanctioned way to add a consumer. Plain <c>AddConsumer&lt;T&gt;</c> also compiles and
-    /// also starts, and produces a queue bound to the context exchange with an empty routing key —
-    /// which on a topic exchange means the consumer receives nothing, with no error anywhere to say
-    /// so. See <see cref="Topology.NvmConsumerDefinition{TConsumer}"/>.
+    /// Đây là cách duy nhất được chấp nhận để thêm một consumer. <c>AddConsumer&lt;T&gt;</c> thuần cũng
+    /// biên dịch được và cũng chạy được, nhưng sẽ tạo ra một queue bind vào context exchange với routing
+    /// key rỗng — mà trên một topic exchange thì điều đó nghĩa là consumer không nhận được gì cả, và
+    /// không có lỗi nào báo cho biết. Xem <see cref="Topology.NvmConsumerDefinition{TConsumer}"/>.
     /// </remarks>
     public static IBusRegistrationConfigurator AddNvmConsumer<TConsumer>(this IBusRegistrationConfigurator bus)
         where TConsumer : class, IConsumer
@@ -110,28 +110,28 @@ public static class BusServiceCollectionExtensions
         return bus;
     }
 
-    /// <summary>States the bus health check's name and tags instead of inheriting them.</summary>
+    /// <summary>Khai báo tường minh tên và tag của bus health check thay vì kế thừa mặc định.</summary>
     /// <remarks>
     /// <para>
-    /// <c>AddMassTransit</c> registers a health check on its own, and left alone it appears as
-    /// <c>masstransit-bus</c> with whatever tags that version of the library happens to choose. Both
-    /// are operational facts — the name shows up in dashboards and runbooks, and the tag decides which
-    /// endpoint the probe answers on — so both are stated here, for the same reason a queue name is
-    /// stated in <see cref="Topology.BusEndpointAttribute"/> rather than derived.
+    /// <c>AddMassTransit</c> tự đăng ký một health check, và nếu để mặc định thì nó sẽ xuất hiện dưới
+    /// tên <c>masstransit-bus</c> với tag tùy phiên bản thư viện lúc đó chọn. Cả hai đều là dữ kiện vận
+    /// hành — tên xuất hiện trên dashboard và runbook, còn tag quyết định probe trả lời trên endpoint
+    /// nào — nên cả hai đều được khai báo tường minh ở đây, cùng lý do mà tên queue được khai báo tường
+    /// minh trong <see cref="Topology.BusEndpointAttribute"/> thay vì được suy ra.
     /// </para>
     /// <para>
-    /// The tag is <b>ready only, never live</b>. This check fails when the bus cannot serve, and a
-    /// process whose bus cannot serve is still a process that must not be restarted — putting it on
-    /// liveness turns a broker outage into a restart loop across every instance at once, which is
-    /// exactly what N15 forbids.
+    /// Tag chỉ là <b>ready, không bao giờ là live</b>. Check này fail khi bus không phục vụ được, và một
+    /// tiến trình có bus không phục vụ được vẫn là một tiến trình không được phép restart — đặt nó vào
+    /// liveness sẽ biến một sự cố broker thành vòng lặp restart trên mọi instance cùng lúc, đúng là điều
+    /// N15 cấm.
     /// </para>
     /// <para>
-    /// <b>What it does and does not tell you.</b> It reports on <i>this process's</i> bus: whether it
-    /// started, and whether its receive endpoints are ready. It is not a broker probe. A host that
-    /// only publishes has no receive endpoints, so after a bus has started successfully this check
-    /// stays healthy even while the broker is gone — measured in M1/C14. Reachability of the broker is
-    /// answered by the separate <c>rabbitmq</c> probe in the host, and the two are not
-    /// interchangeable.
+    /// <b>Nó cho biết gì và không cho biết gì.</b> Nó báo cáo về bus của <i>chính tiến trình này</i>: bus
+    /// đã khởi động chưa, và các receive endpoint của nó đã sẵn sàng chưa. Đây không phải là probe của
+    /// broker. Một host chỉ publish thì không có receive endpoint nào, nên sau khi bus khởi động thành
+    /// công, check này vẫn healthy kể cả khi broker đã biến mất — đã đo được ở M1/C14. Khả năng kết nối
+    /// tới broker được trả lời bởi probe <c>rabbitmq</c> riêng biệt trong host, và hai thứ này không thể
+    /// dùng thay cho nhau.
     /// </para>
     /// </remarks>
     private static void ConfigureHealthCheck(IBusRegistrationConfigurator bus) =>
@@ -139,33 +139,36 @@ public static class BusServiceCollectionExtensions
         {
             health.Name = HealthCheckName;
 
-            // Cleared, not added to. The defaults are whatever the library chose, and appending would
-            // leave this check answering on an endpoint nobody here decided it should answer on.
+            // Xóa sạch, không phải thêm vào. Giá trị mặc định là do thư viện tự chọn, nếu chỉ thêm vào
+            // thì check này sẽ trả lời trên một endpoint mà không ai ở đây quyết định là nó nên trả lời.
             health.Tags.Clear();
             health.Tags.Add(HealthTags.Ready);
 
-            // Unhealthy, not the Degraded that MassTransit would otherwise report while the bus is
-            // still coming up. Degraded answers HTTP 200, so an instance whose bus cannot carry a
-            // message would stay in rotation — a readiness probe that never goes red checks nothing.
-            // (MassTransit 8.5 marked FailureStatus obsolete; this one property now sets both.)
+            // Là Unhealthy, không phải Degraded như MassTransit sẽ báo cáo trong lúc bus vẫn đang khởi
+            // động. Degraded trả về HTTP 200, nên một instance có bus không truyền được message vẫn sẽ
+            // ở lại trong vòng xoay phục vụ — một readiness probe không bao giờ chuyển đỏ thì coi như
+            // không kiểm tra gì cả.
+            // (MassTransit 8.5 đánh dấu FailureStatus là obsolete; property này giờ set cả hai.)
             health.MinimalFailureStatus = HealthStatus.Unhealthy;
         });
 
     /// <summary>
-    /// Points every declared event at its context's topic exchange, with the routing key this system
-    /// uses.
+    /// Trỏ mọi event đã khai báo tới topic exchange của context của nó, với routing key mà hệ
+    /// thống này dùng.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// MassTransit's default is one exchange per message type, named after the .NET type. That would
-    /// make a namespace rename into a topology change, and it gives consumers no way to say "anything
-    /// happening at Hai Phong" — a fan-out exchange per type has no routing key to match on.
+    /// Mặc định của MassTransit là mỗi loại message có một exchange riêng, đặt tên theo type .NET. Điều
+    /// đó sẽ biến việc đổi tên namespace thành một thay đổi topology, và không cho consumer cách nào để
+    /// nói "bất cứ thứ gì xảy ra ở Hải Phòng" — một fan-out exchange theo từng type thì không có routing
+    /// key nào để khớp cả.
     /// </para>
     /// <para>
-    /// So every event carrying <c>[EventContract]</c> is redirected: exchange
+    /// Vì vậy mọi event mang <c>[EventContract]</c> đều được chuyển hướng: exchange
     /// <c>nvm.{context}</c>, type <c>topic</c>, routing key
-    /// <c>nvm.{site}.{context}.{event}.v{n}</c>. Discovered by scanning the contracts assembly rather
-    /// than listed here, so adding an event is one attribute and not two edits in two projects.
+    /// <c>nvm.{site}.{context}.{event}.v{n}</c>. Được phát hiện bằng cách quét assembly contracts thay
+    /// vì liệt kê ở đây, nên thêm một event chỉ cần một attribute chứ không phải sửa hai chỗ ở hai
+    /// project.
     /// </para>
     /// </remarks>
     private static void ApplyEventTopology(IRabbitMqBusFactoryConfigurator configurator)
@@ -187,9 +190,9 @@ public static class BusServiceCollectionExtensions
 
         configurator.Message<TEvent>(message => message.SetEntityName(exchange));
 
-        // Topic, not the fanout MassTransit would pick. Fanout has no routing key, so every consumer
-        // bound to the exchange receives every message on it and filters in code — which is exactly
-        // how a Leipzig message ends up inside a Hai Phong process.
+        // Là Topic, không phải fanout mà MassTransit sẽ tự chọn. Fanout không có routing key, nên mọi
+        // consumer bind vào exchange đó sẽ nhận mọi message trên đó rồi tự lọc bằng code — đúng là
+        // cách một message ở Leipzig lại lọt vào một tiến trình ở Hải Phòng.
         configurator.Publish<TEvent>(publish => publish.ExchangeType = ExchangeType.Topic);
 
         configurator.Send<TEvent>(send => send.UseRoutingKeyFormatter(

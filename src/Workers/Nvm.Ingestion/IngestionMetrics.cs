@@ -89,16 +89,15 @@ public sealed class IngestionMetrics
     /// <summary>Write transactions PostgreSQL killed to break a deadlock, and this process retried.</summary>
     /// <remarks>
     /// <para>
-    /// Non-zero is normal and near-constant per day. Creating a chunk takes a
-    /// <c>ShareUpdateExclusiveLock</c> on the hypertable, so several writers reaching for the SAME
-    /// not-yet-existing chunk deadlock, PostgreSQL kills all but one, and the losers retry into the
-    /// chunk the winner made. Measured on 2.29.2-pg17: four writers, three killed on the first batch
-    /// of a day and zero on every batch after it.
+    /// The expected value is zero, including at chunk boundaries. The writer now pre-creates every
+    /// missing daily slice in autocommit before any transaction claims a message, which removes the
+    /// chunk-DDL/claim-table lock cycle. The bounded retry remains as a safety net for unrelated
+    /// <c>40P01</c> deadlocks and <c>40001</c> serialization failures.
     /// </para>
     /// <para>
-    /// It is counted rather than swallowed because the shape of the number is the diagnosis. A few per
-    /// chunk boundary is the mechanism working; a number that climbs with load is contention of some
-    /// other kind, and the two are indistinguishable if neither is counted.
+    /// It is counted rather than swallowed because any non-zero value is now an investigation
+    /// signal, not ordinary chunk creation. N-M3-10 measured 119 retries when the pre-create call was
+    /// removed and zero when it was restored on the same 16-day concurrent fixture.
     /// </para>
     /// </remarks>
     public long WriteRetryCount => Interlocked.Read(ref _writeRetryCount);

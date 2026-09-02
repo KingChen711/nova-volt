@@ -4,18 +4,18 @@ using Nvm.Contracts.Events;
 
 namespace Nvm.Bus.CloudEvents;
 
-/// <summary>Installs the CloudEvents stamping filter for every declared event.</summary>
+/// <summary>Cài đặt filter đóng dấu CloudEvents cho mọi event đã khai báo.</summary>
 /// <remarks>
-/// Written against <see cref="IBusFactoryConfigurator"/> rather than the RabbitMQ one on purpose:
-/// stamping is about the message, not about the transport carrying it. That also means a test can run
-/// the real filter over the in-memory transport instead of re-implementing what it does — a test that
-/// stamps its own headers would pass with the filter deleted.
+/// Viết dựa trên <see cref="IBusFactoryConfigurator"/> thay vì cái dành riêng cho RabbitMQ là có chủ ý:
+/// việc đóng dấu là về message, không phải về transport mang nó đi. Điều đó cũng có nghĩa là một test có
+/// thể chạy filter thật trên transport in-memory thay vì phải cài lại logic của nó — một test tự đóng
+/// dấu header của riêng mình thì vẫn pass ngay cả khi filter đã bị xóa.
 /// </remarks>
 public static class CloudEventsBusConfiguratorExtensions
 {
-    /// <summary>Stamps every outgoing declared event with its CloudEvents attributes.</summary>
-    /// <param name="configurator">The bus being configured.</param>
-    /// <param name="applicationName">Which deployable this process is, in kebab-case.</param>
+    /// <summary>Đóng dấu mọi event gửi đi đã khai báo với các thuộc tính CloudEvents của nó.</summary>
+    /// <param name="configurator">Bus đang được cấu hình.</param>
+    /// <param name="applicationName">Tiến trình này là deployable nào, viết dạng kebab-case.</param>
     public static void UseNvmCloudEvents(this IBusFactoryConfigurator configurator, string applicationName)
     {
         ArgumentNullException.ThrowIfNull(configurator);
@@ -35,10 +35,10 @@ public static class CloudEventsBusConfiguratorExtensions
     {
         var filter = new CloudEventsSendFilter<TEvent>(applicationName);
 
-        // Both pipes. Publish and send are separate in MassTransit; everything here goes out through
-        // Publish, and send is covered so that a direct send to an endpoint is not a hole.
-        // Casts are needed because one class implements both filter interfaces; without them the
-        // compiler picks the non-generic overload and the message type is lost.
+        // Cả hai pipe. Publish và send là hai đường tách biệt trong MassTransit; mọi thứ ở đây đi ra qua
+        // Publish, và send cũng được bao phủ để một lượt send trực tiếp tới endpoint không bị bỏ sót.
+        // Cần cast vì một class triển khai cả hai filter interface; không có cast thì compiler sẽ chọn
+        // overload không generic và mất luôn message type.
         configurator.ConfigurePublish(pipe => pipe.UseFilter((IFilter<PublishContext<TEvent>>)filter));
         configurator.ConfigureSend(pipe => pipe.UseFilter((IFilter<SendContext<TEvent>>)filter));
     }

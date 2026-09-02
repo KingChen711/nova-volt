@@ -2,52 +2,53 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Nvm.Kernel.Commands.Idempotency;
 
-/// <summary>What happened the first time a command with this key was handled.</summary>
-/// <typeparam name="TResult">What the command yielded.</typeparam>
-/// <param name="Result">The result produced then, replayed to every later duplicate.</param>
-/// <param name="FirstHandledAt">When the original was handled.</param>
+/// <summary>Điều gì đã xảy ra lần đầu tiên một command mang khoá này được xử lý.</summary>
+/// <typeparam name="TResult">Kết quả command đã trả về.</typeparam>
+/// <param name="Result">Kết quả tạo ra lúc đó, được replay lại cho mọi bản duplicate đến sau.</param>
+/// <param name="FirstHandledAt">Lúc bản gốc được xử lý.</param>
 public sealed record IdempotentOutcome<TResult>(TResult Result, DateTimeOffset FirstHandledAt);
 
-/// <summary>The answer to "may I handle this command?".</summary>
-/// <typeparam name="TResult">What the command yields.</typeparam>
+/// <summary>Câu trả lời cho "tôi có được phép xử lý command này không?".</summary>
+/// <typeparam name="TResult">Kết quả command trả về.</typeparam>
 /// <remarks>
-/// Two answers and no third. Either the caller now holds the claim and must finish it, or the work is
-/// already done and here is what it produced. A caller that arrives while someone else holds the claim
-/// does not get an answer at all until that someone finishes — see
+/// Hai câu trả lời và không có câu thứ ba. Hoặc caller giờ đang giữ claim và phải hoàn tất nó, hoặc
+/// việc đã xong rồi và đây là kết quả nó tạo ra. Một caller đến trong lúc người khác đang giữ claim sẽ
+/// hoàn toàn chưa nhận được câu trả lời cho tới khi người đó xong việc — xem
 /// <see cref="IIdempotencyStore.ClaimAsync{TResult}"/>.
 /// </remarks>
 public sealed class IdempotencyClaim<TResult>
 {
-    /// <summary>Builds a claim.</summary>
+    /// <summary>Dựng một claim.</summary>
     /// <param name="outcome">
-    /// What the first handling produced, or null to grant the claim to the caller. Prefer the named
-    /// factories on <see cref="IdempotencyClaim"/>, which say which of the two this is.
+    /// Kết quả lần xử lý đầu tiên tạo ra, hoặc null để cấp claim cho caller. Nên dùng các factory có
+    /// tên trên <see cref="IdempotencyClaim"/>, vì chúng nói rõ đây là trường hợp nào trong hai
+    /// trường hợp.
     /// </param>
     public IdempotencyClaim(IdempotentOutcome<TResult>? outcome) => Outcome = outcome;
 
-    /// <summary>What the first handling produced, when there was one.</summary>
+    /// <summary>Kết quả lần xử lý đầu tiên tạo ra, nếu có.</summary>
     public IdempotentOutcome<TResult>? Outcome { get; }
 
-    /// <summary>True when the caller must do the work; false when it must replay <see cref="Outcome"/>.</summary>
+    /// <summary>True khi caller phải tự làm việc; false khi nó phải replay lại <see cref="Outcome"/>.</summary>
     [MemberNotNullWhen(false, nameof(Outcome))]
     public bool IsGranted => Outcome is null;
 }
 
-/// <summary>Names the two answers, so that call sites read as what they mean.</summary>
+/// <summary>Đặt tên cho hai câu trả lời, để call site đọc lên đúng nghĩa chúng mang.</summary>
 /// <remarks>
-/// Non-generic on purpose. The factories cannot live on <see cref="IdempotencyClaim{TResult}"/>
-/// itself — static members on a generic type force every caller to spell the type argument out, which
-/// is what CA1000 is about.
+/// Cố ý không dùng generic. Các factory không thể đặt trên chính <see cref="IdempotencyClaim{TResult}"/>
+/// — static member trên một generic type buộc mọi caller phải viết rõ type argument ra, đó chính là
+/// điều CA1000 nói tới.
 /// </remarks>
 public static class IdempotencyClaim
 {
-    /// <summary>The caller now holds the claim and must call complete or abandon.</summary>
-    /// <typeparam name="TResult">What the command yields.</typeparam>
+    /// <summary>Caller giờ đang giữ claim và phải gọi complete hoặc abandon.</summary>
+    /// <typeparam name="TResult">Kết quả command trả về.</typeparam>
     public static IdempotencyClaim<TResult> Granted<TResult>() => new(null);
 
-    /// <summary>The work was already done; replay this.</summary>
-    /// <typeparam name="TResult">What the command yields.</typeparam>
-    /// <param name="outcome">What the first handling produced.</param>
+    /// <summary>Việc đã được làm xong rồi; replay lại kết quả này.</summary>
+    /// <typeparam name="TResult">Kết quả command trả về.</typeparam>
+    /// <param name="outcome">Kết quả lần xử lý đầu tiên tạo ra.</param>
     public static IdempotencyClaim<TResult> Replay<TResult>(IdempotentOutcome<TResult> outcome)
     {
         ArgumentNullException.ThrowIfNull(outcome);
@@ -56,84 +57,87 @@ public static class IdempotencyClaim
     }
 }
 
-/// <summary>Lets exactly one caller carry out a command, however many ask.</summary>
+/// <summary>Cho phép đúng một caller thực hiện một command, dù có bao nhiêu caller cùng hỏi.</summary>
 /// <remarks>
 /// <para>
-/// <b>A claim protocol, not a lookup.</b> The obvious shape — look the key up, run the handler, write
-/// the key down — is a check-then-act, and check-then-act does not survive concurrency: two identical
-/// commands arriving at the same instant both look up, both miss, and both run. Dedupe that only works
-/// when nothing is happening at once is not dedupe. So the decision and the reservation happen in
-/// <see cref="ClaimAsync{TResult}"/>, in one step, and the outcome is written back afterwards.
+/// <b>Một giao thức claim, không phải một lookup.</b> Hình dạng hiển nhiên nhất — tra khoá, chạy
+/// handler, ghi khoá lại — là một check-then-act, và check-then-act không sống sót được qua
+/// concurrency: hai command giống hệt nhau đến cùng một thời điểm đều tra, đều không thấy, và đều
+/// chạy. Dedupe mà chỉ đúng khi không có gì xảy ra cùng lúc thì không phải là dedupe. Vì vậy quyết
+/// định và việc giữ chỗ (reservation) xảy ra trong <see cref="ClaimAsync{TResult}"/>, trong một bước
+/// duy nhất, và kết quả được ghi lại sau đó.
 /// </para>
 /// <para>
-/// <b>Three states, not two.</b> A key is unseen, <i>in flight</i>, or completed. The middle state is
-/// the one the old shape had no room for, and the one that makes concurrency work.
+/// <b>Ba trạng thái, không phải hai.</b> Một khoá là chưa thấy, <i>đang bay (in flight)</i>, hoặc đã
+/// hoàn tất. Trạng thái ở giữa là trạng thái mà hình dạng cũ không có chỗ chứa, và cũng là trạng thái
+/// khiến concurrency hoạt động đúng.
 /// </para>
 /// <para>
-/// <b>The claim holder must always finish it.</b> Success calls
-/// <see cref="CompleteAsync{TResult}"/>; failure calls <see cref="AbandonAsync"/>. A claim that is
-/// neither completed nor abandoned blocks every duplicate of that command until it times out — which
-/// is why the failure path uses <see cref="CancellationToken.None"/> rather than the token that may
-/// have just been cancelled.
+/// <b>Người giữ claim luôn phải hoàn tất nó.</b> Thành công thì gọi
+/// <see cref="CompleteAsync{TResult}"/>; thất bại thì gọi <see cref="AbandonAsync"/>. Một claim không
+/// được complete cũng không được abandon sẽ chặn mọi bản duplicate của command đó cho tới khi hết
+/// timeout — đó là lý do đường xử lý thất bại dùng <see cref="CancellationToken.None"/> thay vì token
+/// vừa có thể bị cancel.
 /// </para>
 /// <para>
-/// <b>Abandon frees the key rather than remembering the failure.</b> A handler that threw did not
-/// happen, so a retry must be allowed to run. Remembering it would turn a transient database blip into
-/// permanent silent data loss: the resend is mistaken for a duplicate and the work is never done.
+/// <b>Abandon giải phóng khoá thay vì ghi nhớ thất bại.</b> Một handler đã ném exception coi như chưa
+/// từng xảy ra, nên một lần retry phải được phép chạy. Nếu ghi nhớ lại thất bại đó, một trục trặc
+/// thoáng qua của database sẽ biến thành mất dữ liệu vĩnh viễn trong im lặng: lần gửi lại bị nhầm
+/// thành duplicate và việc đó không bao giờ được làm.
 /// </para>
 /// <para>
-/// Generic over the result rather than storing loose objects, so that an implementation which has to
-/// serialize — the SQL Server one, arriving with the event store — can do so knowing the type, instead
-/// of guessing at run time.
+/// Generic theo kết quả thay vì lưu các object rời rạc, để một implementation cần serialize — bản SQL
+/// Server, đến cùng event store — có thể làm việc đó khi biết trước type, thay vì phải đoán lúc chạy.
 /// </para>
 /// <para>
-/// The timestamp is a parameter rather than something the store reads from a clock. Handing it in
-/// keeps the clock in one place, where a test can move it (AGENTS.md K1).
+/// Timestamp là một tham số thay vì thứ store tự đọc từ đồng hồ. Truyền nó vào giữ đồng hồ ở một chỗ
+/// duy nhất, nơi một test có thể chỉnh nó (AGENTS.md K1).
 /// </para>
 /// <para>
-/// <b>What is still missing, and it is not small.</b> The version that matters claims the key and
-/// writes the event it guards <b>in the same transaction</b>. Until then the claim is durable only for
-/// as long as the process is, and a claim recorded outside the transaction can be marked done while
-/// its effect was rolled back. That version needs a database and an effect worth committing, so it
-/// belongs to the milestone that introduces both (docs/adr/ADR-023).
+/// <b>Điều vẫn còn thiếu, và không hề nhỏ.</b> Phiên bản thực sự đáng tin cậy phải claim khoá và ghi
+/// event mà nó bảo vệ <b>trong cùng một transaction</b>. Cho tới lúc đó, claim chỉ bền (durable) trong
+/// suốt vòng đời của process, và một claim được ghi ngoài transaction có thể được đánh dấu xong trong
+/// khi hiệu lực của nó đã bị rollback. Phiên bản đó cần một database và một hiệu lực đáng để commit,
+/// nên nó thuộc về milestone giới thiệu cả hai điều này (docs/adr/ADR-023).
 /// </para>
 /// </remarks>
 public interface IIdempotencyStore
 {
-    /// <summary>Reserves the key for handling, or hands back what the first handling produced.</summary>
-    /// <typeparam name="TResult">What the command yields.</typeparam>
-    /// <param name="key">The command's idempotency key.</param>
-    /// <param name="commandType">Name of the command, kept for diagnosis and for the mismatch guard.</param>
-    /// <param name="cancellationToken">Cancellation for the whole operation.</param>
+    /// <summary>Giữ chỗ khoá này để xử lý, hoặc trả lại kết quả lần xử lý đầu tiên đã tạo ra.</summary>
+    /// <typeparam name="TResult">Kết quả command trả về.</typeparam>
+    /// <param name="key">Idempotency key của command.</param>
+    /// <param name="commandType">Tên command, giữ lại để chẩn đoán và cho việc canh gác (guard) khi lệch loại.</param>
+    /// <param name="cancellationToken">Cancellation cho toàn bộ thao tác.</param>
     /// <returns>
-    /// <see cref="IdempotencyClaim.Granted{TResult}"/> when the caller must do the work, or a replay of
-    /// the earlier outcome. When another caller holds the claim, this waits for that caller to finish:
-    /// if it succeeded the result is replayed, and if it gave up the claim is contested again.
+    /// <see cref="IdempotencyClaim.Granted{TResult}"/> khi caller phải tự làm việc, hoặc một bản replay
+    /// của kết quả trước đó. Khi một caller khác đang giữ claim, lệnh này sẽ chờ caller đó xong việc:
+    /// nếu thành công thì kết quả được replay lại, và nếu caller đó bỏ cuộc thì claim lại được tranh
+    /// chấp lần nữa.
     /// </returns>
     /// <exception cref="InvalidOperationException">
-    /// The key was first claimed by a different command or a different result type. Two commands
-    /// deriving one natural key is a modelling fault upstream, and the only useful thing to do with it
-    /// is say so loudly rather than replay a wrongly-typed result into unrelated code.
+    /// Khoá này trước đó đã được claim bởi một command khác hoặc một result type khác. Hai command
+    /// cùng suy ra một natural key là lỗi modelling ở phía trên, và điều duy nhất đáng làm với nó là
+    /// nói to lên chứ không phải replay một kết quả sai kiểu vào code không liên quan.
     /// </exception>
     Task<IdempotencyClaim<TResult>> ClaimAsync<TResult>(
         IdempotencyKey key,
         string commandType,
         CancellationToken cancellationToken);
 
-    /// <summary>The claim holder succeeded. Records the result and releases anyone waiting.</summary>
-    /// <typeparam name="TResult">What the command yields.</typeparam>
-    /// <param name="key">The command's idempotency key.</param>
-    /// <param name="result">What handling produced.</param>
-    /// <param name="handledAt">When it was handled, taken from the ambient clock.</param>
-    /// <param name="cancellationToken">Cancellation for the whole operation.</param>
+    /// <summary>Người giữ claim đã thành công. Ghi lại kết quả và giải phóng mọi caller đang chờ.</summary>
+    /// <typeparam name="TResult">Kết quả command trả về.</typeparam>
+    /// <param name="key">Idempotency key của command.</param>
+    /// <param name="result">Kết quả việc xử lý tạo ra.</param>
+    /// <param name="handledAt">Lúc nó được xử lý, lấy từ đồng hồ hệ thống.</param>
+    /// <param name="cancellationToken">Cancellation cho toàn bộ thao tác.</param>
     Task CompleteAsync<TResult>(
         IdempotencyKey key,
         TResult result,
         DateTimeOffset handledAt,
         CancellationToken cancellationToken);
 
-    /// <summary>The claim holder failed. Drops the claim so that a retry may take it.</summary>
-    /// <param name="key">The command's idempotency key.</param>
-    /// <param name="cancellationToken">Cancellation for the whole operation.</param>
+    /// <summary>Người giữ claim đã thất bại. Bỏ claim để một lần retry có thể lấy nó.</summary>
+    /// <param name="key">Idempotency key của command.</param>
+    /// <param name="cancellationToken">Cancellation cho toàn bộ thao tác.</param>
     Task AbandonAsync(IdempotencyKey key, CancellationToken cancellationToken);
 }

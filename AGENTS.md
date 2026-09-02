@@ -319,7 +319,7 @@ Ví dụ: `feat(traceability): add optimistic concurrency to event store`
 |---|---|
 | Code, tên biến, tên hàm, tên bảng | Tiếng Anh |
 | Commit message | Tiếng Anh |
-| Comment trong code | Tiếng Anh, và chỉ khi giải thích **vì sao**, không phải **cái gì** |
+| Comment trong code | Tiếng Việt (giữ nguyên thuật ngữ kỹ thuật/nghiệp vụ tiếng Anh), và chỉ khi giải thích **vì sao**, không phải **cái gì** |
 | Tài liệu trong `docs/`, ADR | Tiếng Việt (giữ nguyên thuật ngữ tiếng Anh) |
 | Giải thích cho người dùng | Tiếng Việt |
 

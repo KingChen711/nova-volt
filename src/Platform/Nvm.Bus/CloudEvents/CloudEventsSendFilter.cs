@@ -5,23 +5,23 @@ using Nvm.Contracts.Events;
 
 namespace Nvm.Bus.CloudEvents;
 
-/// <summary>Stamps every outgoing event with its CloudEvents attributes as transport headers.</summary>
-/// <typeparam name="TEvent">The event being sent.</typeparam>
+/// <summary>Đóng dấu mọi event gửi đi với các thuộc tính CloudEvents của nó dưới dạng transport header.</summary>
+/// <typeparam name="TEvent">Event đang được gửi.</typeparam>
 /// <param name="applicationName">
-/// Which deployable is publishing, in kebab-case — the second half of the source URN.
+/// Deployable nào đang publish, viết dạng kebab-case — nửa sau của source URN.
 /// </param>
 /// <remarks>
 /// <para>
-/// Two envelopes meet on this message and both are correct. MassTransit wraps the payload in its own
-/// so that it can route, retry and fault; that envelope belongs to the library and may be replaced.
-/// The CloudEvents attributes are the <b>business</b> envelope — what happened, where, when, who says
-/// so — and that one may not. Keeping them as headers lets both exist without either pretending to be
-/// the other. See <c>ADR-008</c>.
+/// Có hai envelope gặp nhau trên message này và cả hai đều đúng. MassTransit bọc payload trong envelope
+/// riêng của nó để có thể route, retry và fault; envelope đó thuộc về thư viện và có thể bị thay thế. Các
+/// thuộc tính CloudEvents là envelope <b>nghiệp vụ</b> — chuyện gì đã xảy ra, ở đâu, khi nào, ai khẳng
+/// định điều đó — và envelope này thì không được thay thế. Giữ chúng dưới dạng header cho phép cả hai
+/// cùng tồn tại mà không cái nào giả vờ là cái kia. Xem <c>ADR-008</c>.
 /// </para>
 /// <para>
-/// Headers rather than the body because the body is MassTransit's. A reader outside .NET — an
-/// operator with <c>rabbitmqadmin</c>, a bridge to another system, a message sitting in an error
-/// queue that no code could deserialize — can still see what the message claims to be.
+/// Dùng header thay vì body vì body thuộc về MassTransit. Một reader ở ngoài .NET — một operator dùng
+/// <c>rabbitmqadmin</c>, một cầu nối sang hệ thống khác, một message nằm trong error queue mà không code
+/// nào deserialize được — vẫn có thể thấy message này tự nhận là gì.
 /// </para>
 /// </remarks>
 internal sealed class CloudEventsSendFilter<TEvent>(string applicationName)
@@ -62,27 +62,27 @@ internal sealed class CloudEventsSendFilter<TEvent>(string applicationName)
         context.CreateFilterScope("nvm-cloudevents");
     }
 
-    // Publish and send are separate pipes in MassTransit, and a filter on one does not run on the
-    // other. Everything this system emits goes out through Publish, so installing on the send pipe
-    // alone would have stamped nothing at all — and the headers would simply have been absent, with
-    // no error anywhere to say so.
+    // Publish và send là hai pipe tách biệt trong MassTransit, và một filter gắn trên pipe này sẽ không
+    // chạy trên pipe kia. Mọi thứ hệ thống này phát ra đều đi qua Publish, nên nếu chỉ cài trên send pipe
+    // thì sẽ không đóng dấu được gì cả — và các header đơn giản là sẽ vắng mặt, không có lỗi nào báo cho
+    // biết.
     private void Stamp(SendContext<TEvent> context)
     {
         var message = context.Message;
 
         context.Headers.Set(CloudEventHeaders.SpecVersion, CloudEventEnvelope<TEvent>.SpecVersionValue);
 
-        // Straight off the payload, not generated here. This value is what deduplication at ingestion
-        // and deduplication in the command pipeline both key on; a second source for it would be a
-        // second thing to drift.
+        // Lấy thẳng từ payload, không tạo ra ở đây. Giá trị này là thứ mà cả deduplication ở ingestion
+        // lẫn deduplication trong command pipeline đều dùng làm khóa; có thêm một nguồn thứ hai cho nó
+        // nghĩa là có thêm một thứ có thể lệch nhau.
         context.Headers.Set(CloudEventHeaders.Id, message.EventId.ToString());
 
         context.Headers.Set(CloudEventHeaders.Type, TypeName.Value);
         context.Headers.Set(CloudEventHeaders.Source, EventSource.Create(message.SiteId, _applicationName).Value);
 
-        // Round-trip format: unambiguous and lossless. RFC 3339 allows a trimmed fraction too, which
-        // is what System.Text.Json writes in the event store's JSON — the same instant, spelled two
-        // ways. Noted in ADR-008 so nobody reads it as a discrepancy.
+        // Định dạng round-trip: rõ ràng và không mất thông tin. RFC 3339 cũng cho phép phần thập phân bị
+        // cắt bớt, đó là cách System.Text.Json ghi trong JSON của event store — cùng một thời điểm, viết
+        // theo hai cách. Đã ghi chú trong ADR-008 để không ai đọc nhầm đó là một sự sai lệch.
         context.Headers.Set(CloudEventHeaders.Time, message.OccurredAt.ToString("O", CultureInfo.InvariantCulture));
 
         context.Headers.Set(CloudEventHeaders.DataContentType, CloudEventEnvelope<TEvent>.JsonContentType);

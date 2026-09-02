@@ -1,26 +1,26 @@
 namespace Nvm.Kernel.Commands.Audit;
 
-/// <summary>Records that a command was carried out, how long it took, and whether it worked.</summary>
-/// <typeparam name="TCommand">The command being handled.</typeparam>
-/// <typeparam name="TResult">What handling it yields.</typeparam>
-/// <param name="sink">Where entries go.</param>
-/// <param name="clock">The only clock. Never <c>DateTimeOffset.UtcNow</c> (AGENTS.md K1).</param>
+/// <summary>Ghi lại rằng một command đã được thực hiện, mất bao lâu, và có thành công hay không.</summary>
+/// <typeparam name="TCommand">Command đang được xử lý.</typeparam>
+/// <typeparam name="TResult">Kết quả trả về khi xử lý.</typeparam>
+/// <param name="sink">Nơi các entry được ghi tới.</param>
+/// <param name="clock">Đồng hồ duy nhất. Không bao giờ dùng <c>DateTimeOffset.UtcNow</c> (AGENTS.md K1).</param>
 /// <remarks>
 /// <para>
-/// Innermost of the three, so it wraps the handler and nothing else. That placement has a consequence
-/// worth stating rather than discovering: a command rejected by validation, and a duplicate
-/// short-circuited above, <b>do not appear in the trail</b>.
+/// Là behavior trong cùng nhất trong ba behavior, nên nó chỉ bọc quanh handler và không gì khác. Vị trí
+/// này kéo theo một hệ quả cần nói rõ thay vì để tự phát hiện: một command bị validation từ chối, và
+/// một bản duplicate bị chặn sớm ở phía trên, <b>đều không xuất hiện trong audit trail</b>.
 /// </para>
 /// <para>
-/// That is the intended reading of an audit trail here — a record of what the plant actually did to
-/// its product, not a record of every request that arrived. A duplicate changed nothing, so it
-/// changed nothing to record; it is counted as a metric instead. When electronic signatures arrive
-/// and refused attempts become interesting in their own right, they get their own trail rather than
-/// being mixed into this one.
+/// Đó chính là cách audit trail ở đây được hiểu — một hồ sơ về những gì nhà máy thực sự đã làm với sản
+/// phẩm, không phải hồ sơ về mọi request đã đến. Một bản duplicate không làm thay đổi gì, nên nó cũng
+/// không có gì để ghi lại; nó được đếm như một metric thay vì vậy. Khi chữ ký điện tử được đưa vào và
+/// các lần thử bị từ chối trở thành điều đáng quan tâm riêng, chúng sẽ có trail riêng thay vì bị trộn
+/// vào trail này.
 /// </para>
 /// <para>
-/// Failures are recorded and then rethrown. A trail holding only successes cannot answer the question
-/// an investigation actually starts with, which is what was tried and did not work.
+/// Thất bại được ghi lại rồi mới ném lại (rethrow). Một trail chỉ chứa toàn thành công thì không trả
+/// lời được câu hỏi mà một cuộc điều tra thực sự bắt đầu bằng — đó là đã thử gì và không thành công.
 /// </para>
 /// </remarks>
 public sealed class AuditBehavior<TCommand, TResult>(ICommandAuditSink sink, TimeProvider clock)
@@ -41,9 +41,9 @@ public sealed class AuditBehavior<TCommand, TResult>(ICommandAuditSink sink, Tim
 
         var startedAt = _clock.GetUtcNow();
 
-        // Two different clocks on purpose. GetUtcNow answers "when", and is the value an auditor reads.
-        // GetTimestamp answers "how long", and is monotonic — it does not jump when NTP corrects the
-        // machine, so a duration cannot come out negative.
+        // Cố ý dùng hai đồng hồ khác nhau. GetUtcNow trả lời "lúc nào", và là giá trị auditor sẽ đọc.
+        // GetTimestamp trả lời "mất bao lâu", và là monotonic — nó không nhảy khi NTP chỉnh lại đồng hồ
+        // máy, nên duration không thể ra số âm.
         var startedTicks = _clock.GetTimestamp();
 
         try
@@ -57,8 +57,8 @@ public sealed class AuditBehavior<TCommand, TResult>(ICommandAuditSink sink, Tim
         }
         catch (Exception failure)
         {
-            // CancellationToken.None: the operation is being abandoned, and that is exactly when the
-            // trail is worth having. Passing the cancelled token here would abandon the record too.
+            // CancellationToken.None: thao tác đang bị bỏ dở, và đây chính là lúc audit trail đáng có
+            // nhất. Truyền token đã bị cancel vào đây sẽ khiến việc ghi record cũng bị bỏ dở theo.
             await WriteAsync(command, startedAt, startedTicks, failure, CancellationToken.None)
                 .ConfigureAwait(false);
 

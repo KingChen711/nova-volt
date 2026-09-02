@@ -1,28 +1,27 @@
 namespace Nvm.Kernel.Commands;
 
-/// <summary>Thrown when a command is dispatched and no handler is registered for it.</summary>
+/// <summary>Được ném khi một command được dispatch mà không có handler nào đăng ký cho nó.</summary>
 /// <remarks>
-/// Always a wiring mistake, never a runtime condition: either the handler's assembly was not passed
-/// to the kernel registration, or the handler does not implement the interface it looks like it
-/// implements. The message names the command type because that is the only thing the person reading
-/// the log has to go on.
+/// Luôn là lỗi wiring, không bao giờ là một tình huống lúc chạy: hoặc assembly của handler chưa được
+/// truyền vào kernel registration, hoặc handler không thực sự implement interface mà nó trông giống
+/// như đang implement. Message nêu tên command type vì đó là thứ duy nhất người đọc log có để dựa vào.
 /// </remarks>
 public sealed class CommandHandlerNotFoundException : InvalidOperationException
 {
-    /// <summary>Creates the exception for a command type with no handler.</summary>
-    /// <param name="commandType">The command that could not be dispatched.</param>
+    /// <summary>Tạo exception cho một command type không có handler.</summary>
+    /// <param name="commandType">Command không thể dispatch được.</param>
     public CommandHandlerNotFoundException(Type commandType)
         : base(BuildMessage(commandType)) => CommandType = commandType;
 
-    /// <summary>Creates the exception with a custom message.</summary>
+    /// <summary>Tạo exception với một message tuỳ chỉnh.</summary>
     public CommandHandlerNotFoundException(string message)
         : base(message) => CommandType = typeof(void);
 
-    /// <summary>Creates the exception with a custom message and inner exception.</summary>
+    /// <summary>Tạo exception với một message tuỳ chỉnh và inner exception.</summary>
     public CommandHandlerNotFoundException(string message, Exception innerException)
         : base(message, innerException) => CommandType = typeof(void);
 
-    /// <summary>The command type that had no handler.</summary>
+    /// <summary>Command type không có handler.</summary>
     public Type CommandType { get; }
 
     private static string BuildMessage(Type commandType)

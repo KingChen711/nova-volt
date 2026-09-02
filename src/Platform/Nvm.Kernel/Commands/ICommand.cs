@@ -1,44 +1,43 @@
 namespace Nvm.Kernel.Commands;
 
 /// <summary>
-/// A request to change something, addressed to exactly one handler.
+/// Một yêu cầu thay đổi điều gì đó, gửi đến đúng một handler.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The counterpart of a domain event. An event is a fact that already happened and is stated in the
-/// past tense; a command is an intention that may still be refused, and is named in the imperative:
+/// Là đối trọng của một domain event. Một event là một sự việc đã xảy ra, được phát biểu ở thì quá
+/// khứ; một command là một ý định (intention) vẫn có thể bị từ chối, và được đặt tên ở thể mệnh lệnh:
 /// <c>ActivateFactoryModelRevision</c>, <c>QuarantineUnit</c>, <c>ApproveRecipeVersion</c>.
 /// </para>
 /// <para>
-/// This non-generic interface exists so that the pipeline can read
-/// <see cref="IdempotencyKey"/> off a command without knowing what the command returns.
-/// Implementations use <see cref="ICommand{TResult}"/>.
+/// Interface non-generic này tồn tại để pipeline có thể đọc <see cref="IdempotencyKey"/> từ một
+/// command mà không cần biết command đó trả về gì. Các implementation dùng <see cref="ICommand{TResult}"/>.
 /// </para>
 /// </remarks>
 public interface ICommand
 {
     /// <summary>
-    /// Identifies the intention itself, so that receiving it twice does not perform it twice.
+    /// Định danh cho chính ý định đó, để nhận nó hai lần không thực hiện nó hai lần.
     /// </summary>
     /// <remarks>
-    /// Required rather than optional (AGENTS.md K7). An optional key would be omitted exactly where
-    /// it matters most — in the retry path, written by whoever was in a hurry.
+    /// Bắt buộc chứ không phải tuỳ chọn (AGENTS.md K7). Một khoá tuỳ chọn sẽ bị bỏ quên đúng ở chỗ
+    /// quan trọng nhất — trong đường retry, do người đang vội viết ra.
     /// </remarks>
     IdempotencyKey IdempotencyKey { get; }
 }
 
-/// <summary>A command whose handler produces <typeparamref name="TResult"/>.</summary>
-/// <typeparam name="TResult">What handling the command yields, usually the event it caused.</typeparam>
+/// <summary>Một command mà handler của nó tạo ra <typeparamref name="TResult"/>.</summary>
+/// <typeparam name="TResult">Kết quả khi xử lý command, thường là event mà nó gây ra.</typeparam>
 /// <remarks>
 /// <para>
-/// There is deliberately no void-returning variant. In this domain a command that changes anything
-/// produces at least the event that records the change, and the caller needs that event — to publish
-/// it, to return it, or to write it to the store. A handler that has nothing to give back is usually
-/// a handler that forgot to record what it did.
+/// Cố ý không có biến thể trả về void. Trong domain này, một command làm thay đổi bất cứ điều gì đều
+/// tạo ra ít nhất là event ghi lại thay đổi đó, và caller cần event đó — để publish nó, để trả nó về,
+/// hoặc để ghi nó vào store. Một handler không có gì để trả lại thường là một handler đã quên ghi lại
+/// việc nó đã làm.
 /// </para>
 /// <para>
-/// Keeping one shape also keeps one dispatch path. Two would double the generic machinery in
-/// <see cref="ICommandDispatcher"/> for no benefit anybody has asked for yet.
+/// Giữ một hình dạng duy nhất cũng giữ một đường dispatch duy nhất. Có hai hình dạng sẽ nhân đôi phần
+/// generic machinery trong <see cref="ICommandDispatcher"/> mà chưa ai từng cần đến lợi ích đó.
 /// </para>
 /// </remarks>
 public interface ICommand<out TResult> : ICommand;

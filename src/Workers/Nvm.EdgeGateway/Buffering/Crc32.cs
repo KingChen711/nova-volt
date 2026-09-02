@@ -1,6 +1,6 @@
 namespace Nvm.EdgeGateway.Buffering;
 
-/// <summary>CRC-32/ISO-HDLC for detecting torn or changed queue payloads.</summary>
+/// <summary>CRC-32/ISO-HDLC dùng để phát hiện payload trong hàng đợi bị ghi dở (torn) hoặc bị đổi.</summary>
 internal static class Crc32
 {
     private const uint Polynomial = 0xedb88320;

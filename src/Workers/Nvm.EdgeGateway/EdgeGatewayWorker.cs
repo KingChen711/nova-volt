@@ -8,7 +8,7 @@ using Nvm.Sparkplug.Topics;
 
 namespace Nvm.EdgeGateway;
 
-/// <summary>Subscribes to the Sparkplug namespace and hands decoded batches toward ingestion.</summary>
+/// <summary>Subscribe tới Sparkplug namespace và chuyển các batch đã decode về phía ingestion.</summary>
 public sealed partial class EdgeGatewayWorker : BackgroundService
 {
     private readonly EdgeGatewayOptions _options;
@@ -25,7 +25,7 @@ public sealed partial class EdgeGatewayWorker : BackgroundService
     private volatile bool _bufferFull;
     private volatile bool _durableWriteFault;
 
-    /// <summary>Creates the DMZ subscriber without connecting yet.</summary>
+    /// <summary>Tạo DMZ subscriber mà chưa kết nối vội.</summary>
     public EdgeGatewayWorker(
         EdgeGatewayOptions options,
         IMqttClient mqtt,
@@ -59,7 +59,7 @@ public sealed partial class EdgeGatewayWorker : BackgroundService
         _mqtt.ApplicationMessageReceivedAsync += MessageReceivedAsync;
     }
 
-    /// <summary>Builds the persistent MQTT 5 session used by the runtime worker.</summary>
+    /// <summary>Xây dựng session MQTT 5 persistent mà runtime worker sử dụng.</summary>
     internal static MqttClientOptions BuildMqttOptions(EdgeGatewayOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
@@ -67,8 +67,8 @@ public sealed partial class EdgeGatewayWorker : BackgroundService
         return new MqttClientOptionsBuilder()
             .WithTcpServer(options.BrokerHost, options.BrokerPort)
             .WithClientId(options.ClientId)
-            // MQTT 5 needs both Clean Start=false and a non-zero expiry. Without the second field,
-            // EMQX reports is_persistent=false and discards the unacknowledged QoS 1 session.
+            // MQTT 5 cần cả Clean Start=false lẫn một expiry khác zero. Thiếu trường thứ hai, EMQX
+            // báo cáo is_persistent=false và hủy session QoS 1 chưa được acknowledge.
             .WithCleanSession(false)
             .WithSessionExpiryInterval(checked((uint)options.SessionExpiryInterval.TotalSeconds))
             .Build();
@@ -91,8 +91,9 @@ public sealed partial class EdgeGatewayWorker : BackgroundService
 
                 if (_durableWriteFault)
                 {
-                    // Capacity can recover as the flusher advances the cursor. An arbitrary I/O
-                    // failure cannot be proven transient, so only an operator restart may retry it.
+                    // Sức chứa có thể phục hồi khi flusher đẩy cursor tiến lên. Một lỗi I/O bất kỳ
+                    // không thể chứng minh là tạm thời, nên chỉ một lần operator restart mới được
+                    // phép retry nó.
                     await Task.Delay(_options.Buffer.FlushRetryDelay, _clock, stoppingToken);
                     continue;
                 }
@@ -115,9 +116,9 @@ public sealed partial class EdgeGatewayWorker : BackgroundService
                 {
                     await ConnectAndSubscribeAsync(stoppingToken);
                 }
-                // Guarded on the stopping token, not on the exception type: an MQTT connect that
-                // times out surfaces as TaskCanceledException, which derives from
-                // OperationCanceledException. See StoreAndForwardFlusher for what that cost.
+                // Được gác bởi stopping token, không phải bởi loại exception: một MQTT connect bị
+                // timeout sẽ hiện ra dưới dạng TaskCanceledException, thứ kế thừa từ
+                // OperationCanceledException. Xem StoreAndForwardFlusher để biết cái giá của điều đó.
                 catch (Exception exception) when (!stoppingToken.IsCancellationRequested)
                 {
                     BrokerUnavailable(_logger, exception, _options.ReconnectDelay);
@@ -132,8 +133,8 @@ public sealed partial class EdgeGatewayWorker : BackgroundService
     {
         if (!_mqtt.IsConnected)
         {
-            // A lost connection invalidates our local subscription flag even though EMQX retains
-            // the persistent session and its unacknowledged QoS 1 deliveries.
+            // Một kết nối bị mất làm cờ subscription cục bộ của ta không còn hợp lệ, dù EMQX vẫn
+            // giữ lại persistent session cùng các delivery QoS 1 chưa được acknowledge của nó.
             _subscribed = false;
             await _mqtt.ConnectAsync(_mqttOptions, cancellationToken);
         }
@@ -151,8 +152,9 @@ public sealed partial class EdgeGatewayWorker : BackgroundService
 
     private async Task MessageReceivedAsync(MqttApplicationMessageReceivedEventArgs arguments)
     {
-        // QoS 1 is not durable until our disk is. MQTTnet's default auto-ack would let EMQX forget
-        // the message before fsync completed, leaving a power-loss window no test could reconcile.
+        // QoS 1 chưa durable cho tới khi ổ đĩa của ta durable. Auto-ack mặc định của MQTTnet sẽ để
+        // EMQX quên message trước khi fsync hoàn tất, để lại một khoảng hở mất điện mà không test
+        // nào có thể đối soát được.
         arguments.AutoAcknowledge = false;
 
         DecodedSparkplugMessage? decoded;
@@ -174,8 +176,9 @@ public sealed partial class EdgeGatewayWorker : BackgroundService
                 MessageRejected(_logger, exception, rejected, arguments.ApplicationMessage.Topic);
             }
 
-            // A malformed/unknown-site publish is poison, not a transient outage. Leaving it
-            // unacknowledged would pin the persistent session on the same unreadable bytes forever.
+            // Một publish sai định dạng/site không xác định là poison, không phải một outage tạm
+            // thời. Để nó không được acknowledge sẽ ghim persistent session vào đúng những byte
+            // không đọc được đó mãi mãi.
             await arguments.AcknowledgeAsync(_stoppingToken);
             return;
         }
@@ -203,9 +206,10 @@ public sealed partial class EdgeGatewayWorker : BackgroundService
         {
             var persisted = await _bufferWriter.QueueAsync([decoded], _stoppingToken);
 
-            // Do not await fsync in the MQTT callback. MQTTnet dispatches callbacks serially; doing
-            // so would force one physical disk flush per publish. The bounded channel admits enough
-            // outstanding QoS 1 deliveries to share one fsync, while each ACK still waits for it.
+            // Không await fsync bên trong MQTT callback. MQTTnet dispatch các callback tuần tự;
+            // làm vậy sẽ buộc mỗi publish phải có một lần flush đĩa vật lý riêng. Bounded channel
+            // cho phép đủ số delivery QoS 1 đang chờ để chia sẻ chung một fsync, trong khi mỗi ACK
+            // vẫn chờ nó hoàn tất.
             _ = CompleteDurableAcceptanceAsync(persisted, arguments);
         }
         catch (OperationCanceledException) when (_stoppingToken.IsCancellationRequested)
@@ -243,8 +247,8 @@ public sealed partial class EdgeGatewayWorker : BackgroundService
         }
         catch (Exception exception)
         {
-            // A disk I/O failure is not a poison MQTT message. Do not ACK it and stop accepting
-            // further traffic; a restart/recovery is safer than silently making a hole.
+            // Một lỗi I/O đĩa không phải là một MQTT message poison. Không ACK nó và dừng nhận thêm
+            // traffic; một lần restart/recovery an toàn hơn là âm thầm tạo ra một lỗ hổng.
             arguments.ProcessingFailed = true;
             _durableWriteFault = true;
             DurableWriteFailed(_logger, exception, _buffer.Snapshot.Depth, _buffer.Snapshot.Bytes);

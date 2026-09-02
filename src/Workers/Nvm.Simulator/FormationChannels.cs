@@ -4,22 +4,22 @@ using Nvm.Kernel.Identity;
 
 namespace Nvm.Simulator;
 
-/// <summary>Reads the channel list off the plant instead of inventing one.</summary>
+/// <summary>Đọc danh sách channel từ nhà máy thay vì tự bịa ra.</summary>
 /// <remarks>
-/// The simulator is not free to make up equipment. A topic naming a device the plant does not have is
-/// refused by ingestion (K3), and a run whose every message is refused measures nothing — the failure
-/// would look like a broken pipeline rather than a made-up channel list.
+/// Simulator không được tự do bịa ra thiết bị. Một topic đặt tên một device mà nhà máy không có sẽ bị
+/// ingestion (K3) từ chối, và một run mà mọi message của nó đều bị từ chối thì chẳng đo được gì —
+/// thất bại đó sẽ trông như một pipeline bị hỏng chứ không phải một danh sách channel bịa đặt.
 /// </remarks>
 public static class FormationChannels
 {
-    /// <summary>Every channel under a line, in path order.</summary>
-    /// <param name="model">The revision the plant is running.</param>
-    /// <param name="linePath">The line to look under.</param>
-    /// <exception cref="InvalidOperationException">The revision has no channels there.</exception>
+    /// <summary>Mọi channel bên dưới một line, theo thứ tự path.</summary>
+    /// <param name="model">Revision mà nhà máy đang chạy.</param>
+    /// <param name="linePath">Line cần tìm bên dưới.</param>
+    /// <exception cref="InvalidOperationException">Revision này không có channel nào ở đó.</exception>
     /// <remarks>
-    /// Equipment level only. A work cell with nothing under it — <c>FORM-02</c> in the seed, a cycler
-    /// whose channels have not been modelled — is a machine, not a charging channel, and simulating it
-    /// as one would put formation readings on a device that has none.
+    /// Chỉ ở cấp equipment. Một work cell không có gì bên dưới nó — <c>FORM-02</c> trong seed, một
+    /// cycler chưa được mô hình hóa channel — là một machine, không phải một charging channel, và mô
+    /// phỏng nó như một channel sẽ đặt formation reading lên một device không hề tồn tại.
     /// </remarks>
     public static ImmutableArray<EquipmentPath> Under(FactoryModelSnapshot model, EquipmentPath linePath)
     {

@@ -3,113 +3,114 @@ using Npgsql;
 
 namespace Nvm.Ingestion;
 
-/// <summary>Runtime limits and the one database endpoint the ingestion bridge may use.</summary>
+/// <summary>Giới hạn runtime và endpoint database duy nhất mà ingestion bridge được phép dùng.</summary>
 public sealed class IngestionOptions
 {
-    /// <summary>Configuration section consumed by this service.</summary>
+    /// <summary>Configuration section mà service này đọc.</summary>
     public const string SectionName = "NVM_INGEST";
 
     private const int DefaultPostgresPort = 5432;
 
-    /// <summary>PostgreSQL connection string. Supplied through the environment in containers.</summary>
+    /// <summary>Connection string PostgreSQL. Cấp qua environment trong container.</summary>
     public string ConnectionString { get; set; } = string.Empty;
 
-    /// <summary>Address inside the container. No host port is published.</summary>
+    /// <summary>Địa chỉ bên trong container. Không publish host port nào.</summary>
     public string ListenUrl { get; set; } = "http://0.0.0.0:8080";
 
-    /// <summary>Hard limit before protobuf decode allocates object graphs.</summary>
+    /// <summary>Giới hạn cứng trước khi protobuf decode cấp phát object graph.</summary>
     public int MaxRequestBytes { get; set; } = 16 * 1024 * 1024;
 
-    /// <summary>Maximum readings accepted in one transaction.</summary>
+    /// <summary>Số reading tối đa chấp nhận trong một transaction.</summary>
     public int MaxReadingsPerBatch { get; set; } = 50_000;
 
-    /// <summary>Batches allowed to hold a database transaction at the same time.</summary>
+    /// <summary>Số batch được phép giữ một database transaction cùng lúc.</summary>
     /// <remarks>
-    /// Admission control, not a throughput setting. Without a ceiling, a gateway draining hours of
-    /// backlog opens transactions faster than PostgreSQL retires them, and the failure arrives as
-    /// connection-pool timeouts spread across every caller rather than as one honest "slow down".
+    /// Admission control, không phải một thiết lập throughput. Không có trần, một gateway đang xả
+    /// hàng giờ backlog sẽ mở transaction nhanh hơn PostgreSQL đóng chúng lại, và thất bại sẽ đến
+    /// dưới dạng connection-pool timeout rải khắp mọi caller thay vì một tiếng "hãy chậm lại" trung
+    /// thực.
     /// </remarks>
     public int MaxConcurrentBatches { get; set; } = 8;
 
-    /// <summary>Batches allowed to wait for a slot before ingestion starts refusing.</summary>
+    /// <summary>Số batch được phép chờ một slot trước khi ingestion bắt đầu từ chối.</summary>
     public int MaxQueuedBatches { get; set; } = 16;
 
-    /// <summary>Database writers one accepted batch may spread its rows across.</summary>
+    /// <summary>Số database writer mà một batch được chấp nhận có thể trải các dòng của nó ra.</summary>
     /// <remarks>
     /// <para>
-    /// PostgreSQL serves one connection with one backend process, so a batch written through a
-    /// single transaction can use exactly one core however many the host has. Measured at R5: with
-    /// one edge node and a strictly sequential flusher, the whole pipeline was serial, the timescale
-    /// container sat at ~93% of one core, and end-to-end throughput stopped at 4.141 msg/s while the
-    /// gateway was already accepting 5.105 msg/s. Memory tuning did not move it because the limit
-    /// was CPU, not cache misses.
+    /// PostgreSQL phục vụ một connection bằng một backend process, nên một batch được ghi qua một
+    /// transaction đơn chỉ dùng được đúng một core dù host có bao nhiêu core đi nữa. Đo được ở R5:
+    /// với một edge node và một flusher tuần tự nghiêm ngặt, toàn bộ pipeline chạy serial, container
+    /// timescale ngồi ở mức ~93% của một core, và throughput đầu-cuối dừng lại ở 4.141 msg/s trong
+    /// khi gateway đã chấp nhận 5.105 msg/s. Tuning memory không thay đổi được gì vì giới hạn nằm ở
+    /// CPU, không phải cache miss.
     /// </para>
     /// <para>
-    /// A production plant reaches the same parallelism for free by having many edge nodes posting at
-    /// once. D2 measures one, so the fan-out has to be explicit here instead.
+    /// Một nhà máy production đạt được cùng mức parallelism đó miễn phí, nhờ có nhiều edge node cùng
+    /// post một lúc. D2 chỉ đo một edge node, nên việc fan-out phải được khai báo rõ ràng ở đây.
     /// </para>
     /// <para>
-    /// Each writer commits its own transaction, so a failure can leave part of a batch committed.
-    /// That is safe precisely because dedup is the contract: the gateway retries the whole batch and
-    /// the committed rows come back as duplicates rather than as second copies. One is never
-    /// dropped and never stored twice, which is what D1 asserts.
+    /// Mỗi writer commit transaction riêng của nó, nên một thất bại có thể để lại một phần batch đã
+    /// commit. Điều đó an toàn chính xác vì dedup là hợp đồng: gateway retry cả batch và các dòng đã
+    /// commit quay lại dưới dạng duplicate thay vì bản sao thứ hai. Không cái nào từng bị mất và
+    /// không cái nào từng bị lưu hai lần, đó chính là điều D1 khẳng định.
     /// </para>
     /// </remarks>
     public int WriterParallelism { get; set; } = 4;
 
-    /// <summary>Rows a batch must exceed before it is worth splitting across writers.</summary>
+    /// <summary>Số dòng một batch phải vượt qua trước khi đáng để chia ra nhiều writer.</summary>
     public int MinRowsPerWriter { get; set; } = 256;
 
-    /// <summary>Delay handed back in <c>Retry-After</c> when a batch is refused.</summary>
+    /// <summary>Delay trả về trong <c>Retry-After</c> khi một batch bị từ chối.</summary>
     public TimeSpan RetryAfter { get; set; } = TimeSpan.FromSeconds(2);
 
-    /// <summary>How far a device clock may disagree with the gateway's before a reading is flagged.</summary>
+    /// <summary>Device clock được phép lệch với clock của gateway bao xa trước khi một reading bị flag.</summary>
     public TimeSpan ClockDriftThreshold { get; set; } = ClockQualityClassifier.DefaultThreshold;
 
-    /// <summary>Directory holding the immutable factory-model documents.</summary>
+    /// <summary>Thư mục chứa các tài liệu factory-model bất biến.</summary>
     public string SeedDirectory { get; set; } = "seed";
 
-    /// <summary>Revision this service reads; null selects the newest published document.</summary>
+    /// <summary>Revision mà service này đọc; null chọn tài liệu đã publish mới nhất.</summary>
     public int? Revision { get; set; }
 
-    /// <summary>The CSV file-drop adapter (C15). Off unless a plant has an old machine.</summary>
+    /// <summary>Adapter file-drop CSV (C15). Tắt trừ khi nhà máy có một máy cũ.</summary>
     public FileDrop.FileDropOptions FileDrop { get; set; } = new();
 
-    /// <summary>Where the original bytes of a dropped export are kept (C12). Off by default.</summary>
+    /// <summary>Nơi giữ các byte gốc của một export được drop (C12). Tắt theo mặc định.</summary>
     public RawCurves.RawCurveArchiveOptions RawCurveArchive { get; set; } = new();
 
-    /// <summary>Signal codes that name an evaluated result rather than an observation.</summary>
+    /// <summary>Signal code chỉ ra một kết quả đã đánh giá thay vì một observation.</summary>
     /// <remarks>
-    /// Empty means telemetry only, which is the safe default: the reading is stored either way. List
-    /// the code the plant uses for the <b>result</b> — <c>Formation/CapacityResult</c>, not
-    /// <c>Formation/Capacity</c> — because this list is the only thing that says a signal carries a
-    /// decision. See <see cref="Publishing.PublishedSignals"/> for the boundary from scope.md §5.5.
+    /// Rỗng nghĩa là chỉ có telemetry, đó là mặc định an toàn: reading vẫn được lưu dù thế nào. Liệt
+    /// kê code mà nhà máy dùng cho <b>kết quả</b> — <c>Formation/CapacityResult</c>, không phải
+    /// <c>Formation/Capacity</c> — vì danh sách này là thứ duy nhất nói rằng một signal mang theo
+    /// một quyết định. Xem <see cref="Publishing.PublishedSignals"/> để biết ranh giới từ scope.md §5.5.
     /// </remarks>
     public IList<string> PublishedSignals { get; } = [];
 
-    /// <summary>RabbitMQ host. Reached from this service's <c>it-net</c> leg only.</summary>
+    /// <summary>Host RabbitMQ. Chỉ được tiếp cận từ chân <c>it-net</c> của service này.</summary>
     public string BusHost { get; set; } = "rabbitmq";
 
-    /// <summary>AMQP port.</summary>
+    /// <summary>Port AMQP.</summary>
     public ushort BusPort { get; set; } = 5672;
 
-    /// <summary>Broker user. Never <c>guest</c>.</summary>
+    /// <summary>User của broker. Không bao giờ là <c>guest</c>.</summary>
     public string BusUsername { get; set; } = string.Empty;
 
-    /// <summary>Broker password.</summary>
+    /// <summary>Password của broker.</summary>
     public string BusPassword { get; set; } = string.Empty;
 
-    /// <summary>Whether this process should connect to the bus at all.</summary>
+    /// <summary>Process này có nên kết nối tới bus hay không.</summary>
     /// <remarks>
-    /// False when no result signal is whitelisted or credentials are absent. A migration job has
-    /// neither, and a bus it never uses is a dependency that can only fail.
+    /// False khi không có result signal nào được whitelist hoặc thiếu credentials. Một migration job
+    /// không có cả hai, và một bus mà nó không bao giờ dùng tới là một dependency chỉ có thể gây fail.
     /// </remarks>
     public bool PublishesToBus =>
         PublishedSignals.Count > 0
         && !string.IsNullOrWhiteSpace(BusUsername)
         && !string.IsNullOrWhiteSpace(BusPassword);
 
-    /// <summary>Builds options, using the repo's separate PostgreSQL variables for local development.</summary>
+    /// <summary>Xây options, dùng các biến PostgreSQL riêng của repo cho local development.</summary>
     public static IngestionOptions FromConfiguration(IConfiguration configuration)
     {
         ArgumentNullException.ThrowIfNull(configuration);
@@ -126,7 +127,7 @@ public sealed class IngestionOptions
         return options;
     }
 
-    /// <summary>Fails before binding a socket when the service could only fail every request.</summary>
+    /// <summary>Fail trước khi bind một socket, cho trường hợp service chỉ có thể fail ở mọi request.</summary>
     public void Validate()
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(ConnectionString);

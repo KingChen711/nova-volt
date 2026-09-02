@@ -57,8 +57,8 @@ builder.Services.AddSingleton<GatewayBufferMetrics>();
 builder.Services.AddSingleton<GatewayFlushMetrics>();
 builder.Services.AddHostedService<GatewayDiagnosticsWriter>();
 builder.Services.AddSingleton<FlushRateLimiter>();
-// Seeded per process, not per message: what must differ is one gateway's schedule from the next
-// gateway's, and Random.Shared already differs across processes.
+// Seed theo từng tiến trình, không phải theo từng message: cái cần khác nhau là lịch trình của
+// gateway này so với gateway kế tiếp, và Random.Shared vốn đã khác nhau giữa các tiến trình rồi.
 builder.Services.AddSingleton(services => new FlushBackoff(
     services.GetRequiredService<PersistentBufferOptions>(),
     Random.Shared));

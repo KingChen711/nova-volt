@@ -8,10 +8,10 @@ using Nvm.Kernel.Identity;
 
 namespace Nvm.Ingestion.RawCurves;
 
-/// <summary>Writes exact raw-curve bytes first, then appends their site-scoped database index.</summary>
+/// <summary>Ghi đúng các byte raw-curve trước, rồi mới thêm chỉ mục database theo phạm vi site của chúng.</summary>
 public sealed class RawCurveArchiveStore : IRawCurveArchive
 {
-    /// <summary>The dedicated WORM bucket provisioned by <c>minio-init</c>.</summary>
+    /// <summary>Bucket WORM chuyên dụng do <c>minio-init</c> cấp phát.</summary>
     public const string DefaultBucketName = "raw-curve";
 
     private const int RequiredRetentionYears = 15;
@@ -67,12 +67,12 @@ public sealed class RawCurveArchiveStore : IRawCurveArchive
             @actor,
             @reason,
             @supersedes_archive_id)
-        -- Named target, not a bare DO NOTHING. The only conflict this insert is allowed to shrug off
-        -- is another writer having already indexed the SAME evidence, which is what archive_id means:
-        -- it is a v5 of exactly the tuple uq_raw_curve_archive_identity covers. Any other conflict is
-        -- a real disagreement — two rows claiming to correct one record, most of all — and a bare
-        -- DO NOTHING would turn that into a silent no-op followed by a confusing "the winner cannot
-        -- be read".
+        -- Named target, không phải DO NOTHING trơ trụi. Conflict duy nhất mà insert này được phép bỏ
+        -- qua là khi một writer khác đã index cùng một bằng chứng, đó chính xác là ý nghĩa của
+        -- archive_id: nó là v5 của đúng bộ tuple mà uq_raw_curve_archive_identity bao phủ. Bất kỳ
+        -- conflict nào khác là một bất đồng thật sự — nhất là hai dòng cùng tuyên bố sửa một bản ghi —
+        -- và một DO NOTHING trơ trụi sẽ biến nó thành một no-op âm thầm rồi kéo theo một "the winner
+        -- cannot be read" khó hiểu.
         ON CONFLICT (archive_id) DO NOTHING
         RETURNING archive_id;
         """;
@@ -86,7 +86,7 @@ public sealed class RawCurveArchiveStore : IRawCurveArchive
     private readonly TimeProvider _clock;
     private readonly string _bucketName;
 
-    /// <summary>Creates a store over one migrated database and one S3-compatible service.</summary>
+    /// <summary>Tạo một store trên một database đã migrate và một service tương thích S3.</summary>
     public RawCurveArchiveStore(
         NpgsqlDataSource dataSource,
         IAmazonS3 s3,
@@ -167,7 +167,7 @@ public sealed class RawCurveArchiveStore : IRawCurveArchive
         return Result(candidate, objectCreated, metadataCreated: true);
     }
 
-    /// <summary>Downloads the exact version recorded for one site and verifies its original digest.</summary>
+    /// <summary>Tải về đúng phiên bản đã ghi cho một site và xác minh digest gốc của nó.</summary>
     public async Task<bool> VerifyAsync(
         string siteId,
         Guid archiveId,
@@ -264,8 +264,8 @@ public sealed class RawCurveArchiveStore : IRawCurveArchive
         }
         catch (AmazonS3Exception exception) when (exception.StatusCode == HttpStatusCode.PreconditionFailed)
         {
-            // Another writer won If-None-Match. Read the winner; retrying PUT would create the exact
-            // second version that conditional creation exists to prevent.
+            // Một writer khác đã thắng If-None-Match. Đọc lấy người thắng; thử lại PUT sẽ tạo ra đúng
+            // cái phiên bản thứ hai mà conditional creation tồn tại để ngăn chặn.
             var metadata = await _s3.GetObjectMetadataAsync(
                 new GetObjectMetadataRequest
                 {

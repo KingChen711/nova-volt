@@ -2,20 +2,20 @@ using System.Text.Json;
 
 namespace Nvm.Simulator.Reporting;
 
-/// <summary>Puts a <see cref="RunReport"/> on disk, and reads one back.</summary>
+/// <summary>Đặt một <see cref="RunReport"/> xuống đĩa, và đọc lại nó.</summary>
 public static class RunReportFile
 {
     private const string TemporarySuffix = ".tmp";
 
-    /// <summary>Writes the report, replacing whatever was there.</summary>
-    /// <param name="path">Where the file goes.</param>
-    /// <param name="report">What to write.</param>
+    /// <summary>Ghi report, thay thế bất cứ thứ gì đang có ở đó.</summary>
+    /// <param name="path">File đi tới đâu.</param>
+    /// <param name="report">Cái gì cần ghi.</param>
     /// <remarks>
-    /// Written beside the target and then moved onto it. The reconciliation reads this file <b>while
-    /// the run is still going</b>, and half a JSON document does not parse as half a report — it
-    /// parses as nothing, which reads as a simulator that produced no measurements. A rename is
-    /// atomic on both filesystems this runs on, so a reader sees the old report or the new one and
-    /// never a partial one.
+    /// Được ghi cạnh đích rồi mới di chuyển đè lên đích. Reconciliation đọc file này <b>trong khi run
+    /// vẫn đang chạy</b>, và một nửa JSON document không parse thành một nửa report — nó parse thành
+    /// không có gì cả, và điều đó đọc như thể simulator không tạo ra measurement nào. Việc đổi tên
+    /// (rename) là atomic trên cả hai filesystem mà thứ này chạy trên, nên một reader chỉ thấy report
+    /// cũ hoặc report mới chứ không bao giờ thấy một report dở dang.
     /// </remarks>
     public static void Write(string path, RunReport report)
     {
@@ -35,9 +35,9 @@ public static class RunReportFile
         File.Move(temporary, path, overwrite: true);
     }
 
-    /// <summary>Reads a report back.</summary>
-    /// <param name="path">The file to read.</param>
-    /// <exception cref="InvalidOperationException">The file is not a report.</exception>
+    /// <summary>Đọc lại một report.</summary>
+    /// <param name="path">File cần đọc.</param>
+    /// <exception cref="InvalidOperationException">File này không phải một report.</exception>
     public static RunReport Read(string path)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);

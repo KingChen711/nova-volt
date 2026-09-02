@@ -1,30 +1,30 @@
 namespace Nvm.Ingestion.RawCurves;
 
-/// <summary>Where the original bytes of a machine export are kept.</summary>
+/// <summary>Nơi giữ các byte gốc của một export từ máy.</summary>
 /// <remarks>
-/// Off by default because the archive belongs to file-drop ingestion. Program startup fails when
-/// file drop is enabled without it; MQTT-only ingestion can run without an object store because it
-/// never consumes a machine-export file whose original bytes must be retained.
+/// Tắt theo mặc định vì archive thuộc về file-drop ingestion. Program khởi động sẽ thất bại khi file
+/// drop được bật mà không có nó; ingestion chỉ dùng MQTT vẫn chạy được mà không cần object store vì
+/// nó không bao giờ tiêu thụ một file export từ máy mà byte gốc của nó phải được giữ lại.
 /// </remarks>
 public sealed class RawCurveArchiveOptions
 {
-    /// <summary>Whether originals are archived at all.</summary>
+    /// <summary>Có archive bản gốc hay không.</summary>
     public bool Enabled { get; set; }
 
-    /// <summary>S3 endpoint. MinIO inside the compose network, an S3 region endpoint elsewhere.</summary>
+    /// <summary>Endpoint S3. MinIO bên trong compose network, một S3 region endpoint ở nơi khác.</summary>
     public string ServiceUrl { get; set; } = "http://minio:9000";
 
-    /// <summary>Access key. Supplied through the environment, never checked in (K13).</summary>
+    /// <summary>Access key. Cấp qua environment, không bao giờ check-in (K13).</summary>
     public string AccessKey { get; set; } = string.Empty;
 
-    /// <summary>Secret key. Supplied through the environment, never checked in (K13).</summary>
+    /// <summary>Secret key. Cấp qua environment, không bao giờ check-in (K13).</summary>
     public string SecretKey { get; set; } = string.Empty;
 
-    /// <summary>The object-locked bucket. Must already carry COMPLIANCE retention.</summary>
+    /// <summary>Bucket bị object-locked. Phải đã mang retention COMPLIANCE.</summary>
     public string BucketName { get; set; } = RawCurveArchiveStore.DefaultBucketName;
 
-    /// <summary>Refuses a configuration that would fail on the first file rather than at startup.</summary>
-    /// <exception cref="InvalidOperationException">Enabled without an endpoint or credentials.</exception>
+    /// <summary>Từ chối một cấu hình sẽ fail ở file đầu tiên thay vì fail ngay lúc khởi động.</summary>
+    /// <exception cref="InvalidOperationException">Được bật mà thiếu endpoint hoặc credentials.</exception>
     public void Validate()
     {
         if (!Enabled)

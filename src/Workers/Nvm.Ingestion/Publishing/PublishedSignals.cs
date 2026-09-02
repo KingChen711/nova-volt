@@ -2,59 +2,61 @@ using System.Collections.Frozen;
 
 namespace Nvm.Ingestion.Publishing;
 
-/// <summary>Lists signal codes eligible to become business facts rather than observations.</summary>
+/// <summary>Liệt kê các signal code đủ điều kiện trở thành business fact thay vì chỉ là observation.</summary>
 /// <remarks>
 /// <para>
-/// scope.md §5.5 draws the line and this type is where it is drawn in code: <i>"if it changes the
-/// business state of a production unit it is a domain event; if it is continuous observation it is
-/// telemetry"</i>. A formation channel reporting voltage every few seconds is the second kind. The
-/// capacity a cycle finished at is the first — it may later grade the cell.
+/// scope.md §5.5 vạch ra ranh giới và type này là nơi ranh giới đó được thể hiện trong code:
+/// <i>"nếu nó thay đổi business state của một production unit thì đó là domain event; nếu nó là
+/// continuous observation thì đó là telemetry"</i>. Một formation channel báo cáo voltage mỗi vài
+/// giây là loại thứ hai. Capacity mà một cycle kết thúc ở đó là loại thứ nhất — nó có thể sau này
+/// dùng để chấm điểm cell.
 /// </para>
 /// <para>
-/// <b>Finality is carried by the signal code and by nothing else.</b> A cycler reporting
-/// <c>Formation/Capacity</c> every few seconds and a test station reporting the capacity a cell
-/// finished at are two different signals, so the plant gives them two different names and only the
-/// second is ever listed here. Deciding it some other way — "it has a unit id, so somebody must have
-/// evaluated it" — holds only while raw readings have no unit: the moment M7 maps a channel to the
-/// cell sitting in it, every point on the curve acquires one and the whole curve walks onto the bus.
+/// <b>Tính chung cuộc được mang bởi signal code và không gì khác.</b> Một cycler báo cáo
+/// <c>Formation/Capacity</c> mỗi vài giây và một test station báo cáo capacity mà một cell kết thúc
+/// ở đó là hai signal khác nhau, nên nhà máy đặt cho chúng hai cái tên khác nhau và chỉ cái thứ hai
+/// từng được liệt vào đây. Quyết định theo cách khác — "nó có unit id, chắc là ai đó đã đánh giá
+/// rồi" — chỉ đúng khi raw reading chưa có unit: khoảnh khắc M7 ánh xạ một channel vào cell đang nằm
+/// trong đó, mọi điểm trên curve đều có được một unit id và cả curve bước thẳng lên bus.
 /// </para>
 /// <para>
-/// A row still has to name the unit it is about before it can be announced, but that is a
-/// completeness check on an event that is already a business fact, not the test for whether it is
-/// one.
+/// Một dòng vẫn phải nêu tên unit mà nó nói về trước khi có thể được announce, nhưng đó là một
+/// completeness check trên một event đã là business fact rồi, không phải phép thử để xác định nó có
+/// phải business fact hay không.
 /// </para>
 /// <para>
-/// Publishing everything would put thousands of events a second on a bus that exists to carry
-/// decisions, and would do it silently: nothing fails, the broker simply fills, and the event store
-/// becomes the time-series database it was deliberately kept separate from. Publishing nothing is
-/// the safe default because the telemetry is already stored either way — the reading is never lost,
-/// only unannounced.
+/// Publish mọi thứ sẽ đặt hàng nghìn event mỗi giây lên một bus vốn tồn tại để mang các quyết định,
+/// và sẽ làm điều đó một cách âm thầm: không gì fail cả, broker chỉ đơn giản là đầy dần, và event
+/// store trở thành chính cái time-series database mà nó đã cố tình được tách riêng ra. Không publish
+/// gì là lựa chọn an toàn mặc định vì telemetry dù sao cũng đã được lưu — reading không bao giờ mất,
+/// chỉ là không được announce mà thôi.
 /// </para>
 /// </remarks>
 public sealed class PublishedSignals
 {
     private readonly FrozenSet<string> _signalCodes;
 
-    /// <summary>Creates the filter from configured signal codes.</summary>
-    /// <param name="signalCodes">Signal codes to publish, exactly as the plant spells them.</param>
+    /// <summary>Tạo filter từ các signal code đã cấu hình.</summary>
+    /// <param name="signalCodes">Các signal code cần publish, đúng như nhà máy đánh vần chúng.</param>
     public PublishedSignals(IEnumerable<string>? signalCodes)
     {
         _signalCodes = (signalCodes ?? [])
             .Where(code => !string.IsNullOrWhiteSpace(code))
             .Select(code => code.Trim())
-            // Ordinal, like every other comparison of a plant identifier in this system. The signal
-            // code goes into the natural key unnormalised (C04), so a case-insensitive match here
-            // would publish an event whose SignalCode never equals the one that was configured.
+            // Ordinal, như mọi phép so sánh khác của một plant identifier trong hệ thống này. Signal
+            // code đi vào natural key mà không được chuẩn hóa (C04), nên một phép so khớp
+            // case-insensitive ở đây sẽ publish một event có SignalCode không bao giờ bằng cái đã
+            // được cấu hình.
             .ToFrozenSet(StringComparer.Ordinal);
     }
 
-    /// <summary>Nothing is published. The default, and what a plant that has not decided should run.</summary>
+    /// <summary>Không publish gì cả. Mặc định, và cũng là thứ một nhà máy chưa quyết định nên chạy.</summary>
     public static PublishedSignals None { get; } = new([]);
 
-    /// <summary>How many signal codes are on the list.</summary>
+    /// <summary>Có bao nhiêu signal code đang trong danh sách.</summary>
     public int Count => _signalCodes.Count;
 
-    /// <summary>Whether a reading of this signal is announced on the bus.</summary>
-    /// <param name="signalCode">The metric name as the device declared it.</param>
+    /// <summary>Một reading của signal này có được announce lên bus hay không.</summary>
+    /// <param name="signalCode">Tên metric đúng như device đã khai báo.</param>
     public bool Includes(string signalCode) => _signalCodes.Contains(signalCode);
 }

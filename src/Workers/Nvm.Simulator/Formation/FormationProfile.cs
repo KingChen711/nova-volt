@@ -1,11 +1,11 @@
 namespace Nvm.Simulator.Formation;
 
-/// <summary>What one formation channel reads at one moment of a cycle.</summary>
-/// <param name="Step">Which of the five stages the cycle is in.</param>
-/// <param name="Volts">Cell voltage.</param>
-/// <param name="Amperes">Current. Positive charges the cell, negative discharges it.</param>
-/// <param name="Celsius">Cell surface temperature.</param>
-/// <param name="AmpHours">Charge accumulated so far.</param>
+/// <summary>Những gì một formation channel đọc được tại một thời điểm của một cycle.</summary>
+/// <param name="Step">Cycle đang ở stage nào trong năm stage.</param>
+/// <param name="Volts">Điện áp cell.</param>
+/// <param name="Amperes">Dòng điện. Dương là đang sạc cell, âm là đang xả.</param>
+/// <param name="Celsius">Nhiệt độ bề mặt cell.</param>
+/// <param name="AmpHours">Điện lượng đã tích lũy tính đến thời điểm đó.</param>
 public readonly record struct FormationSample(
     FormationStep Step,
     double Volts,
@@ -13,44 +13,46 @@ public readonly record struct FormationSample(
     double Celsius,
     double AmpHours);
 
-/// <summary>The five stages of a formation cycle, in order.</summary>
+/// <summary>Năm stage của một formation cycle, theo đúng thứ tự.</summary>
 public enum FormationStep
 {
-    /// <summary>The cell sits after being loaded, so its open-circuit voltage can settle.</summary>
+    /// <summary>Cell nghỉ sau khi được nạp vào, để điện áp hở mạch của nó ổn định lại.</summary>
     RestBeforeCharge = 1,
 
-    /// <summary>Constant current: the current is held and the voltage climbs.</summary>
+    /// <summary>Constant current: dòng điện được giữ cố định và điện áp tăng dần.</summary>
     ConstantCurrentCharge = 2,
 
-    /// <summary>Constant voltage: the voltage is held at the ceiling and the current tails off.</summary>
+    /// <summary>Constant voltage: điện áp được giữ ở mức trần và dòng điện giảm dần.</summary>
     ConstantVoltageCharge = 3,
 
-    /// <summary>The cell rests and relaxes off its charge voltage.</summary>
+    /// <summary>Cell nghỉ và điện áp giãn ra khỏi mức điện áp sạc.</summary>
     RestAfterCharge = 4,
 
-    /// <summary>The first discharge, which is what the measured capacity comes from.</summary>
+    /// <summary>Lần xả đầu tiên, đây là nguồn gốc của dung lượng đo được.</summary>
     Discharge = 5,
 }
 
-/// <summary>The shape a formation cycle has, as a function of how far into it the cell is.</summary>
+/// <summary>Hình dạng của một formation cycle, là hàm của việc cell đã đi được bao xa vào trong nó.</summary>
 /// <remarks>
 /// <para>
-/// A pure function of elapsed cycle time, and everything else in the simulator depends on that. It is
-/// what lets a cycle be run at a thousand times speed and produce the <b>same measurements</b> — the
-/// samples are taken at fixed points of process time, so compressing the wall clock changes how long
-/// the run takes and nothing else.
+/// Một hàm thuần (pure function) của thời gian đã trôi qua trong cycle, và mọi thứ khác trong
+/// simulator đều phụ thuộc vào điều đó. Chính điều này cho phép một cycle được chạy nhanh gấp nghìn
+/// lần mà vẫn tạo ra <b>cùng những measurement</b> — các sample được lấy ở những điểm cố định của
+/// process time, nên việc nén wall clock chỉ thay đổi thời gian chạy hết một run chứ không thay đổi
+/// gì khác.
 /// </para>
 /// <para>
-/// <b>Not random.</b> Random values would make everything downstream appear to work while nobody could
-/// tell that a projection had started computing the curve wrongly, because there would be no right
-/// curve to compare against — and the mistake would sleep until M8. The voltage climbs along a charge
-/// curve, the current steps between CC and CV, the temperature follows the current, and capacity is
-/// the integral of it.
+/// <b>Không phải ngẫu nhiên.</b> Giá trị ngẫu nhiên sẽ khiến mọi thứ ở downstream trông như vẫn hoạt
+/// động trong khi không ai có thể nhận ra rằng một phép tính đã bắt đầu tính sai đường cong, vì sẽ
+/// không có đường cong đúng nào để so sánh — và sai sót đó sẽ nằm im cho tới tận M8. Điện áp tăng
+/// theo một đường cong sạc, dòng điện chuyển bậc giữa CC và CV, nhiệt độ đi theo dòng điện, và dung
+/// lượng là tích phân của dòng điện đó.
 /// </para>
 /// <para>
-/// It is a shape, not a model. Nobody should predict cell chemistry from this; the point is that the
-/// curve has the features a real one has — a rising CC leg, a CV tail, a discharge plateau with a knee
-/// at the end — so that code reading it can be seen to be reading it correctly.
+/// Đây là một hình dạng, không phải một mô hình. Không ai nên dự đoán hóa học của cell từ đây; điểm
+/// mấu chốt là đường cong này có những đặc điểm mà một đường cong thật có — một nhánh CC dốc lên, một
+/// đuôi CV, một mặt phẳng discharge với một khúc gãy (knee) ở cuối — để code đọc nó có thể được kiểm
+/// chứng là đang đọc đúng.
 /// </para>
 /// </remarks>
 public sealed class FormationProfile
@@ -69,30 +71,30 @@ public sealed class FormationProfile
     private const double AmbientCelsius = 25.0;
     private const double CelsiusPerAmpere = 14.0;
 
-    /// <summary>The CV tail's decay constant: current falls to about 5% of the CC value by the end.</summary>
+    /// <summary>Hằng số suy giảm của đuôi CV: dòng điện giảm xuống còn khoảng 5% giá trị CC vào cuối.</summary>
     private const double CvDecay = 3.0;
 
-    /// <summary>The reference cycle: 18 hours, which is the middle of the 12–24 hour range.</summary>
+    /// <summary>Cycle tham chiếu: 18 giờ, là điểm giữa của khoảng 12–24 giờ.</summary>
     public static FormationProfile Default { get; } = new(TimeSpan.FromHours(18));
 
-    /// <summary>Creates a profile of a given length.</summary>
-    /// <param name="cycleDuration">How long one cell spends in the channel.</param>
-    /// <exception cref="ArgumentOutOfRangeException">The cycle is shorter than its own stages.</exception>
+    /// <summary>Tạo một profile với độ dài cho trước.</summary>
+    /// <param name="cycleDuration">Một cell ở trong channel bao lâu.</param>
+    /// <exception cref="ArgumentOutOfRangeException">Cycle ngắn hơn chính các stage của nó.</exception>
     public FormationProfile(TimeSpan cycleDuration)
     {
-        // The stage boundaries are absolute, so a cycle shorter than the last of them would put the
-        // cell in a stage that ends before it starts.
+        // Ranh giới các stage là tuyệt đối, nên một cycle ngắn hơn ranh giới cuối cùng trong số đó sẽ
+        // đặt cell vào một stage kết thúc trước khi nó bắt đầu.
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(cycleDuration, RestAfterEnd);
 
         CycleDuration = cycleDuration;
     }
 
-    /// <summary>How long one cell spends in the channel.</summary>
+    /// <summary>Một cell ở trong channel bao lâu.</summary>
     public TimeSpan CycleDuration { get; }
 
-    /// <summary>Reads the channel at a point in the cycle.</summary>
-    /// <param name="elapsed">How far into the cycle the cell is.</param>
-    /// <exception cref="ArgumentOutOfRangeException">The point is outside the cycle.</exception>
+    /// <summary>Đọc channel tại một điểm trong cycle.</summary>
+    /// <param name="elapsed">Cell đã đi được bao xa vào trong cycle.</param>
+    /// <exception cref="ArgumentOutOfRangeException">Điểm này nằm ngoài cycle.</exception>
     public FormationSample At(TimeSpan elapsed)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(elapsed, TimeSpan.Zero);
@@ -107,8 +109,8 @@ public sealed class FormationProfile
         {
             var progress = Fraction(elapsed - RestBefore, ChargeCcEnd - RestBefore);
 
-            // Power 0.8 rather than a straight line: a real CC leg climbs quickly out of the low-state
-            // knee and then flattens as it approaches the ceiling.
+            // Lũy thừa 0.8 thay vì một đường thẳng: một nhánh CC thật tăng nhanh khi ra khỏi khúc
+            // gãy (knee) ở mức thấp rồi phẳng dần khi tiến gần tới mức trần.
             return Sample(
                 FormationStep.ConstantCurrentCharge,
                 RestVolts + ((CeilingVolts - RestVolts) * Math.Pow(progress, 0.8)),
@@ -123,8 +125,8 @@ public sealed class FormationProfile
             var progress = Fraction(elapsed - ChargeCcEnd, ChargeCvEnd - ChargeCcEnd);
             var hours = (ChargeCvEnd - ChargeCcEnd).TotalHours;
 
-            // Held at the ceiling while the current decays; the accumulated charge is the integral of
-            // that decay, which is why the capacity curve bends here rather than continuing straight.
+            // Giữ ở mức trần trong khi dòng điện suy giảm; điện lượng tích lũy là tích phân của độ
+            // suy giảm đó, đó là lý do đường cong dung lượng bẻ cong ở đây thay vì tiếp tục thẳng.
             return Sample(
                 FormationStep.ConstantVoltageCharge,
                 CeilingVolts,
@@ -148,8 +150,8 @@ public sealed class FormationProfile
 
         var discharged = Fraction(elapsed - RestAfterEnd, CycleDuration - RestAfterEnd);
 
-        // Power 2.2 puts the knee at the end: the voltage sits on a plateau for most of the discharge
-        // and then falls away quickly, which is the feature a grading rule looks for.
+        // Lũy thừa 2.2 đặt khúc gãy (knee) ở cuối: điện áp nằm trên một mặt phẳng trong phần lớn thời
+        // gian discharge rồi rơi nhanh về sau, đó chính là đặc điểm mà một quy tắc chấm điểm tìm kiếm.
         return Sample(
             FormationStep.Discharge,
             RelaxedVolts - ((RelaxedVolts - EmptyVolts) * Math.Pow(discharged, 2.2)),
@@ -160,10 +162,10 @@ public sealed class FormationProfile
     private static double Fraction(TimeSpan elapsed, TimeSpan span) =>
         Math.Clamp(elapsed / span, 0, 1);
 
-    // Temperature follows the current rather than the clock: the cell warms while charge moves through
-    // it and sits at ambient while it rests. No lag is modelled, because a lag needs state and state
-    // would make the profile depend on how often it was sampled — which is exactly the property that
-    // has to survive time compression.
+    // Nhiệt độ đi theo dòng điện chứ không theo đồng hồ: cell nóng lên khi điện lượng đi qua nó và
+    // nằm ở mức ambient khi nó nghỉ. Không có độ trễ (lag) nào được mô hình hóa, vì một độ trễ cần
+    // state, và state sẽ khiến profile phụ thuộc vào tần suất nó được lấy mẫu — đúng là tính chất
+    // phải sống sót qua time compression.
     private static FormationSample Sample(FormationStep step, double volts, double amperes, double ampHours) =>
         new(step, volts, amperes, AmbientCelsius + (CelsiusPerAmpere * Math.Abs(amperes)), ampHours);
 }

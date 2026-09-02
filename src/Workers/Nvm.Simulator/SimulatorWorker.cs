@@ -6,26 +6,27 @@ using Nvm.Simulator.Reporting;
 
 namespace Nvm.Simulator;
 
-/// <summary>Runs the plant: one tick of wall clock, one sample period of process time.</summary>
+/// <summary>Chạy nhà máy: một tick wall clock, một sample period của process time.</summary>
 /// <remarks>
 /// <para>
-/// The loop is the whole of the time-compression argument. Process time always advances by exactly
-/// <see cref="SimulatorOptions.SamplePeriod"/>, so the samples fall on the same points of the cycle
-/// however fast the run goes; the compression only decides how long the tick waits. Turn the
-/// compression up and the run finishes sooner with an identical set of measurements.
+/// Vòng lặp này chính là toàn bộ luận điểm về time compression. Process time luôn tiến thêm đúng
+/// <see cref="SimulatorOptions.SamplePeriod"/>, nên các sample rơi vào đúng những điểm giống nhau của
+/// cycle bất kể run chạy nhanh tới đâu; compression chỉ quyết định tick chờ bao lâu. Tăng compression
+/// lên thì run kết thúc sớm hơn với một tập measurement giống hệt.
 /// </para>
 /// <para>
-/// Every wait goes through <see cref="TimeProvider"/> (K1). That is not a formality here — it is what
-/// lets a test run an eighteen-hour cycle in a few milliseconds and count what came out.
+/// Mọi lần chờ đều đi qua <see cref="TimeProvider"/> (K1). Đây không phải là hình thức ở đây — chính
+/// điều này cho phép một test chạy hết một cycle mười tám giờ trong vài mili-giây và đếm những gì đã
+/// ra.
 /// </para>
 /// </remarks>
 public sealed partial class SimulatorWorker : BackgroundService
 {
-    /// <summary>Shortest gap between two answered rebirth requests.</summary>
+    /// <summary>Khoảng cách ngắn nhất giữa hai lần trả lời yêu cầu rebirth.</summary>
     /// <remarks>
-    /// A consumer that missed the births asks once per detected gap, so it asks thousands of times
-    /// before the first answer reaches it. Answering each one would republish every DBIRTH on the
-    /// line thousands of times and drown the very data the consumer is trying to read.
+    /// Một consumer bỏ lỡ các birth sẽ hỏi một lần cho mỗi gap nó phát hiện, nên nó hỏi tới hàng nghìn
+    /// lần trước khi câu trả lời đầu tiên tới được nó. Trả lời từng cái một sẽ republish mọi DBIRTH
+    /// trên line hàng nghìn lần và nhấn chìm chính dữ liệu mà consumer đó đang cố đọc.
     /// </remarks>
     private static readonly TimeSpan RebirthCooldown = TimeSpan.FromSeconds(5);
 
@@ -39,22 +40,22 @@ public sealed partial class SimulatorWorker : BackgroundService
     private DateTimeOffset _lastRebirth = DateTimeOffset.MinValue;
     private long _rebirths;
 
-    // Which session this node has declared itself under. Null until the first declaration.
+    // Node này đã tự khai báo dưới session nào. Null cho tới lần khai báo đầu tiên.
     //
-    // A session is opened by the transport; what makes it USABLE is the declaration. Every consumer
-    // reads DDATA against an alias table a DBIRTH gave it, so one DDATA published under a session
-    // whose births have not gone out yet is a message nobody can decode - and there is no recovering
-    // from it afterwards, because an alias is a number with no name attached to it.
+    // Một session được mở bởi transport; thứ khiến nó DÙNG ĐƯỢC là việc khai báo. Mọi consumer đọc
+    // DDATA dựa trên một alias table mà một DBIRTH đã cấp cho nó, nên một DDATA được publish dưới một
+    // session mà các birth của nó chưa ra ngoài là một message không ai giải mã được - và không có
+    // cách nào khôi phục lại sau đó, vì một alias là một con số không gắn với tên nào cả.
     //
-    // Read and written only under _publishing, which is what makes "declare before any data" a rule
-    // rather than a race between the tick loop and whichever MQTT thread noticed the reconnect.
+    // Chỉ được đọc và ghi dưới _publishing, đó chính là điều biến "khai báo trước bất kỳ dữ liệu nào"
+    // thành một quy tắc thay vì một race giữa tick loop và bất kỳ MQTT thread nào phát hiện reconnect.
     private ulong? _declaredSession;
 
-    /// <summary>Creates the worker.</summary>
-    /// <param name="line">The line to run.</param>
-    /// <param name="publisher">Where the messages go, and what goes wrong on the way.</param>
-    /// <param name="options">How fast, and how often.</param>
-    /// <param name="time">The clock. Compressed runs still go through it.</param>
+    /// <summary>Tạo worker.</summary>
+    /// <param name="line">Line cần chạy.</param>
+    /// <param name="publisher">Message đi đâu, và điều gì có thể sai trên đường đi.</param>
+    /// <param name="options">Nhanh cỡ nào, và thường xuyên cỡ nào.</param>
+    /// <param name="time">Đồng hồ. Các run bị nén vẫn đi qua nó.</param>
     /// <param name="logger">Log.</param>
     public SimulatorWorker(
         FormationLine line,
@@ -76,43 +77,44 @@ public sealed partial class SimulatorWorker : BackgroundService
         _logger = logger;
     }
 
-    /// <summary>How many messages the line composed, birth and data together.</summary>
+    /// <summary>Có bao nhiêu message line đã soạn, birth và data gộp lại.</summary>
     /// <remarks>
-    /// What the plant meant to say. What the broker actually heard is larger by however many
-    /// duplicates were injected and smaller by whatever the link refused, and both of those numbers
-    /// live on the publisher — see <see cref="Faults.FaultInjectingPublisher.PublishedMessages"/>.
+    /// Những gì nhà máy định nói. Những gì broker thực sự nghe được thì lớn hơn tùy theo có bao nhiêu
+    /// duplicate đã bị bơm vào, và nhỏ hơn tùy theo đường truyền đã từ chối bao nhiêu, và cả hai con
+    /// số đó nằm ở publisher — xem <see cref="Faults.FaultInjectingPublisher.PublishedMessages"/>.
     /// </remarks>
     public long LogicalMessageCount { get; private set; }
 
-    /// <summary>Measurements the plant took that the link never carried.</summary>
+    /// <summary>Measurement mà nhà máy đã lấy nhưng đường truyền chưa từng chuyển đi.</summary>
     /// <remarks>
     /// <para>
-    /// A batch is composed under one session and published one message at a time, and two things can
-    /// still cut into it: the session ending between two messages, and a publish that throws. What is
-    /// left has been measured and will never be sent — an unbuffered device losing what is in flight
-    /// when its cable is pulled, which is a real thing for this simulator to do.
+    /// Một batch được soạn dưới một session và được publish từng message một, và có hai thứ vẫn có
+    /// thể cắt ngang nó: session kết thúc giữa hai message, và một publish ném exception. Phần còn lại
+    /// đã được đo và sẽ không bao giờ được gửi — giống như một device không có buffer bị mất dữ liệu
+    /// đang truyền dở khi cáp của nó bị rút, đây là một điều có thật mà simulator này có thể làm.
     /// </para>
     /// <para>
-    /// It is a <b>diagnosis</b>, never a correction. Those readings stay in
-    /// <see cref="Formation.FormationLine.MeasurementCount"/>, so D1 and D3 go red over them; taking
-    /// them off the left-hand side is precisely how an oracle stops being able to see a loss. This
-    /// counter only says which side of the wire the loss happened on, and D1 and D3 require it to be
-    /// zero.
+    /// Đây là một <b>chẩn đoán</b>, không bao giờ là một điều chỉnh. Những reading đó vẫn ở trong
+    /// <see cref="Formation.FormationLine.MeasurementCount"/>, nên D1 và D3 sẽ đỏ vì chúng; bỏ chúng
+    /// ra khỏi vế bên trái chính là cách chắc chắn nhất khiến một oracle không còn thấy được một lần
+    /// mất mát. Counter này chỉ nói lên mất mát xảy ra ở phía nào của đường truyền, và D1 cùng D3 đều
+    /// yêu cầu nó phải bằng không.
     /// </para>
     /// </remarks>
     public long AbandonedMeasurements { get; private set; }
 
-    /// <summary>How far the plant has got.</summary>
+    /// <summary>Nhà máy đã tiến được bao xa.</summary>
     public TimeSpan ProcessElapsed { get; private set; }
 
-    /// <summary>How many times this node re-declared itself because a consumer asked.</summary>
+    /// <summary>Node này đã tự khai báo lại chính nó bao nhiêu lần vì một consumer yêu cầu.</summary>
     public long Rebirths => Interlocked.Read(ref _rebirths);
 
-    /// <summary>True once the line is online and the tick loop is armed.</summary>
+    /// <summary>True kể từ khi line online và tick loop đã được bật.</summary>
     /// <remarks>
-    /// The plant is not running until its timer exists, and until then a tick that arrives is a tick
-    /// nobody is holding. Real time never delivers one that early; a test driving a fake clock can,
-    /// so this says when the answer to "has it started" is yes rather than leaving it to be guessed.
+    /// Nhà máy chưa chạy cho tới khi timer của nó tồn tại, và trước đó một tick đến là một tick không
+    /// ai giữ. Thời gian thực không bao giờ tạo ra một tick sớm như vậy; một test điều khiển một đồng
+    /// hồ giả thì có thể, nên property này nói rõ khi nào câu trả lời cho "đã bắt đầu chưa" là có thay
+    /// vì để phải đoán.
     /// </remarks>
     public bool IsRunning { get; private set; }
 
@@ -128,13 +130,13 @@ public sealed partial class SimulatorWorker : BackgroundService
     {
         _options.Validate();
 
-        // Set before connecting, so a request that arrives with the very first subscription is
-        // answered rather than dropped on the floor.
+        // Set trước khi connect, để một yêu cầu đến ngay cùng lúc với subscription đầu tiên được trả
+        // lời thay vì bị rơi mất.
         _publisher.RebirthRequested = RepublishBirthsAsync;
 
-        // A reconnect re-declares the node for the same reason a rebirth does - every consumer is
-        // holding alias tables from a session that no longer exists - but it also needs a new bdSeq,
-        // which a rebirth must never take.
+        // Một reconnect khai báo lại node vì cùng lý do một rebirth cũng làm vậy - mọi consumer đang
+        // giữ alias table của một session không còn tồn tại nữa - nhưng nó còn cần một bdSeq mới, thứ
+        // mà một rebirth không bao giờ được lấy.
         _publisher.BeginSession = _line.BeginSession;
         _publisher.SessionRestored = RepublishAfterReconnectAsync;
 
@@ -149,17 +151,17 @@ public sealed partial class SimulatorWorker : BackgroundService
 
         await DeclareAsync(stoppingToken).ConfigureAwait(false);
 
-        // A timer armed once, not a delay re-armed every pass. Two reasons, and the second is the one
-        // that matters: a delay restarted after the work is done makes the period the interval plus
-        // however long the publishing took, so the message rate drifts below what the settings claim —
-        // and the load numbers of D2 would be measuring a slower plant than the one on paper. The
-        // first is that between two delays there is a moment with no timer at all, and a tick due in
-        // that moment is a tick lost.
+        // Một timer được bật một lần, không phải một delay được bật lại mỗi vòng. Có hai lý do, và lý
+        // do thứ hai mới là cái quan trọng: một delay khởi động lại sau khi công việc đã xong sẽ khiến
+        // period thực tế bằng interval cộng thêm thời gian publish tốn, nên tốc độ message trôi xuống
+        // dưới mức mà setting tuyên bố — và các con số load ở D2 sẽ đo một nhà máy chậm hơn nhà máy
+        // trên giấy. Lý do thứ nhất là giữa hai delay có một khoảnh khắc không có timer nào cả, và
+        // một tick đến đúng khoảnh khắc đó là một tick bị mất.
         using var ticker = new PeriodicTimer(_options.TickInterval, _time);
 
-        // Written once before the loop, and this one is allowed to throw. An unwritable report path
-        // is worth failing on now rather than an hour from now, when the run is over and the number
-        // that was supposed to prove D1 turns out never to have been recorded.
+        // Được ghi một lần trước vòng lặp, và lần ghi này được phép ném exception. Một report path
+        // không ghi được đáng để fail ngay bây giờ hơn là một giờ sau, khi run đã kết thúc và con số
+        // lẽ ra phải chứng minh D1 hóa ra chưa từng được ghi lại.
         RunReportFile.Write(_options.ReportPath, Report());
 
         var lastReport = _time.GetUtcNow();
@@ -176,11 +178,11 @@ public sealed partial class SimulatorWorker : BackgroundService
                 }
                 catch (SparkplugPublishException exception)
                 {
-                    // The link died between the session gate and the packet. The plant does not stop
-                    // for that (N15): the next tick waits for the next session and carries on. What
-                    // was in flight is gone, which is what an unbuffered device loses when its cable
-                    // is pulled - the simulator does not pretend to have held it, and it does not
-                    // pretend not to have measured it either. See AbandonedMeasurements.
+                    // Đường truyền chết giữa session gate và gói tin. Nhà máy không dừng vì điều đó
+                    // (N15): tick kế tiếp chờ session kế tiếp rồi tiếp tục. Cái gì đang truyền dở thì
+                    // mất, giống như một device không có buffer mất dữ liệu khi cáp của nó bị rút -
+                    // simulator không giả vờ đã giữ được nó, và cũng không giả vờ chưa đo được nó. Xem
+                    // AbandonedMeasurements.
                     PublishFailed(_logger, exception, _line.Path.Value);
                 }
 
@@ -195,25 +197,25 @@ public sealed partial class SimulatorWorker : BackgroundService
         }
         catch (OperationCanceledException)
         {
-            // Shutdown, not a fault. The plant stopping is the normal end of a run.
+            // Shutdown, không phải một fault. Nhà máy dừng lại là kết thúc bình thường của một run.
         }
 
         IsRunning = false;
 
-        // CancellationToken.None: stoppingToken is already cancelled by the time execution reaches
-        // here, and a dropout in progress is a gap rather than a loss — the messages are on the
-        // device and the device will send them. The readings they carry are already counted, so
-        // passing the cancelled token would strand them and end the run reporting measurements the
-        // broker was never even offered.
+        // CancellationToken.None: stoppingToken đã bị hủy vào lúc thực thi tới đây, và một dropout
+        // đang diễn ra là một gap chứ không phải một mất mát — các message vẫn đang ở trên device và
+        // device sẽ gửi chúng. Các reading chúng mang theo đã được đếm rồi, nên truyền vào token đã bị
+        // hủy sẽ khiến chúng bị kẹt lại và kết thúc run với việc báo cáo các measurement mà broker
+        // chưa từng được đề nghị nhận.
         try
         {
             await _publisher.FlushAsync(CancellationToken.None).ConfigureAwait(false);
         }
         catch (SparkplugPublishException exception)
         {
-            // A run that ends while the broker is unreachable still has a report to write, and that
-            // report is the left-hand side of D1. Losing it to a failed flush would throw away the
-            // measurement count in order to complain about the link.
+            // Một run kết thúc trong khi broker không thể liên lạc được vẫn cần một report để ghi, và
+            // report đó chính là vế bên trái của D1. Để mất nó vì một lần flush thất bại sẽ là vứt bỏ
+            // con số measurement chỉ để than phiền về đường truyền.
             PublishFailed(_logger, exception, _line.Path.Value);
         }
 
@@ -227,8 +229,8 @@ public sealed partial class SimulatorWorker : BackgroundService
             _line.MeasurementCount);
     }
 
-    // Source-generated for the reason CA1873 gives: a TimeSpan argument boxes, and a log line that
-    // allocates whether or not anybody is listening is a cost paid on every run.
+    // Được source-generate vì lý do CA1873 đưa ra: một argument TimeSpan sẽ bị box, và một dòng log
+    // cấp phát bộ nhớ dù có ai đang lắng nghe hay không là một chi phí phải trả trên mỗi run.
     [LoggerMessage(
         Level = LogLevel.Information,
         Message = "Line {Line} online: {Channels} channels, one sample per {Sample} of plant time, {Compression}x")]
@@ -260,9 +262,9 @@ public sealed partial class SimulatorWorker : BackgroundService
             _publisher.HeldHighWater,
             _options.Faults.AnyEnabled);
 
-    // Every write after the first one is best-effort, and the counts go into the log line when it
-    // fails. A disk hiccup forty minutes into a one-hour run should not throw the run away, and the
-    // number is what the reconciliation needs — the file is only how it usually travels.
+    // Mọi lần ghi sau lần đầu tiên đều là best-effort, và các con số đi vào dòng log khi nó thất bại.
+    // Một trục trặc ổ đĩa ở phút thứ bốn mươi của một run một giờ không nên vứt bỏ cả run, và con số
+    // này là thứ reconciliation cần — file chỉ là cách thông thường nó di chuyển tới đó.
     private void TryWriteReport()
     {
         var report = Report();
@@ -277,18 +279,19 @@ public sealed partial class SimulatorWorker : BackgroundService
         }
     }
 
-    // Same republication as a rebirth, minus the cooldown. The cooldown exists to absorb a host
-    // asking repeatedly; a reconnect is not a request and happens once per dropped connection, so
-    // rate-limiting it would leave the node silent in exactly the case it must not be.
+    // Republish giống hệt một rebirth, chỉ trừ cooldown. Cooldown tồn tại để hấp thụ việc một host hỏi
+    // đi hỏi lại; một reconnect không phải là một yêu cầu và chỉ xảy ra một lần cho mỗi connection bị
+    // rớt, nên giới hạn tốc độ nó sẽ khiến node im lặng đúng vào trường hợp nó không được phép im
+    // lặng.
     private Task RepublishAfterReconnectAsync(CancellationToken cancellationToken) =>
         DeclareAsync(cancellationToken);
 
-    // Declares the node when the session it is publishing under has not been declared yet.
+    // Khai báo node khi session mà nó đang publish dưới đó chưa được khai báo.
     //
-    // Called from two places that must not disagree: the reconnect handler, so a recovered link is
-    // usable at once, and the top of every tick, so it is still true if that handler never ran or
-    // failed half way. Idempotent by construction - the second caller finds the session already
-    // declared and does nothing.
+    // Được gọi từ hai nơi không được phép mâu thuẫn nhau: reconnect handler, để một đường truyền vừa
+    // phục hồi dùng được ngay, và đầu mỗi tick, để điều đó vẫn đúng nếu handler đó chưa từng chạy hoặc
+    // chạy nửa chừng thì thất bại. Có tính idempotent theo cấu trúc - caller thứ hai thấy session đã
+    // được khai báo rồi và không làm gì cả.
     private async Task DeclareAsync(CancellationToken cancellationToken)
     {
         await _publishing.WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -303,19 +306,19 @@ public sealed partial class SimulatorWorker : BackgroundService
         }
     }
 
-    // One tick of the plant, composed and published without letting go of the lock in between.
+    // Một tick của nhà máy, được soạn và publish mà không buông lock ra ở giữa chừng.
     //
-    // Composing outside it was a real defect rather than a theoretical one: Advance moves the
-    // sequence counter and every channel's deadband state, Connect resets both, and the rebirth and
-    // reconnect handlers arrive on MQTT threads. Two of them running at once interleaves the seq
-    // stream of one session with another's, and a consumer counting seq sees gaps that never
-    // happened - then asks for a rebirth over each one.
+    // Soạn ở ngoài lock là một lỗi thật chứ không phải lý thuyết suông: Advance thay đổi sequence
+    // counter và deadband state của mọi channel, Connect reset cả hai, còn rebirth và reconnect
+    // handler thì đến trên các MQTT thread. Hai cái chạy cùng lúc sẽ đan xen luồng seq của session này
+    // với session khác, và một consumer đang đếm seq sẽ thấy những gap chưa từng xảy ra - rồi yêu cầu
+    // rebirth cho từng cái một.
     private async Task AdvanceAsync(CancellationToken cancellationToken)
     {
-        // Waited for OUTSIDE the lock, and that placement is the whole design. Parking here while
-        // holding it would hold the lock the node needs in order to declare itself on the session
-        // being waited for - the tick would be waiting for something that could not happen until the
-        // tick let go. Above the lock, a dead link simply parks the plant until the link is back.
+        // Được chờ ở NGOÀI lock, và cách đặt đó chính là toàn bộ thiết kế. Chặn ở đây trong khi vẫn
+        // giữ lock sẽ giữ luôn cái lock mà node cần để tự khai báo trên session đang được chờ - tick
+        // sẽ chờ một điều không thể xảy ra cho tới khi chính tick đó buông lock ra. Ở trên lock, một
+        // đường truyền chết chỉ đơn giản là tạm dừng nhà máy cho tới khi đường truyền quay lại.
         await _publisher.WaitForSessionAsync(cancellationToken).ConfigureAwait(false);
 
         await _publishing.WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -324,12 +327,12 @@ public sealed partial class SimulatorWorker : BackgroundService
         {
             await DeclareLockedAsync().ConfigureAwait(false);
 
-            // No token from here down, and that is the shutdown rule rather than an oversight.
-            // Advance READS the channels: by the time it returns the deadbands have moved and the
-            // plant has measured. A stop that dropped what was left of the batch would leave those
-            // readings on D1's left-hand side with nothing ever arriving on the right. A tick that
-            // has composed finishes; the loop stops before the NEXT tick, where the plant has
-            // measured nothing yet and stopping costs nothing.
+            // Không truyền token từ đây trở xuống, và đó là quy tắc shutdown chứ không phải một sơ
+            // suất. Advance ĐỌC các channel: đến lúc nó trả về thì các deadband đã thay đổi và nhà máy
+            // đã đo xong. Một lần dừng làm mất phần còn lại của batch sẽ để những reading đó ở vế bên
+            // trái của D1 mà không có gì từng đến được vế bên phải. Một tick đã soạn xong thì hoàn
+            // tất; vòng lặp dừng lại trước tick TIẾP THEO, nơi nhà máy chưa đo gì cả và việc dừng lại
+            // không tốn gì.
             ProcessElapsed += _options.SamplePeriod;
 
             await PublishLockedAsync(_line.Advance(ProcessElapsed)).ConfigureAwait(false);
@@ -351,19 +354,19 @@ public sealed partial class SimulatorWorker : BackgroundService
 
         await PublishLockedAsync(_line.Connect(ProcessElapsed)).ConfigureAwait(false);
 
-        // Set last, so a declaration that failed part way through is attempted again on the next
-        // tick instead of being remembered as done.
+        // Set sau cùng, để một lần khai báo thất bại giữa chừng sẽ được thử lại ở tick kế tiếp thay vì
+        // bị nhớ nhầm là đã xong.
         _declaredSession = session;
     }
 
-    // Re-declares the whole node: NBIRTH, then a DBIRTH for every channel, exactly as at connect.
+    // Khai báo lại toàn bộ node: NBIRTH, rồi một DBIRTH cho mỗi channel, y hệt như lúc connect.
     //
-    // Republished, not re-measured. The readings carry the device clock the channel was declared at,
-    // so they are the same natural keys the first declaration carried: the database stores them once
-    // and the plant measured them once. FormationChannel.Declare is where that is decided, and it is
-    // decided by the instant rather than here - a rebirth counted a second time would put D1's left
-    // side above its right by one full DBIRTH per channel per rebirth, measured at exactly -48 on an
-    // eight-channel line.
+    // Được republish, không được đo lại. Các reading mang theo đồng hồ device tại thời điểm channel
+    // được khai báo, nên chúng là cùng natural key mà lần khai báo đầu tiên đã mang theo: database chỉ
+    // lưu chúng một lần và nhà máy chỉ đo chúng một lần. FormationChannel.Declare là nơi quyết định
+    // điều đó, và nó được quyết định bởi khoảnh khắc chứ không phải ở đây - một rebirth bị đếm lần thứ
+    // hai sẽ khiến vế trái của D1 vượt vế phải đúng bằng một DBIRTH trọn vẹn cho mỗi channel mỗi lần
+    // rebirth, đo được chính xác là -48 trên một line tám channel.
     private async Task RepublishBirthsAsync(CancellationToken cancellationToken)
     {
         var now = _time.GetUtcNow();
@@ -378,9 +381,9 @@ public sealed partial class SimulatorWorker : BackgroundService
 
         RebirthAnswered(_logger, _line.Path.Value, _line.ChannelCount);
 
-        // Connect() is inside the lock, not just the publishing. It resets the sequence counter and
-        // the per-channel cycle state, so composing it while Advance is mid-loop would interleave two
-        // seq streams and a consumer counting them would see gaps that never happened.
+        // Connect() nằm trong lock, không chỉ trong publishing. Nó reset sequence counter và cycle
+        // state của từng channel, nên soạn nó trong khi Advance đang chạy dở sẽ đan xen hai luồng seq
+        // và một consumer đang đếm chúng sẽ thấy những gap chưa từng xảy ra.
         await _publishing.WaitAsync(cancellationToken).ConfigureAwait(false);
 
         try
@@ -408,32 +411,33 @@ public sealed partial class SimulatorWorker : BackgroundService
         Message = "Line {Line} abandoned the rest of a batch numbered under session {Session}, which has ended")]
     private static partial void SessionEndedMidBatch(ILogger logger, string line, ulong session);
 
-    // SemaphoreSlim is not reentrant, so the entry points acquire and this one assumes.
+    // SemaphoreSlim không tái nhập (không reentrant), nên các entry point tự acquire còn hàm này thì
+    // mặc định đã có sẵn lock.
     //
-    // Takes no cancellation token, on purpose. Everything in this array has already been measured, so
-    // there is no point after composition at which stopping is free - the run stops between ticks
-    // instead. A publish that has started is likewise allowed to finish, because its OUTCOME is what
-    // the report has to describe: cancelling mid-await leaves a message the broker may well have
-    // stored and this process unable to say either way, and neither D1 nor D3 has any way to
-    // represent "probably delivered".
+    // Không nhận cancellation token, có chủ đích. Mọi thứ trong mảng này đã được đo rồi, nên không có
+    // điểm nào sau bước soạn mà việc dừng lại là miễn phí cả - run dừng lại giữa hai tick thay vì ở
+    // đây. Một publish đã bắt đầu thì cũng được phép hoàn tất, vì KẾT QUẢ của nó chính là điều report
+    // phải mô tả: hủy giữa chừng một await sẽ để lại một message mà broker rất có thể đã lưu trong khi
+    // process này không thể nói chắc theo cách nào, và cả D1 lẫn D3 đều không có cách nào biểu diễn
+    // "có lẽ đã được gửi".
     private async Task PublishLockedAsync(ImmutableArray<ComposedMessage> messages)
     {
         var session = _line.BirthDeathSequence;
 
-        // Composed, therefore counted - not "accepted by the broker". The fault injector answers a
-        // publish during a simulated dropout by holding the message in memory and returning success,
-        // so a counter moved on a successful return would be claiming delivery for something still
-        // sitting on the device.
+        // Đã soạn, do đó được đếm - không phải "được broker chấp nhận". Fault injector trả lời một
+        // publish trong lúc dropout mô phỏng bằng cách giữ message trong bộ nhớ rồi trả về thành công,
+        // nên nếu một counter được tăng khi trả về thành công thì nó sẽ khẳng định đã giao hàng cho
+        // một thứ vẫn còn đang nằm trên device.
         LogicalMessageCount += messages.Length;
 
         for (var index = 0; index < messages.Length; index++)
         {
-            // A batch is composed under one session and is only valid under that one. The link can
-            // die and come back while this loop is between two messages - it is not holding a
-            // thread - and what is left was numbered by the session that ended: publishing it now
-            // would put a stale seq in front of the new session's NBIRTH, which is exactly the gap
-            // a consumer asks for a rebirth over. A message belonging to a session nobody is
-            // counting any more is not publishable.
+            // Một batch được soạn dưới một session và chỉ hợp lệ dưới đúng session đó. Đường truyền có
+            // thể chết rồi quay lại trong khi vòng lặp này đang ở giữa hai message - nó không giữ một
+            // thread nào cả - và phần còn lại đã được đánh số bởi session đã kết thúc: publish nó bây
+            // giờ sẽ đặt một seq cũ nằm trước cả NBIRTH của session mới, chính xác là cái gap khiến một
+            // consumer yêu cầu rebirth. Một message thuộc về một session không còn ai đếm nữa thì
+            // không thể publish được.
             if (_line.BirthDeathSequence != session)
             {
                 SessionEndedMidBatch(_logger, _line.Path.Value, session);
@@ -449,10 +453,10 @@ public sealed partial class SimulatorWorker : BackgroundService
             }
             catch (SparkplugPublishException)
             {
-                // The message that threw is abandoned along with the rest of the batch. The broker
-                // may or may not have stored it, and a report that guessed either way would be
-                // inventing the number D1 compares against rows - so it is named as lost, which
-                // makes the gate red and says which side of the wire to look at.
+                // Message ném exception bị bỏ dở cùng với phần còn lại của batch. Broker có thể đã lưu
+                // hoặc chưa lưu nó, và một report đoán mò theo hướng nào cũng sẽ bịa ra con số mà D1
+                // đem so với các dòng trong bảng - nên nó được đặt tên là đã mất, điều này khiến gate
+                // chuyển đỏ và cho biết nên nhìn vào phía nào của đường truyền.
                 Abandon(messages, index);
 
                 throw;
@@ -460,9 +464,9 @@ public sealed partial class SimulatorWorker : BackgroundService
         }
     }
 
-    // Never subtracted from anything. The readings stay where the channels put them, so the
-    // reconciliation fails over them; this only records how much of that failure happened before the
-    // broker rather than after it.
+    // Không bao giờ bị trừ khỏi bất cứ thứ gì. Các reading vẫn nằm ở chỗ các channel đặt chúng, nên
+    // reconciliation vẫn fail vì chúng; số này chỉ ghi lại bao nhiêu phần của thất bại đó xảy ra trước
+    // broker thay vì sau broker.
     private void Abandon(ImmutableArray<ComposedMessage> messages, int from)
     {
         for (var index = from; index < messages.Length; index++)

@@ -6,13 +6,14 @@ using Nvm.Sparkplug.Topics;
 
 namespace Nvm.EdgeGateway.Decoding;
 
-/// <summary>Joins an MQTT topic to decoded readings and stamps the gateway clock.</summary>
+/// <summary>Gắn một MQTT topic với các reading đã decode và đóng dấu đồng hồ của gateway.</summary>
 /// <remarks>
-/// Session state — alias tables, <c>bdSeq</c>, <c>seq</c> and liveness — belongs to
-/// <see cref="NodeSessionTracker"/>, not here. This type reads bytes and hands the tracker what it
-/// learned; the tracker decides what that means for the node. Keeping the two apart is what makes
-/// "an NDEATH must not write telemetry" a structural fact rather than a rule someone has to
-/// remember: a death never produces readings for this method to return.
+/// State của session — bảng alias, <c>bdSeq</c>, <c>seq</c> và liveness — thuộc về
+/// <see cref="NodeSessionTracker"/>, không thuộc về đây. Type này đọc byte và giao lại cho tracker
+/// những gì nó biết được; tracker quyết định điều đó có ý nghĩa gì với node. Tách riêng hai việc
+/// này là điều khiến "một NDEATH không được ghi telemetry" trở thành một sự thật mang tính cấu
+/// trúc thay vì một quy tắc ai đó phải nhớ: một death không bao giờ tạo ra reading để method này
+/// trả về.
 /// </remarks>
 public sealed class SparkplugMessageDecoder
 {
@@ -20,10 +21,10 @@ public sealed class SparkplugMessageDecoder
     private readonly IEquipmentDirectory _equipment;
     private readonly TimeProvider _clock;
 
-    /// <summary>Creates a decoder over the model currently active at each site.</summary>
-    /// <param name="sessions">Owner of alias tables and node liveness.</param>
-    /// <param name="equipment">The model each plant is running.</param>
-    /// <param name="clock">Stamps the moment the gateway received the publish (K1).</param>
+    /// <summary>Tạo một decoder dựa trên model đang active ở mỗi site.</summary>
+    /// <param name="sessions">Chủ sở hữu của bảng alias và liveness của node.</param>
+    /// <param name="equipment">Model mà mỗi nhà máy đang chạy.</param>
+    /// <param name="clock">Đóng dấu thời điểm gateway nhận được publish (K1).</param>
     public SparkplugMessageDecoder(
         NodeSessionTracker sessions,
         IEquipmentDirectory equipment,
@@ -38,19 +39,19 @@ public sealed class SparkplugMessageDecoder
         _clock = clock;
     }
 
-    /// <summary>Decodes a birth/data publish, or returns null for a message that carries no readings.</summary>
-    /// <param name="topicValue">The MQTT topic exactly as received.</param>
-    /// <param name="payload">The Sparkplug B bytes.</param>
-    /// <returns>A message to forward, or null for a death, a command or a host-state publish.</returns>
+    /// <summary>Decode một birth/data publish, hoặc trả về null cho một message không mang reading nào.</summary>
+    /// <param name="topicValue">MQTT topic đúng như đã nhận được.</param>
+    /// <param name="payload">Các byte Sparkplug B.</param>
+    /// <returns>Một message để forward, hoặc null cho một death, một command hay một host-state publish.</returns>
     /// <exception cref="UnknownMetricAliasException">
-    /// A metric named itself only by an alias this session never declared. A rebirth is requested
-    /// before the exception leaves, because the exception is what stops the message and the request
-    /// is what makes the next one readable.
+    /// Một metric chỉ tự định danh bằng một alias mà session này chưa từng khai báo. Một rebirth
+    /// được yêu cầu trước khi exception thoát ra, vì exception là thứ chặn message lại còn yêu cầu
+    /// rebirth là thứ khiến message kế tiếp đọc được.
     /// </exception>
     public DecodedSparkplugMessage? Decode(string? topicValue, ReadOnlySpan<byte> payload)
     {
-        // Stamp before parsing or awaiting anything. This is when the gateway received the publish,
-        // not when a downstream HTTP request happened to finish.
+        // Đóng dấu trước khi parse hay await bất cứ thứ gì. Đây là thời điểm gateway nhận được
+        // publish, không phải thời điểm một HTTP request downstream nào đó tình cờ hoàn tất.
         var gatewayTimestamp = _clock.GetUtcNow();
 
         if (SparkplugTopic.IsHostState(topicValue))
@@ -87,9 +88,10 @@ public sealed class SparkplugMessageDecoder
         return ForwardableReadings(birth.Readings);
     }
 
-    // Sparkplug's own bookkeeping stops here. An NBIRTH carries bdSeq and the control metrics and
-    // usually nothing else, so this normally leaves nothing to forward and the birth is consumed by
-    // the tracker alone — which is the right outcome: the session opening is not a measurement.
+    // Việc sổ sách nội bộ của Sparkplug dừng ở đây. Một NBIRTH mang bdSeq và các metric control, và
+    // thường không mang gì khác, nên bình thường sẽ không còn gì để forward và birth chỉ được
+    // tracker tiêu thụ một mình — đó chính là kết quả đúng: việc mở session không phải là một phép
+    // đo.
     private static ImmutableArray<DeviceReading> ForwardableReadings(ImmutableArray<DeviceReading> readings)
     {
         if (readings.IsDefaultOrEmpty || !readings.Any(reading => SparkplugPayload.IsProtocolMetric(reading.MetricName)))
@@ -113,10 +115,10 @@ public sealed class SparkplugMessageDecoder
         }
         catch (UnknownMetricAliasException)
         {
-            // An alias this session never declared means our picture of the session is behind the
-            // node's, which is the same condition a sequence gap reports and has the same only cure.
-            // Guessing the metric would file real readings under the wrong name — the failure mode
-            // that produces no error at all and corrupts every yield number computed from it.
+            // Một alias mà session này chưa từng khai báo nghĩa là bức tranh session của ta đang
+            // chậm hơn so với node, cùng một tình trạng mà một sequence gap báo cáo và chỉ có cùng
+            // một cách chữa. Đoán mò metric sẽ file các reading thật dưới tên sai — kiểu lỗi không
+            // hề tạo ra bất kỳ error nào cả mà lại làm hỏng mọi con số yield được tính từ nó.
             _sessions.RequestRebirth(topic);
             throw;
         }
@@ -127,17 +129,17 @@ public sealed class SparkplugMessageDecoder
 
     private ImmutableArray<DeviceReading> DecodeDeath(SparkplugTopic topic, ReadOnlySpan<byte> payload)
     {
-        // Node level only. A DDEATH says one device stopped reporting and does not carry a bdSeq, so
-        // it cannot end a session; treating it as one would let a single failing channel mark a
-        // thousand healthy ones stale.
+        // Chỉ ở cấp node. Một DDEATH nói rằng một device đã ngừng báo cáo và không mang bdSeq, nên
+        // nó không thể kết thúc một session; xử lý nó như thể có thể sẽ để một channel lỗi duy nhất
+        // đánh dấu hàng ngàn channel khỏe mạnh khác thành stale.
         if (topic.MessageType == SparkplugMessageType.NodeDeath)
         {
             _sessions.ObserveDeath(topic, SparkplugPayload.DecodeDeath(payload));
         }
 
-        // Empty, and this is the whole of D4's structural half: a death produces no readings, so
-        // there is nothing for the buffer to carry, nothing for ingestion to insert, and no path by
-        // which "the node is gone" could ever become "the history is gone" (K4).
+        // Rỗng, và đây chính là toàn bộ nửa mang tính cấu trúc của D4: một death không tạo ra
+        // reading nào, nên không có gì để buffer mang theo, không có gì để ingestion insert, và
+        // không có con đường nào để "node đã biến mất" có thể trở thành "lịch sử đã biến mất" (K4).
         return [];
     }
 }

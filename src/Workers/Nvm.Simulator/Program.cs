@@ -7,8 +7,8 @@ using Nvm.Simulator.Faults;
 using Nvm.Simulator.Formation;
 using Nvm.Simulator.Publishing;
 
-// Same reasoning as every other entry point in the repository: deterministic formatting whatever the
-// machine's locale says, without InvariantGlobalization. See ADR-020.
+// Cùng lý do như mọi entry point khác trong repo: định dạng tất định (deterministic) bất kể locale
+// của máy nói gì, mà không cần InvariantGlobalization. Xem ADR-020.
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
 CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
 
@@ -33,14 +33,14 @@ var options = new SimulatorOptions();
 builder.Configuration.GetSection("NVM_SIM").Bind(options);
 options.Validate();
 
-// The clock the whole plant runs on. TimeProvider.System in production; a test swaps it and an
-// eighteen-hour cycle finishes in milliseconds with the same measurements (K1).
+// Đồng hồ mà cả nhà máy chạy theo. TimeProvider.System ở production; một test sẽ thay nó bằng đồng
+// hồ khác và một cycle mười tám giờ sẽ hoàn thành trong vài mili-giây với cùng những measurement (K1).
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton(options);
 
-// The broker client, and the fault injector wrapped round it. The injector is always in the path,
-// even with every rate at zero: the run report then states what the faults did instead of leaving it
-// to be inferred from whether anybody remembered to switch them on (R-M2-1).
+// Broker client, và fault injector bọc quanh nó. Injector luôn nằm trên đường đi, kể cả khi mọi rate
+// đều bằng không: run report khi đó sẽ nói rõ các fault đã làm gì thay vì để việc đó phải được suy ra
+// từ chuyện có ai nhớ bật chúng lên hay không (R-M2-1).
 builder.Services.AddSingleton<MqttSparkplugPublisher>();
 builder.Services.AddSingleton(serviceProvider => new FaultInjectingPublisher(
     serviceProvider.GetRequiredService<MqttSparkplugPublisher>(),

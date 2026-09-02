@@ -3,10 +3,10 @@ using Nvm.Kernel.Identity;
 
 namespace Nvm.EdgeGateway;
 
-/// <summary>Builds the gateway's read-only view of the published factory model.</summary>
+/// <summary>Xây dựng view chỉ-đọc (read-only) của gateway về factory model đã được publish.</summary>
 internal static class GatewayEquipmentDirectory
 {
-    /// <summary>Loads one revision and activates its site trees in this process.</summary>
+    /// <summary>Tải một revision và kích hoạt các cây site của nó trong tiến trình này.</summary>
     internal static IEquipmentDirectory Load(string seedDirectory, int? requestedRevision) =>
         SeededEquipmentDirectory.Load(seedDirectory, requestedRevision);
 }

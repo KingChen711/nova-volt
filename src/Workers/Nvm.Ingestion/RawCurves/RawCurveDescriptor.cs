@@ -2,10 +2,10 @@ using Nvm.Kernel.Identity;
 
 namespace Nvm.Ingestion.RawCurves;
 
-/// <summary>Plant identity and physical interval carried beside one exact formation CSV.</summary>
+/// <summary>Định danh nhà máy và interval vật lý đi kèm với một file CSV formation chính xác.</summary>
 public sealed record RawCurveDescriptor
 {
-    /// <summary>Creates metadata for one half-open formation interval.</summary>
+    /// <summary>Tạo metadata cho một interval formation half-open.</summary>
     public RawCurveDescriptor(
         EquipmentPath equipmentPath,
         string? unitId,
@@ -17,15 +17,15 @@ public sealed record RawCurveDescriptor
         var siteId = equipmentPath.SiteId
             ?? throw new ArgumentException("A raw curve must belong to one plant.", nameof(equipmentPath));
 
-        // Rounded to what the evidence store can actually hold before anything is checked. `timestamptz`
-        // keeps microseconds, so an interval an ADR describes in ticks is an interval the archive
-        // cannot reproduce: the row that comes back differs from the descriptor that wrote it, and
-        // the identity check for a second archival of the same export then reports "different plant
-        // evidence" for evidence that is identical. Worse, an export of a single reading ended one
-        // 100 ns tick after it began, which PostgreSQL stored as no duration at all and refused --
-        // so the most ordinary export an end-of-line tester writes could never be archived, and the
-        // file went round the retry loop for ever. Found by `scripts/file-drop-race-probe.sh` on the
-        // running stack, with 679 green tests behind it.
+        // Làm tròn về đúng mức mà evidence store thực sự lưu được, trước khi bất cứ gì được kiểm tra.
+        // `timestamptz` chỉ giữ tới micro giây, nên một interval mà một ADR mô tả theo tick là một
+        // interval mà archive không thể tái tạo lại: dòng trả về khác với descriptor đã ghi ra nó, và
+        // identity check cho lần archive thứ hai của cùng một export khi đó sẽ báo "different plant
+        // evidence" cho bằng chứng vốn giống hệt nhau. Tệ hơn, một export chỉ có một reading kết thúc
+        // sau một tick 100 ns kể từ lúc bắt đầu, thứ mà PostgreSQL lưu thành không có duration nào cả
+        // và từ chối -- nên export bình thường nhất mà một end-of-line tester ghi ra sẽ không bao giờ
+        // archive được, và file cứ đi vòng vòng trong retry loop mãi mãi. Được phát hiện bởi
+        // `scripts/file-drop-race-probe.sh` trên stack đang chạy, với 679 test xanh đứng sau nó.
         curveStartAt = ToStorablePrecision(curveStartAt);
         curveEndAt = ToStorablePrecision(curveEndAt);
 
@@ -49,22 +49,22 @@ public sealed record RawCurveDescriptor
         CurveEndAt = curveEndAt.ToUniversalTime();
     }
 
-    /// <summary>The plant derived from the equipment path, never accepted separately (K3).</summary>
+    /// <summary>Nhà máy được suy ra từ equipment path, không bao giờ được nhận riêng (K3).</summary>
     public string SiteId { get; }
 
-    /// <summary>The formation channel or cycler that wrote the file.</summary>
+    /// <summary>Formation channel hoặc cycler đã ghi ra file.</summary>
     public EquipmentPath EquipmentPath { get; }
 
-    /// <summary>The cell being formed when its serial is already known.</summary>
+    /// <summary>Cell đang được formed khi serial của nó đã được biết.</summary>
     public string? UnitId { get; }
 
-    /// <summary>Inclusive beginning of the measurements in the file.</summary>
+    /// <summary>Điểm bắt đầu inclusive của các measurement trong file.</summary>
     public DateTimeOffset CurveStartAt { get; }
 
-    /// <summary>Exclusive end of the measurements in the file.</summary>
+    /// <summary>Điểm kết thúc exclusive của các measurement trong file.</summary>
     public DateTimeOffset CurveEndAt { get; }
 
-    /// <summary>Drops precision the archive cannot store, so a descriptor is what comes back.</summary>
+    /// <summary>Bỏ bớt precision mà archive không lưu được, để descriptor là thứ nhận lại được đúng như vậy.</summary>
     private static DateTimeOffset ToStorablePrecision(DateTimeOffset instant) =>
         new(instant.Ticks - (instant.Ticks % TimeSpan.TicksPerMicrosecond), instant.Offset);
 }

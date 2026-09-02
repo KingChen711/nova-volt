@@ -5,20 +5,21 @@ using Nvm.Sparkplug.Topics;
 
 namespace Nvm.EdgeGateway.Sessions;
 
-/// <summary>Knows which nodes are alive, which aliases are readable, and when data was missed.</summary>
+/// <summary>Biết node nào đang sống, alias nào đọc được, và khi nào dữ liệu bị bỏ lỡ.</summary>
 /// <remarks>
 /// <para>
-/// Three jobs that look separate and are not. All three hang off one fact: an alias table, a
-/// sequence counter and a liveness flag belong to <b>one session of one edge node</b>, and they all
-/// become worthless at the same instant — when that session ends. Splitting them across three owners
-/// is how a system ends up resolving this session's aliases against the previous session's table.
+/// Ba việc trông có vẻ tách biệt nhưng không phải vậy. Cả ba đều dựa trên một sự thật duy nhất:
+/// một bảng alias, một sequence counter và một cờ liveness thuộc về <b>một session của một edge
+/// node</b>, và cả ba đều trở nên vô giá trị tại cùng một thời điểm — khi session đó kết thúc.
+/// Tách chúng ra cho ba chủ sở hữu khác nhau là cách một hệ thống cuối cùng lại resolve alias của
+/// session hiện tại dựa vào bảng của session trước đó.
 /// </para>
 /// <para>
-/// State is kept in memory on purpose. It describes what is true <i>now</i> on the plant floor, and
-/// a gateway that restarts genuinely does not know: the correct answer after a restart is
-/// <see cref="NodeLiveness.Unknown"/> until a birth arrives, not a stale row read back from disk.
-/// Historical readings are a different question and live in the database, untouched by any of this
-/// (K4).
+/// State được cố tình giữ trong bộ nhớ. Nó mô tả điều gì đúng <i>ngay bây giờ</i> trên sàn nhà
+/// máy, và một gateway khi restart thực sự không biết điều đó: câu trả lời đúng sau một lần
+/// restart là <see cref="NodeLiveness.Unknown"/> cho tới khi một birth tới, không phải một dòng
+/// stale đọc lại từ đĩa. Các reading lịch sử là một câu chuyện khác và sống trong database, không
+/// bị đụng chạm bởi bất cứ điều gì ở đây (K4).
 /// </para>
 /// </remarks>
 public sealed class NodeSessionTracker
@@ -29,9 +30,9 @@ public sealed class NodeSessionTracker
     private readonly GatewayCounters _counters;
     private readonly TimeProvider _clock;
 
-    /// <summary>Creates the tracker with a bounded queue of pending rebirth requests.</summary>
-    /// <param name="counters">Process counters for rebirths and ignored late deaths.</param>
-    /// <param name="clock">Clock stamping the moment a node went stale (K1).</param>
+    /// <summary>Tạo tracker với một hàng đợi có giới hạn chứa các rebirth request đang chờ.</summary>
+    /// <param name="counters">Process counter cho rebirth và các late death bị bỏ qua.</param>
+    /// <param name="clock">Đồng hồ đóng dấu thời điểm một node trở nên stale (K1).</param>
     public NodeSessionTracker(GatewayCounters counters, TimeProvider clock)
     {
         ArgumentNullException.ThrowIfNull(counters);
@@ -40,10 +41,10 @@ public sealed class NodeSessionTracker
         _counters = counters;
         _clock = clock;
 
-        // Dropping the oldest is right for this queue and only this queue: a rebirth request is a
-        // statement about now, and a stale one asks a node to re-declare something it has already
-        // re-declared. Nothing durable is lost — unlike the store-and-forward buffer, where dropping
-        // is exactly what ADR-028 forbids.
+        // Drop cái cũ nhất là đúng cho hàng đợi này và chỉ hàng đợi này: một rebirth request là một
+        // phát biểu về hiện tại, và một request đã cũ chỉ yêu cầu một node khai báo lại thứ nó đã
+        // khai báo lại rồi. Không có gì durable bị mất — khác với buffer store-and-forward, nơi
+        // việc drop chính là điều ADR-028 cấm.
         _rebirthRequests = Channel.CreateBounded<NodeAddress>(
             new BoundedChannelOptions(capacity: 256)
             {
@@ -52,10 +53,10 @@ public sealed class NodeSessionTracker
             });
     }
 
-    /// <summary>Rebirth requests waiting to be published as <c>NCMD</c>.</summary>
+    /// <summary>Các rebirth request đang chờ được publish dưới dạng <c>NCMD</c>.</summary>
     public ChannelReader<NodeAddress> RebirthRequests => _rebirthRequests.Reader;
 
-    /// <summary>How many nodes are currently believed dead.</summary>
+    /// <summary>Bao nhiêu node hiện đang được cho là đã chết.</summary>
     public int StaleNodeCount
     {
         get
@@ -67,9 +68,9 @@ public sealed class NodeSessionTracker
         }
     }
 
-    /// <summary>The alias table in force for the publisher of this topic.</summary>
-    /// <param name="topic">The topic of the data message about to be decoded.</param>
-    /// <returns>The table its birth installed, or <see cref="MetricAliasTable.Empty"/>.</returns>
+    /// <summary>Bảng alias đang có hiệu lực cho publisher của topic này.</summary>
+    /// <param name="topic">Topic của data message sắp được decode.</param>
+    /// <returns>Bảng mà birth của nó đã cài đặt, hoặc <see cref="MetricAliasTable.Empty"/>.</returns>
     public MetricAliasTable AliasesFor(SparkplugTopic topic)
     {
         ArgumentNullException.ThrowIfNull(topic);
@@ -82,9 +83,9 @@ public sealed class NodeSessionTracker
         }
     }
 
-    /// <summary>Applies a birth: opens or replaces the session and installs its aliases.</summary>
-    /// <param name="topic">The <c>NBIRTH</c> or <c>DBIRTH</c> topic.</param>
-    /// <param name="birth">The decoded birth.</param>
+    /// <summary>Áp dụng một birth: mở hoặc thay thế session và cài đặt các alias của nó.</summary>
+    /// <param name="topic">Topic <c>NBIRTH</c> hoặc <c>DBIRTH</c>.</param>
+    /// <param name="birth">Birth đã decode.</param>
     public void ObserveBirth(SparkplugTopic topic, SparkplugBirth birth)
     {
         ArgumentNullException.ThrowIfNull(topic);
@@ -102,16 +103,17 @@ public sealed class NodeSessionTracker
 
             if (topic.MessageType == SparkplugMessageType.NodeBirth && node.IsNewSession(birth.BirthDeathSequence))
             {
-                // A node birth with a NEW bdSeq ends the previous session outright. Keeping the old
-                // device tables "just in case" is precisely the bug alias numbering makes possible:
-                // the new session is free to give 1 to a different metric, and every unmatched device
-                // would file its readings under the previous meaning without one error being raised.
+                // Một node birth với bdSeq MỚI kết thúc hẳn session trước đó. Giữ lại các bảng
+                // device cũ "phòng khi cần" chính là bug mà việc đánh số alias tạo điều kiện cho:
+                // session mới hoàn toàn có thể gán 1 cho một metric khác, và mọi device không khớp
+                // sẽ file reading của nó dưới ý nghĩa cũ mà không hề có một lỗi nào được nêu ra.
                 //
-                // The bdSeq comparison is not a refinement, it is the whole correctness of this
-                // branch. Resetting on EVERY NBIRTH looked equivalent and was not: MQTT is
-                // at-least-once, so a redelivered NBIRTH arrives with the same bdSeq, wipes a valid
-                // alias table, and every alias-only message after it becomes unreadable. Measured at
-                // 10.000+ rejected messages in one short run before this comparison existed.
+                // So sánh bdSeq không phải là một sự tinh chỉnh, nó là toàn bộ tính đúng đắn của
+                // nhánh này. Reset trên MỌI NBIRTH trông có vẻ tương đương nhưng không phải vậy:
+                // MQTT là at-least-once, nên một NBIRTH được gửi lại đến với cùng bdSeq, xóa sạch
+                // một bảng alias hợp lệ, và mọi message chỉ-mang-alias sau đó trở nên không đọc
+                // được. Đã đo được hơn 10.000 message bị từ chối trong một run ngắn trước khi phép
+                // so sánh này tồn tại.
                 node.OpenSession(birth.BirthDeathSequence);
             }
 
@@ -121,10 +123,10 @@ public sealed class NodeSessionTracker
         }
     }
 
-    /// <summary>Applies a data message: refreshes values and checks the sequence.</summary>
-    /// <param name="topic">The <c>NDATA</c> or <c>DDATA</c> topic.</param>
-    /// <param name="readings">The decoded readings.</param>
-    /// <param name="sequence">The payload <c>seq</c>, when it carried one.</param>
+    /// <summary>Áp dụng một data message: làm mới các giá trị và kiểm tra sequence.</summary>
+    /// <param name="topic">Topic <c>NDATA</c> hoặc <c>DDATA</c>.</param>
+    /// <param name="readings">Các reading đã decode.</param>
+    /// <param name="sequence"><c>seq</c> của payload, khi nó có mang theo một giá trị.</param>
     public void ObserveData(SparkplugTopic topic, ImmutableArray<DeviceReading> readings, ulong? sequence)
     {
         ArgumentNullException.ThrowIfNull(topic);
@@ -144,14 +146,15 @@ public sealed class NodeSessionTracker
         }
     }
 
-    /// <summary>Applies a death: marks every metric of the node stale, and deletes nothing.</summary>
-    /// <param name="topic">The <c>NDEATH</c> topic.</param>
-    /// <param name="death">The decoded last will.</param>
-    /// <returns><see langword="true"/> when this death ended the session currently in force.</returns>
+    /// <summary>Áp dụng một death: đánh dấu mọi metric của node là stale, và không xóa gì cả.</summary>
+    /// <param name="topic">Topic <c>NDEATH</c>.</param>
+    /// <param name="death">Last will đã decode.</param>
+    /// <returns><see langword="true"/> khi death này đã kết thúc session đang có hiệu lực.</returns>
     /// <remarks>
-    /// The <c>bdSeq</c> check is the whole reason a death carries one. A broker that held a will
-    /// while the node reconnected will deliver the death of session 6 after the birth of session 7,
-    /// and a gateway that did not compare would mark a node dead that is, at that moment, publishing.
+    /// Việc kiểm tra <c>bdSeq</c> chính là toàn bộ lý do một death mang theo nó. Một broker giữ lại
+    /// một will trong khi node kết nối lại sẽ deliver death của session 6 sau birth của session 7,
+    /// và một gateway không so sánh sẽ đánh dấu một node là chết trong khi đúng lúc đó nó lại đang
+    /// publish.
     /// </remarks>
     public bool ObserveDeath(SparkplugTopic topic, SparkplugDeath death)
     {
@@ -164,8 +167,9 @@ public sealed class NodeSessionTracker
         {
             if (!_nodes.TryGetValue(address, out var node))
             {
-                // A death for a node this gateway never saw born. Recorded rather than dropped: the
-                // node is genuinely not reporting, and "unknown" would claim we have no opinion.
+                // Một death cho một node mà gateway này chưa từng thấy sinh ra. Được ghi lại thay
+                // vì bị drop: node thực sự đang không báo cáo, và "unknown" sẽ ngụ ý rằng ta không
+                // có ý kiến gì.
                 node = new NodeState();
                 _nodes[address] = node;
             }
@@ -183,12 +187,12 @@ public sealed class NodeSessionTracker
         }
     }
 
-    /// <summary>Asks a node to declare itself again, at most once per detected gap.</summary>
-    /// <param name="topic">Any topic of the node to ask.</param>
+    /// <summary>Yêu cầu một node khai báo lại chính nó, tối đa một lần cho mỗi gap được phát hiện.</summary>
+    /// <param name="topic">Bất kỳ topic nào của node cần yêu cầu.</param>
     /// <remarks>
-    /// Also the right answer to an alias the table cannot resolve: both mean the same thing — this
-    /// gateway's picture of the session is behind the node's — and both are only repairable by the
-    /// node saying everything again.
+    /// Cũng là câu trả lời đúng cho một alias mà bảng không thể resolve: cả hai đều mang cùng một ý
+    /// nghĩa — bức tranh session của gateway này đang chậm hơn so với node — và cả hai chỉ có thể
+    /// sửa được bằng cách để node nói lại toàn bộ mọi thứ.
     /// </remarks>
     public void RequestRebirth(SparkplugTopic topic)
     {
@@ -197,8 +201,8 @@ public sealed class NodeSessionTracker
         RequestRebirth(NodeAddress.From(topic));
     }
 
-    /// <summary>What the gateway believes about one node right now.</summary>
-    /// <param name="address">The node to describe.</param>
+    /// <summary>Những gì gateway tin là đúng về một node ngay lúc này.</summary>
+    /// <param name="address">Node cần mô tả.</param>
     public NodeSessionSnapshot Snapshot(NodeAddress address)
     {
         lock (_gate)
@@ -216,7 +220,7 @@ public sealed class NodeSessionTracker
         }
     }
 
-    /// <summary>Every node this gateway has an opinion about.</summary>
+    /// <summary>Mọi node mà gateway này có ý kiến về nó.</summary>
     public ImmutableArray<NodeSessionSnapshot> Snapshots()
     {
         lock (_gate)
@@ -246,8 +250,8 @@ public sealed class NodeSessionTracker
 
     private sealed class NodeState
     {
-        // seq is one byte on the wire and wraps at 256, so "went backwards" is never a valid reading
-        // of a smaller number — only "did the count advance by exactly one" is.
+        // seq chỉ có một byte trên wire và cuộn vòng (wrap) ở 256, nên "đi lùi" không bao giờ là một
+        // cách đọc hợp lệ cho một số nhỏ hơn — chỉ có "liệu số đếm có tiến thêm đúng một" mới là hợp lệ.
         private const ulong SequenceWrap = 256;
 
         private readonly Dictionary<string, Dictionary<string, NodeMetricState>> _metrics =
@@ -287,9 +291,9 @@ public sealed class NodeSessionTracker
                 return;
             }
 
-            // Data arriving means the node is talking, whatever we believed a moment ago. A gateway
-            // that stayed on Stale while readings flowed would keep a control room chasing a network
-            // fault that has already fixed itself.
+            // Dữ liệu đến nghĩa là node đang nói chuyện, bất kể ta tin điều gì một lúc trước. Một
+            // gateway vẫn giữ trạng thái Stale trong khi reading vẫn đang chảy vào sẽ khiến một
+            // control room cứ mãi truy tìm một lỗi mạng đã tự khắc phục xong rồi.
             if (Liveness != NodeLiveness.Online)
             {
                 Liveness = NodeLiveness.Online;
@@ -302,9 +306,9 @@ public sealed class NodeSessionTracker
 
             foreach (var reading in readings)
             {
-                // Protocol metrics describe the session, and the session already has a home on this
-                // object. Leaving them in the metric picture would put "bdSeq is STALE" in front of
-                // an operator, which is true and useless.
+                // Protocol metric mô tả session, và session đã có sẵn một nơi ở trên object này rồi.
+                // Để chúng lại trong bức tranh metric sẽ đặt "bdSeq is STALE" ngay trước mặt một
+                // operator, điều đúng nhưng vô dụng.
                 if (SparkplugPayload.IsProtocolMetric(reading.MetricName))
                 {
                     continue;
@@ -323,9 +327,10 @@ public sealed class NodeSessionTracker
             Liveness = NodeLiveness.Stale;
             StaleSince = at;
 
-            // The last value and its timestamp survive, and that is the whole point. "3,82 V at
-            // 09:14, and not trustworthy since" is a different statement from "no data" and from
-            // "zero volts", and only the first one sends the right person to the right place.
+            // Giá trị cuối cùng và timestamp của nó vẫn tồn tại, và đó chính là toàn bộ ý nghĩa.
+            // "3,82 V lúc 09:14, và không còn đáng tin kể từ đó" là một phát biểu khác hẳn "không có
+            // dữ liệu" và khác "điện áp bằng không", và chỉ có phát biểu đầu tiên mới đưa đúng người
+            // tới đúng chỗ.
             foreach (var device in _metrics.Values)
             {
                 foreach (var metricName in device.Keys.ToArray())
@@ -343,10 +348,10 @@ public sealed class NodeSessionTracker
 
         internal bool IsSequenceGap(ulong observed) =>
             LastSequence is { } last
-            // A repeat of the number we just accepted is a redelivery, not a missed message. The bus
-            // and the broker are both at-least-once and the simulator injects duplicates on purpose;
-            // counting each of those as a gap would ask for a rebirth on every duplicate and bury the
-            // real gaps in the noise.
+            // Một số lặp lại đúng số ta vừa chấp nhận là một lần gửi lại (redelivery), không phải một
+            // message bị bỏ lỡ. Cả bus lẫn broker đều là at-least-once và simulator cố tình chèn các
+            // bản trùng lặp; đếm mỗi trường hợp đó thành một gap sẽ yêu cầu rebirth trên mọi bản
+            // trùng lặp và chôn vùi các gap thật sự trong nhiễu.
             && observed != last
             && observed != (last + 1) % SequenceWrap;
 

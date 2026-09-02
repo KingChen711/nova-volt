@@ -3,19 +3,18 @@ using Nvm.Contracts.Events.Quality;
 
 namespace Nvm.Ingestion.Publishing;
 
-/// <summary>Publishes through the M1 bus, envelope and all.</summary>
+/// <summary>Publish qua M1 bus, kèm cả envelope.</summary>
 /// <remarks>
 /// <para>
-/// <c>IPublishEndpoint</c> and nothing else. The CloudEvents attributes — <c>ce_id</c> off the
-/// payload's <c>EventId</c>, type, source, time — are stamped by the send filter
-/// <c>UseNvmCloudEvents</c> installed in M1. A second publish path built here would be a second
-/// place for the envelope to be wrong, and the one place nobody would think to check when a header
-/// went missing.
+/// Chỉ <c>IPublishEndpoint</c> và không gì khác. Các thuộc tính CloudEvents — <c>ce_id</c> lấy từ
+/// <c>EventId</c> của payload, type, source, time — được đóng dấu bởi send filter
+/// <c>UseNvmCloudEvents</c> cài đặt trong M1. Một publish path thứ hai xây ở đây sẽ là một nơi thứ
+/// hai để envelope có thể sai, và là nơi không ai nghĩ tới kiểm tra khi một header bị thiếu.
 /// </para>
 /// <para>
-/// A failed publish is counted and swallowed. The rows are already committed; throwing would fail an
-/// HTTP request the gateway would then retry, and the retry would insert nothing (dedup) and publish
-/// again — turning one lost event into an endless one.
+/// Một publish thất bại được đếm và nuốt đi. Các dòng đã commit rồi; throw ra sẽ làm fail một HTTP
+/// request mà gateway sau đó sẽ retry, và retry đó sẽ không insert gì cả (dedup) rồi publish lại lần
+/// nữa — biến một event bị mất thành một event bị mất mãi mãi.
 /// </para>
 /// </remarks>
 public sealed partial class BusMeasurementEventPublisher : IMeasurementEventPublisher
@@ -23,12 +22,12 @@ public sealed partial class BusMeasurementEventPublisher : IMeasurementEventPubl
     private readonly IPublishEndpoint _publishEndpoint;
     private readonly ILogger<BusMeasurementEventPublisher> _logger;
 
-    /// <summary>Creates the publisher over the shared bus endpoint.</summary>
-    /// <param name="publishEndpoint">MassTransit's publish pipe, already carrying the M1 filters.</param>
+    /// <summary>Tạo publisher trên shared bus endpoint.</summary>
+    /// <param name="publishEndpoint">Publish pipe của MassTransit, đã mang sẵn các filter của M1.</param>
     /// <param name="logger">Structured log sink.</param>
     /// <remarks>
-    /// No metrics dependency: the caller owns the count, because the caller is the one that knows the
-    /// rows are already committed. Counting in both places is how a number ends up doubled.
+    /// Không phụ thuộc metrics: caller sở hữu việc đếm, vì caller là bên biết các dòng đã commit
+    /// rồi. Đếm ở cả hai nơi là cách một con số bị nhân đôi.
     /// </remarks>
     public BusMeasurementEventPublisher(
         IPublishEndpoint publishEndpoint,
@@ -58,9 +57,9 @@ public sealed partial class BusMeasurementEventPublisher : IMeasurementEventPubl
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
-                // Per event, not per batch. One unroutable message must not take the rest of a batch
-                // with it: those events are publishable, and the broker being unhappy about one of
-                // them says nothing about the others.
+                // Theo từng event, không phải theo batch. Một message không route được không được
+                // kéo theo phần còn lại của batch: những event đó vẫn publish được, và việc broker
+                // không hài lòng với một trong số chúng không nói lên điều gì về những cái còn lại.
                 failed++;
                 PublishFailed(_logger, exception, measurement.EventId, measurement.SignalCode);
             }

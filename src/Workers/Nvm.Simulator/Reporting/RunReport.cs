@@ -2,50 +2,50 @@ using System.Text.Json.Serialization;
 
 namespace Nvm.Simulator.Reporting;
 
-/// <summary>What a run says it produced. The left-hand side of D1's reconciliation.</summary>
-/// <param name="LinePath">Which line the run spoke for.</param>
-/// <param name="WrittenAt">When this file was last written. A stale value means the run died.</param>
-/// <param name="ProcessElapsed">How far the plant got, in its own time.</param>
-/// <param name="Channels">How many channels were simulated.</param>
+/// <summary>Những gì một run nói rằng nó đã tạo ra. Vế bên trái của reconciliation ở D1.</summary>
+/// <param name="LinePath">Run này đại diện phát ngôn cho line nào.</param>
+/// <param name="WrittenAt">Thời điểm file này được ghi lần cuối. Một giá trị cũ nghĩa là run đã chết.</param>
+/// <param name="ProcessElapsed">Nhà máy đã tiến được bao xa, theo thời gian riêng của nó.</param>
+/// <param name="Channels">Có bao nhiêu channel đã được mô phỏng.</param>
 /// <param name="LogicalMeasurements">
-/// ★ The number that must equal <c>SELECT count(*)</c> on telemetry. Signals the channels actually
-/// <b>took</b>, counted where the reading is taken and before anything is handed to a transport — a
-/// duplicate does not add to it, a drifted clock does not add to it, and a rebirth restating a
-/// reading already counted does not add to it either.
+/// ★ Con số phải bằng với <c>SELECT count(*)</c> trên telemetry. Là các signal mà các channel thực sự
+/// đã <b>lấy</b> (took), được đếm tại nơi reading được lấy và trước khi bất kỳ thứ gì được đưa cho một
+/// transport — một duplicate không cộng thêm vào nó, một đồng hồ drift không cộng thêm vào nó, và một
+/// rebirth nhắc lại một reading đã được đếm rồi cũng không cộng thêm vào nó.
 /// <para>
-/// Deliberately not "what reached the broker". Both sides of this reconciliation would then sit
-/// downstream of the same wire, and a run that lost its last half-batch would report a smaller left
-/// side and a smaller right side and call itself exact.
+/// Cố tình không phải là "cái gì đã tới được broker". Nếu vậy thì cả hai vế của reconciliation này sẽ
+/// cùng nằm sau cùng một đường truyền, và một run bị mất nửa batch cuối cùng sẽ báo cáo một vế trái
+/// nhỏ hơn và một vế phải nhỏ hơn rồi tự nhận là chính xác.
 /// </para>
 /// </param>
 /// <param name="AbandonedMeasurements">
-/// Of those, how many the link never carried — a session that ended mid-batch, or a publish that
-/// threw. It is a <b>diagnosis and not a correction</b>: these are still inside
-/// <paramref name="LogicalMeasurements"/>, so D1 and D3 fail over them, and both require this to be
-/// <b>0</b>. Subtracting it to make an equality come out even would remove the one thing the
-/// reconciliation exists to detect.
+/// Trong số đó, có bao nhiêu cái mà đường truyền chưa từng chuyển đi — một session kết thúc giữa
+/// chừng một batch, hoặc một lần publish ném exception. Đây là một <b>chẩn đoán, không phải một điều
+/// chỉnh</b>: những cái này vẫn nằm trong <paramref name="LogicalMeasurements"/>, nên D1 và D3 sẽ fail
+/// vì chúng, và cả hai đều yêu cầu con số này phải là <b>0</b>. Trừ nó đi để phép so sánh bằng ra
+/// khớp sẽ xóa mất chính điều mà reconciliation này tồn tại để phát hiện.
 /// </param>
-/// <param name="LogicalMessages">Messages the line composed, whether or not they were sent.</param>
-/// <param name="DuplicateMessages">Messages sent a second time on purpose.</param>
+/// <param name="LogicalMessages">Message mà line đã soạn, bất kể có được gửi hay không.</param>
+/// <param name="DuplicateMessages">Message được gửi lần thứ hai một cách cố ý.</param>
 /// <param name="PublishedMessages">
-/// What the broker acknowledged. Equal to <c>LogicalMessages + DuplicateMessages</c> only on a run
-/// where nothing was abandoned and nothing is still held in a simulated dropout — the difference is
-/// the point of keeping the three numbers apart rather than deriving one from the others.
+/// Những gì broker đã xác nhận. Chỉ bằng <c>LogicalMessages + DuplicateMessages</c> trên một run mà
+/// không có gì bị bỏ dở và không có gì còn đang bị giữ lại trong một đợt dropout mô phỏng — sự khác
+/// biệt chính là lý do giữ ba con số này tách rời nhau thay vì suy ra một con số từ hai con số kia.
 /// </param>
-/// <param name="DriftedDevices">Channels whose clock is wrong.</param>
-/// <param name="Dropouts">How many times the link went down.</param>
-/// <param name="HeldHighWater">The most messages ever waiting at once for the link to come back.</param>
-/// <param name="FaultsEnabled">Whether any fault was switched on at all.</param>
+/// <param name="DriftedDevices">Channel có đồng hồ sai.</param>
+/// <param name="Dropouts">Đường truyền đã rớt bao nhiêu lần.</param>
+/// <param name="HeldHighWater">Số message nhiều nhất từng phải chờ cùng lúc để đường truyền quay lại.</param>
+/// <param name="FaultsEnabled">Có bất kỳ fault nào được bật lên hay không.</param>
 /// <remarks>
 /// <para>
-/// The fault counts sit beside the totals deliberately. A reconciliation that comes out even with
-/// <c>DuplicateMessages = 0</c> has not shown that deduplication works — it has shown that nothing was
-/// deduplicated. That is <c>R-M2-1</c>, and the cheapest defence against it is putting the evidence
-/// where whoever reads the total cannot miss it.
+/// Các con số fault cố tình được đặt cạnh các tổng số. Một reconciliation ra khớp với
+/// <c>DuplicateMessages = 0</c> không có nghĩa là deduplication hoạt động — nó có nghĩa là không có gì
+/// bị deduplicate cả. Đó chính là <c>R-M2-1</c>, và cách phòng vệ rẻ nhất trước nó là đặt bằng chứng ở
+/// nơi mà ai đọc con số tổng cũng không thể bỏ sót.
 /// </para>
 /// <para>
-/// A file rather than a metric, because the reconciliation has to be readable after the run is over
-/// and the process is gone.
+/// Là một file chứ không phải một metric, vì reconciliation phải đọc được sau khi run đã kết thúc và
+/// process đã không còn nữa.
 /// </para>
 /// </remarks>
 public sealed record RunReport(
@@ -63,10 +63,10 @@ public sealed record RunReport(
     int HeldHighWater,
     bool FaultsEnabled);
 
-/// <summary>Serializer configuration for the run report, and nothing else.</summary>
+/// <summary>Cấu hình serializer cho run report, và không gì khác.</summary>
 /// <remarks>
-/// Its own context for the same reason the factory model seed has one: this is a local artefact of a
-/// lab run, and it changes for entirely different reasons than a wire contract does.
+/// Có context riêng của nó vì cùng lý do factory model seed cũng có: đây là một artefact cục bộ của
+/// một lần chạy thử nghiệm, và nó thay đổi vì những lý do hoàn toàn khác với một wire contract.
 /// </remarks>
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase, WriteIndented = true)]
 [JsonSerializable(typeof(RunReport))]

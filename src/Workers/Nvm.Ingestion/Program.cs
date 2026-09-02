@@ -58,9 +58,9 @@ builder.Services.AddSingleton(new PublishedSignals(options.PublishedSignals));
 
 if (options.RawCurveArchive.Enabled)
 {
-    // The WORM half of C12, finally reachable from a running service rather than only from a test.
-    // ForcePathStyle because MinIO serves buckets as a path segment; the region is a formality the
-    // signer insists on and MinIO ignores.
+    // Nửa WORM của C12, cuối cùng cũng chạm tới được từ một service đang chạy chứ không chỉ từ một
+    // test. ForcePathStyle vì MinIO phục vụ bucket dưới dạng một path segment; region là một thủ tục
+    // hình thức mà signer khăng khăng đòi và MinIO thì bỏ qua.
     builder.Services.AddSingleton<IAmazonS3>(_ => new AmazonS3Client(
         new BasicAWSCredentials(options.RawCurveArchive.AccessKey, options.RawCurveArchive.SecretKey),
         new AmazonS3Config
@@ -76,9 +76,9 @@ if (options.RawCurveArchive.Enabled)
         options.RawCurveArchive.BucketName));
 }
 
-// Refuse to start rather than run a service that eats exports and keeps no originals. The previous
-// version passed a null archive into the processor and said so in a comment — which is a deployment
-// quietly losing the bytes an auditor is entitled to ask for, wearing the shape of a note (C12.1).
+// Từ chối khởi động thay vì chạy một service nuốt export mà không giữ bản gốc nào. Phiên bản trước
+// truyền một archive null vào processor và nói vậy trong một comment — đó là một deployment âm thầm
+// làm mất những byte mà một auditor có quyền hỏi tới, khoác lên hình dạng của một ghi chú (C12.1).
 if (options.FileDrop.Enabled && !options.RawCurveArchive.Enabled)
 {
     throw new InvalidOperationException(
@@ -89,17 +89,17 @@ if (options.FileDrop.Enabled && !options.RawCurveArchive.Enabled)
 
 if (options.FileDrop.Enabled)
 {
-    // Same ingestor, same transaction, same natural key. The adapter differs only in how it reads
-    // (C15.1) — a second dedup definition would drift from this one within months.
+    // Cùng ingestor, cùng transaction, cùng natural key. Adapter chỉ khác ở cách nó đọc (C15.1) —
+    // một định nghĩa dedup thứ hai sẽ trôi dạt khỏi cái này chỉ sau vài tháng.
     var seedDirectory = Path.Combine(builder.Environment.ContentRootPath, options.SeedDirectory);
 
     builder.Services.AddSingleton(options.FileDrop);
     builder.Services.AddSingleton(SeededEquipmentDirectory.Load(seedDirectory, options.Revision));
     builder.Services.AddSingleton<CsvMeasurementReader>();
 
-    // Built by hand rather than by convention, and now with GetRequiredService: the guard above has
-    // already refused to start without an archive, so resolving it as optional here would only
-    // re-open the hole one refactor later.
+    // Xây bằng tay thay vì bằng convention, và giờ dùng GetRequiredService: guard ở trên đã từ chối
+    // khởi động khi không có archive rồi, nên resolve nó như optional ở đây chỉ mở lại lỗ hổng đó
+    // sau một lần refactor nữa mà thôi.
     builder.Services.AddSingleton(services => new FileDropProcessor(
         services.GetRequiredService<CsvMeasurementReader>(),
         services.GetRequiredService<IMeasurementIngestor>(),
@@ -112,8 +112,8 @@ if (options.FileDrop.Enabled)
 
 if (options.PublishesToBus)
 {
-    // The M1 bus, unchanged. Ingestion adds no consumers — it only publishes — and it reaches
-    // RabbitMQ on its it-net leg, never from dmz-net (K11).
+    // M1 bus, không đổi. Ingestion không thêm consumer nào — nó chỉ publish — và nó tiếp cận
+    // RabbitMQ qua chân it-net của nó, không bao giờ từ dmz-net (K11).
     builder.Services.AddNvmBus(bus =>
     {
         bus.Host = options.BusHost;
@@ -148,9 +148,9 @@ builder.Services
 
 var app = builder.Build();
 
-// The limiter only applies where a policy is attached, which is the batch endpoint alone. Health
-// checks stay outside it: a saturated ingestion must still answer /health/ready, or Docker would
-// restart the container for the sin of being busy and turn backpressure into an outage.
+// Limiter chỉ áp dụng ở nơi có gắn policy, tức là chỉ mỗi batch endpoint. Health check nằm ngoài
+// phạm vi đó: một ingestion đang quá tải vẫn phải trả lời /health/ready, nếu không Docker sẽ restart
+// container chỉ vì tội đang bận, và biến backpressure thành một outage.
 app.UseRateLimiter();
 
 app.MapHealthChecks(

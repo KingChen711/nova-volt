@@ -3,13 +3,13 @@ using System.Security.Cryptography;
 
 namespace Nvm.Ingestion.RawCurves;
 
-/// <summary>A SHA-256 calculated over the exact bytes presented for archival.</summary>
-/// <param name="Hex">Lower-case hexadecimal form stored in PostgreSQL and object metadata.</param>
-/// <param name="Base64">Wire form sent through the S3 checksum header.</param>
-/// <param name="ByteSize">Number of bytes covered by the digest.</param>
+/// <summary>Một SHA-256 tính trên đúng các byte được đưa ra để archive.</summary>
+/// <param name="Hex">Dạng hexadecimal chữ thường, lưu trong PostgreSQL và object metadata.</param>
+/// <param name="Base64">Dạng wire gửi qua header checksum của S3.</param>
+/// <param name="ByteSize">Số byte mà digest bao phủ.</param>
 public sealed record RawCurveDigest(string Hex, string Base64, long ByteSize)
 {
-    /// <summary>Hashes from the stream's current position and restores that position for upload.</summary>
+    /// <summary>Hash từ vị trí hiện tại của stream và khôi phục lại vị trí đó để upload.</summary>
     public static async Task<RawCurveDigest> CalculateAsync(
         Stream source,
         CancellationToken cancellationToken)
@@ -28,7 +28,7 @@ public sealed record RawCurveDigest(string Hex, string Base64, long ByteSize)
         }
     }
 
-    /// <summary>Recomputes a downloaded stream and compares both its digest and byte count.</summary>
+    /// <summary>Tính lại hash trên một stream đã tải về và so sánh cả digest lẫn số byte.</summary>
     public static async Task<bool> MatchesAsync(
         Stream candidate,
         string expectedHex,

@@ -2,15 +2,15 @@ using Nvm.Contracts.Events.Quality;
 
 namespace Nvm.Ingestion.Publishing;
 
-/// <summary>Stores telemetry and announces nothing.</summary>
+/// <summary>Lưu telemetry và không announce gì cả.</summary>
 /// <remarks>
-/// What a migration job, a unit test, or a deployment with no signals whitelisted runs with. It
-/// exists so that "no bus configured" is a configuration, not a null check repeated at every call
-/// site — and so that a missing publisher can never be mistaken for a publish that failed.
+/// Cái mà một migration job, một unit test, hoặc một deployment không whitelist signal nào chạy
+/// cùng. Nó tồn tại để "không cấu hình bus" là một cấu hình, không phải một null check lặp lại ở mỗi
+/// call site — và để một publisher bị thiếu không bao giờ bị nhầm với một publish đã thất bại.
 /// </remarks>
 public sealed class NullMeasurementEventPublisher : IMeasurementEventPublisher
 {
-    /// <summary>The shared instance.</summary>
+    /// <summary>Instance dùng chung.</summary>
     public static NullMeasurementEventPublisher Instance { get; } = new();
 
     /// <inheritdoc />

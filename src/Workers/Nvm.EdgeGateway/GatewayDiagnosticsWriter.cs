@@ -4,11 +4,12 @@ using Nvm.EdgeGateway.Buffering;
 
 namespace Nvm.EdgeGateway;
 
-/// <summary>Writes an exact, atomic process snapshot for fail-closed operational labs.</summary>
+/// <summary>Ghi một snapshot tiến trình chính xác, nguyên tử, phục vụ các lab vận hành fail-closed.</summary>
 /// <remarks>
-/// Progress logs are sampled and therefore cannot prove that the final batch drained. This file is
-/// intentionally local to the gateway volume: it adds no OT/IT route and no observability platform.
-/// A reader either sees the previous complete snapshot or the next one, never a half-written mix.
+/// Log tiến độ được lấy mẫu (sampled) nên không thể chứng minh rằng batch cuối cùng đã xả cạn
+/// xong. File này được cố tình đặt cục bộ trên volume của gateway: nó không thêm route OT/IT nào
+/// và không thêm nền tảng observability nào. Một reader luôn thấy hoặc là snapshot hoàn chỉnh
+/// trước đó, hoặc là snapshot tiếp theo, không bao giờ thấy một hỗn hợp ghi dở dang.
 /// </remarks>
 public sealed partial class GatewayDiagnosticsWriter : BackgroundService
 {
@@ -21,7 +22,7 @@ public sealed partial class GatewayDiagnosticsWriter : BackgroundService
     private readonly string _path;
     private readonly ILogger<GatewayDiagnosticsWriter> _logger;
 
-    /// <summary>Creates the writer over the same counters and buffer used by the gateway.</summary>
+    /// <summary>Tạo writer trên cùng bộ counter và buffer mà gateway đang sử dụng.</summary>
     public GatewayDiagnosticsWriter(
         GatewayCounters counters,
         FileStoreAndForwardBuffer buffer,
@@ -59,7 +60,7 @@ public sealed partial class GatewayDiagnosticsWriter : BackgroundService
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
         {
-            // Normal host shutdown. The last complete snapshot remains readable.
+            // Host shutdown bình thường. Snapshot hoàn chỉnh cuối cùng vẫn đọc được.
         }
     }
 
@@ -83,7 +84,7 @@ public sealed partial class GatewayDiagnosticsWriter : BackgroundService
     private static partial void SnapshotWriteFailed(ILogger logger, Exception exception, string path);
 }
 
-/// <summary>Exact counters from one gateway process at one instant.</summary>
+/// <summary>Các counter chính xác từ một tiến trình gateway tại một thời điểm.</summary>
 public sealed record GatewayDiagnosticsSnapshot(
     DateTimeOffset CapturedAt,
     long Decoded,
@@ -101,7 +102,7 @@ public sealed record GatewayDiagnosticsSnapshot(
     long DataFsyncs,
     long FlushBatches)
 {
-    /// <summary>Captures counters and durable state without deriving values from sampled logs.</summary>
+    /// <summary>Chụp lại các counter và state durable mà không suy ra giá trị từ log đã lấy mẫu.</summary>
     public static GatewayDiagnosticsSnapshot Capture(
         GatewayCounters counters,
         BufferSnapshot buffer,
@@ -128,7 +129,7 @@ public sealed record GatewayDiagnosticsSnapshot(
             counters.FlushBatches);
     }
 
-    /// <summary>Stable key-value format readable by the minimal shell available in the container.</summary>
+    /// <summary>Định dạng key-value ổn định, đọc được bởi shell tối giản có sẵn trong container.</summary>
     public string ToText() => string.Create(
         CultureInfo.InvariantCulture,
         $"captured_at={CapturedAt:O}\n"

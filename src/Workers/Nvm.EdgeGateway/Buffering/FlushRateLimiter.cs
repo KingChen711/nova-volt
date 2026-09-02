@@ -1,16 +1,16 @@
 namespace Nvm.EdgeGateway.Buffering;
 
-/// <summary>Caps how fast a recovering gateway may push its backlog at ingestion.</summary>
+/// <summary>Giới hạn tốc độ một gateway đang phục hồi được phép đẩy backlog của nó tới ingestion.</summary>
 /// <remarks>
 /// <para>
-/// A token bucket rather than a fixed sleep between batches: the bucket lets a gateway that has
-/// been idle send one burst immediately — the normal case, where there is nothing to protect
-/// anyone from — while a gateway draining hours of buffer settles onto the sustained rate.
+/// Dùng token bucket thay vì sleep cố định giữa các batch: bucket cho phép một gateway đã idle
+/// gửi ngay một burst — trường hợp bình thường, nơi không có gì cần bảo vệ ai khỏi — trong khi
+/// một gateway đang xả cạn hàng giờ buffer sẽ ổn định về tốc độ bền vững (sustained rate).
 /// </para>
 /// <para>
-/// The limiter is deliberately switchable. Lab §5.C10.3 of the M2 plan drains one identical
-/// buffer twice, once with it off and once with it on, because a rate limit that has never been
-/// measured against its own absence is a pattern, not a decision (ADR-029).
+/// Limiter được thiết kế có thể bật/tắt một cách cố ý. Lab §5.C10.3 của plan M2 xả cạn cùng một
+/// buffer y hệt hai lần, một lần tắt và một lần bật, vì một rate limit chưa từng được đo đối chiếu
+/// với chính việc không có nó chỉ là một pattern, không phải một quyết định (ADR-029).
 /// </para>
 /// </remarks>
 public sealed class FlushRateLimiter
@@ -22,9 +22,9 @@ public sealed class FlushRateLimiter
     private double _tokens;
     private long _lastRefillTimestamp;
 
-    /// <summary>Creates the limiter described by the buffer options.</summary>
-    /// <param name="options">Flush pacing configuration.</param>
-    /// <param name="clock">Clock driving refill; a fake clock makes the pacing testable (K1).</param>
+    /// <summary>Tạo limiter theo mô tả trong buffer options.</summary>
+    /// <param name="options">Cấu hình nhịp độ (pacing) flush.</param>
+    /// <param name="clock">Đồng hồ điều khiển việc refill; một fake clock giúp pacing kiểm thử được (K1).</param>
     public FlushRateLimiter(PersistentBufferOptions options, TimeProvider clock)
     {
         ArgumentNullException.ThrowIfNull(options);
@@ -37,17 +37,17 @@ public sealed class FlushRateLimiter
         _lastRefillTimestamp = clock.GetTimestamp();
     }
 
-    /// <summary>Whether a sustained rate is being enforced at all.</summary>
+    /// <summary>Có đang áp một sustained rate nào hay không.</summary>
     public bool IsEnabled => _messagesPerSecond > 0;
 
-    /// <summary>Waits until <paramref name="messages"/> may be sent, then spends the tokens.</summary>
-    /// <param name="messages">Messages the caller is about to POST.</param>
-    /// <param name="cancellationToken">Stops the wait when the host shuts down.</param>
-    /// <returns>How long the caller was held back; <see cref="TimeSpan.Zero"/> when it was not.</returns>
+    /// <summary>Đợi tới khi <paramref name="messages"/> được phép gửi, rồi tiêu token.</summary>
+    /// <param name="messages">Các message caller sắp POST.</param>
+    /// <param name="cancellationToken">Dừng việc chờ khi host shutdown.</param>
+    /// <returns>Thời gian caller bị giữ lại; <see cref="TimeSpan.Zero"/> khi không bị giữ.</returns>
     /// <remarks>
-    /// The buffer cursor has exactly one consumer, so this is called serially and the accounting is
-    /// exact. Concurrent callers would still each be paced, but two of them could sleep for the
-    /// same deficit and jointly overshoot for one window.
+    /// Con trỏ buffer chỉ có đúng một consumer, nên hàm này được gọi tuần tự và việc tính toán là
+    /// chính xác. Các caller chạy đồng thời vẫn sẽ mỗi caller đều bị pace, nhưng hai caller đó có
+    /// thể cùng sleep cho cùng một khoản thiếu hụt và cùng vượt quá trong một window.
     /// </remarks>
     public async ValueTask<TimeSpan> AcquireAsync(int messages, CancellationToken cancellationToken)
     {
@@ -56,8 +56,9 @@ public sealed class FlushRateLimiter
             return TimeSpan.Zero;
         }
 
-        // A batch larger than the bucket must still pass, or the flusher would stall forever on a
-        // record it can never afford. Charging the full bucket keeps the long-run average honest.
+        // Một batch lớn hơn bucket vẫn phải được cho qua, nếu không flusher sẽ đứng khựng mãi mãi
+        // trên một record nó không bao giờ đủ khả năng chi trả. Tính phí toàn bộ bucket giữ cho
+        // mức trung bình dài hạn chính xác.
         var cost = Math.Min(messages, _capacity);
         var waited = TimeSpan.Zero;
 

@@ -4,23 +4,23 @@ using Nvm.Sparkplug;
 
 namespace Nvm.EdgeGateway.Sessions;
 
-/// <summary>Publishes the <c>NCMD</c> that asks an edge node to declare itself again.</summary>
+/// <summary>Publish <c>NCMD</c> yêu cầu một edge node khai báo lại chính nó.</summary>
 /// <remarks>
 /// <para>
-/// A separate pump rather than a publish inside the receive callback. MQTTnet dispatches those
-/// callbacks serially, so publishing from one would put a network round trip on the path of every
-/// message behind it — and the message that triggered the rebirth is, by definition, arriving during
-/// trouble.
+/// Dùng một pump riêng thay vì publish ngay bên trong receive callback. MQTTnet dispatch các
+/// callback đó tuần tự, nên publish từ bên trong một callback sẽ đặt một network round trip lên
+/// đường đi của mọi message phía sau nó — và message đã kích hoạt rebirth, theo định nghĩa, đang
+/// đến giữa lúc có sự cố.
 /// </para>
 /// <para>
-/// Best effort by design. A rebirth request that cannot be published is not data loss: the buffer
-/// still holds everything received, and the next gap will ask again. Failing the host over it would
-/// turn a degraded picture into an outage.
+/// Cố tình thiết kế theo kiểu best effort. Một rebirth request không publish được không phải là
+/// mất dữ liệu: buffer vẫn giữ mọi thứ đã nhận, và gap tiếp theo sẽ yêu cầu lại. Làm sập host vì
+/// điều này sẽ biến một bức tranh suy giảm thành một outage.
 /// </para>
 /// </remarks>
 public sealed partial class RebirthRequestPump : BackgroundService
 {
-    /// <summary>The metric a node watches to know it must republish its births.</summary>
+    /// <summary>Metric mà một node theo dõi để biết nó phải republish lại các birth của mình.</summary>
     public const string RebirthControlMetric = "Node Control/Rebirth";
 
     private readonly NodeSessionTracker _tracker;
@@ -29,14 +29,14 @@ public sealed partial class RebirthRequestPump : BackgroundService
     private readonly TimeProvider _clock;
     private readonly ILogger<RebirthRequestPump> _logger;
 
-    /// <summary>Creates the pump over the tracker's pending-request queue.</summary>
-    /// <param name="tracker">Where rebirth requests are raised.</param>
+    /// <summary>Tạo pump trên hàng đợi pending-request của tracker.</summary>
+    /// <param name="tracker">Nơi các rebirth request được raise.</param>
     /// <param name="metrics">
-    /// The session instruments. Taken here so the container builds them: an observable gauge that
-    /// nothing resolves is a gauge that never reports, and it would fail silently.
+    /// Các instrument của session. Được nhận vào đây để container build chúng: một observable gauge
+    /// mà không ai resolve tới là một gauge không bao giờ report, và nó sẽ fail một cách âm thầm.
     /// </param>
-    /// <param name="mqtt">The gateway's broker connection.</param>
-    /// <param name="clock">Clock stamping the command payload (K1).</param>
+    /// <param name="mqtt">Kết nối broker của gateway.</param>
+    /// <param name="clock">Đồng hồ đóng dấu command payload (K1).</param>
     /// <param name="logger">Structured log sink.</param>
     public RebirthRequestPump(
         NodeSessionTracker tracker,
@@ -65,8 +65,8 @@ public sealed partial class RebirthRequestPump : BackgroundService
         {
             if (!_mqtt.IsConnected)
             {
-                // Nothing to do and nothing to report as an error: a disconnected gateway is already
-                // being logged by the worker, and the node cannot hear us either way.
+                // Không có gì để làm và không có gì để báo cáo như một lỗi: một gateway bị ngắt kết
+                // nối đã được worker ghi log rồi, và dù sao node cũng không nghe được ta.
                 continue;
             }
 
@@ -86,8 +86,8 @@ public sealed partial class RebirthRequestPump : BackgroundService
     {
         var now = _clock.GetUtcNow();
 
-        // seq 0: a command is not part of the node's own numbered stream, and a consumer counting
-        // that stream must not see our traffic in it.
+        // seq 0: một command không thuộc về stream đánh số riêng của node, và một consumer đang đếm
+        // stream đó không được thấy traffic của ta lẫn trong đó.
         var payload = SparkplugPayload.EncodeData(
             [new DeviceReading(RebirthControlMetric, Alias: null, new MetricValue.Flag(true), now)],
             sequence: 0,

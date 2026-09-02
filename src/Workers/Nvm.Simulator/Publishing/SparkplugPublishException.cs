@@ -1,35 +1,36 @@
 namespace Nvm.Simulator.Publishing;
 
-/// <summary>A message could not be put on the wire.</summary>
+/// <summary>Một message không thể được đặt lên đường truyền.</summary>
 /// <remarks>
 /// <para>
-/// The link failed, not the plant. The distinction is the whole reason this type exists: the worker
-/// has to keep running when the broker goes away (N15) and must NOT keep running when the line
-/// itself is wrong, and a bare <c>catch</c> around the publish would make those two indistinguishable.
+/// Đường truyền hỏng, không phải nhà máy hỏng. Sự phân biệt này chính là toàn bộ lý do type này tồn
+/// tại: worker phải tiếp tục chạy khi broker biến mất (N15) và KHÔNG được tiếp tục chạy khi chính line
+/// bị sai, và một <c>catch</c> trần trụi quanh publish sẽ khiến hai trường hợp đó không thể phân biệt
+/// được.
 /// </para>
 /// <para>
-/// Declared here rather than letting MQTTnet's own exceptions travel, because the worker is written
-/// against <see cref="ISparkplugPublisher"/> and has no business knowing which transport is under it.
-/// A publisher that spoke a different protocol would report the same failure the same way.
+/// Được khai báo ở đây thay vì để exception của chính MQTTnet đi xuyên qua, vì worker được viết dựa
+/// trên <see cref="ISparkplugPublisher"/> và không có việc gì phải biết transport bên dưới là gì. Một
+/// publisher nói một protocol khác vẫn sẽ báo cùng một lỗi theo đúng cùng một cách.
 /// </para>
 /// </remarks>
 public sealed class SparkplugPublishException : Exception
 {
-    /// <summary>Creates the exception.</summary>
+    /// <summary>Tạo exception.</summary>
     public SparkplugPublishException()
     {
     }
 
-    /// <summary>Creates the exception.</summary>
-    /// <param name="message">What could not be sent, and where it was going.</param>
+    /// <summary>Tạo exception.</summary>
+    /// <param name="message">Cái gì không gửi được, và nó định đi đâu.</param>
     public SparkplugPublishException(string message)
         : base(message)
     {
     }
 
-    /// <summary>Creates the exception.</summary>
-    /// <param name="message">What could not be sent, and where it was going.</param>
-    /// <param name="innerException">What the transport said.</param>
+    /// <summary>Tạo exception.</summary>
+    /// <param name="message">Cái gì không gửi được, và nó định đi đâu.</param>
+    /// <param name="innerException">Transport đã báo gì.</param>
     public SparkplugPublishException(string message, Exception innerException)
         : base(message, innerException)
     {

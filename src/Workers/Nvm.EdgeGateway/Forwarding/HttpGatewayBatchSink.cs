@@ -4,20 +4,20 @@ using Nvm.Sparkplug;
 
 namespace Nvm.EdgeGateway.Forwarding;
 
-/// <summary>POSTs protobuf batches to ingestion inside <c>dmz-net</c>.</summary>
+/// <summary>POST các batch protobuf tới ingestion bên trong <c>dmz-net</c>.</summary>
 public sealed class HttpGatewayBatchSink : IGatewayBatchSink
 {
-    /// <summary>The media type of ADR-027's body.</summary>
+    /// <summary>Media type của body theo ADR-027.</summary>
     public const string ProtobufMediaType = "application/x-protobuf";
 
     private readonly HttpClient _httpClient;
     private readonly TimeProvider _clock;
     private readonly Uri _endpoint;
 
-    /// <summary>Creates the sender that turns an overload answer into a pacing instruction.</summary>
-    /// <param name="httpClient">Client already carrying the gateway request timeout.</param>
-    /// <param name="options">Gateway configuration holding the ingestion endpoint.</param>
-    /// <param name="clock">Resolves a <c>Retry-After</c> expressed as an HTTP date.</param>
+    /// <summary>Tạo sender biến một câu trả lời overload thành một chỉ dẫn pacing.</summary>
+    /// <param name="httpClient">Client đã mang sẵn request timeout của gateway.</param>
+    /// <param name="options">Cấu hình gateway chứa ingestion endpoint.</param>
+    /// <param name="clock">Phân giải một <c>Retry-After</c> được biểu diễn dưới dạng HTTP date.</param>
     public HttpGatewayBatchSink(HttpClient httpClient, EdgeGatewayOptions options, TimeProvider clock)
     {
         ArgumentNullException.ThrowIfNull(httpClient);
@@ -57,10 +57,10 @@ public sealed class HttpGatewayBatchSink : IGatewayBatchSink
         response.EnsureSuccessStatusCode();
     }
 
-    /// <summary>Converts a <c>Retry-After</c> header into a delay this process can wait for.</summary>
-    /// <param name="header">Parsed header value, or null when the response carried none.</param>
-    /// <param name="now">Reference instant for a header expressed as an HTTP date.</param>
-    /// <returns>The requested delay, or null when the header is missing or already in the past.</returns>
+    /// <summary>Chuyển đổi một header <c>Retry-After</c> thành một delay mà tiến trình này có thể chờ.</summary>
+    /// <param name="header">Giá trị header đã parse, hoặc null khi response không mang header nào.</param>
+    /// <param name="now">Thời điểm tham chiếu cho một header được biểu diễn dưới dạng HTTP date.</param>
+    /// <returns>Delay được yêu cầu, hoặc null khi header bị thiếu hoặc đã ở trong quá khứ.</returns>
     public static TimeSpan? ReadRetryAfter(RetryConditionHeaderValue? header, DateTimeOffset now)
     {
         if (header is null)
@@ -82,8 +82,8 @@ public sealed class HttpGatewayBatchSink : IGatewayBatchSink
         return null;
     }
 
-    // 429 and 503 are the two answers that mean "later, slower" rather than "never". A 500 is a bug
-    // in ingestion and a 400 is a bug in us; neither is a reason to change pace.
+    // 429 và 503 là hai câu trả lời mang nghĩa "sau này, chậm hơn" chứ không phải "không bao giờ".
+    // Một 500 là bug ở ingestion và một 400 là bug ở phía ta; không cái nào là lý do để đổi nhịp độ.
     private static bool IsBackpressure(HttpStatusCode statusCode) =>
         statusCode is HttpStatusCode.TooManyRequests or HttpStatusCode.ServiceUnavailable;
 }

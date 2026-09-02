@@ -1,19 +1,19 @@
 namespace Nvm.Ingestion.RawCurves;
 
-/// <summary>Keeps the exact bytes a machine produced, and an auditable index of them.</summary>
+/// <summary>Giữ đúng các byte mà một máy tạo ra, cùng một chỉ mục có thể audit được.</summary>
 /// <remarks>
-/// An interface so the file-drop adapter can depend on the act of archiving rather than on S3. The
-/// adapter's job is to notice that a file is a plant record and to say who handed it over; where the
-/// bytes land, and under what object lock, is a decision the adapter should not be able to weaken by
-/// accident.
+/// Một interface để file-drop adapter phụ thuộc vào hành động archive thay vì phụ thuộc vào S3.
+/// Việc của adapter là nhận ra một file là bản ghi của nhà máy và nói ai đã giao nó; các byte đó nằm
+/// ở đâu, dưới object lock nào, là một quyết định mà adapter không nên có khả năng làm yếu đi một
+/// cách vô tình.
 /// </remarks>
 public interface IRawCurveArchive
 {
-    /// <summary>Archives one exact stream idempotently and returns its immutable object version.</summary>
-    /// <param name="descriptor">The plant, machine and interval the bytes belong to.</param>
-    /// <param name="source">The original bytes, seekable and positioned at the start.</param>
-    /// <param name="provenance">Who is archiving, why, and what this corrects (K5).</param>
-    /// <param name="cancellationToken">Stops the work when the host shuts down.</param>
+    /// <summary>Archive một stream chính xác một cách idempotent và trả về phiên bản object bất biến của nó.</summary>
+    /// <param name="descriptor">Nhà máy, máy và interval mà các byte này thuộc về.</param>
+    /// <param name="source">Các byte gốc, seekable và đang ở vị trí bắt đầu.</param>
+    /// <param name="provenance">Ai đang archive, vì sao, và cái này sửa lại gì (K5).</param>
+    /// <param name="cancellationToken">Dừng công việc khi host tắt.</param>
     Task<RawCurveArchiveResult> ArchiveAsync(
         RawCurveDescriptor descriptor,
         Stream source,

@@ -16,9 +16,9 @@ internal static class IngestionEndpoints
         app.MapPost(SparkplugBatchPath, IngestSparkplugBatchAsync)
             .RequireRateLimiting(IngestionAdmissionControl.PolicyName);
 
-        // Read-only, and deliberately outside the rate limiter: the moment worth asking about is the
-        // moment ingestion is busiest, and a stats endpoint that returns 429 under load reports on
-        // exactly the conditions it cannot observe.
+        // Chỉ đọc, và cố ý nằm ngoài rate limiter: khoảnh khắc đáng để hỏi tới chính là lúc ingestion
+        // bận rộn nhất, và một stats endpoint trả về 429 khi đang tải nặng thì đang báo cáo đúng cái
+        // điều kiện mà nó không thể quan sát được.
         app.MapGet(StatsPath, ReadStats);
     }
 
@@ -128,17 +128,17 @@ internal static class IngestionEndpoints
         : Exception($"Batch exceeds the {limit} byte limit.");
 }
 
-/// <summary>What one ingestion process has done since it started, and how far behind it is.</summary>
-/// <param name="Inserted">New logical readings stored.</param>
-/// <param name="Duplicates">Repeated deliveries the dedup key swallowed.</param>
-/// <param name="Drifted">Readings stored with a device clock that could not be trusted.</param>
-/// <param name="Published">Events handed to the broker without an error.</param>
-/// <param name="PublishFailures">Events whose row is stored and whose announcement was lost.</param>
-/// <param name="LagSamples">Readings sampled for lag — good clocks only.</param>
-/// <param name="LagP50Seconds">Median device-to-database lag.</param>
-/// <param name="LagP95Seconds">D2's number.</param>
-/// <param name="LagP99Seconds">Tail lag.</param>
-/// <param name="LagMaxSeconds">Worst lag in the recent window.</param>
+/// <summary>Những gì một ingestion process đã làm kể từ lúc khởi động, và nó đang chậm bao xa.</summary>
+/// <param name="Inserted">Reading logic mới đã lưu.</param>
+/// <param name="Duplicates">Các delivery lặp lại mà dedup key đã nuốt.</param>
+/// <param name="Drifted">Reading đã lưu với một device clock không thể tin cậy được.</param>
+/// <param name="Published">Event đã giao cho broker mà không lỗi.</param>
+/// <param name="PublishFailures">Event có dòng đã lưu nhưng thông báo của nó bị mất.</param>
+/// <param name="LagSamples">Reading được lấy mẫu cho lag — chỉ những đồng hồ tốt.</param>
+/// <param name="LagP50Seconds">Lag trung vị từ device tới database.</param>
+/// <param name="LagP95Seconds">Con số của D2.</param>
+/// <param name="LagP99Seconds">Lag đuôi.</param>
+/// <param name="LagMaxSeconds">Lag tệ nhất trong window gần đây.</param>
 internal sealed record IngestionStats(
     long Inserted,
     long Duplicates,

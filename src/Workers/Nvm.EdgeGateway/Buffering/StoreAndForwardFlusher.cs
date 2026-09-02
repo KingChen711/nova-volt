@@ -3,13 +3,14 @@ using Nvm.Sparkplug;
 
 namespace Nvm.EdgeGateway.Buffering;
 
-/// <summary>Reads durable records, POSTs them at a bounded rate, then advances the cursor.</summary>
+/// <summary>Đọc các record durable, POST chúng ở một tốc độ có giới hạn, rồi đẩy cursor tiến lên.</summary>
 /// <remarks>
-/// Two independent brakes, and they exist for different reasons. The rate limiter is what this
-/// gateway promises never to exceed even when it is the only one recovering. Backpressure is what
-/// ingestion asks for when it is not coping — which usually means the other gateways in the area
-/// came back at the same moment. Honouring only the first would still overwhelm a shared backend;
-/// honouring only the second would need ingestion to be hurt before anyone slowed down.
+/// Hai cái phanh độc lập, và chúng tồn tại vì những lý do khác nhau. Rate limiter là điều mà
+/// gateway này cam kết không bao giờ vượt quá, kể cả khi nó là gateway duy nhất đang phục hồi.
+/// Backpressure là điều ingestion yêu cầu khi nó không kham nổi — thường có nghĩa là các gateway
+/// khác trong khu vực cùng quay lại vào đúng lúc đó. Chỉ tuân theo cái đầu vẫn có thể làm quá tải
+/// một backend dùng chung; chỉ tuân theo cái sau thì cần ingestion phải bị tổn hại trước khi có ai
+/// đó chậm lại.
 /// </remarks>
 public sealed partial class StoreAndForwardFlusher : BackgroundService
 {
@@ -25,17 +26,17 @@ public sealed partial class StoreAndForwardFlusher : BackgroundService
     private readonly int _logEvery;
     private long _failures;
 
-    /// <summary>Creates the single consumer of the buffer cursor.</summary>
-    /// <param name="buffer">Durable queue this flusher drains.</param>
-    /// <param name="metrics">Buffer depth gauges; constructed here so they are alive while draining.</param>
-    /// <param name="flushMetrics">Rate and throttle instruments read by the D3 lab.</param>
-    /// <param name="sink">Ingestion transport.</param>
-    /// <param name="options">Flush batching, pacing and retry configuration.</param>
-    /// <param name="rateLimiter">The gateway's own sustained-rate promise.</param>
-    /// <param name="backoff">Retry schedule honouring any server-supplied floor.</param>
-    /// <param name="gatewayOptions">Supplies the shared progress-log interval.</param>
-    /// <param name="counters">Process counters.</param>
-    /// <param name="clock">Clock behind every wait (K1).</param>
+    /// <summary>Tạo consumer duy nhất của cursor buffer.</summary>
+    /// <param name="buffer">Hàng đợi durable mà flusher này xả cạn.</param>
+    /// <param name="metrics">Các gauge buffer depth; được khởi tạo ở đây để chúng sống suốt quá trình xả cạn.</param>
+    /// <param name="flushMetrics">Các instrument về rate và throttle mà lab D3 đọc.</param>
+    /// <param name="sink">Kênh vận chuyển tới ingestion.</param>
+    /// <param name="options">Cấu hình batching, pacing và retry của flush.</param>
+    /// <param name="rateLimiter">Cam kết sustained-rate của chính gateway này.</param>
+    /// <param name="backoff">Lịch retry tuân theo mức sàn mà server đưa ra (nếu có).</param>
+    /// <param name="gatewayOptions">Cung cấp interval ghi log tiến độ dùng chung.</param>
+    /// <param name="counters">Process counter.</param>
+    /// <param name="clock">Đồng hồ đứng sau mọi lần chờ (K1).</param>
     /// <param name="logger">Structured log sink.</param>
     public StoreAndForwardFlusher(
         FileStoreAndForwardBuffer buffer,
@@ -106,8 +107,9 @@ public sealed partial class StoreAndForwardFlusher : BackgroundService
 
                 if (pending.Payloads.IsEmpty)
                 {
-                    // Every physical record in this range failed CRC. Crossing it is explicit and
-                    // counted; retrying the same corrupt bytes forever cannot restore their contents.
+                    // Mọi record vật lý trong khoảng này đều fail CRC. Việc đi qua nó được thực hiện
+                    // tường minh và có đếm; retry mãi mãi với cùng những byte hỏng không thể khôi
+                    // phục nội dung của chúng.
                     await _buffer.AcknowledgeAsync(pending, stoppingToken);
                     pending = null;
                     continue;
@@ -118,8 +120,8 @@ public sealed partial class StoreAndForwardFlusher : BackgroundService
                     .ToArray();
             }
 
-            // Pace before sending, not after failing. Waiting only once ingestion has complained
-            // means the first burst of a recovery has already landed.
+            // Pace trước khi gửi, không phải sau khi thất bại. Chỉ chờ khi ingestion đã than phiền
+            // nghĩa là burst đầu tiên của một lần phục hồi đã kịp đến rồi.
             var held = await _rateLimiter.AcquireAsync(pendingMessages!.Length, stoppingToken);
 
             if (held > TimeSpan.Zero)
@@ -136,13 +138,13 @@ public sealed partial class StoreAndForwardFlusher : BackgroundService
             {
                 await _sink.SendAsync(pendingMessages!, stoppingToken);
             }
-            // Guarded on the stopping token, NOT on the exception type. HttpClient throws
-            // TaskCanceledException when its own timeout elapses, and TaskCanceledException derives
-            // from OperationCanceledException — so "is not OperationCanceledException" let every
-            // ingestion timeout escape and kill the host. Measured in lab §5.C10.2: six gateway
-            // restarts during one two-minute backend outage, each one re-reading the buffer, and a
-            // drain that missed its three-minute budget by three seconds. Restarting the edge
-            // because the backend is unreachable is exactly what N15 forbids.
+            // Được gác bởi stopping token, KHÔNG phải bởi loại exception. HttpClient ném
+            // TaskCanceledException khi timeout của chính nó trôi qua, và TaskCanceledException kế
+            // thừa từ OperationCanceledException — nên "is not OperationCanceledException" sẽ để
+            // mọi timeout của ingestion thoát ra và giết host. Đã đo được trong lab §5.C10.2: sáu
+            // lần gateway restart trong một lần backend outage kéo dài hai phút, mỗi lần đều đọc
+            // lại buffer từ đầu, và một lần xả cạn trễ mất ba giây so với ngân sách ba phút của nó.
+            // Restart edge chỉ vì backend không thể liên lạc được chính là điều N15 cấm.
             catch (Exception exception) when (!stoppingToken.IsCancellationRequested)
             {
                 var failure = ++_failures;
@@ -172,10 +174,10 @@ public sealed partial class StoreAndForwardFlusher : BackgroundService
                 continue;
             }
 
-            // A cursor fsync failure is a local storage fault, not HTTP backpressure. Let it stop
-            // the host so restart recovery can decide whether HTTP must be repeated; retrying this
-            // in-process after a partially completed cursor update can violate the outstanding-read
-            // invariant.
+            // Một lỗi fsync cursor là lỗi storage cục bộ, không phải HTTP backpressure. Cứ để nó
+            // dừng host để quá trình phục hồi khi restart có thể quyết định liệu HTTP có cần lặp
+            // lại hay không; retry việc này ngay trong tiến trình sau một lần cập nhật cursor dở
+            // dang có thể vi phạm bất biến (invariant) về outstanding-read.
             await _buffer.AcknowledgeAsync(pending, stoppingToken);
             var forwarded = _counters.CountForwarded(pendingMessages!.Length);
             _counters.CountFlushBatch();

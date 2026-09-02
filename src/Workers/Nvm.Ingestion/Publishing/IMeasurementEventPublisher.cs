@@ -2,19 +2,19 @@ using Nvm.Contracts.Events.Quality;
 
 namespace Nvm.Ingestion.Publishing;
 
-/// <summary>Carries committed measurements onward as domain events.</summary>
+/// <summary>Mang các measurement đã commit đi tiếp dưới dạng domain event.</summary>
 /// <remarks>
-/// Called <b>after</b> the database transaction commits, never inside it. Ingestion and RabbitMQ are
-/// two systems with no shared transaction, and pretending otherwise is what ADR-022 measured: 18 of
-/// 200 events lost when the broker died mid-publish. M2 keeps that limit and counts it rather than
-/// hiding it; the transactional outbox that closes it is M6.
+/// Được gọi <b>sau</b> khi database transaction commit, không bao giờ ở bên trong nó. Ingestion và
+/// RabbitMQ là hai hệ thống không chia sẻ transaction, và giả vờ ngược lại chính là điều ADR-022 đã
+/// đo được: 18 trên 200 event bị mất khi broker chết giữa lúc publish. M2 giữ nguyên giới hạn đó và
+/// đếm nó thay vì che giấu nó; transactional outbox đóng lỗ hổng này là M6.
 /// </remarks>
 public interface IMeasurementEventPublisher
 {
-    /// <summary>Publishes the events for one committed batch.</summary>
-    /// <param name="events">Events for the readings that were actually stored.</param>
-    /// <param name="cancellationToken">Stops the publish when the host shuts down.</param>
-    /// <returns>How many failed to publish. The telemetry rows stay either way.</returns>
+    /// <summary>Publish các event cho một batch đã commit.</summary>
+    /// <param name="events">Event cho những reading thực sự đã được lưu.</param>
+    /// <param name="cancellationToken">Dừng việc publish khi host tắt.</param>
+    /// <returns>Bao nhiêu cái publish thất bại. Các dòng telemetry vẫn ở nguyên đó dù thế nào.</returns>
     Task<int> PublishAsync(
         IReadOnlyCollection<MeasurementRecorded> events,
         CancellationToken cancellationToken);

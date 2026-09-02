@@ -1,6 +1,6 @@
 namespace Nvm.Ingestion.FileDrop;
 
-/// <summary>Polls the inbox and hands each published file to the processor.</summary>
+/// <summary>Poll inbox và giao mỗi file đã publish cho processor.</summary>
 public sealed partial class FileDropWatcher : BackgroundService
 {
     private readonly FileDropProcessor _processor;
@@ -8,13 +8,13 @@ public sealed partial class FileDropWatcher : BackgroundService
     private readonly TimeProvider _clock;
     private readonly ILogger<FileDropWatcher> _logger;
 
-    /// <summary>Files already reported as waiting, so one stuck export is one log line.</summary>
+    /// <summary>Các file đã báo cáo là đang chờ, để một export bị kẹt chỉ là một dòng log.</summary>
     private readonly HashSet<string> _reportedUnpublished = new(StringComparer.Ordinal);
 
-    /// <summary>Creates the watcher.</summary>
-    /// <param name="processor">What a file is turned into.</param>
-    /// <param name="options">Directories and timing.</param>
-    /// <param name="clock">Drives the poll interval and the settle check (K1).</param>
+    /// <summary>Tạo watcher.</summary>
+    /// <param name="processor">File được biến thành gì.</param>
+    /// <param name="options">Thư mục và timing.</param>
+    /// <param name="clock">Điều khiển poll interval và settle check (K1).</param>
     /// <param name="logger">Structured log sink.</param>
     public FileDropWatcher(
         FileDropProcessor processor,
@@ -45,9 +45,10 @@ public sealed partial class FileDropWatcher : BackgroundService
         }
         else
         {
-            // Said out loud, once, at the only moment somebody is reading. A deployment that turned
-            // the contract off is reading files on a timer and calling a quiet exporter a finished
-            // one, and that decision must not be discoverable only by reading the configuration.
+            // Nói ra thành lời, một lần, đúng vào khoảnh khắc duy nhất có ai đó đang đọc. Một
+            // deployment đã tắt contract này là đang đọc file theo một timer và coi một exporter im
+            // lặng là một exporter đã xong, và quyết định đó không được phép chỉ khám phá ra bằng
+            // cách đọc configuration.
             PublishContractDisabled(_logger, _options.SettleTime);
         }
 
@@ -71,14 +72,14 @@ public sealed partial class FileDropWatcher : BackgroundService
                     await _processor.ProcessAsync(path, stoppingToken);
                 }
 
-                // A name that left the inbox is a name worth reporting again if it comes back.
+                // Một cái tên đã rời khỏi inbox là một cái tên đáng báo cáo lại nếu nó quay trở về.
                 _reportedUnpublished.IntersectWith(present);
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
-                // A share that went away, a file locked by the exporter, a permission change. None of
-                // those is a reason to stop watching: the MQTT path is unaffected and the file is
-                // still on disk to be tried again (N15).
+                // Một share biến mất, một file bị exporter khóa, một thay đổi permission. Không cái
+                // nào trong số đó là lý do để dừng watching: đường MQTT không bị ảnh hưởng và file
+                // vẫn còn trên đĩa để thử lại (N15).
                 PollFailed(_logger, exception, _options.InboxPath);
             }
 
@@ -86,21 +87,21 @@ public sealed partial class FileDropWatcher : BackgroundService
         }
     }
 
-    /// <summary>Everything in the inbox when a contract is in force, so the rest can be reported.</summary>
+    /// <summary>Mọi thứ trong inbox khi một contract đang có hiệu lực, để phần còn lại có thể báo cáo.</summary>
     /// <remarks>
-    /// A file nobody will ever read is the failure this contract trades for, and it has no error of
-    /// its own. Listing the whole directory is what makes it possible to say so.
+    /// Một file không ai từng đọc là thất bại mà contract này đánh đổi để tránh, và tự nó không có
+    /// lỗi nào cả. Liệt kê toàn bộ thư mục là thứ giúp nói ra được điều đó.
     /// </remarks>
     private IEnumerable<string> EnumerateInbox() =>
         Directory
             .EnumerateFiles(_options.InboxPath, _options.RequiresPublishedSuffix ? "*" : "*.csv")
             .Order(StringComparer.Ordinal);
 
-    /// <summary>Whether the producer has said this file is finished.</summary>
+    /// <summary>Producer đã nói file này xong chưa.</summary>
     /// <remarks>
-    /// The name answers the question; the settle time only guesses at it. Renaming a file out of the
-    /// inbox does not close the handle an exporter still holds on it, so a quiet mtime is evidence
-    /// of nothing except that the exporter has been quiet for two seconds.
+    /// Cái tên trả lời câu hỏi này; settle time chỉ đoán mò. Đổi tên một file ra khỏi inbox không
+    /// đóng cái handle mà một exporter vẫn còn giữ trên nó, nên một mtime im lặng chỉ là bằng chứng
+    /// cho việc exporter đã im lặng được hai giây, không hơn.
     /// </remarks>
     private bool IsReadable(string path)
     {
@@ -114,9 +115,9 @@ public sealed partial class FileDropWatcher : BackgroundService
             return false;
         }
 
-        // Still an export underneath, checked by hand rather than by the glob: DOS-style matching on
-        // Windows can hand back a name whose extension only looks like the suffix, and anything else
-        // in the inbox is somebody's business but not this adapter's.
+        // Vẫn là một export bên dưới, kiểm tra bằng tay thay vì bằng glob: kiểu khớp DOS-style trên
+        // Windows có thể trả về một cái tên mà extension chỉ trông giống suffix, và bất cứ thứ gì
+        // khác trong inbox là việc của ai đó khác, không phải của adapter này.
         return path[..^_options.PublishedSuffix.Length]
             .EndsWith(".csv", StringComparison.OrdinalIgnoreCase);
     }
@@ -125,8 +126,8 @@ public sealed partial class FileDropWatcher : BackgroundService
     {
         if (!_options.RequiresPublishedSuffix || !File.Exists(path))
         {
-            // Nothing is waiting: either there is no contract to wait on, or the file was claimed or
-            // removed between the listing and here.
+            // Không có gì đang chờ: hoặc không có contract nào để chờ theo, hoặc file đã bị claim
+            // hoặc bị xóa giữa lúc liệt kê và lúc này.
             return;
         }
 
@@ -150,10 +151,10 @@ public sealed partial class FileDropWatcher : BackgroundService
             return true;
         }
 
-        // Both sides UTC, and the near side through TimeProvider (K1). The far side is a timestamp
-        // the operating system wrote, so a test driving a fake clock has one real value in the
-        // comparison — which is why a test that is not about settling sets SettleTime to zero rather
-        // than trying to move the file's mtime.
+        // Cả hai vế đều UTC, và vế gần đi qua TimeProvider (K1). Vế xa là một timestamp do hệ điều
+        // hành ghi, nên một test lái theo một đồng hồ giả có một giá trị thật trong phép so sánh —
+        // đó là lý do một test không nói về settling thì đặt SettleTime bằng 0 thay vì cố dịch mtime
+        // của file.
         var lastWrite = new DateTimeOffset(File.GetLastWriteTimeUtc(path), TimeSpan.Zero);
 
         return _clock.GetUtcNow() - lastWrite >= _options.SettleTime;

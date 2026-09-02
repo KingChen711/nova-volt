@@ -7,22 +7,22 @@ using Nvm.Sparkplug.Topics;
 
 namespace Nvm.Simulator.Publishing;
 
-/// <summary>Publishes to EMQX over MQTT, as a real edge node would.</summary>
+/// <summary>Publish lên EMQX qua MQTT, giống như một edge node thật sẽ làm.</summary>
 /// <remarks>
 /// <para>
-/// QoS 1, at least once. QoS 0 would lose readings on a blip and QoS 2 would pay for an exactly-once
-/// handshake the system does not need: everything downstream deduplicates on
-/// <c>source_event_id</c> already (docs/scope.md §7.2), so a repeat costs one wasted insert and a
-/// loss costs a measurement nobody can recover.
+/// QoS 1, at least once. QoS 0 sẽ làm mất reading khi có sự cố nhỏ, còn QoS 2 sẽ phải trả giá cho một
+/// cái bắt tay exactly-once mà hệ thống không cần: mọi thứ ở downstream đã deduplicate dựa trên
+/// <c>source_event_id</c> rồi (docs/scope.md §7.2), nên một lần gửi lặp chỉ tốn một insert lãng phí,
+/// còn một lần mất thì tốn một measurement không ai khôi phục được.
 /// </para>
 /// <para>
-/// No retained messages. A retained Sparkplug payload would be replayed to every new subscriber as
-/// though it had just been measured, and its <c>seq</c> would be from a session that has ended.
+/// Không có retained message. Một Sparkplug payload được retain sẽ bị phát lại cho mọi subscriber mới
+/// như thể nó vừa mới được đo, trong khi <c>seq</c> của nó lại thuộc về một session đã kết thúc.
 /// </para>
 /// </remarks>
 public sealed partial class MqttSparkplugPublisher : ISparkplugPublisher
 {
-    /// <summary>The metric a host sets to ask this node to declare itself again.</summary>
+    /// <summary>Metric mà một host set để yêu cầu node này tự khai báo lại chính nó.</summary>
     public const string RebirthControlMetric = "Node Control/Rebirth";
 
     private readonly IMqttClient _client;
@@ -34,21 +34,22 @@ public sealed partial class MqttSparkplugPublisher : ISparkplugPublisher
     private MqttClientOptions _options;
     private bool _closing;
 
-    // Open while a session exists, closed from the moment one drops until the next one is up.
+    // Mở trong khi một session tồn tại, đóng lại kể từ lúc một session rớt cho tới khi session kế
+    // tiếp lên.
     //
-    // Without it, PublishAsync reaches for the client whenever the plant has something to say, and
-    // during a reconnect that client is not connected: MQTTnet throws, the exception travels up
-    // through the worker's tick loop, and the run ends. A cut cable stopping the line is exactly
-    // what N15 forbids - the plant does not care that the MES lost its broker.
+    // Nếu không có cái này, PublishAsync sẽ với tới client bất cứ khi nào nhà máy có điều gì cần nói,
+    // và trong lúc reconnect thì client đó không được kết nối: MQTTnet ném exception, exception đó đi
+    // ngược lên qua tick loop của worker, và run kết thúc. Một sợi cáp bị cắt làm dừng cả line chính
+    // là điều mà N15 cấm - nhà máy không quan tâm việc MES bị mất broker.
     //
-    // A gate rather than a retry, because the thing being waited for is a session and not a
-    // message. The reconnect loop below is what opens it, and it opens it BEFORE re-declaring the
-    // node: the worker can be holding its publishing lock while parked here, and the declaration
-    // needs that same lock.
+    // Là một cái cổng (gate) chứ không phải một retry, vì thứ đang được chờ là một session chứ không
+    // phải một message. Reconnect loop bên dưới chính là nơi mở cổng đó, và nó mở TRƯỚC khi khai báo
+    // lại node: worker có thể đang giữ publishing lock của nó trong lúc bị chặn ở đây, và việc khai
+    // báo cần đúng lock đó.
     private TaskCompletionSource _session = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-    /// <summary>Creates the publisher without connecting.</summary>
-    /// <param name="options">Where the broker is and who this node says it is.</param>
+    /// <summary>Tạo publisher mà chưa connect.</summary>
+    /// <param name="options">Broker ở đâu và node này tự xưng là gì.</param>
     /// <param name="logger">Log.</param>
     public MqttSparkplugPublisher(SimulatorOptions options, ILogger<MqttSparkplugPublisher> logger)
     {
@@ -69,25 +70,26 @@ public sealed partial class MqttSparkplugPublisher : ISparkplugPublisher
         _options = SessionOptions(options.BirthDeathSequence);
     }
 
-    // Rebuilt per session because the will carries bdSeq, and the will is fixed at CONNECT.
+    // Dựng lại cho mỗi session vì will mang bdSeq, và will được cố định tại CONNECT.
     private MqttClientOptions SessionOptions(ulong birthDeathSequence) =>
         new MqttClientOptionsBuilder()
             .WithTcpServer(_settings.BrokerHost, _settings.BrokerPort)
             .WithClientId($"nvm-simulator-{_settings.LinePath.Replace('/', '-')}")
             .WithCleanSession()
-            // The last will is registered at CONNECT and published by the broker when this client
-            // stops answering. That is the whole value of it: a process that is killed, or a cable
-            // that is pulled, gets no chance to say goodbye — so the goodbye is left with the broker
-            // in advance. Without it, a dead node and a quiet node look identical downstream, and
-            // report-by-exception makes "quiet" completely normal.
+            // Last will được đăng ký tại CONNECT và được broker publish khi client này ngừng trả
+            // lời. Đó chính là toàn bộ giá trị của nó: một process bị kill, hoặc một sợi cáp bị rút,
+            // không có cơ hội để nói lời tạm biệt — nên lời tạm biệt đó được để lại cho broker từ
+            // trước. Nếu không có nó, một node đã chết và một node đang im lặng sẽ trông giống hệt
+            // nhau ở downstream, và report-by-exception khiến "im lặng" trở thành hoàn toàn bình
+            // thường.
             .WithWillTopic(_deathTopic.Value)
             .WithWillPayload(DeathPayload(birthDeathSequence))
             .WithWillQualityOfServiceLevel(MqttQualityOfServiceLevel.AtLeastOnce)
             .WithWillRetain(false)
             .Build();
 
-    // MQTTnet raises this for every close, ours included, so a deliberate shutdown must not be
-    // answered by dialling back in.
+    // MQTTnet raise cái này cho mọi lần đóng, kể cả của chính ta, nên một shutdown chủ động không
+    // được phép bị đáp lại bằng việc quay số kết nối lại.
     private async Task ReconnectAsync(MqttClientDisconnectedEventArgs arguments)
     {
         if (_closing)
@@ -95,8 +97,8 @@ public sealed partial class MqttSparkplugPublisher : ISparkplugPublisher
             return;
         }
 
-        // Closed first, before anything is awaited. A publish that arrives after this point has no
-        // session to travel on and waits for the next one instead of failing the run.
+        // Đóng trước tiên, trước khi bất kỳ thứ gì được await. Một publish đến sau thời điểm này sẽ
+        // không có session nào để đi trên đó và chờ session kế tiếp thay vì làm fail cả run.
         Volatile.Write(ref _session, new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously));
 
         ConnectionLost(_logger, arguments.Exception, _broker, _settings.ReconnectDelay);
@@ -112,8 +114,8 @@ public sealed partial class MqttSparkplugPublisher : ISparkplugPublisher
                     return;
                 }
 
-                // A new connection is a new Sparkplug session, so it gets a new bdSeq before the
-                // will that carries it is registered.
+                // Một connection mới là một Sparkplug session mới, nên nó nhận một bdSeq mới trước
+                // khi will mang số đó được đăng ký.
                 if (BeginSession is { } beginSession)
                 {
                     _options = SessionOptions(beginSession());
@@ -130,15 +132,15 @@ public sealed partial class MqttSparkplugPublisher : ISparkplugPublisher
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
-                // The plant does not stop because the broker is unreachable (N15). Keep trying.
+                // Nhà máy không dừng lại vì broker không thể liên lạc được (N15). Cứ tiếp tục thử.
                 ReconnectFailed(_logger, exception, _broker, _settings.ReconnectDelay);
             }
         }
     }
 
-    // bdSeq and nothing else. The will is composed before the session starts, so it cannot carry a
-    // reading — and it names the session it belongs to, which is what stops a will delivered late
-    // from killing the session that has already replaced it.
+    // Chỉ có bdSeq, không gì khác. Will được soạn trước khi session bắt đầu, nên nó không thể mang
+    // một reading — và nó chỉ tên session mà nó thuộc về, đó chính là điều ngăn một will đến trễ giết
+    // chết session đã thay thế nó.
     private static byte[] DeathPayload(ulong birthDeathSequence) =>
         SparkplugPayload.EncodeData(
             [
@@ -165,10 +167,11 @@ public sealed partial class MqttSparkplugPublisher : ISparkplugPublisher
     {
         await _client.ConnectAsync(_options, cancellationToken).ConfigureAwait(false);
 
-        // Subscribed before the first birth is published. A gateway that comes up after this node
-        // has no way to read one alias-only message until the next DBIRTH, which on a formation line
-        // is a cell change away — eighteen hours. NCMD is how it says so, and a node that is not
-        // listening turns a one-second startup race into a run-long blackout.
+        // Subscribe trước khi birth đầu tiên được publish. Một gateway lên sau khi node này đã lên sẽ
+        // không có cách nào đọc dù chỉ một message alias-only cho tới DBIRTH kế tiếp, mà trên một
+        // formation line thì đó là cách một lần đổi cell — mười tám giờ. NCMD chính là cách nó báo
+        // điều đó, và một node không lắng nghe sẽ biến một race lúc khởi động chỉ một giây thành một
+        // khoảng mù kéo dài cả run.
         await _client.SubscribeAsync(
             new MqttClientSubscribeOptionsBuilder()
                 .WithTopicFilter(filter => filter
@@ -177,9 +180,9 @@ public sealed partial class MqttSparkplugPublisher : ISparkplugPublisher
                 .Build(),
             cancellationToken).ConfigureAwait(false);
 
-        // Opened here rather than after the node has re-declared itself, and the ordering is load
-        // bearing: the caller re-declares by publishing, so a gate that stayed shut until the births
-        // were out would be a gate the births could not get through.
+        // Mở ở đây thay vì sau khi node đã tự khai báo lại, và thứ tự này mang tính quyết định: caller
+        // tự khai báo lại bằng cách publish, nên một cổng còn đóng cho tới khi các birth đã ra ngoài
+        // sẽ là một cổng mà chính các birth đó không thể đi qua được.
         Volatile.Read(ref _session).TrySetResult();
 
         Connected(_logger, _broker, _options.ClientId);
@@ -197,13 +200,14 @@ public sealed partial class MqttSparkplugPublisher : ISparkplugPublisher
 
         try
         {
-            // Typed local first: System.Collections.Immutable is in scope here and its ToArray
-            // extension makes the call on a ReadOnlySequence ambiguous.
+            // Biến cục bộ có kiểu tường minh trước tiên: System.Collections.Immutable đang trong
+            // scope ở đây và extension ToArray của nó khiến lời gọi trên một ReadOnlySequence trở nên
+            // mập mờ.
             ReadOnlySequence<byte> payload = arguments.ApplicationMessage.Payload;
             var readings = SparkplugPayload.DecodeData(payload.ToArray(), MetricAliasTable.Empty);
 
-            // Named metric, no alias: a command arrives before any birth of ours could have declared
-            // one, so the host has to spell it out and we have to read it by name.
+            // Metric có tên, không alias: một command đến trước khi bất kỳ birth nào của ta kịp khai
+            // báo alias, nên host phải viết rõ tên ra và ta phải đọc nó theo tên.
             var asked = readings.Any(reading =>
                 string.Equals(reading.MetricName, RebirthControlMetric, StringComparison.Ordinal)
                 && reading.Value is MetricValue.Flag { Value: true });
@@ -215,8 +219,8 @@ public sealed partial class MqttSparkplugPublisher : ISparkplugPublisher
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            // A command we cannot read is not a reason to stop producing data. The plant keeps
-            // running; the consumer that asked will ask again on its next gap.
+            // Một command mà ta không đọc được không phải là lý do để ngừng tạo dữ liệu. Nhà máy vẫn
+            // tiếp tục chạy; consumer đã hỏi sẽ hỏi lại vào lần có gap kế tiếp của nó.
             CommandNotUnderstood(_logger, exception, arguments.ApplicationMessage.Topic);
         }
     }
@@ -224,8 +228,8 @@ public sealed partial class MqttSparkplugPublisher : ISparkplugPublisher
     [LoggerMessage(Level = LogLevel.Warning, Message = "Could not read the command on {Topic}")]
     private static partial void CommandNotUnderstood(ILogger logger, Exception exception, string topic);
 
-    // Source-generated rather than a LogInformation call: the arguments are formatted only when the
-    // level is enabled, and nothing is boxed on the way in. CA1873 is what asks for this.
+    // Được source-generate thay vì gọi LogInformation trực tiếp: các argument chỉ được format khi
+    // level đang bật, và không có gì bị box trên đường đi. CA1873 là quy tắc yêu cầu điều này.
     [LoggerMessage(Level = LogLevel.Information, Message = "Connected to {Broker} as {ClientId}")]
     private static partial void Connected(ILogger logger, string broker, string clientId);
 
@@ -250,10 +254,10 @@ public sealed partial class MqttSparkplugPublisher : ISparkplugPublisher
     {
         ArgumentNullException.ThrowIfNull(message);
 
-        // Refused rather than held. Waiting here would park a caller that is part way through a
-        // batch, and when the session finally opened it would put a message numbered by the DEAD
-        // session on the wire ahead of the new session's NBIRTH - one stale seq in front of the
-        // declaration, which is the one shape a consumer cannot make sense of.
+        // Từ chối thay vì giữ lại chờ. Chờ ở đây sẽ chặn một caller đang giữa chừng một batch, và khi
+        // session cuối cùng cũng mở ra, nó sẽ đặt một message được đánh số bởi session ĐÃ CHẾT lên
+        // đường truyền trước cả NBIRTH của session mới - một seq cũ nằm trước cả khai báo, đây chính
+        // là hình dạng duy nhất mà một consumer không thể hiểu nổi.
         if (!Volatile.Read(ref _session).Task.IsCompleted)
         {
             throw new SparkplugPublishException(
@@ -272,10 +276,10 @@ public sealed partial class MqttSparkplugPublisher : ISparkplugPublisher
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            // The gate above narrows this window; it cannot close it. A link that dies in the moment
-            // between "a session is open" and "the packet is on the wire" leaves the client throwing
-            // whatever MQTTnet throws, and the caller has to be able to tell that apart from the
-            // plant being wrong - which is what the wrapper is for.
+            // Cái cổng ở trên chỉ thu hẹp khoảng hở này; nó không thể đóng hẳn được. Một đường truyền
+            // chết đúng vào khoảnh khắc giữa "có một session đang mở" và "gói tin đã lên đường truyền"
+            // sẽ khiến client ném ra bất cứ thứ gì MQTTnet ném, và caller phải phân biệt được điều đó
+            // với việc nhà máy đang sai - đó chính là lý do có cái wrapper này.
             throw new SparkplugPublishException(
                 $"Could not publish to '{message.Topic.Value}' on {_broker}.",
                 exception);
@@ -284,10 +288,10 @@ public sealed partial class MqttSparkplugPublisher : ISparkplugPublisher
 
     /// <inheritdoc />
     /// <remarks>
-    /// Does not promise a session is still there when the wait returns: the link can die in the
-    /// moment between. That race is unavoidable and is why a caller still has to survive a failed
-    /// publish — what the gate removes is the far larger window in which every publish during a
-    /// reconnect was certain to fail.
+    /// Không hứa hẹn rằng session vẫn còn đó khi việc chờ trả về: đường truyền có thể chết đúng vào
+    /// khoảnh khắc đó. Race đó là không thể tránh khỏi và đó là lý do một caller vẫn phải chịu được
+    /// một lần publish thất bại — điều mà cái cổng loại bỏ là khoảng thời gian lớn hơn nhiều, trong đó
+    /// mọi publish trong lúc reconnect chắc chắn sẽ thất bại.
     /// </remarks>
     public async Task WaitForSessionAsync(CancellationToken cancellationToken)
     {
@@ -306,9 +310,9 @@ public sealed partial class MqttSparkplugPublisher : ISparkplugPublisher
     {
         _closing = true;
 
-        // Anything parked waiting for a session is woken rather than left there. A run that ends
-        // while the broker is unreachable still has a report to write, and a shutdown that hangs on
-        // a gate nobody will ever open is worse than a publish that fails and says so.
+        // Bất cứ thứ gì đang bị chặn chờ một session đều được đánh thức thay vì bị bỏ lại đó. Một run
+        // kết thúc trong khi broker không thể liên lạc được vẫn cần một report để ghi, và một shutdown
+        // treo trên một cổng không ai từng mở còn tệ hơn một publish thất bại và báo lỗi rõ ràng.
         Volatile.Read(ref _session).TrySetResult();
 
         if (_client.IsConnected)

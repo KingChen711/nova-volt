@@ -3,25 +3,25 @@ using System.Net;
 
 namespace Nvm.EdgeGateway.Forwarding;
 
-/// <summary>Ingestion refused a batch by asking the gateway to slow down, not by failing.</summary>
+/// <summary>Ingestion từ chối một batch bằng cách yêu cầu gateway chậm lại, chứ không phải bằng cách fail.</summary>
 /// <remarks>
-/// Derives from <see cref="HttpRequestException"/> so the flusher's existing "did not forward"
-/// path stays one branch. What the subtype adds is the difference the flusher must act on: a
-/// connection refused says nothing about pace, while <c>429</c>/<c>503</c> plus <c>Retry-After</c>
-/// is ingestion naming the pace it can survive.
+/// Kế thừa từ <see cref="HttpRequestException"/> để nhánh "did not forward" hiện có của flusher
+/// vẫn chỉ là một nhánh duy nhất. Điều subtype này bổ sung là sự khác biệt mà flusher phải hành
+/// động theo: một connection refused không nói gì về nhịp độ, trong khi <c>429</c>/<c>503</c> cùng
+/// <c>Retry-After</c> là ingestion đang gọi tên nhịp độ nó có thể chịu đựng được.
 /// </remarks>
 public sealed class GatewayBackpressureException : HttpRequestException
 {
-    /// <summary>Creates the typed refusal carrying the server's own pacing hint.</summary>
-    /// <param name="statusCode">The status ingestion answered with.</param>
-    /// <param name="retryAfter">Delay ingestion asked for, when it named one.</param>
+    /// <summary>Tạo lời từ chối có kiểu (typed refusal) mang theo gợi ý pacing riêng của server.</summary>
+    /// <param name="statusCode">Status mà ingestion trả lời.</param>
+    /// <param name="retryAfter">Delay mà ingestion yêu cầu, khi nó có nêu tên một giá trị.</param>
     public GatewayBackpressureException(HttpStatusCode statusCode, TimeSpan? retryAfter)
         : base(Describe(statusCode, retryAfter), inner: null, statusCode)
     {
         RetryAfter = retryAfter;
     }
 
-    /// <summary>Delay ingestion asked for. Null when the response carried no usable header.</summary>
+    /// <summary>Delay mà ingestion yêu cầu. Null khi response không mang header nào dùng được.</summary>
     public TimeSpan? RetryAfter { get; }
 
     private static string Describe(HttpStatusCode statusCode, TimeSpan? retryAfter) =>

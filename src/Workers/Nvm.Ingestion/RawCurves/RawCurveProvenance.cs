@@ -1,33 +1,33 @@
 namespace Nvm.Ingestion.RawCurves;
 
-/// <summary>Who archived a raw curve, why, and which record it corrects.</summary>
+/// <summary>Ai đã archive một raw curve, vì sao, và bản ghi nào bị nó sửa lại.</summary>
 /// <remarks>
 /// <para>
-/// K5 says a mistake is fixed by a compensating entry carrying a reason and the person who made it.
-/// The archive table was append-only from the start, so a correction was already a second row — but
-/// the second row said nothing about itself, and two rows for the same channel and interval with no
-/// explanation is a chain of evidence an auditor cannot walk.
+/// K5 nói một sai sót được sửa bằng một entry bù trừ mang theo lý do và người thực hiện. Bảng archive
+/// vốn append-only ngay từ đầu, nên một correction đã là một dòng thứ hai — nhưng dòng thứ hai đó
+/// không nói gì về chính nó, và hai dòng cho cùng một channel và interval mà không có giải thích là
+/// một chuỗi bằng chứng mà một auditor không thể lần theo được.
 /// </para>
 /// <para>
-/// A required parameter rather than an optional one. A default would be filled in by every caller
-/// that had nothing to say, and a column full of "system" answers no question at all.
+/// Một tham số bắt buộc thay vì tùy chọn. Một giá trị mặc định sẽ bị mọi caller không có gì để nói
+/// điền vào cho có, và một cột toàn "system" thì không trả lời được câu hỏi nào cả.
 /// </para>
 /// </remarks>
 /// <param name="Actor">
-/// Who caused this archive: a person, or a named automated caller such as the file-drop adapter.
-/// Never a bare service account — "which service wrote it" is already in the object metadata.
+/// Ai gây ra archive này: một người, hoặc một caller tự động có tên như file-drop adapter. Không bao
+/// giờ là một service account trơ trụi — "service nào đã ghi" thì đã có sẵn trong object metadata rồi.
 /// </param>
 /// <param name="Reason">
-/// Why these bytes are being archived. For a correction, what was wrong with the record it replaces.
+/// Vì sao các byte này được archive. Với một correction, điều gì đã sai ở bản ghi mà nó thay thế.
 /// </param>
 /// <param name="SupersedesArchiveId">
-/// The archive record this one corrects, or null for an original. The superseded row and its object
-/// both stay: replacing evidence means adding the newer statement beside it, not removing the older.
+/// Bản ghi archive mà cái này sửa lại, hoặc null nếu là bản gốc. Dòng bị superseded và object của nó
+/// đều được giữ lại: thay thế bằng chứng nghĩa là thêm một phát biểu mới bên cạnh, không phải xóa cái cũ.
 /// </param>
 public sealed record RawCurveProvenance(string Actor, string Reason, Guid? SupersedesArchiveId = null)
 {
-    /// <summary>Validates the two fields the database also refuses to accept blank.</summary>
-    /// <exception cref="ArgumentException">The actor or the reason is missing.</exception>
+    /// <summary>Kiểm tra hai trường mà database cũng từ chối nhận giá trị rỗng.</summary>
+    /// <exception cref="ArgumentException">Thiếu actor hoặc thiếu reason.</exception>
     public void Validate()
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(Actor);

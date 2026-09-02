@@ -6,14 +6,14 @@ using Nvm.Kernel.Identity;
 
 namespace Nvm.Ingestion.FileDrop;
 
-/// <summary>Turns one dropped file into stored measurements, and files the remains.</summary>
+/// <summary>Biến một file được drop vào thành các measurement đã lưu, và xếp phần còn lại.</summary>
 /// <remarks>
-/// Separated from the polling loop so the whole decision — parse, ingest, move, explain — can be
-/// tested against a real directory without a host, a timer, or a wait.
+/// Tách khỏi polling loop để toàn bộ quyết định — parse, ingest, move, giải thích — có thể được test
+/// trên một thư mục thật mà không cần host, không cần timer, không cần chờ đợi.
 /// </remarks>
 public sealed partial class FileDropProcessor
 {
-    /// <summary>Named in every archive row this adapter writes, instead of a service account.</summary>
+    /// <summary>Được nêu tên trong mọi dòng archive mà adapter này ghi, thay vì một service account.</summary>
     private const string ArchiveActor = "ingestion:file-drop";
 
     private readonly CsvMeasurementReader _reader;
@@ -25,16 +25,16 @@ public sealed partial class FileDropProcessor
 
     private string ProcessingPath => Path.Combine(_options.InboxPath, ".processing");
 
-    /// <summary>Creates the processor over the one dedup path.</summary>
-    /// <param name="reader">CSV parser.</param>
-    /// <param name="ingestor">The same ingestor the MQTT path uses (C15.1).</param>
-    /// <param name="options">Directories and timing.</param>
-    /// <param name="clock">Stamps <c>gateway_timestamp</c> as the moment the file was read (K1).</param>
+    /// <summary>Tạo processor trên con đường dedup duy nhất.</summary>
+    /// <param name="reader">Parser CSV.</param>
+    /// <param name="ingestor">Cùng một ingestor mà đường MQTT dùng (C15.1).</param>
+    /// <param name="options">Thư mục và timing.</param>
+    /// <param name="clock">Đóng dấu <c>gateway_timestamp</c> là thời điểm file được đọc (K1).</param>
     /// <param name="logger">Structured log sink.</param>
     /// <param name="archive">
-    /// Where the original bytes are kept, or null where no WORM store is configured. A file with
-    /// measurements fails closed when this is null: a plant that stores measurements and throws the
-    /// export away has no answer to "what did the machine actually write" (C12.1).
+    /// Nơi giữ các byte gốc, hoặc null khi không cấu hình WORM store nào. Một file có measurement sẽ
+    /// fail closed khi cái này là null: một nhà máy lưu measurement rồi vứt export đi thì không có
+    /// câu trả lời cho "máy thực sự đã ghi ra cái gì" (C12.1).
     /// </param>
     public FileDropProcessor(
         CsvMeasurementReader reader,
@@ -58,7 +58,7 @@ public sealed partial class FileDropProcessor
         _logger = logger;
     }
 
-    /// <summary>Creates the inbox and its two outcome directories.</summary>
+    /// <summary>Tạo inbox và hai thư mục kết quả của nó.</summary>
     public void EnsureDirectories()
     {
         Directory.CreateDirectory(_options.InboxPath);
@@ -69,10 +69,10 @@ public sealed partial class FileDropProcessor
         RecoverAbandonedClaims();
     }
 
-    /// <summary>Processes one file and moves it out of the inbox.</summary>
-    /// <param name="path">The file to read.</param>
-    /// <param name="cancellationToken">Stops the work when the host shuts down.</param>
-    /// <returns>What was stored, or null when the whole file was rejected.</returns>
+    /// <summary>Xử lý một file và chuyển nó ra khỏi inbox.</summary>
+    /// <param name="path">File cần đọc.</param>
+    /// <param name="cancellationToken">Dừng công việc khi host tắt.</param>
+    /// <returns>Những gì đã được lưu, hoặc null khi toàn bộ file bị từ chối.</returns>
     public async Task<IngestionResult?> ProcessAsync(string path, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
@@ -82,34 +82,34 @@ public sealed partial class FileDropProcessor
 
         try
         {
-            // Read once after the atomic claim. Parsing, WORM archival and the outcome copy all use
-            // this one immutable buffer. Reopening either the inbox path or the claimed file would
-            // let an exporter append/replace bytes between those phases and produce telemetry from A
-            // with an alleged original B.
+            // Chỉ đọc một lần sau atomic claim. Parsing, WORM archival và bản sao kết quả đều dùng
+            // chung một buffer bất biến này. Mở lại inbox path hoặc file đã claim sẽ để một exporter
+            // append/thay byte giữa các giai đoạn đó và tạo ra telemetry từ A với một bản gốc B bị
+            // gán ghép.
             var snapshot = await File.ReadAllBytesAsync(claim.SnapshotPath, cancellationToken);
             return await ProcessSnapshotAsync(claim, snapshot, name, cancellationToken);
         }
         catch
         {
-            // Cancellation does not cancel recovery. Losing the claimed original while the host is
-            // stopping is worse than taking a little longer to stop.
+            // Cancellation không hủy recovery. Mất bản gốc đã claim trong lúc host đang dừng lại còn
+            // tệ hơn là mất thêm chút thời gian để dừng.
             if (File.Exists(claim.SnapshotPath))
             {
                 try
                 {
-                    // The claimed file is the snapshot: nothing writes into `.processing`, so the
-                    // bytes read a moment ago and the bytes on disk are the same bytes. Moving that
-                    // file back is one rename, where writing the buffer out again was a create and
-                    // a rename with a gap in the middle for a crash to stop in.
+                    // File đã claim chính là snapshot: không gì ghi vào `.processing`, nên các byte
+                    // đọc được lúc nãy và các byte trên đĩa là cùng một dữ liệu. Chuyển file đó trở
+                    // lại chỉ là một rename, trong khi ghi lại buffer ra lần nữa sẽ là một create và
+                    // một rename với một khoảng hở ở giữa cho một crash dừng lại trong đó.
                     RepublishClaim(claim, "retry");
                 }
                 catch (Exception restoreFailure)
                 {
-                    // A failed restore must not replace the failure that caused it. Throwing from
-                    // here reported the inbox name as the problem and threw away the real cause --
-                    // the archive was unreachable, the transaction rolled back -- while leaving the
-                    // claim under `.processing` until the next restart. Both are worth a log line;
-                    // only one is worth an exception, and it is the one already on its way out.
+                    // Một restore thất bại không được phép thay thế thất bại đã gây ra nó. Throw từ
+                    // đây sẽ báo cáo cái tên trong inbox là vấn đề và vứt bỏ nguyên nhân thật -- kiểu
+                    // archive không tiếp cận được, transaction rollback -- trong khi để claim nằm
+                    // dưới `.processing` cho tới lần khởi động lại kế tiếp. Cả hai đáng một dòng log;
+                    // chỉ một cái đáng một exception, và đó là cái đang trên đường thoát ra ngoài rồi.
                     RestoreFailed(_logger, restoreFailure, name);
                 }
             }
@@ -138,7 +138,8 @@ public sealed partial class FileDropProcessor
         }
         catch (FileDropFormatException exception)
         {
-            // The whole file, not a line. Nothing in it can be attributed, so nothing in it is stored.
+            // Toàn bộ file, không phải một dòng. Không gì trong nó có thể được attribute, nên không
+            // gì trong nó được lưu.
             await WriteErrorAsync(
                 Path.Combine(_options.RejectedPath, name + ".error"),
                 [$"The file could not be read: {exception.Message}"],
@@ -153,30 +154,30 @@ public sealed partial class FileDropProcessor
             return null;
         }
 
-        // Every data line, not only the ones that parsed all the way through. A line can fail on its
-        // VALUE and still name its machine perfectly clearly, and counting only successful parses let
-        // exactly that file through: machine A's rows stored, the whole A+B file archived under A,
-        // and the file filed as processed. An independent audit found this on 2026-09-01, after the
-        // previous round had already "closed" the mixed-machine hole once.
+        // Mọi dòng dữ liệu, không chỉ những dòng parse trót lọt tới cùng. Một dòng có thể fail ở
+        // VALUE của nó mà vẫn nêu tên máy của nó hoàn toàn rõ ràng, và chỉ đếm những parse thành công
+        // đã để lọt đúng loại file đó qua: dòng của máy A được lưu, cả file A+B được archive dưới A,
+        // và file được xếp vào processed. Một audit độc lập phát hiện điều này vào 2026-09-01, sau
+        // khi vòng trước đó đã từng "đóng" lỗ hổng mixed-machine một lần rồi.
         var machines = parsed.Measurements
             .Select(measurement => measurement.EquipmentPath)
             .Concat(parsed.Rejected.Where(line => line.Identity is not null).Select(line => line.Identity!))
             .Distinct()
             .ToList();
 
-        // A line whose identity could not be read at all is worse than a second machine: it might BE
-        // a second machine and there is no way to tell. The file then cannot be proven to belong to
-        // anyone, and an archive filed under a machine that might not own every line in it is not
-        // evidence. This is a deliberate departure from "one bad line does not reject the file" in
-        // CsvMeasurementReader: a bad VALUE costs one measurement, a bad IDENTITY costs the ability
-        // to say whose file this is.
+        // Một dòng mà identity của nó hoàn toàn không đọc được thì còn tệ hơn một máy thứ hai: nó có
+        // thể CHÍNH LÀ một máy thứ hai và không có cách nào để biết. File khi đó không thể chứng
+        // minh là thuộc về ai, và một archive được xếp dưới một máy có thể không sở hữu mọi dòng
+        // trong đó thì không phải bằng chứng. Đây là một sự khác biệt cố ý so với "một dòng hỏng
+        // không làm từ chối cả file" trong CsvMeasurementReader: một VALUE hỏng tốn một measurement,
+        // một IDENTITY hỏng tốn khả năng nói được đây là file của ai.
         var unattributable = parsed.Rejected.Count(line => line.Identity is null);
         var hasDataLines = parsed.Measurements.Count > 0 || parsed.Rejected.Count > 0;
 
-        // A syntactically valid CSV with no readings is not a successful no-op. It cannot be
-        // attributed to a machine, so it cannot have the immutable original that `processed`
-        // promises. More importantly, treating it as success hides the ordinary plant failure where
-        // an exporter emitted a header after losing the run it was supposed to export.
+        // Một CSV hợp lệ về cú pháp nhưng không có reading nào không phải một no-op thành công. Nó
+        // không thể được attribute cho một máy, nên nó không thể có bản gốc bất biến mà `processed`
+        // hứa hẹn. Quan trọng hơn, coi nó là thành công sẽ che giấu một thất bại bình thường của nhà
+        // máy, khi một exporter phát ra một header sau khi đã mất run mà lẽ ra nó phải export.
         if (!hasDataLines)
         {
             await WriteErrorAsync(
@@ -199,12 +200,13 @@ public sealed partial class FileDropProcessor
             return null;
         }
 
-        // Refused before anything is stored, and refused whether or not an archive is configured. An
-        // export is one machine's record of one run; a file naming several has no single answer to
-        // "whose curve is this", so it cannot be archived as anybody's original — and a file that can
-        // never have an original must not be able to succeed. The earlier version of this stored the
-        // rows, logged a warning and filed the file under `processed`, which is the failure this
-        // whole adapter exists to avoid: something that looks handled and is not.
+        // Bị từ chối trước khi bất cứ gì được lưu, và bị từ chối bất kể có cấu hình archive hay
+        // không. Một export là bản ghi của một máy cho một run; một file nêu tên nhiều máy không có
+        // câu trả lời duy nhất cho "curve này của ai", nên nó không thể được archive như bản gốc của
+        // bất kỳ ai — và một file không bao giờ có được một bản gốc thì không được phép thành công.
+        // Phiên bản trước đó của đoạn này đã lưu các dòng, log một cảnh báo và xếp file vào
+        // `processed`, chính là thất bại mà toàn bộ adapter này tồn tại để tránh: một thứ trông như
+        // đã được xử lý mà thực ra không phải.
         if (machines.Count != 1 || unattributable > 0)
         {
             await WriteErrorAsync(
@@ -245,13 +247,13 @@ public sealed partial class FileDropProcessor
             return null;
         }
 
-        // A file that HAD data lines and produced no measurement does not belong in `processed`.
+        // Một file CÓ dòng dữ liệu nhưng không tạo ra measurement nào thì không thuộc về `processed`.
         //
-        // Nothing was stored, so nothing lacks its original and K4 is not violated — but the export
-        // still leaves the inbox and lands in the directory whose name says its contents went in.
-        // An operator reading `processed` cannot tell this file apart from one that worked, and the
-        // rejected-lines artefact that explains it sits in a different directory. The signal and the
-        // outcome pointed in opposite directions.
+        // Không gì được lưu, nên không gì thiếu bản gốc và K4 không bị vi phạm — nhưng export vẫn
+        // rời khỏi inbox và rơi vào thư mục mà cái tên của nó nói rằng nội dung đã đi vào thành công.
+        // Một operator đọc `processed` không thể phân biệt file này với một file đã thành công, và
+        // artefact rejected-lines giải thích nó lại nằm ở một thư mục khác. Tín hiệu và kết quả chỉ
+        // theo hai hướng ngược nhau.
         //
         if (parsed.Measurements.Count == 0)
         {
@@ -294,16 +296,17 @@ public sealed partial class FileDropProcessor
             await RejectLinesAsync(name, parsed.Rejected, cancellationToken);
         }
 
-        // Before the outcome copy, and after the rows are stored. If the archive is unreachable the
-        // exact claimed snapshot is restored to the inbox and the next poll tries again: the rows are
-        // already in, so the retry costs a round of deduplication and buys the guarantee that no file
-        // reaches `processed` without its original bytes kept. Program startup and the guard below
-        // both fail closed when file drop has no archive.
+        // Trước bản sao kết quả, và sau khi các dòng đã được lưu. Nếu archive không tiếp cận được thì
+        // đúng snapshot đã claim được khôi phục lại inbox và lần poll kế tiếp sẽ thử lại: các dòng đã
+        // vào rồi, nên retry chỉ tốn một vòng deduplication và đổi lại đảm bảo rằng không file nào
+        // tới được `processed` mà thiếu byte gốc của nó. Cả lúc Program khởi động lẫn guard bên dưới
+        // đều fail closed khi file drop không có archive.
         await ArchiveOriginalAsync(snapshot, name, descriptor, cancellationToken);
 
-        // Published only after the transaction committed. The other order would leave a window where
-        // the file is marked processed and nothing was stored, and a crash inside it loses the export
-        // silently. Publishing late can only repeat a snapshot, and a repeat is what dedup is for.
+        // Chỉ publish sau khi transaction đã commit. Thứ tự ngược lại sẽ để lại một khoảng hở nơi
+        // file được đánh dấu processed mà không gì được lưu, và một crash bên trong khoảng đó sẽ làm
+        // mất export một cách âm thầm. Publish trễ chỉ có thể lặp lại một snapshot, và lặp lại chính
+        // là thứ dedup sinh ra để xử lý.
         await CompleteSnapshotAsync(
             claim,
             snapshot,
@@ -314,12 +317,13 @@ public sealed partial class FileDropProcessor
         return result;
     }
 
-    /// <summary>Keeps the exact bytes of one export beside the rows read out of it.</summary>
+    /// <summary>Giữ đúng các byte của một export bên cạnh các dòng đọc ra từ nó.</summary>
     /// <remarks>
-    /// The interval comes from the measurements rather than from the file name, and its end is
-    /// exclusive: the archive interval is half-open like every other interval in this system, so the
-    /// last sample is inside it and the next export's first sample is not. A file with no descriptor
-    /// never reaches here — <see cref="ProcessAsync"/> refuses it before anything is stored.
+    /// Interval tới từ các measurement chứ không phải từ tên file, và điểm kết thúc của nó là
+    /// exclusive: interval archive là half-open giống như mọi interval khác trong hệ thống này, nên
+    /// mẫu cuối cùng nằm bên trong nó còn mẫu đầu tiên của export kế tiếp thì không. Một file không
+    /// có descriptor không bao giờ tới được đây — <see cref="ProcessAsync"/> đã từ chối nó trước khi
+    /// bất cứ gì được lưu.
     /// </remarks>
     private async Task ArchiveOriginalAsync(
         byte[] snapshot,
@@ -329,15 +333,15 @@ public sealed partial class FileDropProcessor
     {
         if (_archive is null)
         {
-            // NOT a warning-and-carry-on. Moving the file to `processed` here consumed the export and
-            // destroyed the only copy of bytes an auditor is entitled to ask for, which is the exact
-            // outcome C12.1 exists to prevent. The comment that used to sit above this branch
-            // described the hole instead of closing it.
+            // KHÔNG PHẢI kiểu warning-rồi-tiếp-tục. Chuyển file vào `processed` ở đây đã tiêu thụ
+            // export và phá hủy bản sao byte duy nhất mà một auditor có quyền hỏi tới, đúng chính là
+            // kết quả mà C12.1 tồn tại để ngăn chặn. Comment từng nằm trên nhánh này mô tả lỗ hổng
+            // thay vì đóng nó lại.
             //
-            // Program.cs refuses to start when the file drop is enabled without an archive, so a
-            // correctly deployed service never reaches this line. It stays as the second lock,
-            // because the first one only guards the composition root and this class is also
-            // constructed directly by tests and by anything written later.
+            // Program.cs từ chối khởi động khi file drop được bật mà không có archive, nên một
+            // service được deploy đúng cách không bao giờ chạm tới dòng này. Nó vẫn ở đây như lớp
+            // khóa thứ hai, vì lớp thứ nhất chỉ bảo vệ composition root và class này cũng được
+            // construct trực tiếp bởi test và bởi bất cứ thứ gì viết sau này.
             throw new RawCurveArchiveMissingException(
                 $"'{name}' names {descriptor.EquipmentPath.Value} and would be stored with no archive "
                 + "configured, so its original bytes would be lost. Configure "
@@ -358,7 +362,7 @@ public sealed partial class FileDropProcessor
         FileArchived(_logger, name, result.Sha256, result.ObjectCreated);
     }
 
-    /// <summary>The one machine and interval a file covers, or null when it covers several.</summary>
+    /// <summary>Máy duy nhất và interval mà một file bao phủ, hoặc null khi nó bao phủ nhiều máy.</summary>
     private static RawCurveDescriptor? Describe(IReadOnlyList<FileMeasurement> measurements)
     {
         if (measurements.Count == 0)
@@ -388,9 +392,9 @@ public sealed partial class FileDropProcessor
             }
             else if (!string.Equals(unitId, measurement.UnitId, StringComparison.Ordinal))
             {
-                // Several cells through one channel in one export is ordinary. The file is still one
-                // machine's original, so it is archived — with no unit named, rather than with the
-                // first one, which would file the whole export under one cell's serial.
+                // Nhiều cell đi qua một channel trong một export là chuyện bình thường. File vẫn là
+                // bản gốc của một máy, nên nó được archive — không nêu tên unit nào, thay vì nêu tên
+                // cell đầu tiên, việc đó sẽ xếp cả export dưới serial của một cell duy nhất.
                 oneUnit = false;
             }
 
@@ -403,10 +407,10 @@ public sealed partial class FileDropProcessor
             equipmentPath!,
             oneUnit ? unitId : null,
             first,
-            // One microsecond, not one tick: the interval is stored in a `timestamptz`, and an end
-            // that only exists at 100 ns resolution is an end the archive cannot keep. A file with a
-            // single reading is the case that proves it -- ended one tick after it began, it stored
-            // as an interval of zero and PostgreSQL refused the row.
+            // Một micro giây, không phải một tick: interval được lưu trong một `timestamptz`, và một
+            // điểm kết thúc chỉ tồn tại ở độ phân giải 100 ns là một điểm kết thúc mà archive không
+            // giữ được. Một file chỉ có một reading là trường hợp chứng minh điều đó -- kết thúc một
+            // tick sau khi bắt đầu, nó lưu thành một interval bằng không và PostgreSQL đã từ chối dòng đó.
             last.AddTicks(TimeSpan.TicksPerMicrosecond));
     }
 
@@ -423,8 +427,8 @@ public sealed partial class FileDropProcessor
             var suffix = string.Format(CultureInfo.InvariantCulture, "{0}.line-{1}{2}", stem, line.LineNumber, extension);
             var target = Path.Combine(_options.RejectedPath, suffix);
 
-            // The header goes with it. A rejected line on its own is a row of commas an operator has
-            // to decode by counting; with the header above it, it reads.
+            // Header đi kèm theo nó. Một dòng bị từ chối đứng một mình là một hàng dấu phẩy mà một
+            // operator phải giải mã bằng cách đếm; có header ở trên, nó đọc được ngay.
             await File.WriteAllLinesAsync(
                 target,
                 [CsvMeasurementReader.Header, line.Line],
@@ -478,13 +482,13 @@ public sealed partial class FileDropProcessor
 
         try
         {
-            // One rename takes the whole export, because the export is one file. The version of this
-            // that published readiness in a second file beside the data had to take the two in
-            // sequence, and a producer republishing that name between the two renames handed the
-            // reader one export's bytes under another export's readiness -- measured, not argued
-            // (ADR-035 §Evidence, probe `PAIR_RACE`). No ordering of two renames closes that, so
-            // there is one rename: the suffix the producer renamed the file into is the readiness,
-            // and taking the file takes the readiness with it.
+            // Một rename lấy trọn cả export, vì export là một file duy nhất. Phiên bản trước đó
+            // publish readiness bằng một file thứ hai bên cạnh dữ liệu phải thực hiện hai rename theo
+            // thứ tự, và một producer publish lại cùng tên đó giữa hai lần rename sẽ giao cho reader
+            // các byte của một export dưới readiness của một export khác -- đo được, không phải suy
+            // đoán (ADR-035 §Evidence, probe `PAIR_RACE`). Không thứ tự nào của hai rename đóng được
+            // lỗ hổng đó, nên chỉ có một rename: suffix mà producer đổi tên file thành chính là
+            // readiness, và lấy file đó lấy luôn cả readiness đi cùng.
             File.Move(publishedPath, snapshotPath);
             return new ClaimedFile(snapshotPath, directoryPath);
         }
@@ -495,11 +499,10 @@ public sealed partial class FileDropProcessor
         }
     }
 
-    /// <summary>The export's own name, refusing anything a producer has not published.</summary>
+    /// <summary>Tên riêng của export, từ chối bất cứ thứ gì mà producer chưa publish.</summary>
     /// <remarks>
-    /// Checked here rather than only in the watcher because this is the claim boundary: a caller
-    /// that hands over a half-written file has to be told no by the thing that would otherwise
-    /// store it.
+    /// Kiểm tra ở đây thay vì chỉ trong watcher vì đây là claim boundary: một caller giao một file
+    /// viết dở phải bị từ chối bởi chính cái thứ đáng ra sẽ lưu nó.
     /// </remarks>
     private string ExportName(string publishedName)
     {
@@ -524,14 +527,14 @@ public sealed partial class FileDropProcessor
     private string PublishedPath(string dataFilePath) =>
         _options.RequiresPublishedSuffix ? dataFilePath + _options.PublishedSuffix : dataFilePath;
 
-    /// <summary>Publishes a claimed export back into the inbox under a name of its own.</summary>
+    /// <summary>Publish một export đã claim trở lại inbox dưới một cái tên của riêng nó.</summary>
     /// <remarks>
-    /// Never the name it arrived under. A POSIX rename replaces whatever sits at the destination, so
-    /// a producer publishing that name again cannot be defended against by any check made on this
-    /// side -- an exclusive create is a placeholder, and `mv` walks straight through a placeholder
-    /// (ADR-035 §Evidence, probe `RESERVATION_RACE`). The only way not to destroy somebody else's
-    /// export is not to aim at a name somebody else might use. The GUID also tells an operator
-    /// reading the inbox that this file has been round the loop once.
+    /// Không bao giờ dùng cái tên mà nó đã tới với. Một POSIX rename thay thế bất cứ gì đang nằm ở
+    /// đích, nên một producer publish lại cùng tên đó không thể bị chặn bởi bất kỳ kiểm tra nào thực
+    /// hiện ở phía này -- một exclusive create chỉ là một placeholder, và `mv` đi xuyên thẳng qua một
+    /// placeholder (ADR-035 §Evidence, probe `RESERVATION_RACE`). Cách duy nhất để không phá hủy
+    /// export của người khác là không nhắm vào một cái tên mà người khác có thể dùng. GUID cũng nói
+    /// cho một operator đang đọc inbox biết rằng file này đã đi vòng qua loop một lần rồi.
     /// </remarks>
     private void RepublishClaim(ClaimedFile claim, string reason)
     {
@@ -540,8 +543,8 @@ public sealed partial class FileDropProcessor
                 _options.InboxPath,
                 UniqueName(Path.GetFileName(claim.SnapshotPath), reason)));
 
-        // One rename again: afterwards the export is in the inbox and published, or it is still
-        // claimed and recoverable. There is no third state for a crash to stop in.
+        // Lại một rename duy nhất: sau đó export nằm trong inbox và đã publish, hoặc nó vẫn còn được
+        // claim và có thể phục hồi. Không có trạng thái thứ ba nào cho một crash dừng lại trong đó.
         File.Move(claim.SnapshotPath, target);
     }
 
@@ -571,10 +574,10 @@ public sealed partial class FileDropProcessor
         {
             await File.WriteAllBytesAsync(temporary, snapshot, cancellationToken);
 
-            // Overwrite, and only ever inside this adapter's own outcome directories, where
-            // re-exporting a file name is ordinary and the immutable archive is content-addressed
-            // anyway. Nothing writes into the inbox by this route: a file going back there goes by
-            // rename, under a name no producer will pick.
+            // Overwrite, và chỉ bao giờ ở bên trong các thư mục kết quả của riêng adapter này, nơi
+            // re-export một tên file là chuyện bình thường và archive bất biến vốn dĩ đã
+            // content-addressed rồi. Không gì ghi vào inbox qua con đường này: một file quay lại đó
+            // đi bằng rename, dưới một cái tên không producer nào sẽ chọn.
             File.Move(temporary, target, overwrite: true);
         }
         finally
@@ -596,14 +599,14 @@ public sealed partial class FileDropProcessor
         }
     }
 
-    /// <summary>Names a returned export after the one it came from, plus how many rounds it has had.</summary>
+    /// <summary>Đặt tên một export được trả lại theo cái nó bắt nguồn, cộng thêm nó đã qua bao nhiêu vòng.</summary>
     /// <remarks>
-    /// The marker replaces the previous marker rather than stacking on top of it. Appending to
-    /// whatever name it was handed made every round of the retry loop ~40 bytes longer, and after
-    /// six rounds the name passed the 255-byte limit: the move failed, and the export was stranded
-    /// under `.processing` with nothing but a log line to say so. Found by
-    /// `scripts/file-drop-race-probe.sh` on the running stack, where an export that could never be
-    /// archived went round the loop until it could no longer be moved at all.
+    /// Marker thay thế marker trước đó thay vì chồng lên trên nó. Nối thêm vào bất cứ tên nào nó
+    /// nhận được khiến mỗi vòng của retry loop dài thêm ~40 byte, và sau sáu vòng cái tên vượt qua
+    /// giới hạn 255 byte: move thất bại, và export bị mắc kẹt dưới `.processing` với chỉ một dòng
+    /// log để nói lên điều đó. Phát hiện bởi `scripts/file-drop-race-probe.sh` trên stack đang chạy,
+    /// nơi một export không bao giờ archive được cứ đi vòng vòng trong loop cho tới khi nó không thể
+    /// di chuyển được nữa.
     /// </remarks>
     private static string UniqueName(string exportName, string reason)
     {
@@ -626,10 +629,10 @@ public sealed partial class FileDropProcessor
         return $"{stem}.{marker}-{Guid.NewGuid():N}{extension}";
     }
 
-    /// <summary>Reads a marker this adapter wrote, and nothing else.</summary>
+    /// <summary>Đọc một marker mà adapter này đã ghi, và không gì khác.</summary>
     /// <remarks>
-    /// Only <c>retry</c> and <c>recovered</c> are recognised, so a producer whose own file name ends
-    /// in something-hex keeps every part of the name it chose.
+    /// Chỉ <c>retry</c> và <c>recovered</c> được nhận diện, nên một producer có tên file của riêng
+    /// nó kết thúc bằng thứ-gì-đó-hex vẫn giữ nguyên mọi phần của cái tên mà nó đã chọn.
     /// </remarks>
     private static bool TrySplitMarker(string stem, out string origin, out string reason, out int attempt)
     {
@@ -768,6 +771,6 @@ public sealed partial class FileDropProcessor
     private static partial void RestoreFailed(ILogger logger, Exception exception, string fileName);
 }
 
-/// <summary>A file in the inbox whose producer has not said it is finished.</summary>
-/// <param name="message">What the published name would be, and what a producer has to do.</param>
+/// <summary>Một file trong inbox mà producer của nó chưa nói là đã xong.</summary>
+/// <param name="message">Tên đã publish lẽ ra sẽ là gì, và producer phải làm gì.</param>
 public sealed class FileDropNotPublishedException(string message) : Exception(message);

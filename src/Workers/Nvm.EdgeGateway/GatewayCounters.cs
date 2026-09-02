@@ -1,6 +1,6 @@
 namespace Nvm.EdgeGateway;
 
-/// <summary>Process counters around MQTT acceptance and durable forwarding.</summary>
+/// <summary>Process counter xoay quanh việc chấp nhận MQTT và forwarding durable.</summary>
 public sealed class GatewayCounters
 {
     private long _decodedMessages;
@@ -14,48 +14,49 @@ public sealed class GatewayCounters
     private long _lateDeathsIgnored;
     private long _flushBatches;
 
-    /// <summary>Birth/data messages decoded successfully.</summary>
+    /// <summary>Message birth/data đã decode thành công.</summary>
     public long DecodedMessages => Interlocked.Read(ref _decodedMessages);
 
-    /// <summary>Messages fsynced before MQTT acknowledgement.</summary>
+    /// <summary>Message đã fsync trước khi acknowledge MQTT.</summary>
     public long BufferedMessages => Interlocked.Read(ref _bufferedMessages);
 
-    /// <summary>Messages accepted by ingestion and crossed by the durable cursor.</summary>
+    /// <summary>Message được ingestion chấp nhận và đã được durable cursor đi qua.</summary>
     public long ForwardedMessages => Interlocked.Read(ref _forwardedMessages);
 
-    /// <summary>Malformed or unknown-site messages refused before forwarding.</summary>
+    /// <summary>Message sai định dạng hoặc site không xác định, bị từ chối trước khi forward.</summary>
     public long RejectedMessages => Interlocked.Read(ref _rejectedMessages);
 
-    /// <summary>Times the hard disk cap stopped MQTT acceptance.</summary>
+    /// <summary>Số lần trần đĩa cứng chặn việc chấp nhận MQTT.</summary>
     public long BufferFullEvents => Interlocked.Read(ref _bufferFullEvents);
 
-    /// <summary>Times ingestion answered 429/503 and the gateway slowed down instead of retrying.</summary>
+    /// <summary>Số lần ingestion trả lời 429/503 và gateway chậm lại thay vì retry.</summary>
     public long ThrottledFlushes => Interlocked.Read(ref _throttledFlushes);
 
-    /// <summary>Times the gateway's own rate limiter held a batch back.</summary>
+    /// <summary>Số lần rate limiter của chính gateway giữ một batch lại.</summary>
     /// <remarks>
-    /// Kept apart from <see cref="ThrottledFlushes"/> because lab §5.C10.3 exists to tell the two
-    /// causes apart: "we paced ourselves" and "the server made us" produce the same slow drain and
-    /// completely different conclusions about whether ADR-029 earns its place.
+    /// Được tách riêng khỏi <see cref="ThrottledFlushes"/> vì lab §5.C10.3 tồn tại để phân biệt hai
+    /// nguyên nhân: "ta tự pace mình" và "server bắt ta phải pace" tạo ra cùng một quá trình xả cạn
+    /// chậm nhưng dẫn tới kết luận hoàn toàn đối lập về việc ADR-029 có xứng đáng tồn tại hay không.
     /// </remarks>
     public long RateLimitedFlushes => Interlocked.Read(ref _rateLimitedFlushes);
 
-    /// <summary>Times the gateway asked a node to declare itself again.</summary>
+    /// <summary>Số lần gateway yêu cầu một node khai báo lại chính nó.</summary>
     /// <remarks>
-    /// A sequence gap means data was missed, and a missed message may have been the one that
-    /// renumbered an alias. The count is evidence for C17: a reconciliation that comes out even with
-    /// zero rebirths on a run with dropouts enabled has not exercised the path it claims to.
+    /// Một sequence gap nghĩa là dữ liệu đã bị bỏ lỡ, và một message bị bỏ lỡ có thể chính là
+    /// message đã đánh số lại một alias. Con số này là bằng chứng cho C17: một lần đối soát ra kết
+    /// quả khớp với zero lần rebirth trên một run có bật dropout thì chưa thực sự thực thi con
+    /// đường mà nó tuyên bố.
     /// </remarks>
     public long RebirthRequests => Interlocked.Read(ref _rebirthRequests);
 
-    /// <summary>Deaths refused because they named a session that had already been replaced.</summary>
+    /// <summary>Death bị từ chối vì chúng nêu tên một session đã bị thay thế.</summary>
     public long LateDeathsIgnored => Interlocked.Read(ref _lateDeathsIgnored);
 
-    /// <summary>Batches ingestion accepted and the durable cursor crossed.</summary>
+    /// <summary>Batch mà ingestion đã chấp nhận và durable cursor đã đi qua.</summary>
     /// <remarks>
-    /// The flusher is one sequential loop by design: read, POST, advance the cursor, repeat. Its
-    /// ceiling is therefore batch size divided by round trip, and forwarded/batches is the only
-    /// number that says which of the two a slow drain is short on.
+    /// Flusher được thiết kế là một vòng lặp tuần tự duy nhất: đọc, POST, đẩy cursor tiến lên, lặp
+    /// lại. Vì vậy trần của nó là batch size chia cho round trip, và forwarded/batches là con số
+    /// duy nhất cho biết một quá trình xả cạn chậm đang thiếu ở cái nào trong hai cái đó.
     /// </remarks>
     public long FlushBatches => Interlocked.Read(ref _flushBatches);
 

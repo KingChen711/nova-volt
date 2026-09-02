@@ -2,10 +2,10 @@ using Nvm.Sparkplug;
 
 namespace Nvm.EdgeGateway.Forwarding;
 
-/// <summary>The next durable hop for decoded device messages.</summary>
+/// <summary>Chặng durable kế tiếp cho các message device đã decode.</summary>
 public interface IGatewayBatchSink
 {
-    /// <summary>Sends one or more messages to ingestion.</summary>
+    /// <summary>Gửi một hoặc nhiều message tới ingestion.</summary>
     Task SendAsync(
         IReadOnlyCollection<DecodedSparkplugMessage> messages,
         CancellationToken cancellationToken);

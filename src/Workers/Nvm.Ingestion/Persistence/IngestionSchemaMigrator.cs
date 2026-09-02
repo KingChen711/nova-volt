@@ -3,12 +3,12 @@ using DbUp;
 
 namespace Nvm.Ingestion.Persistence;
 
-/// <summary>Runs versioned PostgreSQL scripts only when invoked as a migration job.</summary>
+/// <summary>Chạy các script PostgreSQL đã đánh version, chỉ khi được gọi như một migration job.</summary>
 public static class IngestionSchemaMigrator
 {
     private const string UpScriptMarker = ".Migrations.Up.";
 
-    /// <summary>Applies every forward migration not yet journalled.</summary>
+    /// <summary>Áp dụng mọi forward migration chưa được journal.</summary>
     public static void Upgrade(string connectionString)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);

@@ -5,33 +5,33 @@ using Nvm.Sparkplug.Topics;
 
 namespace Nvm.EdgeGateway.Sessions;
 
-/// <summary>Which edge node a message came from, independent of the device under it.</summary>
-/// <param name="LinePath">The line the node speaks for, which is the identity the plant uses.</param>
+/// <summary>Một message tới từ edge node nào, độc lập với device bên dưới nó.</summary>
+/// <param name="LinePath">Line mà node đang đại diện, chính là identity nhà máy sử dụng.</param>
 /// <remarks>
 /// <para>
-/// <c>seq</c>, <c>bdSeq</c> and liveness are all properties of the <b>node</b>, never of a device.
-/// One counter per device would make a gap in it meaningless, and a death would only ever be able to
-/// kill the box that noticed it.
+/// <c>seq</c>, <c>bdSeq</c> và liveness đều là thuộc tính của <b>node</b>, không bao giờ là của một
+/// device. Một counter riêng cho mỗi device sẽ khiến một gap trong đó trở nên vô nghĩa, và một
+/// death khi đó sẽ chỉ có thể giết mỗi cái hộp đã nhận ra nó.
 /// </para>
 /// <para>
-/// The line path rather than the group and node strings, even though the wire carries those: it is
-/// the only form that can be handed back to <see cref="SparkplugTopic.For"/> to address the node,
-/// and keeping both would let the two drift apart.
+/// Dùng line path thay vì các chuỗi group và node, dù wire mang theo các chuỗi đó: đây là dạng
+/// duy nhất có thể đưa ngược lại cho <see cref="SparkplugTopic.For"/> để định địa chỉ tới node,
+/// và giữ cả hai sẽ để chúng trôi dạt khỏi nhau.
 /// </para>
 /// </remarks>
 public readonly record struct NodeAddress(EquipmentPath LinePath)
 {
-    /// <summary>The Sparkplug group, which encodes enterprise, site and area.</summary>
+    /// <summary>Group Sparkplug, mã hóa enterprise, site và area.</summary>
     public string GroupId => SparkplugTopic.For(LinePath, SparkplugMessageType.NodeCommand).GroupId;
 
-    /// <summary>The edge node id as it appears in a topic.</summary>
+    /// <summary>Id của edge node như nó xuất hiện trong một topic.</summary>
     public string EdgeNodeId => SparkplugTopic.EdgeNodePrefix + LinePath.Code;
 
-    /// <summary>The plant this node belongs to (K3).</summary>
+    /// <summary>Nhà máy mà node này thuộc về (K3).</summary>
     public string SiteId => LinePath.Segments[1];
 
-    /// <summary>Reads the node a topic addresses, device level or not.</summary>
-    /// <param name="topic">Any Sparkplug topic.</param>
+    /// <summary>Đọc node mà một topic định địa chỉ tới, dù ở cấp device hay không.</summary>
+    /// <param name="topic">Bất kỳ topic Sparkplug nào.</param>
     public static NodeAddress From(SparkplugTopic topic)
     {
         ArgumentNullException.ThrowIfNull(topic);
@@ -39,7 +39,7 @@ public readonly record struct NodeAddress(EquipmentPath LinePath)
         return new NodeAddress(topic.LinePath);
     }
 
-    /// <summary>The topic a command to this node is published on.</summary>
+    /// <summary>Topic mà một command gửi tới node này được publish lên.</summary>
     public SparkplugTopic NodeCommandTopic() =>
         SparkplugTopic.For(LinePath, SparkplugMessageType.NodeCommand);
 
@@ -47,46 +47,45 @@ public readonly record struct NodeAddress(EquipmentPath LinePath)
     public override string ToString() => LinePath.Value;
 }
 
-/// <summary>How much a reported value can be trusted right now.</summary>
+/// <summary>Một giá trị được báo cáo có thể được tin tưởng tới mức nào ngay lúc này.</summary>
 /// <remarks>
-/// Three states, because a control room reading a formation channel has three questions and only one
-/// of them is about the cell. <c>0</c> reads as "the voltage is zero" and starts an alarm on healthy
-/// hardware; <c>null</c> reads as "nothing has been measured yet" and is ignored. Only
-/// <see cref="Stale"/> says what is actually true after an <c>NDEATH</c>: the last number was X at
-/// time T, and nothing since then can be believed. That sends someone to check the network instead
-/// of the cell.
+/// Ba trạng thái, vì một control room đọc một formation channel có ba câu hỏi và chỉ một trong số
+/// đó là về cell. <c>0</c> đọc thành "điện áp bằng không" và kích hoạt một cảnh báo trên phần cứng
+/// khỏe mạnh; <c>null</c> đọc thành "chưa đo được gì cả" và bị bỏ qua. Chỉ có <see cref="Stale"/>
+/// nói lên điều thực sự đúng sau một <c>NDEATH</c>: con số cuối cùng là X tại thời điểm T, và
+/// không gì kể từ đó có thể tin được. Điều đó khiến người ta đi kiểm tra mạng thay vì kiểm tra cell.
 /// </remarks>
 public enum NodeLiveness
 {
-    /// <summary>No birth has been seen for this node in this gateway's lifetime.</summary>
+    /// <summary>Chưa có birth nào được thấy cho node này trong suốt vòng đời của gateway này.</summary>
     Unknown,
 
-    /// <summary>The node published a birth and has not died since.</summary>
+    /// <summary>Node đã publish một birth và chưa chết kể từ đó.</summary>
     Online,
 
-    /// <summary>The node's last will fired. Its history stands; its present does not.</summary>
+    /// <summary>Last will của node đã kích hoạt. Lịch sử của nó vẫn đứng vững; hiện tại của nó thì không.</summary>
     Stale,
 }
 
-/// <summary>The last thing a metric said, and whether that is still current.</summary>
-/// <param name="MetricName">The metric, by the name its birth declared.</param>
-/// <param name="LastValue">The most recent value seen.</param>
-/// <param name="LastDeviceTimestamp">When the device says it took that value.</param>
-/// <param name="Liveness">Whether the node behind it is still alive.</param>
+/// <summary>Điều cuối cùng một metric đã nói, và liệu điều đó có còn đúng hay không.</summary>
+/// <param name="MetricName">Metric, theo tên mà birth của nó đã khai báo.</param>
+/// <param name="LastValue">Giá trị gần nhất được thấy.</param>
+/// <param name="LastDeviceTimestamp">Thời điểm device nói rằng nó lấy giá trị đó.</param>
+/// <param name="Liveness">Node đứng sau nó có còn sống hay không.</param>
 public sealed record NodeMetricState(
     string MetricName,
     MetricValue LastValue,
     DateTimeOffset LastDeviceTimestamp,
     NodeLiveness Liveness);
 
-/// <summary>What the gateway currently believes about one edge node.</summary>
-/// <param name="Address">The node.</param>
-/// <param name="Liveness">Alive, dead, or never seen.</param>
-/// <param name="BirthDeathSequence">The session number of the birth in force, when it carried one.</param>
-/// <param name="LastSequence">The last <c>seq</c> accepted from this node.</param>
-/// <param name="StaleSince">When the death was processed, or null while the node is alive.</param>
-/// <param name="SequenceGaps">How many times a message arrived out of order for this node.</param>
-/// <param name="Metrics">Every metric of every device under the node, newest value first seen last.</param>
+/// <summary>Những gì gateway hiện đang tin là đúng về một edge node.</summary>
+/// <param name="Address">Node.</param>
+/// <param name="Liveness">Sống, chết, hoặc chưa từng thấy.</param>
+/// <param name="BirthDeathSequence">Số session của birth đang có hiệu lực, khi nó mang theo một số.</param>
+/// <param name="LastSequence"><c>seq</c> cuối cùng được chấp nhận từ node này.</param>
+/// <param name="StaleSince">Thời điểm death được xử lý, hoặc null trong khi node còn sống.</param>
+/// <param name="SequenceGaps">Số lần một message đến không đúng thứ tự đối với node này.</param>
+/// <param name="Metrics">Mọi metric của mọi device dưới node, giá trị mới nhất được thấy sau cùng.</param>
 public sealed record NodeSessionSnapshot(
     NodeAddress Address,
     NodeLiveness Liveness,

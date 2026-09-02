@@ -7,7 +7,7 @@ using Nvm.Sparkplug;
 
 namespace Nvm.Ingestion.Persistence;
 
-/// <summary>Uses PostgreSQL uniqueness as the authority for device-level idempotency.</summary>
+/// <summary>Dùng tính unique của PostgreSQL làm thẩm quyền cho idempotency ở cấp device.</summary>
 public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
 {
     private const string ClaimSql = """
@@ -90,19 +90,19 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
                 jsonb_build_array(@range_start::timestamptz, @range_start::timestamptz + INTERVAL '1 day')));
         """;
 
-    /// <summary>How many times one chunk write may be retried after a deadlock before giving up.</summary>
+    /// <summary>Số lần một chunk write được phép retry sau một deadlock trước khi bỏ cuộc.</summary>
     /// <remarks>
-    /// Bounded, and low. Chunk creation is kept outside the write transaction; a write still failing
-    /// after several attempts is contending with something else, and looping on it would hide that
-    /// instead of reporting it.
+    /// Có giới hạn, và thấp. Chunk creation được giữ ở ngoài write transaction; một write vẫn thất
+    /// bại sau nhiều lần thử là đang tranh chấp với thứ gì khác, và loop trên nó sẽ che giấu điều đó
+    /// thay vì báo cáo nó.
     /// </remarks>
     private const int MaxWriteAttempts = 5;
 
-    /// <summary>One chunk of the telemetry hypertable, as migration 003 declares it.</summary>
+    /// <summary>Một chunk của telemetry hypertable, như migration 003 khai báo.</summary>
     /// <remarks>
-    /// Written here rather than read from the database because it is the unit retention acts in, and
-    /// a counter that quietly re-derived it would stop meaning the same thing the day someone changed
-    /// <c>chunk_time_interval</c>. If that day comes, this line has to change with it — deliberately.
+    /// Viết cứng ở đây thay vì đọc từ database vì đây là đơn vị mà retention hoạt động theo, và một
+    /// counter âm thầm tự suy ra nó sẽ ngừng mang cùng ý nghĩa vào cái ngày ai đó đổi
+    /// <c>chunk_time_interval</c>. Nếu ngày đó tới, dòng này phải đổi theo — một cách cố ý.
     /// </remarks>
     private static readonly TimeSpan ChunkInterval = TimeSpan.FromDays(1);
 
@@ -116,21 +116,22 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
     private readonly int _writerParallelism;
     private readonly int _minRowsPerWriter;
 
-    /// <summary>Creates the transaction boundary used by HTTP and file drop alike.</summary>
-    /// <param name="dataSource">Connection source for the one transaction per batch.</param>
-    /// <param name="timeProvider">Stamps <c>recorded_at</c> (K1).</param>
-    /// <param name="metrics">Counters updated only after the transaction commits.</param>
-    /// <param name="lag">Device-to-database lag samples for D2. Null discards them.</param>
-    /// <param name="publisher">Where committed business facts go next. Null publishes nothing.</param>
-    /// <param name="publishedSignals">Which signal codes are business facts (scope.md §5.5).</param>
+    /// <summary>Tạo transaction boundary dùng chung cho cả HTTP lẫn file drop.</summary>
+    /// <param name="dataSource">Nguồn connection cho một transaction trên mỗi batch.</param>
+    /// <param name="timeProvider">Đóng dấu <c>recorded_at</c> (K1).</param>
+    /// <param name="metrics">Các counter chỉ cập nhật sau khi transaction commit.</param>
+    /// <param name="lag">Mẫu lag từ device đến database cho D2. Null thì bỏ qua chúng.</param>
+    /// <param name="publisher">Nơi các business fact đã commit đi tiếp. Null thì không publish gì.</param>
+    /// <param name="publishedSignals">Signal code nào là business fact (scope.md §5.5).</param>
     /// <param name="clockDriftThreshold">
-    /// How far the device and gateway clocks may disagree before a reading is flagged. Defaults to
-    /// <see cref="ClockQualityClassifier.DefaultThreshold"/>.
+    /// Đồng hồ device và gateway được phép lệch nhau bao xa trước khi một reading bị flag. Mặc định
+    /// là <see cref="ClockQualityClassifier.DefaultThreshold"/>.
     /// </param>
     /// <param name="writerParallelism">
-    /// Database writers one batch may spread across. One keeps the single-transaction behaviour.
+    /// Số database writer mà một batch có thể trải rộng ra. Bằng một thì giữ nguyên hành vi
+    /// single-transaction.
     /// </param>
-    /// <param name="minRowsPerWriter">Rows each additional writer must be given to be worth opening.</param>
+    /// <param name="minRowsPerWriter">Số dòng mỗi writer thêm vào phải có để đáng mở ra.</param>
     public PostgresMeasurementIngestor(
         NpgsqlDataSource dataSource,
         TimeProvider timeProvider,
@@ -211,8 +212,8 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
         return await StoreAsync(distinct, rawCount, cancellationToken);
     }
 
-    // The transaction boundary both adapters commit through. Neither of them gets to decide what
-    // dedup means; they only decide how to read.
+    // Transaction boundary mà cả hai adapter đều commit qua. Không cái nào trong chúng được quyết
+    // định dedup nghĩa là gì; chúng chỉ quyết định cách đọc.
     private async Task<IngestionResult> StoreAsync(
         Dictionary<Guid, MeasurementRow> distinct,
         int rawCount,
@@ -235,9 +236,9 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
         }
         else
         {
-            // One PostgreSQL backend per connection, so this is the only way a single batch reaches
-            // more than one core. Each chunk is its own transaction; see IngestionOptions
-            // .WriterParallelism for why a partial commit stays correct under retry.
+            // Mỗi connection chỉ có một PostgreSQL backend, nên đây là cách duy nhất một batch đơn
+            // chạm được tới nhiều hơn một core. Mỗi chunk là một transaction riêng; xem
+            // IngestionOptions.WriterParallelism để biết vì sao một commit từng phần vẫn đúng khi retry.
             var written = await Task.WhenAll(
                 chunks.Select(chunk => WriteChunkAsync(chunk, cancellationToken)));
 
@@ -254,9 +255,9 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
             RetentionRisk: RecordRetentionRisk(claimedRows));
         _metrics.RecordCommitted(result);
 
-        // After the commit, and outside it. A publish failure must leave the rows where they are:
-        // this is the dual-write ADR-022 already measured at 18/200, and M2 counts it rather than
-        // pretending the outbox that closes it (M6) is already here.
+        // Sau khi commit, và ở ngoài nó. Một publish thất bại phải để các dòng nguyên tại chỗ: đây là
+        // dual-write mà ADR-022 đã đo được ở mức 18/200, và M2 đếm nó thay vì giả vờ rằng outbox
+        // đóng lỗ hổng đó (M6) đã có sẵn ở đây.
         var announced = Announce(claimedRows);
 
         if (announced.Count == 0)
@@ -270,8 +271,8 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
         return result with { PublishFailures = failures };
     }
 
-    // Splitting costs a connection and a transaction per chunk, which is only worth paying once a
-    // batch is big enough that index maintenance dominates. Small batches stay on one writer.
+    // Việc chia nhỏ tốn một connection và một transaction cho mỗi chunk, chỉ đáng trả cái giá đó khi
+    // batch đủ lớn để index maintenance chiếm ưu thế. Batch nhỏ ở lại trên một writer duy nhất.
     private MeasurementRow[][] SplitAcrossWriters(MeasurementRow[] rows)
     {
         var writers = Math.Min(_writerParallelism, rows.Length / _minRowsPerWriter);
@@ -294,19 +295,20 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
         return chunks;
     }
 
-    // Claim and store share one transaction so a row can never be claimed without being stored.
+    // Claim và store dùng chung một transaction nên một dòng không bao giờ có thể được claim mà
+    // không được store.
     private async Task<MeasurementRow[]> WriteChunkAsync(
         MeasurementRow[] rows,
         CancellationToken cancellationToken)
     {
-        // Retried rather than surfaced, because a serialization failure or unrelated deadlock is a
-        // scheduling accident and not a statement about the data. Chunk creation is deliberately
-        // absent from this transaction: EnsureTelemetryChunksAsync completes it before any writer
-        // takes a RowExclusive lock on the claim table.
+        // Retry thay vì để lộ ra ngoài, vì một serialization failure hay một deadlock không liên quan
+        // là một tai nạn lập lịch chứ không phải một phát biểu về dữ liệu. Chunk creation cố ý vắng
+        // mặt khỏi transaction này: EnsureTelemetryChunksAsync hoàn tất nó trước khi bất kỳ writer
+        // nào lấy RowExclusive lock trên claim table.
         //
-        // Retrying remains exactly safe: PostgreSQL rolled back BOTH statements together (ADR-030),
-        // so nothing was claimed and nothing was stored, and the claim insert is ON CONFLICT DO
-        // NOTHING, so a retry that races another delivery simply reports its rows as duplicates.
+        // Retry vẫn an toàn tuyệt đối: PostgreSQL rollback CẢ HAI statement cùng nhau (ADR-030), nên
+        // không gì bị claim và không gì bị store, và claim insert là ON CONFLICT DO NOTHING, nên một
+        // retry đua với một delivery khác chỉ đơn giản báo cáo các dòng của nó là duplicate.
         for (var attempt = 1; ; attempt++)
         {
             try
@@ -321,16 +323,16 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
         }
     }
 
-    // TimescaleDB copies the hypertable's foreign key onto a new chunk. If that DDL runs after this
-    // transaction has inserted claims, concurrent writers form a lock cycle: each holds
-    // RowExclusive on ingest.processed_message, one holds ShareUpdateExclusive on the hypertable,
-    // and chunk creation asks for ShareRowExclusive on the claim table. Pre-creating the slice in an
-    // autocommit statement removes that cycle while preserving the claim+telemetry transaction.
+    // TimescaleDB copy foreign key của hypertable sang một chunk mới. Nếu DDL đó chạy sau khi
+    // transaction này đã insert claim, các writer đồng thời sẽ tạo thành một lock cycle: mỗi cái giữ
+    // RowExclusive trên ingest.processed_message, một cái giữ ShareUpdateExclusive trên hypertable,
+    // và chunk creation đòi ShareRowExclusive trên claim table. Pre-create slice trong một
+    // autocommit statement loại bỏ cycle đó trong khi vẫn giữ nguyên transaction claim+telemetry.
     //
-    // create_chunk is concurrency-safe: exactly one caller reports created=true and callers racing
-    // for the same slice receive created=false. Do not cache the result indefinitely; retention may
-    // remove a chunk later. Replays whose global claim already exists are filtered first so they do
-    // not recreate an empty raw chunk after retention has legitimately removed it.
+    // create_chunk an toàn với concurrency: đúng một caller báo created=true và các caller đua nhau
+    // cho cùng một slice nhận created=false. Không cache kết quả vô thời hạn; retention có thể xóa
+    // một chunk sau đó. Các replay có global claim đã tồn tại được lọc trước để chúng không tạo lại
+    // một raw chunk rỗng sau khi retention đã xóa nó một cách hợp lệ.
     private async Task EnsureTelemetryChunksAsync(
         MeasurementRow[] rows,
         CancellationToken cancellationToken)
@@ -388,25 +390,26 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
         return claimedRows;
     }
 
-    // Only the two states PostgreSQL raises when it has undone the whole transaction for a reason
-    // that will not repeat. A constraint violation is neither, and retrying one would turn a message
-    // this process must reject into an endless loop.
+    // Chỉ hai trạng thái mà PostgreSQL nêu ra khi nó đã undo toàn bộ transaction vì một lý do sẽ
+    // không lặp lại. Một constraint violation không thuộc trong hai cái đó, và retry nó sẽ biến một
+    // message mà process này phải từ chối thành một vòng lặp vô tận.
     private static bool IsTransientWriteConflict(PostgresException failure) =>
         failure.SqlState is PostgresErrorCodes.DeadlockDetected or PostgresErrorCodes.SerializationFailure;
 
-    /// <summary>Counts, per site, the committed rows that landed a chunk or more from their write.</summary>
+    /// <summary>Đếm, theo từng site, các dòng đã commit mà lệch một chunk trở lên so với thời điểm ghi của chúng.</summary>
     /// <remarks>
     /// <para>
-    /// ADR-011 owed this number and migration 007 is the reason it is now due: raw retention stays off
-    /// the schedule until legal hold exists, and this counter is what turns "should it come back on"
-    /// into a measurement. A gap wider than one chunk means the row is filed under a day the plant was
-    /// not producing it, so retention — which drops whole chunks by <c>device_timestamp</c> — would
-    /// judge it by a date nobody chose.
+    /// ADR-011 đã nợ con số này và migration 007 là lý do nó tới hạn phải trả: raw retention vẫn ở
+    /// ngoài lịch cho tới khi có legal hold, và counter này là thứ biến "có nên bật lại không" thành
+    /// một phép đo. Một khoảng lệch rộng hơn một chunk nghĩa là dòng đó bị xếp vào một ngày mà nhà máy
+    /// không hề sản xuất ra nó, nên retention — thứ xóa nguyên cả chunk theo <c>device_timestamp</c> —
+    /// sẽ đánh giá nó theo một ngày mà không ai chọn cả.
     /// </para>
     /// <para>
-    /// Absolute, not signed. A clock ahead by a week puts a row in a chunk that does not exist yet and
-    /// is just as wrong as one behind by a week; only one of the two is ever near the retention
-    /// horizon, but a plant that produces either has a clock problem worth seeing.
+    /// Giá trị tuyệt đối, không có dấu. Một đồng hồ chạy nhanh một tuần đặt một dòng vào một chunk
+    /// còn chưa tồn tại và cũng sai y hệt như một đồng hồ chạy chậm một tuần; chỉ một trong hai
+    /// trường hợp từng gần tới retention horizon, nhưng một nhà máy tạo ra một trong hai đều có vấn
+    /// đề về đồng hồ đáng để nhìn thấy.
     /// </para>
     /// </remarks>
     private int RecordRetentionRisk(MeasurementRow[] rows)
@@ -442,9 +445,9 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
         return total;
     }
 
-    // Good clocks only. The measurement subtracts two clocks, so a PLC two hours out would
-    // contribute a two-hour "lag" that says nothing about the pipeline, and one two hours fast would
-    // contribute a negative one. Either ruins a percentile in a way that is invisible in the result.
+    // Chỉ những đồng hồ tốt. Phép đo này lấy hiệu của hai đồng hồ, nên một PLC lệch hai giờ sẽ đóng
+    // góp một "lag" hai giờ không nói lên điều gì về pipeline, và một PLC nhanh hai giờ sẽ đóng góp
+    // một giá trị âm. Cả hai đều phá hỏng một percentile theo cách vô hình trong kết quả.
     private void RecordLag(MeasurementRow[] rows)
     {
         foreach (var row in rows)
@@ -467,14 +470,14 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
 
         foreach (var row in rows)
         {
-            // The signal code decides. An evaluated result is a different signal from the curve it
-            // came off - Formation/CapacityResult against Formation/Capacity - so the whitelist can
-            // name one without ever admitting the other, and it keeps doing that after M7 gives
-            // every raw reading a unit id.
+            // Signal code là thứ quyết định. Một kết quả đã đánh giá là một signal khác với curve mà
+            // nó bắt nguồn - Formation/CapacityResult khác với Formation/Capacity - nên whitelist có
+            // thể nêu tên cái này mà không bao giờ chấp nhận cái kia, và nó vẫn tiếp tục như vậy sau
+            // khi M7 gán unit id cho mọi raw reading.
             //
-            // The unit id is then required as well, because an event that grades a cell has to say
-            // WHICH cell; a result signal arriving without one is malformed rather than telemetry,
-            // and it is stored and left unannounced instead of being announced about nobody.
+            // Unit id sau đó cũng bắt buộc phải có, vì một event chấm điểm một cell phải nói rõ là
+            // CELL NÀO; một result signal đến mà không có unit id là dị dạng chứ không phải
+            // telemetry, và nó được lưu lại nhưng không được announce thay vì announce về không ai cả.
             if (_publishedSignals.Includes(row.SignalCode)
                 && !string.IsNullOrWhiteSpace(row.UnitId))
             {

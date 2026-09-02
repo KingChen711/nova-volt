@@ -1,15 +1,15 @@
 namespace Nvm.EdgeGateway;
 
-/// <summary>A syntactically valid Sparkplug topic names no equipment in the active plant model.</summary>
+/// <summary>Một topic Sparkplug hợp lệ về cú pháp nhưng không đặt tên cho bất kỳ equipment nào trong plant model đang active.</summary>
 public sealed class UnknownEquipmentTopicException : Exception
 {
-    /// <summary>Creates a rejection that names the offending topic.</summary>
+    /// <summary>Tạo một lời từ chối nêu tên topic gây ra lỗi.</summary>
     public UnknownEquipmentTopicException(string topic)
         : base($"Sparkplug topic '{topic}' names no equipment in the active factory model.")
     {
         Topic = topic;
     }
 
-    /// <summary>The MQTT topic that was refused (K3).</summary>
+    /// <summary>MQTT topic đã bị từ chối (K3).</summary>
     public string Topic { get; }
 }

@@ -2,14 +2,15 @@ using Nvm.Sparkplug;
 
 namespace Nvm.EdgeGateway.Buffering;
 
-/// <summary>Durably accepts decoded MQTT messages before their QoS acknowledgement is sent.</summary>
+/// <summary>Nhận các message MQTT đã decode một cách durable, trước khi acknowledgement QoS của chúng được gửi.</summary>
 public interface IGatewayBufferWriter
 {
-    /// <summary>Queues decoded messages and returns a task that completes at their fsync boundary.</summary>
+    /// <summary>Xếp hàng các message đã decode và trả về một task hoàn tất tại thời điểm fsync của chúng.</summary>
     /// <remarks>
-    /// Waiting for the outer value keeps the in-memory handoff bounded. The MQTT callback must not
-    /// wait for the inner task: returning lets the broker deliver enough QoS 1 publishes to share an
-    /// fsync; each inner task sends its own acknowledgement only after that shared fsync completes.
+    /// Chờ giá trị bên ngoài giữ cho việc handoff trong bộ nhớ ở mức có giới hạn. MQTT callback
+    /// không được chờ task bên trong: việc return cho phép broker deliver đủ số publish QoS 1 để
+    /// chia sẻ chung một fsync; mỗi task bên trong chỉ gửi acknowledgement riêng của nó sau khi
+    /// fsync chung đó hoàn tất.
     /// </remarks>
     ValueTask<Task> QueueAsync(
         IReadOnlyCollection<DecodedSparkplugMessage> messages,

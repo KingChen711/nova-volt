@@ -4,12 +4,12 @@ using System.Text.Json.Serialization;
 namespace Nvm.Contracts.CloudEvents;
 
 /// <summary>
-/// Writes <see cref="EventSource"/> as the URN string it is on the wire, not as an object.
+/// Ghi <see cref="EventSource"/> dưới dạng chuỗi URN đúng như nó trên wire, không phải dưới dạng object.
 /// </summary>
 /// <remarks>
-/// Same reason as <see cref="EventTypeNameJsonConverter"/>. Note that the round trip is not a plain
-/// string copy: the URN carries the site in lower case and the parsed object holds it in canonical
-/// upper case, so reading is where that translation happens.
+/// Cùng lý do như <see cref="EventTypeNameJsonConverter"/>. Lưu ý round trip không phải một phép sao
+/// chép chuỗi đơn thuần: URN mang site ở dạng chữ thường còn object đã parse thì giữ nó ở dạng chuẩn
+/// chữ hoa, nên bước đọc chính là nơi diễn ra sự chuyển đổi đó.
 /// </remarks>
 internal sealed class EventSourceJsonConverter : JsonConverter<EventSource>
 {

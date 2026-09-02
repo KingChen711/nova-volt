@@ -2,13 +2,13 @@ using Nvm.Kernel.Commands.Validation;
 
 namespace Nvm.FactoryModel.Commands;
 
-/// <summary>Checks the shape of an activation request, and nothing about the plant.</summary>
+/// <summary>Kiểm tra hình dạng của một activation request, và không kiểm tra gì về plant cả.</summary>
 /// <remarks>
-/// The dividing line drawn on <see cref="ICommandValidator{TCommand}"/>, in practice. "Revision must
-/// be at least 1" is here, because it is true without reading anything. "That plant exists" and
-/// "revision must be higher than the one in force" are in the handler, because answering them needs
-/// state — and a check made against state that something else can change in the meantime has to
-/// happen where the change is made, not two stages earlier.
+/// Là ranh giới mà <see cref="ICommandValidator{TCommand}"/> vạch ra, áp dụng vào thực tế. "Revision
+/// phải ít nhất là 1" nằm ở đây, vì điều đó đúng mà không cần đọc gì thêm. "Plant đó có tồn tại không"
+/// và "revision phải cao hơn revision đang có hiệu lực" nằm trong handler, vì trả lời hai câu đó cần
+/// đến state — và một phép kiểm nhắm vào state mà thứ khác có thể thay đổi trong lúc đó thì phải xảy
+/// ra ngay tại nơi thay đổi được thực hiện, không phải sớm hơn hai bước.
 /// </remarks>
 public sealed class ActivateFactoryModelRevisionValidator : ICommandValidator<ActivateFactoryModelRevisionCommand>
 {
@@ -23,9 +23,9 @@ public sealed class ActivateFactoryModelRevisionValidator : ICommandValidator<Ac
         }
         else if (!command.SiteId.All(character => char.IsAsciiLetterUpper(character) || char.IsAsciiDigit(character)))
         {
-            // Site codes are upper case everywhere else — in a serial number, in an equipment path, in
-            // the site_id claim from Keycloak. Accepting 'nv1' here would put a second spelling into
-            // the audit trail and the routing key.
+            // Site code luôn viết hoa ở mọi nơi khác — trong serial number, trong equipment path,
+            // trong claim site_id từ Keycloak. Chấp nhận 'nv1' ở đây sẽ đưa một cách viết thứ hai vào
+            // audit trail và routing key.
             yield return new ValidationFailure(
                 nameof(command.SiteId),
                 $"Site '{command.SiteId}' must be upper-case letters and digits.");

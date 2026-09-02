@@ -3,12 +3,12 @@ using Nvm.Contracts.Events;
 
 namespace Nvm.Bus;
 
-/// <summary>The events this system knows how to put on the bus.</summary>
+/// <summary>Các event mà hệ thống này biết cách đưa lên bus.</summary>
 /// <remarks>
-/// Discovered by scanning the contracts assembly for <see cref="EventContractAttribute"/> rather than
-/// listed anywhere. Adding an event is then one attribute on the record, not that plus two edits in
-/// a project the author has no reason to open — and a list maintained by hand is a list that goes
-/// stale on the event nobody remembered.
+/// Được phát hiện bằng cách quét assembly contracts để tìm <see cref="EventContractAttribute"/> thay vì
+/// liệt kê ở đâu đó. Thêm một event khi đó chỉ cần một attribute trên record, chứ không phải attribute
+/// đó cộng thêm hai chỗ sửa trong một project mà tác giả không có lý do gì để mở ra — và một danh sách
+/// duy trì bằng tay là một danh sách sẽ lỗi thời đúng ở event mà không ai nhớ tới.
 /// </remarks>
 internal static class DeclaredEventTypes
 {

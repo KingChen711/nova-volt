@@ -3,28 +3,27 @@ using System.Diagnostics.CodeAnalysis;
 namespace Nvm.Contracts.CloudEvents;
 
 /// <summary>
-/// The CloudEvents <c>source</c> attribute: <c>urn:novavolt:{site}:{application}</c>.
+/// Attribute <c>source</c> của CloudEvents: <c>urn:novavolt:{site}:{application}</c>.
 /// </summary>
 /// <remarks>
 /// <para>
-/// Example: <c>urn:novavolt:nv1:app-execution</c>, per docs/scope.md §7.4.
+/// Ví dụ: <c>urn:novavolt:nv1:app-execution</c>, theo docs/scope.md §7.4.
 /// </para>
 /// <para>
-/// Source answers "who says so". Together with the event id it is what CloudEvents defines
-/// uniqueness against, and when two services disagree about the same unit it is the first thing
-/// anyone looks at.
+/// Source trả lời câu "ai nói vậy". Cùng với event id, đây là thứ CloudEvents dùng để định nghĩa tính
+/// duy nhất, và khi hai service bất đồng về cùng một unit thì đây là thứ đầu tiên ai đó nhìn vào.
 /// </para>
 /// <para>
-/// The site appears here in lower case, and in the routing key in upper case. That is not an
-/// oversight — see <see cref="RoutingKey"/>. Inside this type the site is always held in its
-/// canonical upper-case form, so that <see cref="SiteId"/> can be compared against every other
-/// SiteId in the codebase without anyone remembering which string came from a URN.
+/// Site xuất hiện ở đây dưới dạng chữ thường, còn trong routing key thì dưới dạng chữ hoa. Đó không
+/// phải là sơ suất — xem <see cref="RoutingKey"/>. Bên trong type này, site luôn được giữ ở dạng chuẩn
+/// (canonical) chữ hoa, để <see cref="SiteId"/> có thể được so sánh với mọi SiteId khác trong codebase
+/// mà không ai phải nhớ chuỗi nào đến từ một URN.
 /// </para>
 /// </remarks>
 [System.Text.Json.Serialization.JsonConverter(typeof(EventSourceJsonConverter))]
 public sealed record EventSource
 {
-    /// <summary>URN prefix shared by every source in the system.</summary>
+    /// <summary>Tiền tố URN chung cho mọi source trong hệ thống.</summary>
     public const string Prefix = "urn:novavolt";
 
     private const char Separator = ':';
@@ -39,23 +38,23 @@ public sealed record EventSource
         Application = application;
     }
 
-    /// <summary>The full URN, exactly as it travels on the wire, with the site in lower case.</summary>
+    /// <summary>URN đầy đủ, đúng như nó di chuyển trên wire, với site ở dạng chữ thường.</summary>
     public string Value { get; }
 
-    /// <summary>Site code in its canonical upper-case form, for example <c>NV1</c>.</summary>
+    /// <summary>Mã site ở dạng chuẩn chữ hoa, ví dụ <c>NV1</c>.</summary>
     public string SiteId { get; }
 
-    /// <summary>Deployable that published the event, for example <c>app-execution</c>.</summary>
+    /// <summary>Deployable đã publish event này, ví dụ <c>app-execution</c>.</summary>
     public string Application { get; }
 
-    /// <summary>Builds a source URN, throwing when a part is malformed.</summary>
-    /// <exception cref="FormatException">The site is not upper-case alphanumeric, or the application is not kebab-case.</exception>
+    /// <summary>Xây dựng một source URN, ném lỗi khi có phần bị sai định dạng.</summary>
+    /// <exception cref="FormatException">Site không phải chữ hoa-số, hoặc application không phải kebab-case.</exception>
     public static EventSource Create(string? siteId, string? application) =>
         TryCreate(siteId, application, out var source)
             ? source
             : throw new FormatException($"Not a valid event source: site '{siteId}', application '{application}'.");
 
-    /// <summary>Builds a source URN, returning false when a part is malformed.</summary>
+    /// <summary>Xây dựng một source URN, trả về false khi có phần bị sai định dạng.</summary>
     public static bool TryCreate(
         [NotNullWhen(true)] string? siteId,
         [NotNullWhen(true)] string? application,
@@ -68,23 +67,23 @@ public sealed record EventSource
             return false;
         }
 
-        // ToLowerInvariant, never ToLower: with InvariantGlobalization off (ADR-020) the ambient
-        // culture is real, and on a Turkish machine ToLower turns 'I' into 'ı'. A source URN that
-        // depends on where the process runs is not an identifier.
+        // ToLowerInvariant, không bao giờ dùng ToLower: khi InvariantGlobalization tắt (ADR-020) thì
+        // ambient culture là có thật, và trên một máy Thổ Nhĩ Kỳ, ToLower biến 'I' thành 'ı'. Một
+        // source URN mà phụ thuộc vào nơi tiến trình đang chạy thì không còn là một định danh nữa.
         var value = string.Concat(Prefix, Separator, siteId.ToLowerInvariant(), Separator, application);
 
         source = new EventSource(value, siteId, application);
         return true;
     }
 
-    /// <summary>Reads a source URN back from the wire, throwing when the string is malformed.</summary>
-    /// <exception cref="FormatException">The string does not match the layout.</exception>
+    /// <summary>Đọc lại một source URN từ wire, ném lỗi khi chuỗi bị sai định dạng.</summary>
+    /// <exception cref="FormatException">Chuỗi không khớp với cấu trúc quy định.</exception>
     public static EventSource Parse(string? value) =>
         TryParse(value, out var source)
             ? source
             : throw new FormatException("Not a valid event source: '" + value + "'.");
 
-    /// <summary>Reads a source URN back from the wire, returning false when the string is malformed.</summary>
+    /// <summary>Đọc lại một source URN từ wire, trả về false khi chuỗi bị sai định dạng.</summary>
     public static bool TryParse([NotNullWhen(true)] string? value, [NotNullWhen(true)] out EventSource? source)
     {
         source = null;
@@ -101,9 +100,9 @@ public sealed record EventSource
             return false;
         }
 
-        // The site travels lower-cased, so it is lifted back to canonical form before validation.
-        // Upper-casing here is safe because a site code is alphanumeric by definition; anything that
-        // was not already lower case will fail the round-trip check below.
+        // Site di chuyển ở dạng chữ thường, nên nó được nâng trở lại dạng chuẩn trước khi validate.
+        // Chuyển chữ hoa ở đây an toàn vì một mã site theo định nghĩa là chữ-số; bất cứ gì chưa từng ở
+        // dạng chữ thường sẽ fail ở bước kiểm tra round-trip bên dưới.
         if (!TryCreate(segments[SiteSegment].ToUpperInvariant(), segments[ApplicationSegment], out var candidate))
         {
             return false;
@@ -118,6 +117,6 @@ public sealed record EventSource
         return true;
     }
 
-    /// <summary>Returns the full URN.</summary>
+    /// <summary>Trả về URN đầy đủ.</summary>
     public override string ToString() => Value;
 }

@@ -1,41 +1,43 @@
 namespace Nvm.Kernel.Commands.Idempotency;
 
-/// <summary>Carries out a command once, however many times it arrives and however close together.</summary>
-/// <typeparam name="TCommand">The command being handled.</typeparam>
-/// <typeparam name="TResult">What handling it yields.</typeparam>
-/// <param name="store">Where claims are taken and outcomes remembered.</param>
-/// <param name="clock">The only clock. Never <c>DateTimeOffset.UtcNow</c> (AGENTS.md K1).</param>
+/// <summary>Thực hiện một command đúng một lần, dù nó đến bao nhiêu lần và gần nhau đến đâu.</summary>
+/// <typeparam name="TCommand">Command đang được xử lý.</typeparam>
+/// <typeparam name="TResult">Kết quả trả về khi xử lý.</typeparam>
+/// <param name="store">Nơi các claim được giữ và kết quả được ghi nhớ.</param>
+/// <param name="clock">Đồng hồ duy nhất. Không bao giờ dùng <c>DateTimeOffset.UtcNow</c> (AGENTS.md K1).</param>
 /// <remarks>
 /// <para>
-/// This is AGENTS.md K7 made real. Equipment resends when it gets no acknowledgement, a recovered
-/// gateway flushes its backlog, and the bus is at-least-once — so the same intention arrives two or
-/// three times as a matter of normal operation. Without this stage, a step is completed twice and a
-/// material lot is consumed twice, and the numbers are wrong with nothing to show for it.
+/// Đây là AGENTS.md K7 được hiện thực hoá. Thiết bị gửi lại khi không nhận được acknowledgement, một
+/// gateway vừa hồi phục sẽ đẩy hết backlog của nó, và bus là at-least-once — nên cùng một ý định
+/// (intention) đến hai hoặc ba lần là chuyện bình thường trong vận hành. Thiếu bước này, một bước công
+/// đoạn bị hoàn tất hai lần và một lot vật liệu bị tiêu thụ hai lần, và các con số sai mà không để lại
+/// dấu vết nào.
 /// </para>
 /// <para>
-/// A duplicate gets the <b>original result replayed</b> rather than an error. The caller asked for
-/// something to be true; it is true; that is a success. Answering "already done" as a failure pushes
-/// every caller into treating a normal condition as an exception.
+/// Một bản duplicate nhận lại <b>kết quả gốc được replay</b> chứ không phải một lỗi. Caller yêu cầu
+/// một điều gì đó phải đúng; nó đúng; đó là thành công. Trả lời "đã làm rồi" như một thất bại sẽ buộc
+/// mọi caller phải xử lý một tình huống bình thường như một exception.
 /// </para>
 /// <para>
-/// <b>Claim first, run second.</b> The key is reserved before the handler is called, not written down
-/// after it returns. Writing it after is a check-then-act: two identical commands arriving at the same
-/// instant both look it up, both miss, and both run. A gateway flushing a backlog does exactly that —
-/// it does not resend politely one at a time.
+/// <b>Claim trước, chạy sau.</b> Khoá được đặt trước khi handler được gọi, chứ không ghi lại sau khi
+/// nó trả về. Ghi lại sau là kiểu check-then-act: hai command giống hệt nhau đến cùng một thời điểm
+/// đều tra cứu, đều không thấy, và đều chạy. Một gateway đang đẩy backlog làm đúng như vậy — nó không
+/// gửi lại lần lượt một cách lịch sự.
 /// </para>
 /// <para>
-/// <b>Claiming first is what makes the behaviour order load-bearing.</b> From here on, a command that
-/// reaches this stage marks its key as taken, so validation <i>must</i> stay outermost: a malformed
-/// command that got this far would claim the key, and the corrected resend — which carries the same
-/// natural key — would be swallowed as a duplicate. The operator fixes the form, presses submit, sees
-/// success, and nothing happens. See <see cref="KernelServiceCollectionExtensions.AddNvmKernel"/>.
+/// <b>Chính việc claim trước là điều khiến thứ tự behaviour trở thành yếu tố chịu tải
+/// (load-bearing).</b> Từ đây trở đi, một command đến được bước này sẽ đánh dấu khoá của nó là đã bị
+/// chiếm, nên validation <i>bắt buộc</i> phải nằm ngoài cùng: một command sai định dạng mà đi được
+/// tới đây sẽ claim mất khoá, và bản gửi lại đã sửa đúng — mang cùng natural key — sẽ bị nuốt mất như
+/// một bản duplicate. Người vận hành sửa lại form, bấm submit, thấy thành công, và không có gì xảy ra.
+/// Xem <see cref="KernelServiceCollectionExtensions.AddNvmKernel"/>.
 /// </para>
 /// <para>
-/// <b>Still missing, and it is not small.</b> The claim lives as long as the process does. Across a
-/// restart, or across two instances, nothing is shared and duplicates get through. Closing that needs
-/// the store to be a database and the claim to commit in the same transaction as the event it guards
-/// (docs/adr/ADR-023). Until then K7 holds within one process and no further, which is the truthful
-/// claim and the one the tests assert.
+/// <b>Vẫn còn thiếu, và không phải thiếu nhỏ.</b> Claim chỉ sống được lâu bằng process. Qua một lần
+/// restart, hoặc giữa hai instance, không có gì được chia sẻ và duplicate lọt qua. Để khắc phục cần
+/// store là một database và claim phải commit trong cùng transaction với event mà nó bảo vệ
+/// (docs/adr/ADR-023). Cho tới lúc đó, K7 chỉ đúng trong phạm vi một process chứ không hơn — đó là
+/// điều đúng sự thật và cũng là điều mà test khẳng định.
 /// </para>
 /// </remarks>
 public sealed class IdempotencyBehavior<TCommand, TResult>(IIdempotencyStore store, TimeProvider clock)
@@ -45,11 +47,11 @@ public sealed class IdempotencyBehavior<TCommand, TResult>(IIdempotencyStore sto
     private readonly IIdempotencyStore _store = store;
     private readonly TimeProvider _clock = clock;
 
-    /// <summary>How many duplicates this instance has short-circuited. For tests and diagnostics.</summary>
+    /// <summary>Số lượng bản duplicate mà instance này đã short-circuit. Dùng cho test và chẩn đoán.</summary>
     /// <remarks>
-    /// Duplicates are worth counting even though they are normal: the count going from a trickle to a
-    /// flood is how a resend storm announces itself. It is a metric, not an audit entry — see
-    /// <see cref="Audit.AuditBehavior{TCommand, TResult}"/> for why those are different things.
+    /// Duplicate đáng để đếm dù chúng là chuyện bình thường: con số đi từ lác đác lên thành dồn dập
+    /// chính là cách một cơn bão resend tự báo hiệu. Đây là một metric, không phải một audit entry —
+    /// xem <see cref="Audit.AuditBehavior{TCommand, TResult}"/> để biết vì sao hai thứ đó khác nhau.
     /// </remarks>
     public int DuplicatesSuppressed => _duplicatesSuppressed;
 
@@ -85,21 +87,21 @@ public sealed class IdempotencyBehavior<TCommand, TResult>(IIdempotencyStore sto
         }
         catch
         {
-            // Every failure path, cancellation included. A handler that threw did not happen, so its
-            // key must go back to being unseen — otherwise a retry of a transient failure is mistaken
-            // for a duplicate and the work is lost for good.
+            // Mọi đường lỗi, kể cả cancellation. Một handler ném lỗi coi như chưa từng chạy, nên khoá
+            // của nó phải trở lại trạng thái chưa từng thấy — nếu không một lần retry của lỗi tạm thời
+            // sẽ bị nhầm thành duplicate và công việc bị mất vĩnh viễn.
             //
-            // CancellationToken.None on purpose: the token that got us here may be the very one that
-            // was just cancelled, and a claim left neither completed nor abandoned blocks every
-            // duplicate of that command until it times out.
+            // CancellationToken.None có chủ đích: token đưa ta tới đây có thể chính là token vừa bị
+            // cancel, và một claim bị bỏ lửng — không hoàn tất cũng không abandon — sẽ chặn mọi
+            // duplicate của command đó cho tới khi hết timeout.
             await _store.AbandonAsync(key, CancellationToken.None).ConfigureAwait(false);
 
             throw;
         }
 
-        // Also under None. Recording the outcome is what releases the callers already waiting on this
-        // claim; abandoning them because the token was cancelled after the work was done would make
-        // them redo work that succeeded.
+        // Cũng dùng None. Ghi lại kết quả chính là điều giải phóng các caller đang chờ trên claim này;
+        // abandon họ chỉ vì token bị cancel sau khi công việc đã xong sẽ khiến họ phải làm lại việc đã
+        // thành công.
         await _store
             .CompleteAsync(key, result, _clock.GetUtcNow(), CancellationToken.None)
             .ConfigureAwait(false);

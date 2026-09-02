@@ -3,15 +3,15 @@ using MassTransit;
 
 namespace Nvm.Bus.Topology;
 
-/// <summary>Names queues from what a consumer <i>is for</i>, never from what its class is called.</summary>
+/// <summary>Đặt tên queue theo <i>công dụng</i> của consumer, không bao giờ theo tên class của nó.</summary>
 /// <remarks>
-/// See <see cref="BusEndpointAttribute"/> for why. A consumer that has not declared its endpoint is
-/// refused here, at startup, with a message naming the class — rather than being handed a generated
-/// name that silently becomes a second queue on the next rename.
+/// Xem <see cref="BusEndpointAttribute"/> để biết lý do. Một consumer chưa khai báo endpoint của nó sẽ
+/// bị từ chối ngay tại đây, lúc khởi động, với một thông báo nêu tên class — thay vì được cấp một tên
+/// tự sinh mà âm thầm trở thành một queue thứ hai ở lần đổi tên kế tiếp.
 /// </remarks>
 public sealed class NvmEndpointNameFormatter : IEndpointNameFormatter
 {
-    /// <summary>The single instance; the formatter has no state.</summary>
+    /// <summary>Instance duy nhất; formatter không giữ state nào.</summary>
     public static readonly NvmEndpointNameFormatter Instance = new();
 
     private const string TemporaryPrefix = "tmp";

@@ -2,44 +2,46 @@ using System.Collections.Concurrent;
 
 namespace Nvm.Kernel.Commands.Idempotency;
 
-/// <summary>Keeps claims in process memory. Enough to develop and test against, and nothing more.</summary>
-/// <param name="clock">The only clock, used for the claim timeout (AGENTS.md K1).</param>
+/// <summary>Giữ claim trong bộ nhớ của process. Đủ để phát triển và test, và không hơn thế.</summary>
+/// <param name="clock">Đồng hồ duy nhất, dùng cho claim timeout (AGENTS.md K1).</param>
 /// <param name="claimTimeout">
-/// How long a duplicate waits for the caller holding the claim. Defaults to thirty seconds.
+/// Một duplicate chờ caller đang giữ claim bao lâu. Mặc định ba mươi giây.
 /// </param>
 /// <remarks>
 /// <para>
-/// <b>Concurrency inside one process is handled here and is correct.</b> The claim is taken with a
-/// single <see cref="ConcurrentDictionary{TKey, TValue}.TryAdd"/>, so of any number of threads racing
-/// for one key exactly one wins; the rest wait on the winner's
-/// <see cref="TaskCompletionSource{TResult}"/> and replay its result.
+/// <b>Concurrency bên trong một process được xử lý ở đây và là đúng.</b> Claim được lấy bằng một lời
+/// gọi <see cref="ConcurrentDictionary{TKey, TValue}.TryAdd"/> duy nhất, nên dù có bao nhiêu thread
+/// đang tranh nhau cùng một khoá thì cũng chỉ đúng một thread thắng; những thread còn lại chờ trên
+/// <see cref="TaskCompletionSource{TResult}"/> của người thắng và replay lại kết quả của nó.
 /// </para>
 /// <para>
-/// Three limits remain, stated plainly because an in-memory deduplication store is the kind of thing
-/// that looks like it works right up until it matters:
+/// Còn lại ba giới hạn, nói thẳng ra vì một store khử trùng lặp trong bộ nhớ là kiểu thứ trông như hoạt
+/// động tốt cho tới đúng lúc nó quan trọng:
 /// </para>
 /// <list type="number">
 ///   <item><description>
-///     <b>The memory is the process.</b> Restart the service and every claim is forgotten, so the
-///     backlog a gateway flushes afterwards is processed all over again.
+///     <b>Bộ nhớ chính là process.</b> Restart service thì mọi claim bị quên sạch, nên backlog mà một
+///     gateway đẩy lên sau đó sẽ bị xử lý lại từ đầu.
 ///   </description></item>
 ///   <item><description>
-///     <b>One process only.</b> Two instances behind a load balancer each keep their own set and
-///     neither sees the other's, so a duplicate routed elsewhere gets through. Both limits are pinned
-///     by tests that assert them rather than left as a comment nobody re-checks.
+///     <b>Chỉ một process.</b> Hai instance đứng sau load balancer mỗi cái giữ một tập riêng và không
+///     thấy tập của nhau, nên một duplicate bị định tuyến sang instance khác sẽ lọt qua. Cả hai giới
+///     hạn đều được chốt bằng test khẳng định chúng, thay vì để lại như một comment không ai kiểm tra
+///     lại.
 ///   </description></item>
 ///   <item><description>
-///     <b>Not in the transaction.</b> The record lands here whether or not the effect it guards was
-///     committed, which is the failure mode described on <see cref="IIdempotencyStore"/>.
+///     <b>Không nằm trong transaction.</b> Bản ghi được lưu ở đây bất kể hiệu ứng mà nó bảo vệ có được
+///     commit hay không, đây chính là kiểu lỗi được mô tả trên <see cref="IIdempotencyStore"/>.
 ///   </description></item>
 /// </list>
 /// <para>
-/// None of that is fixable here; all three need a database. This exists so the pipeline can be built
-/// and proven now, and is replaced wholesale by the SQL Server version (docs/adr/ADR-023).
+/// Không cái nào trong số đó sửa được ở đây; cả ba đều cần một database. Class này tồn tại để pipeline
+/// có thể được xây dựng và kiểm chứng ngay bây giờ, và sẽ bị thay thế toàn bộ bằng phiên bản SQL Server
+/// (docs/adr/ADR-023).
 /// </para>
 /// <para>
-/// Nothing is ever evicted either, which is correct for a test and unacceptable for a long-running
-/// process.
+/// Cũng không có gì từng bị evict, điều này đúng cho một test và không chấp nhận được cho một process
+/// chạy dài hạn.
 /// </para>
 /// </remarks>
 public sealed class InMemoryIdempotencyStore(TimeProvider clock, TimeSpan? claimTimeout = null)
@@ -49,13 +51,13 @@ public sealed class InMemoryIdempotencyStore(TimeProvider clock, TimeSpan? claim
     private readonly TimeProvider _clock = clock;
     private readonly TimeSpan _claimTimeout = claimTimeout ?? TimeSpan.FromSeconds(30);
 
-    /// <summary>How many keys have been carried through to completion. For tests and diagnostics.</summary>
+    /// <summary>Số khoá đã được đưa tới hoàn tất. Dùng cho test và chẩn đoán.</summary>
     public int Count => _entries.Values.Count(entry => entry.Settled.Task.IsCompletedSuccessfully);
 
-    /// <summary>How many claims are held right now with no outcome yet. For tests and diagnostics.</summary>
+    /// <summary>Số claim đang được giữ ngay lúc này mà chưa có kết quả. Dùng cho test và chẩn đoán.</summary>
     /// <remarks>
-    /// A number that only ever grows is the shape of a handler that neither completes nor abandons,
-    /// and every duplicate of those commands is stuck behind it.
+    /// Một con số chỉ tăng mãi là hình dạng của một handler không hoàn tất cũng không abandon, và mọi
+    /// duplicate của các command đó đều bị kẹt lại phía sau nó.
     /// </remarks>
     public int InFlightCount => _entries.Values.Count(entry => !entry.Settled.Task.IsCompleted);
 
@@ -72,8 +74,8 @@ public sealed class InMemoryIdempotencyStore(TimeProvider clock, TimeSpan? claim
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            // The whole of the mutual exclusion, in one line. TryAdd either inserts or does not; there
-            // is no window between deciding the key is free and taking it.
+            // Toàn bộ phần mutual exclusion, gói trong một dòng. TryAdd hoặc chèn được hoặc không; không
+            // có khoảng hở nào giữa lúc quyết định khoá đang rảnh và lúc chiếm lấy nó.
             if (_entries.TryAdd(key.Value, new Entry(commandType)))
             {
                 return IdempotencyClaim.Granted<TResult>();
@@ -81,15 +83,15 @@ public sealed class InMemoryIdempotencyStore(TimeProvider clock, TimeSpan? claim
 
             if (!_entries.TryGetValue(key.Value, out var holder))
             {
-                // Abandoned between the two calls. The key is free again; go round and contest it.
+                // Bị abandon giữa hai lời gọi. Khoá lại rảnh; quay vòng và tranh lại nó.
                 continue;
             }
 
             GuardCommandType(key, holder, commandType);
 
-            // Already completed and this returns at once; still in flight and this parks until the
-            // holder settles it. The timeout is the difference between a duplicate waiting and a
-            // duplicate waiting forever behind a handler that hung.
+            // Nếu đã hoàn tất thì trả về ngay; nếu còn đang chạy thì dừng lại chờ cho tới khi holder
+            // chốt xong. Timeout chính là khác biệt giữa một duplicate đang chờ và một duplicate chờ
+            // mãi mãi phía sau một handler đã treo.
             bool succeeded;
             try
             {
@@ -99,8 +101,8 @@ public sealed class InMemoryIdempotencyStore(TimeProvider clock, TimeSpan? claim
             }
             catch (TimeoutException)
             {
-                // Rethrown with the key in it. A bare "The operation has timed out" says nothing about
-                // which command is stuck, and the stuck one is the only thing worth knowing.
+                // Ném lại kèm theo khoá. Một câu "The operation has timed out" trần trụi không nói gì
+                // về command nào đang bị kẹt, mà đó lại chính là điều duy nhất đáng biết.
                 throw new TimeoutException(
                     $"Idempotency key {key} has been claimed by '{holder.CommandType}' for longer than "
                     + $"{_claimTimeout}. The caller holding it neither completed nor abandoned it.");
@@ -108,7 +110,7 @@ public sealed class InMemoryIdempotencyStore(TimeProvider clock, TimeSpan? claim
 
             if (!succeeded)
             {
-                // The holder gave up. Its work did not happen, so this caller may now do it.
+                // Holder đã bỏ cuộc. Công việc của nó chưa xảy ra, nên caller này giờ có thể làm việc đó.
                 continue;
             }
 
@@ -137,8 +139,8 @@ public sealed class InMemoryIdempotencyStore(TimeProvider clock, TimeSpan? claim
         entry.ResultType = typeof(TResult);
         entry.HandledAt = handledAt;
 
-        // Published last, and the fields above are read only after this task completes, so a waiter
-        // that observes success also observes the result.
+        // Được publish sau cùng, và các field ở trên chỉ được đọc sau khi task này hoàn tất, nên một
+        // waiter quan sát thấy thành công cũng sẽ quan sát thấy cả kết quả.
         entry.Settled.TrySetResult(true);
 
         return Task.CompletedTask;
@@ -150,8 +152,8 @@ public sealed class InMemoryIdempotencyStore(TimeProvider clock, TimeSpan? claim
         ArgumentNullException.ThrowIfNull(key);
         cancellationToken.ThrowIfCancellationRequested();
 
-        // Removed first, then waiters are woken. The other order lets a woken waiter contest a key
-        // that has not been freed yet, and it would take the slow path for no reason.
+        // Xoá trước, rồi mới đánh thức các waiter. Thứ tự ngược lại sẽ để một waiter vừa được đánh thức
+        // tranh chấp một khoá vẫn chưa được giải phóng, và nó sẽ phải đi đường chậm mà không vì lý do gì.
         if (_entries.TryRemove(key.Value, out var entry))
         {
             entry.Settled.TrySetResult(false);
@@ -170,8 +172,8 @@ public sealed class InMemoryIdempotencyStore(TimeProvider clock, TimeSpan? claim
         }
     }
 
-    // Compares the declared type rather than pattern-matching the stored value, so that a handler
-    // which legitimately returned null is replayed as null instead of being reported as a mismatch.
+    // So sánh theo kiểu khai báo thay vì pattern-match giá trị đã lưu, để một handler trả về null một
+    // cách hợp lệ sẽ được replay lại là null thay vì bị báo là mismatch.
     private static IdempotentOutcome<TResult> OutcomeOf<TResult>(IdempotencyKey key, Entry entry)
     {
         if (entry.ResultType != typeof(TResult))
@@ -189,8 +191,8 @@ public sealed class InMemoryIdempotencyStore(TimeProvider clock, TimeSpan? claim
     {
         public string CommandType { get; } = commandType;
 
-        // True when the holder completed, false when it abandoned. RunContinuationsAsynchronously so
-        // that releasing a queue of waiters does not run all of them on the completing thread.
+        // True khi holder hoàn tất, false khi nó abandon. Dùng RunContinuationsAsynchronously để việc
+        // giải phóng một hàng đợi waiter không chạy tất cả chúng trên thread đang hoàn tất.
         public TaskCompletionSource<bool> Settled { get; } =
             new(TaskCreationOptions.RunContinuationsAsynchronously);
 

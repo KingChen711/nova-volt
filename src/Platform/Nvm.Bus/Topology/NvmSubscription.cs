@@ -5,28 +5,28 @@ using Nvm.Contracts.Events;
 
 namespace Nvm.Bus.Topology;
 
-/// <summary>One thing a consumer has asked for: an exchange, and a pattern to match on it.</summary>
-/// <param name="Exchange">The context exchange, for example <c>nvm.factory-model</c>.</param>
-/// <param name="RoutingKey">The binding pattern, for example
+/// <summary>Một thứ mà consumer đã yêu cầu: một exchange, và một pattern để khớp trên đó.</summary>
+/// <param name="Exchange">Context exchange, ví dụ <c>nvm.factory-model</c>.</param>
+/// <param name="RoutingKey">Binding pattern, ví dụ
 /// <c>nvm.*.factory-model.revision-activated.v1</c>.</param>
 /// <remarks>
-/// Separated from <see cref="NvmConsumerDefinition{TConsumer}"/> so that what a consumer subscribes to
-/// can be asserted without a broker. Binding is the half of a topology that fails silently — a wrong
-/// pattern produces a queue that exists, is bound, reports no error, and stays empty — so it is the
-/// half that most needs a test that can be red.
+/// Tách khỏi <see cref="NvmConsumerDefinition{TConsumer}"/> để những gì một consumer subscribe vào có
+/// thể được assert mà không cần tới broker. Binding là nửa topology fail một cách âm thầm — một
+/// pattern sai tạo ra một queue vẫn tồn tại, vẫn được bind, không báo lỗi gì, và cứ rỗng mãi — nên đây
+/// là nửa cần nhất một test có thể chuyển màu đỏ.
 /// </remarks>
 public sealed record NvmSubscription(string Exchange, string RoutingKey)
 {
-    /// <summary>Works out what a consumer subscribes to, from the events it handles.</summary>
-    /// <param name="consumerType">The consumer class.</param>
+    /// <summary>Tính ra một consumer subscribe vào cái gì, từ các event mà nó xử lý.</summary>
+    /// <param name="consumerType">Class consumer.</param>
     /// <exception cref="InvalidOperationException">
-    /// The consumer handles nothing that carries <see cref="EventContractAttribute"/>, so there is no
-    /// routing key to bind it by.
+    /// Consumer không xử lý gì mang <see cref="EventContractAttribute"/>, nên không có routing key nào
+    /// để bind theo.
     /// </exception>
     /// <remarks>
-    /// Derived from the <c>IConsumer&lt;T&gt;</c> interfaces rather than declared a second time next to
-    /// them. A consumer that starts handling a second event gets its binding from the same edit that
-    /// added the interface, and cannot end up subscribed to something it no longer handles.
+    /// Được suy ra từ các interface <c>IConsumer&lt;T&gt;</c> thay vì khai báo lần thứ hai bên cạnh
+    /// chúng. Một consumer bắt đầu xử lý event thứ hai sẽ nhận binding của nó từ đúng lần sửa đã thêm
+    /// interface đó, và không thể nào lại đang subscribe vào thứ mà nó không còn xử lý nữa.
     /// </remarks>
     public static IReadOnlyList<NvmSubscription> Of(Type consumerType)
     {
@@ -37,9 +37,10 @@ public sealed record NvmSubscription(string Exchange, string RoutingKey)
             .Select(eventType => new NvmSubscription(
                 NvmTopology.ExchangeFor(eventType),
 
-                // Every site, not one. A probe or a projection wants the fact wherever it happened; a
-                // service that runs inside one plant asks for NvmTopology.BindingForEvent instead, and
-                // that choice is the whole of multiplant isolation on the consume side.
+                // Mọi site, không phải một site. Một probe hay một projection muốn biết sự việc bất kể
+                // xảy ra ở đâu; một service chỉ chạy trong một nhà máy thì gọi
+                // NvmTopology.BindingForEvent thay vào đó, và lựa chọn đó chính là toàn bộ việc cách ly
+                // đa nhà máy (multiplant isolation) ở phía consume.
                 NvmTopology.BindingForEventAtEverySite(eventType)))
             .ToArray();
 

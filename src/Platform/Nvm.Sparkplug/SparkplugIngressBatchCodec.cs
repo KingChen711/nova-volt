@@ -8,14 +8,15 @@ using WireReading = Nvm.Sparkplug.Transport.Generated.DecodedDeviceReading;
 
 namespace Nvm.Sparkplug;
 
-/// <summary>Serializes the protobuf body used on the gateway-to-ingestion HTTP conduit.</summary>
+/// <summary>Serialize phần thân protobuf dùng trên đường truyền HTTP gateway-to-ingestion.</summary>
 /// <remarks>
-/// Generated protobuf types stay internal to this assembly. Both deployables work with NovaVolt
-/// types and byte arrays, so changing code generation cannot leak across the boundary ADR-027 owns.
+/// Các type protobuf sinh ra chỉ ở mức internal trong assembly này. Cả hai deployable đều làm việc
+/// với type của NovaVolt và mảng byte, nên đổi cách sinh code không thể rò rỉ qua ranh giới mà
+/// ADR-027 sở hữu.
 /// </remarks>
 public static class SparkplugIngressBatchCodec
 {
-    /// <summary>Encodes one non-empty HTTP batch.</summary>
+    /// <summary>Encode một batch HTTP không rỗng.</summary>
     public static byte[] Encode(IReadOnlyCollection<DecodedSparkplugMessage> messages)
     {
         ArgumentNullException.ThrowIfNull(messages);
@@ -36,8 +37,8 @@ public static class SparkplugIngressBatchCodec
         return batch.ToByteArray();
     }
 
-    /// <summary>Decodes and validates one non-empty HTTP batch.</summary>
-    /// <exception cref="SparkplugIngressBatchException">The bytes do not describe a valid v1 batch.</exception>
+    /// <summary>Decode và validate một batch HTTP không rỗng.</summary>
+    /// <exception cref="SparkplugIngressBatchException">Các byte không mô tả một batch v1 hợp lệ.</exception>
     public static ImmutableArray<DecodedSparkplugMessage> Decode(ReadOnlySpan<byte> payload)
     {
         WireBatch batch;

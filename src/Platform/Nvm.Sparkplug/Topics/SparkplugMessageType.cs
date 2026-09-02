@@ -1,51 +1,51 @@
 namespace Nvm.Sparkplug.Topics;
 
-/// <summary>What a Sparkplug message is for, taken from the topic.</summary>
+/// <summary>Một message Sparkplug dùng để làm gì, lấy từ topic.</summary>
 /// <remarks>
-/// The payload does not say. Everything the decoder needs in order to know whether it is looking at a
-/// declaration or an update comes from here, which is why <c>SparkplugPayload</c> has two entry points
-/// and no guessing.
+/// Payload không nói điều đó. Mọi thứ decoder cần để biết mình đang nhìn vào một khai báo hay một
+/// bản cập nhật đều đến từ đây, đó là lý do <c>SparkplugPayload</c> có hai entry point và không phải
+/// đoán.
 /// </remarks>
 public enum SparkplugMessageType
 {
-    /// <summary><c>NBIRTH</c> — an edge node came online and is declaring itself.</summary>
+    /// <summary><c>NBIRTH</c> — một edge node vừa online và đang tự khai báo.</summary>
     NodeBirth,
 
-    /// <summary><c>NDEATH</c> — the broker published the node's last will; it is gone.</summary>
+    /// <summary><c>NDEATH</c> — broker đã publish last will của node; nó đã biến mất.</summary>
     NodeDeath,
 
-    /// <summary><c>NDATA</c> — values that changed on the node itself.</summary>
+    /// <summary><c>NDATA</c> — các giá trị đã thay đổi trên chính node.</summary>
     NodeData,
 
-    /// <summary><c>NCMD</c> — a command to the node. Rebirth requests travel this way.</summary>
+    /// <summary><c>NCMD</c> — một lệnh gửi tới node. Yêu cầu rebirth đi theo đường này.</summary>
     NodeCommand,
 
-    /// <summary><c>DBIRTH</c> — a device under the node is declaring its metrics.</summary>
+    /// <summary><c>DBIRTH</c> — một device dưới node đang khai báo các metric của nó.</summary>
     DeviceBirth,
 
-    /// <summary><c>DDEATH</c> — a device under the node stopped reporting.</summary>
+    /// <summary><c>DDEATH</c> — một device dưới node ngừng báo cáo.</summary>
     DeviceDeath,
 
-    /// <summary><c>DDATA</c> — values that changed on a device.</summary>
+    /// <summary><c>DDATA</c> — các giá trị đã thay đổi trên một device.</summary>
     DeviceData,
 
-    /// <summary><c>DCMD</c> — a command to a device.</summary>
+    /// <summary><c>DCMD</c> — một lệnh gửi tới một device.</summary>
     DeviceCommand,
 }
 
-/// <summary>Converts between the enum and the token that appears in a topic.</summary>
+/// <summary>Chuyển đổi giữa enum và token xuất hiện trong một topic.</summary>
 /// <remarks>
-/// Written out rather than reached through <c>Enum.Parse</c>. The wire tokens are upper case and
-/// abbreviated (<c>NBIRTH</c>, not <c>NodeBirth</c>), and a case-insensitive parse would quietly
-/// accept <c>nbirth</c> — a topic from the lower-case Unified Namespace tree, which addresses the same
-/// machines by a different convention (docs/scope.md §7.1). Accepting both spellings is how one
-/// machine ends up with two identities.
+/// Viết tường minh thay vì đi qua <c>Enum.Parse</c>. Các token trên wire là chữ hoa và viết tắt
+/// (<c>NBIRTH</c>, không phải <c>NodeBirth</c>), và một phép parse không phân biệt hoa thường sẽ âm
+/// thầm chấp nhận <c>nbirth</c> — một topic từ cây Unified Namespace chữ thường, vốn định danh cùng
+/// những máy đó theo một quy ước khác (docs/scope.md §7.1). Chấp nhận cả hai cách viết là cách một
+/// máy kết thúc với hai identity.
 /// </remarks>
 public static class SparkplugMessageTypes
 {
-    /// <summary>The token this message type appears as in a topic.</summary>
-    /// <param name="messageType">The message type.</param>
-    /// <exception cref="ArgumentOutOfRangeException">The value is not a message type.</exception>
+    /// <summary>Token mà message type này xuất hiện dưới dạng trong một topic.</summary>
+    /// <param name="messageType">Message type.</param>
+    /// <exception cref="ArgumentOutOfRangeException">Giá trị không phải một message type.</exception>
     public static string Token(this SparkplugMessageType messageType) =>
         messageType switch
         {
@@ -60,11 +60,11 @@ public static class SparkplugMessageTypes
             _ => throw new ArgumentOutOfRangeException(nameof(messageType)),
         };
 
-    /// <summary>Whether this message type addresses a device rather than the edge node itself.</summary>
-    /// <param name="messageType">The message type.</param>
+    /// <summary>Message type này có định danh một device thay vì chính edge node hay không.</summary>
+    /// <param name="messageType">Message type.</param>
     /// <remarks>
-    /// Decides how many levels the topic has, so it is also what catches a <c>DDATA</c> published
-    /// without a device or an <c>NDATA</c> published with one.
+    /// Quyết định topic có bao nhiêu cấp, nên đây cũng chính là thứ bắt được một <c>DDATA</c> được
+    /// publish mà không có device, hoặc một <c>NDATA</c> được publish kèm device.
     /// </remarks>
     public static bool IsDeviceLevel(this SparkplugMessageType messageType) =>
         messageType
@@ -73,10 +73,10 @@ public static class SparkplugMessageTypes
             or SparkplugMessageType.DeviceData
             or SparkplugMessageType.DeviceCommand;
 
-    /// <summary>Reads a topic token, case-sensitively.</summary>
-    /// <param name="token">The token from the topic.</param>
-    /// <param name="messageType">The message type it names.</param>
-    /// <returns><see langword="false"/> when the token is not one Sparkplug defines.</returns>
+    /// <summary>Đọc một token từ topic, phân biệt hoa thường.</summary>
+    /// <param name="token">Token lấy từ topic.</param>
+    /// <param name="messageType">Message type mà nó định danh.</param>
+    /// <returns><see langword="false"/> khi token không phải loại nào Sparkplug định nghĩa.</returns>
     public static bool TryParse(string? token, out SparkplugMessageType messageType)
     {
         var parsed = token switch

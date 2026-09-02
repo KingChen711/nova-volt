@@ -5,19 +5,20 @@ using Nvm.Kernel.Identity;
 
 namespace Nvm.FactoryModel.Storage;
 
-/// <summary>Answers <see cref="IEquipmentDirectory"/> from whatever revision each plant is running.</summary>
+/// <summary>Trả lời <see cref="IEquipmentDirectory"/> dựa trên revision mà mỗi plant đang chạy.</summary>
 /// <remarks>
 /// <para>
-/// The lookup goes through <see cref="IActiveFactoryModel"/> rather than the catalog, and that is the
-/// point of it: a message arriving from NV1 has to be read against the tree NV1 is running, even
-/// while DE1 is still on an older revision. Asking the catalog for the newest document instead would
-/// resolve devices that the plant sending them has not been rolled out to yet.
+/// Lượt tra cứu đi qua <see cref="IActiveFactoryModel"/> thay vì qua catalog, và đó chính là mục đích
+/// của nó: một message đến từ NV1 phải được đọc dựa trên cái cây mà NV1 đang chạy, ngay cả khi DE1
+/// vẫn còn ở một revision cũ hơn. Nếu thay vào đó hỏi catalog để lấy document mới nhất thì sẽ resolve
+/// nhầm các device mà plant gửi message đó còn chưa được rollout tới.
 /// </para>
 /// <para>
-/// An index is built per plant and revision and kept. <see cref="FactorySite"/> carries a tree and no
-/// index, so every lookup would otherwise walk it — forty nodes today, and once per message at five
-/// thousand messages a second. Keyed on the revision as well as the plant so that an activation
-/// invalidates nothing: it simply produces a key nothing has cached yet.
+/// Một index được build cho từng cặp plant và revision rồi được giữ lại. <see cref="FactorySite"/>
+/// mang theo một cái cây và không có index, nên nếu không có bước này thì mọi lượt tra cứu sẽ phải đi
+/// bộ qua nó — bốn mươi node ở hiện tại, và một lần cho mỗi message ở tốc độ năm nghìn message một
+/// giây. Được key theo cả revision lẫn plant để một lần activation không làm mất hiệu lực bất cứ thứ
+/// gì: nó chỉ đơn giản sinh ra một key mà chưa gì từng cache tới.
 /// </para>
 /// </remarks>
 public sealed class FactoryModelEquipmentDirectory : IEquipmentDirectory
@@ -25,8 +26,8 @@ public sealed class FactoryModelEquipmentDirectory : IEquipmentDirectory
     private readonly IActiveFactoryModel _active;
     private readonly ConcurrentDictionary<(string SiteId, int Revision), FrozenDictionary<EquipmentPath, FactoryNode>> _indexes = new();
 
-    /// <summary>Creates the directory over what each plant is currently running.</summary>
-    /// <param name="active">The activation store.</param>
+    /// <summary>Tạo directory dựa trên những gì mỗi plant hiện đang chạy.</summary>
+    /// <param name="active">Kho lưu activation.</param>
     public FactoryModelEquipmentDirectory(IActiveFactoryModel active)
     {
         ArgumentNullException.ThrowIfNull(active);
@@ -54,9 +55,10 @@ public sealed class FactoryModelEquipmentDirectory : IEquipmentDirectory
             return null;
         }
 
-        // Built through TryParse rather than Append: the code came off a wire, so it can be anything,
-        // and Append answers a malformed segment with an exception. A device calling itself something
-        // impossible is a message to refuse, not a fault to throw out of a directory lookup.
+        // Xây bằng TryParse thay vì Append: code này đến từ một message trên dây, nên nó có thể là bất
+        // cứ gì, còn Append lại trả lời một segment sai định dạng bằng một exception. Một device tự
+        // xưng bằng một cái tên bất khả thi là một message cần bị từ chối, không phải một lỗi cần được
+        // ném ra từ một lượt tra cứu directory.
         if (EquipmentPath.TryParse($"{line.Value}{EquipmentPath.Separator}{deviceCode}", out var direct)
             && index.ContainsKey(direct))
         {
@@ -82,9 +84,9 @@ public sealed class FactoryModelEquipmentDirectory : IEquipmentDirectory
 
     private FrozenDictionary<EquipmentPath, FactoryNode>? IndexFor(string? siteId)
     {
-        // Null for an enterprise-level path, which cannot name a device and cannot name a plant to
-        // resolve one against. K3 falls out of this: a topic quoting a plant nobody has activated gets
-        // no index, so nothing in it resolves.
+        // Trả null cho một path ở cấp enterprise, vì nó không thể nêu tên một device và cũng không thể
+        // nêu tên một plant để resolve dựa trên đó. K3 tự nhiên mà có từ đây: một topic nhắc tới một
+        // plant chưa ai activate sẽ không có index nào cả, nên không gì bên trong nó resolve được.
         if (siteId is null)
         {
             return null;

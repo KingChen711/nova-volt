@@ -1,48 +1,48 @@
 namespace Nvm.Time;
 
-/// <summary>Turns an instant into the production day and shift a plant would file it under.</summary>
+/// <summary>Biến một instant thành production day và shift mà một plant sẽ ghi nhận nó vào.</summary>
 /// <remarks>
 /// <para>
-/// The central domain function of M3 (docs/scope.md §9/M3). It is a <b>function</b>, not a query:
-/// nothing here reads a database, and a plant's answer depends on nothing but its zone, its shift
-/// table and the instant it is asked about.
+/// Domain function trung tâm của M3 (docs/scope.md §9/M3). Đây là một <b>function</b>, không phải một
+/// query: không có gì ở đây đọc database, và câu trả lời của một plant chỉ phụ thuộc vào zone của nó,
+/// shift table của nó và instant được hỏi tới.
 /// </para>
 /// <para>
-/// Every method takes a plant, and none of them defaults it. A calendar answer without a site is a
-/// cross-site answer, and K3 has no room for one — 05:59 in Hai Phong and 05:59 in Leipzig are eight
-/// hours apart and, on two days a year, not even a fixed eight.
+/// Mọi method đều nhận một plant, và không method nào mặc định nó. Một câu trả lời calendar không có
+/// site là một câu trả lời cross-site, và K3 không có chỗ cho điều đó — 05:59 ở Hải Phòng và 05:59 ở
+/// Leipzig cách nhau tám giờ, và có hai ngày trong năm còn không phải đúng tám giờ cố định.
 /// </para>
 /// </remarks>
 public interface IProductionCalendar
 {
-    /// <summary>The production day an instant belongs to at a plant.</summary>
-    /// <param name="instant">The moment, as an absolute point in time.</param>
-    /// <param name="siteId">The plant, for example <c>NV1</c>.</param>
-    /// <exception cref="UnknownSiteException">The plant has no calendar.</exception>
+    /// <summary>Production day mà một instant thuộc về tại một plant.</summary>
+    /// <param name="instant">Thời điểm, dưới dạng một điểm tuyệt đối trong thời gian.</param>
+    /// <param name="siteId">Plant, ví dụ <c>NV1</c>.</param>
+    /// <exception cref="UnknownSiteException">Plant không có calendar.</exception>
     ProductionDay GetProductionDay(DateTimeOffset instant, string siteId);
 
-    /// <summary>The shift an instant falls in at a plant.</summary>
-    /// <param name="instant">The moment, as an absolute point in time.</param>
-    /// <param name="siteId">The plant.</param>
-    /// <exception cref="UnknownSiteException">The plant has no calendar.</exception>
+    /// <summary>Shift mà một instant rơi vào tại một plant.</summary>
+    /// <param name="instant">Thời điểm, dưới dạng một điểm tuyệt đối trong thời gian.</param>
+    /// <param name="siteId">Plant.</param>
+    /// <exception cref="UnknownSiteException">Plant không có calendar.</exception>
     Shift GetShift(DateTimeOffset instant, string siteId);
 
-    /// <summary>When a given shift of a given production day started and ended at a plant.</summary>
-    /// <param name="day">The production day.</param>
-    /// <param name="shift">The shift.</param>
-    /// <param name="siteId">The plant.</param>
-    /// <returns>Two absolute instants, half-open.</returns>
-    /// <exception cref="UnknownSiteException">The plant has no calendar.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">The plant does not run that shift.</exception>
+    /// <summary>Một shift cho trước của một production day cho trước đã bắt đầu và kết thúc khi nào tại một plant.</summary>
+    /// <param name="day">Production day.</param>
+    /// <param name="shift">Shift.</param>
+    /// <param name="siteId">Plant.</param>
+    /// <returns>Hai instant tuyệt đối, half-open.</returns>
+    /// <exception cref="UnknownSiteException">Plant không có calendar.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Plant không chạy shift đó.</exception>
     ShiftBoundaries GetShiftBoundaries(ProductionDay day, Shift shift, string siteId);
 
-    /// <summary>The production day a plant is in right now.</summary>
-    /// <param name="siteId">The plant.</param>
-    /// <exception cref="UnknownSiteException">The plant has no calendar.</exception>
+    /// <summary>Production day mà một plant đang ở ngay lúc này.</summary>
+    /// <param name="siteId">Plant.</param>
+    /// <exception cref="UnknownSiteException">Plant không có calendar.</exception>
     ProductionDay CurrentProductionDay(string siteId);
 
-    /// <summary>The shift a plant is in right now.</summary>
-    /// <param name="siteId">The plant.</param>
-    /// <exception cref="UnknownSiteException">The plant has no calendar.</exception>
+    /// <summary>Shift mà một plant đang ở ngay lúc này.</summary>
+    /// <param name="siteId">Plant.</param>
+    /// <exception cref="UnknownSiteException">Plant không có calendar.</exception>
     Shift CurrentShift(string siteId);
 }

@@ -3,13 +3,13 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 namespace Nvm.Host.Infrastructure;
 
 /// <summary>
-/// Writes a health report as JSON naming every probe, its status and how long it took.
+/// Ghi ra một health report dạng JSON, nêu tên từng probe, trạng thái của nó và thời gian đã chạy.
 /// </summary>
 /// <remarks>
-/// The default writer answers with the single word <c>Unhealthy</c>, which says nothing about
-/// which dependency is down. Naming the failing probe is the whole point of the endpoint during
-/// an incident. Exception text is exposed in Development only — outside it, a probe message could
-/// leak a host name or a connection string fragment to whoever can reach the endpoint.
+/// Writer mặc định chỉ trả lời bằng đúng một từ <c>Unhealthy</c>, không nói gì về việc dependency nào
+/// đang gặp sự cố. Nêu đúng tên probe đang lỗi chính là mục đích của endpoint này khi có incident.
+/// Nội dung exception chỉ được lộ ra ở Development — ngoài môi trường đó, một probe message có thể
+/// để lộ host name hoặc một mảnh connection string cho bất kỳ ai chạm được tới endpoint.
 /// </remarks>
 internal static class HealthReportWriter
 {

@@ -4,31 +4,32 @@ using Nvm.Kernel.Commands;
 
 namespace Nvm.FactoryModel.Commands;
 
-/// <summary>Puts a published revision of the factory model in force at one plant.</summary>
-/// <param name="IdempotencyKey">Which intention this is. Build it with <see cref="KeyFor"/>.</param>
-/// <param name="SiteId">The plant, for example <c>NV1</c>.</param>
+/// <summary>Đưa một revision đã publish của factory model vào hiệu lực tại một plant.</summary>
+/// <param name="IdempotencyKey">Ý định này là gì. Xây nó bằng <see cref="KeyFor"/>.</param>
+/// <param name="SiteId">Plant, ví dụ <c>NV1</c>.</param>
 /// <param name="Revision">
-/// Which document in the catalog to put in force.
+/// Document nào trong catalog sẽ được đưa vào hiệu lực.
 /// </param>
 /// <remarks>
 /// <para>
-/// The revision belongs to the <b>document</b>, not to the plant, and activation is per plant. Those
-/// two facts together are what allows a staged rollout: a new model can be adopted at Hai Phong while
-/// Leipzig keeps running the previous one, and the two are told apart by which document each is on.
+/// Revision thuộc về <b>document</b>, không thuộc về plant, còn activation thì tính theo từng plant.
+/// Hai sự thật đó cộng lại là thứ cho phép một staged rollout: một model mới có thể được áp dụng ở Hải
+/// Phòng trong khi Leipzig vẫn chạy model trước đó, và hai plant được phân biệt bằng việc mỗi bên đang
+/// ở document nào.
 /// </para>
 /// <para>
-/// <paramref name="Revision"/> selects one immutable document out of
-/// <see cref="Storage.IFactoryModelCatalog"/>, which holds every revision that exists rather than only
-/// the one in force. Documents are never rewritten, so naming a revision resolves to exactly the tree
-/// the caller read — "I looked at revision 12 and I mean to activate that" is a statement the handler
-/// can check rather than take on trust.
+/// <paramref name="Revision"/> chọn ra đúng một document bất biến trong
+/// <see cref="Storage.IFactoryModelCatalog"/>, nơi giữ mọi revision từng tồn tại chứ không chỉ revision
+/// đang có hiệu lực. Document không bao giờ bị ghi đè, nên nêu tên một revision sẽ trỏ đúng về cái cây
+/// mà caller đã đọc — "tôi đã xem revision 12 và tôi muốn activate đúng nó" là một phát biểu mà handler
+/// có thể kiểm chứng chứ không phải tin suông.
 /// </para>
 /// <para>
-/// The handler then asks three questions before writing: does the catalog hold this revision, does
-/// that document describe this plant, and does it move the plant <b>forward</b> from whatever revision
-/// is in force there now. The write itself is a compare-and-swap against that same current revision,
-/// so two activations racing for one plant cannot both succeed. Activating a plant model nobody read
-/// is how a decommissioned work cell reappears on the shop floor.
+/// Handler sau đó hỏi ba câu trước khi ghi: catalog có giữ revision này không, document đó có mô tả
+/// đúng plant này không, và nó có đưa plant <b>tiến lên</b> so với revision đang có hiệu lực ở đó hiện
+/// tại hay không. Bản thân việc ghi là một compare-and-swap so với chính current revision đó, nên hai
+/// lần activate đua nhau cho cùng một plant không thể cùng thành công. Activate một plant model mà
+/// chưa ai đọc qua chính là cách một work cell đã ngừng hoạt động tái xuất hiện trên sàn nhà máy.
 /// </para>
 /// </remarks>
 public sealed record ActivateFactoryModelRevisionCommand(
@@ -36,12 +37,12 @@ public sealed record ActivateFactoryModelRevisionCommand(
     string SiteId,
     int Revision) : ICommand<FactoryModelRevisionActivated>
 {
-    /// <summary>Derives the idempotency key for activating a revision at a plant.</summary>
+    /// <summary>Suy ra idempotency key cho việc activate một revision tại một plant.</summary>
     /// <remarks>
-    /// The natural key lives next to the command it identifies, so that every caller derives the same
-    /// value instead of inventing one. Activating revision 12 at NV1 is one intention however many
-    /// times it is asked for — a retry after a timeout has to land on the same key as the attempt that
-    /// timed out, or the model gets activated twice and two events go out for one change.
+    /// Natural key nằm ngay cạnh command mà nó định danh, để mọi caller đều suy ra cùng một giá trị
+    /// thay vì mỗi nơi tự bịa một cái. Activate revision 12 tại NV1 là một ý định duy nhất dù được yêu
+    /// cầu bao nhiêu lần — một lần retry sau timeout phải cho ra đúng key với lần thử đã timeout, nếu
+    /// không model sẽ bị activate hai lần và hai event được phát ra cho một thay đổi.
     /// </remarks>
     public static IdempotencyKey KeyFor(string siteId, int revision) =>
         IdempotencyKey.FromNaturalKey(

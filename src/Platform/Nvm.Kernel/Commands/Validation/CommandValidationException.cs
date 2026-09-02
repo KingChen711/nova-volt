@@ -2,16 +2,16 @@ using System.Globalization;
 
 namespace Nvm.Kernel.Commands.Validation;
 
-/// <summary>Thrown when a command is refused before anything acted on it.</summary>
+/// <summary>Được ném ra khi một command bị từ chối trước khi bất cứ điều gì tác động lên nó.</summary>
 /// <remarks>
-/// Carries every failure rather than the first one. An operator who fixes one field, resubmits, and
-/// is told about the next field will stop trusting the screen by the third round.
+/// Mang theo mọi lỗi tìm được chứ không chỉ lỗi đầu tiên. Một người vận hành sửa một field, gửi lại,
+/// rồi bị báo về field tiếp theo sẽ hết tin tưởng vào màn hình đó ngay từ vòng thứ ba.
 /// </remarks>
 public sealed class CommandValidationException : Exception
 {
-    /// <summary>Creates the exception from the failures found on a command.</summary>
-    /// <param name="commandType">The command that was refused.</param>
-    /// <param name="failures">Everything wrong with it.</param>
+    /// <summary>Tạo exception từ các lỗi tìm thấy trên một command.</summary>
+    /// <param name="commandType">Command bị từ chối.</param>
+    /// <param name="failures">Mọi thứ sai trên command đó.</param>
     public CommandValidationException(Type commandType, IReadOnlyList<ValidationFailure> failures)
         : base(BuildMessage(commandType, failures))
     {
@@ -19,7 +19,7 @@ public sealed class CommandValidationException : Exception
         Failures = failures;
     }
 
-    /// <summary>Creates the exception with a custom message.</summary>
+    /// <summary>Tạo exception với một message tuỳ chỉnh.</summary>
     public CommandValidationException(string message)
         : base(message)
     {
@@ -27,7 +27,7 @@ public sealed class CommandValidationException : Exception
         Failures = [];
     }
 
-    /// <summary>Creates the exception with a custom message and inner exception.</summary>
+    /// <summary>Tạo exception với một message tuỳ chỉnh và một inner exception.</summary>
     public CommandValidationException(string message, Exception innerException)
         : base(message, innerException)
     {
@@ -35,10 +35,10 @@ public sealed class CommandValidationException : Exception
         Failures = [];
     }
 
-    /// <summary>The command that was refused.</summary>
+    /// <summary>Command bị từ chối.</summary>
     public Type CommandType { get; }
 
-    /// <summary>Everything wrong with it.</summary>
+    /// <summary>Mọi thứ sai trên command đó.</summary>
     public IReadOnlyList<ValidationFailure> Failures { get; }
 
     private static string BuildMessage(Type commandType, IReadOnlyList<ValidationFailure> failures)

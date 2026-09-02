@@ -4,35 +4,34 @@ using System.Diagnostics.CodeAnalysis;
 namespace Nvm.Kernel.Identity;
 
 /// <summary>
-/// A position in the ISA-95 hierarchy, written as
+/// Một vị trí trong phân cấp ISA-95, được viết dưới dạng
 /// <c>NOVAVOLT/NV1/FORMATION/F1/FORM-01/FORM-01-CH-0142</c>.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The single most reused string in the system (docs/scope.md §2.1): it is the MQTT topic, the metric
-/// label, the authorization key, the XPath constraint in Mendix, and the <c>equipmentId</c> field of
-/// an event. Decided once, used everywhere — which also means a mistake here is a mistake in six
-/// places.
+/// Chuỗi được tái sử dụng nhiều nhất trong toàn hệ thống (docs/scope.md §2.1): nó là MQTT topic, nhãn
+/// metric, khoá phân quyền, ràng buộc XPath trong Mendix, và field <c>equipmentId</c> của một event.
+/// Quyết định một lần, dùng khắp mọi nơi — nghĩa là một sai sót ở đây cũng là sai sót ở sáu chỗ khác.
 /// </para>
 /// <para>
-/// A path may stop at any level. An area has a perfectly good path, and a supervisor's dashboard asks
-/// questions at that level while a recall asks them at equipment level. Both use this type, and the
-/// level is read off the number of segments rather than stored separately.
+/// Một path có thể dừng ở bất kỳ cấp nào. Một area có một path hoàn toàn hợp lệ, và dashboard của một
+/// supervisor hỏi câu hỏi ở cấp đó trong khi một recall hỏi ở cấp equipment. Cả hai đều dùng type này,
+/// và cấp được đọc ra từ số lượng segment thay vì được lưu riêng.
 /// </para>
 /// <para>
-/// Comparison is case-sensitive and lower case is rejected rather than normalised. The codes are
-/// stencilled on machines and printed on routing sheets in upper case; a lower-case reading means
-/// something upstream is misconfigured. Quietly upper-casing it would give one machine two nodes in
-/// the tree and split its history down the middle.
+/// So sánh có phân biệt hoa thường, và chữ thường bị từ chối thay vì được chuẩn hoá. Mã được khắc trên
+/// máy và in trên phiếu routing bằng chữ hoa; một lần đọc ra chữ thường nghĩa là có gì đó ở tầng trên
+/// bị cấu hình sai. Âm thầm chuyển thành chữ hoa sẽ khiến một máy có hai node trong cây và chia đôi
+/// lịch sử của nó.
 /// </para>
 /// <para>
-/// The name is the plant's, not an invention: <c>equipment_path</c> is what the term is on the shop
-/// floor, even for a path that stops at an area.
+/// Cái tên là của nhà máy, không phải do đặt ra: <c>equipment_path</c> chính là thuật ngữ được dùng
+/// trên sàn sản xuất, kể cả cho một path dừng ở cấp area.
 /// </para>
 /// </remarks>
 public sealed record EquipmentPath
 {
-    /// <summary>The character between segments.</summary>
+    /// <summary>Ký tự phân tách giữa các segment.</summary>
     public const char Separator = '/';
 
     private const int MinSegments = (int)FactoryNodeKind.Enterprise;
@@ -47,40 +46,40 @@ public sealed record EquipmentPath
         _segments = segments;
     }
 
-    /// <summary>The full path, exactly as it is written everywhere else.</summary>
+    /// <summary>Toàn bộ path, đúng như nó được viết ở mọi nơi khác.</summary>
     public string Value { get; }
 
-    /// <summary>Which level of the hierarchy this path names, taken from its depth.</summary>
+    /// <summary>Path này đặt tên cho cấp nào trong phân cấp, lấy ra từ độ sâu của nó.</summary>
     public FactoryNodeKind Kind => (FactoryNodeKind)_segments.Length;
 
-    /// <summary>The segments, outermost first.</summary>
+    /// <summary>Các segment, ngoài cùng trước.</summary>
     /// <remarks>
-    /// <see cref="ImmutableArray{T}"/> rather than <c>IReadOnlyList</c>, and the difference is not
-    /// stylistic. <c>IReadOnlyList</c> only promises that <i>this reference</i> offers no mutators; a
-    /// caller can cast it back to the array underneath and write through it. Doing that here would
-    /// leave <see cref="Value"/> saying one thing and <see cref="SiteId"/>, <see cref="Code"/> and
-    /// <see cref="Kind"/> saying another — a path that names one machine and reports itself as
-    /// another, in the one string the whole system keys on.
+    /// Dùng <see cref="ImmutableArray{T}"/> thay vì <c>IReadOnlyList</c>, và khác biệt này không phải
+    /// chuyện phong cách. <c>IReadOnlyList</c> chỉ đảm bảo rằng <i>chính reference này</i> không cung
+    /// cấp mutator; một caller vẫn có thể cast ngược nó về mảng bên dưới và ghi thẳng qua đó. Làm vậy ở
+    /// đây sẽ khiến <see cref="Value"/> nói một đằng còn <see cref="SiteId"/>, <see cref="Code"/> và
+    /// <see cref="Kind"/> nói một nẻo — một path đặt tên cho một máy nhưng lại tự báo cáo mình là một
+    /// máy khác, trong đúng chuỗi mà cả hệ thống dùng làm khoá.
     /// </remarks>
     public ImmutableArray<string> Segments => _segments;
 
-    /// <summary>The last segment: the code of the thing this path names.</summary>
+    /// <summary>Segment cuối cùng: mã của thứ mà path này đặt tên.</summary>
     public string Code => _segments[^1];
 
-    /// <summary>The enterprise code, always the first segment.</summary>
+    /// <summary>Mã enterprise, luôn là segment đầu tiên.</summary>
     public string EnterpriseCode => _segments[0];
 
     /// <summary>
-    /// The plant this path belongs to, or null for an enterprise-level path.
+    /// Nhà máy mà path này thuộc về, hoặc null với một path ở cấp enterprise.
     /// </summary>
     /// <remarks>
-    /// Null is possible for exactly one level, and callers have to deal with it rather than assume it
-    /// away (AGENTS.md K3). An enterprise spans plants, so asking which plant it is in has no answer —
-    /// unlike every level below, where the answer is mandatory.
+    /// Null chỉ có thể xảy ra ở đúng một cấp, và caller phải xử lý điều đó thay vì mặc định bỏ qua
+    /// (AGENTS.md K3). Một enterprise trải rộng qua nhiều nhà máy, nên hỏi nó thuộc nhà máy nào không
+    /// có câu trả lời — khác với mọi cấp bên dưới, nơi câu trả lời luôn bắt buộc.
     /// </remarks>
     public string? SiteId => _segments.Length > SiteSegmentIndex ? _segments[SiteSegmentIndex] : null;
 
-    /// <summary>The path one level up, or null when this is already the enterprise.</summary>
+    /// <summary>Path ở cấp trên một bậc, hoặc null khi đây đã là cấp enterprise.</summary>
     public EquipmentPath? Parent
     {
         get
@@ -96,14 +95,14 @@ public sealed record EquipmentPath
         }
     }
 
-    /// <summary>Parses a path, throwing when it is malformed.</summary>
-    /// <exception cref="FormatException">The string does not describe a position in the hierarchy.</exception>
+    /// <summary>Parse một path, ném lỗi khi nó sai định dạng.</summary>
+    /// <exception cref="FormatException">Chuỗi không mô tả một vị trí trong phân cấp.</exception>
     public static EquipmentPath Parse(string? value) =>
         TryParse(value, out var path)
             ? path
             : throw new FormatException("Not a valid equipment path: '" + value + "'.");
 
-    /// <summary>Parses a path, returning false when it is malformed.</summary>
+    /// <summary>Parse một path, trả về false khi nó sai định dạng.</summary>
     public static bool TryParse([NotNullWhen(true)] string? value, [NotNullWhen(true)] out EquipmentPath? path)
     {
         path = null;
@@ -115,9 +114,9 @@ public sealed record EquipmentPath
 
         var segments = value.Split(Separator);
 
-        // Below one segment there is nothing to name; above six there is no level for it to be. The
-        // hierarchy is fixed at six by docs/scope.md §2.1 — sub-components of a machine are modelled
-        // as attributes of the equipment, not as a seventh level.
+        // Dưới một segment thì không có gì để đặt tên; trên sáu thì không còn cấp nào để nó thuộc về.
+        // Phân cấp bị cố định ở sáu bậc bởi docs/scope.md §2.1 — các thành phần con của một máy được mô
+        // hình hoá thành thuộc tính của equipment, chứ không phải một cấp thứ bảy.
         if (segments.Length is < MinSegments or > MaxSegments)
         {
             return false;
@@ -128,16 +127,17 @@ public sealed record EquipmentPath
             return false;
         }
 
-        // Copied rather than wrapped: the array Split handed back is local here, but a type whose
-        // immutability depended on nobody else holding the array would be immutable by luck.
+        // Copy lại thay vì bọc trực tiếp: mảng mà Split trả về chỉ là biến local ở đây, nhưng một type
+        // mà tính immutable của nó phụ thuộc vào việc không ai khác giữ mảng đó thì chỉ immutable nhờ
+        // may mắn.
         path = new EquipmentPath(value, [.. segments]);
         return true;
     }
 
-    /// <summary>Builds the path of a child one level down.</summary>
-    /// <param name="childCode">The child's code, for example <c>FORM-01</c>.</param>
-    /// <exception cref="FormatException">The code is malformed.</exception>
-    /// <exception cref="InvalidOperationException">This path is already at the deepest level.</exception>
+    /// <summary>Xây path của một con, ở cấp thấp hơn một bậc.</summary>
+    /// <param name="childCode">Mã của con, ví dụ <c>FORM-01</c>.</param>
+    /// <exception cref="FormatException">Mã sai định dạng.</exception>
+    /// <exception cref="InvalidOperationException">Path này đã ở cấp sâu nhất.</exception>
     public EquipmentPath Append(string childCode)
     {
         if (!IsValidSegment(childCode))

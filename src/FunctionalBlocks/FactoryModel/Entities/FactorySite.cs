@@ -1,23 +1,23 @@
 namespace Nvm.FactoryModel.Entities;
 
-/// <summary>A plant, with the attributes that belong to a plant rather than to a node.</summary>
-/// <param name="SiteId">The code every record carries, for example <c>NV1</c>.</param>
-/// <param name="Name">Display name.</param>
+/// <summary>Một plant, cùng với các thuộc tính thuộc về plant chứ không thuộc về một node.</summary>
+/// <param name="SiteId">Mã code mà mọi record đều mang theo, ví dụ <c>NV1</c>.</param>
+/// <param name="Name">Tên hiển thị.</param>
 /// <param name="TimeZoneId">
-/// IANA time zone, for example <c>Asia/Ho_Chi_Minh</c> or <c>Europe/Berlin</c>.
+/// Time zone theo IANA, ví dụ <c>Asia/Ho_Chi_Minh</c> hoặc <c>Europe/Berlin</c>.
 /// </param>
-/// <param name="Root">The site's node, and through it everything below.</param>
+/// <param name="Root">Node của site, và thông qua nó là mọi thứ bên dưới.</param>
 /// <remarks>
 /// <para>
-/// Separate from <see cref="FactoryNode"/> because a time zone is not a property of a node — a
-/// stacker does not have one. Hanging it on every node would put a nullable field on forty of them
-/// so that two could use it.
+/// Tách riêng khỏi <see cref="FactoryNode"/> vì time zone không phải là một thuộc tính của node — một
+/// stacker thì không có time zone. Gắn nó lên mọi node sẽ đặt một field nullable lên bốn mươi node chỉ
+/// để hai trong số đó thực sự dùng đến.
 /// </para>
 /// <para>
-/// The time zone is not decoration. Shifts run 06–14, 14–22 and 22–06 local, and a production day is
-/// the calendar date on which shift A of that cycle began, so a night shift belongs to the day it
-/// started on. <c>DE1</c> observes daylight saving, which makes its shift C nine hours long once a
-/// year and seven hours long once a year — the reason it exists in this model at all
+/// Time zone không phải là trang trí. Các ca chạy 06–14, 14–22 và 22–06 theo giờ local, và một
+/// production day là ngày dương lịch mà ca A của chu kỳ đó bắt đầu, nên một ca đêm thuộc về ngày mà nó
+/// bắt đầu chạy. <c>DE1</c> áp dụng daylight saving, khiến ca C của nó dài chín giờ vào một lần trong
+/// năm và ngắn bảy giờ vào một lần khác trong năm — chính là lý do site này tồn tại trong model
 /// (docs/scope.md §2.3).
 /// </para>
 /// </remarks>

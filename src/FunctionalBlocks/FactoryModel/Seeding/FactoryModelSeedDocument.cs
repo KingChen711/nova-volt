@@ -2,33 +2,33 @@ using System.Text.Json.Serialization;
 
 namespace Nvm.FactoryModel.Seeding;
 
-/// <summary>The shape of a <c>deploy/seed/factory-model.r*.json</c> document as it sits on disk.</summary>
-/// <param name="Revision">Which revision of the plant this file describes. Starts at 1.</param>
-/// <param name="GeneratedAt">When the file was produced, with an explicit offset.</param>
-/// <param name="Enterprise">The root of the tree.</param>
+/// <summary>Hình dạng của một document <c>deploy/seed/factory-model.r*.json</c> khi nó nằm trên đĩa.</summary>
+/// <param name="Revision">File này mô tả revision nào của plant. Bắt đầu từ 1.</param>
+/// <param name="GeneratedAt">Khi nào file được tạo ra, kèm offset rõ ràng.</param>
+/// <param name="Enterprise">Gốc của cái cây.</param>
 /// <remarks>
-/// Deliberately separate from anything that travels on the bus. This is an <i>import</i> format —
-/// today a hand-maintained file, at M11 whatever an engineering system exports — and it changes for
-/// completely different reasons than a wire contract does. Sharing one serializer configuration
-/// between them would tie those reasons together.
+/// Cố ý tách riêng khỏi bất cứ thứ gì đi trên bus. Đây là một định dạng <i>import</i> — hiện tại là
+/// một file được duy trì thủ công, tới M11 sẽ là bất cứ thứ gì một hệ thống kỹ thuật xuất ra — và nó
+/// thay đổi vì những lý do hoàn toàn khác với một wire contract. Dùng chung một cấu hình serializer
+/// giữa hai bên sẽ trói buộc những lý do đó lại với nhau.
 /// </remarks>
 internal sealed record FactoryModelSeedDocument(
     int Revision,
     DateTimeOffset GeneratedAt,
     FactoryNodeSeed Enterprise);
 
-/// <summary>One node in the seed file, at any level.</summary>
-/// <param name="Code">The node's own code, upper case.</param>
-/// <param name="Name">Display name.</param>
+/// <summary>Một node trong seed file, ở bất kỳ cấp nào.</summary>
+/// <param name="Code">Mã code riêng của node, viết hoa.</param>
+/// <param name="Name">Tên hiển thị.</param>
 /// <param name="TimeZoneId">
-/// IANA time zone. Present only on a site, and required there.
+/// Time zone theo IANA. Chỉ xuất hiện trên một site, và bắt buộc phải có ở đó.
 /// </param>
-/// <param name="Children">The nodes one level down, if any.</param>
+/// <param name="Children">Các node ở cấp thấp hơn một bậc, nếu có.</param>
 /// <remarks>
-/// One shape for every level rather than five named ones. The level is not written down anywhere in
-/// the file: it follows from how deep the node sits, exactly as it does in an
-/// <see cref="Kernel.Identity.EquipmentPath"/>. Naming the levels in the file would create a second
-/// place for them to be stated, and therefore a place for them to disagree.
+/// Một hình dạng duy nhất cho mọi cấp, thay vì năm hình dạng được đặt tên riêng. Cấp độ không được ghi
+/// ra ở bất cứ đâu trong file: nó được suy ra từ độ sâu node đang nằm, hệt như cách
+/// <see cref="Kernel.Identity.EquipmentPath"/> làm. Đặt tên cho các cấp trong file sẽ tạo ra một nơi
+/// thứ hai để nêu ra chúng, và vì vậy là một nơi để chúng bất đồng với nhau.
 /// </remarks>
 internal sealed record FactoryNodeSeed(
     string Code,
@@ -36,7 +36,7 @@ internal sealed record FactoryNodeSeed(
     string? TimeZoneId = null,
     IReadOnlyList<FactoryNodeSeed>? Children = null);
 
-/// <summary>Serializer configuration for the seed file, and nothing else.</summary>
+/// <summary>Cấu hình serializer cho seed file, và không gì khác.</summary>
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 [JsonSerializable(typeof(FactoryModelSeedDocument))]
 internal sealed partial class FactoryModelSeedJsonContext : JsonSerializerContext;

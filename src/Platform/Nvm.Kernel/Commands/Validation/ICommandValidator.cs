@@ -1,32 +1,31 @@
 namespace Nvm.Kernel.Commands.Validation;
 
-/// <summary>One thing wrong with a command, and which field it is wrong on.</summary>
-/// <param name="Field">The property at fault, so an operator screen can point at it.</param>
-/// <param name="Message">What is wrong, phrased for whoever has to fix it.</param>
+/// <summary>Một điều sai trên một command, và nó sai ở field nào.</summary>
+/// <param name="Field">Thuộc tính gây lỗi, để một màn hình vận hành có thể chỉ đúng vào đó.</param>
+/// <param name="Message">Điều gì đang sai, được diễn đạt cho người phải sửa nó.</param>
 public sealed record ValidationFailure(string Field, string Message);
 
 /// <summary>
-/// Checks that a command is well formed, before anything acts on it.
+/// Kiểm tra một command có đúng định dạng hay không, trước khi bất cứ điều gì tác động lên nó.
 /// </summary>
-/// <typeparam name="TCommand">The command checked.</typeparam>
+/// <typeparam name="TCommand">Command được kiểm tra.</typeparam>
 /// <remarks>
 /// <para>
-/// Shape only: required fields present, numbers in range, codes matching their format. Deliberately
-/// synchronous, because that is the line between this and business rules. "Revision must be at least
-/// 1" belongs here; "revision must be higher than the one currently in force" needs to read state and
-/// belongs in the handler, where it can be decided inside the same transaction as the change it
-/// guards.
+/// Chỉ kiểm tra hình dạng: field bắt buộc có mặt, số nằm trong khoảng, mã đúng định dạng. Cố ý đồng bộ
+/// (synchronous), vì đó là ranh giới giữa việc này và business rule. "Revision phải ít nhất là 1" thuộc
+/// về đây; "revision phải cao hơn revision đang có hiệu lực" cần đọc state và thuộc về handler, nơi nó
+/// có thể được quyết định bên trong cùng transaction với thay đổi mà nó bảo vệ.
 /// </para>
 /// <para>
-/// A command with no validator registered passes straight through. That is a deliberate default: most
-/// commands are records whose constructor already refuses nonsense, and demanding an empty validator
-/// for each of them teaches people to write empty validators.
+/// Một command không có validator nào được đăng ký sẽ đi qua thẳng. Đó là mặc định có chủ đích: hầu
+/// hết command là record mà constructor của nó đã từ chối những giá trị vô lý rồi, và bắt mỗi command
+/// đó phải có một validator rỗng chỉ dạy người ta viết validator rỗng.
 /// </para>
 /// </remarks>
 public interface ICommandValidator<in TCommand>
     where TCommand : ICommand
 {
-    /// <summary>Returns everything wrong with the command. Empty means valid.</summary>
-    /// <param name="command">The command to check.</param>
+    /// <summary>Trả về mọi thứ sai trên command. Rỗng nghĩa là hợp lệ.</summary>
+    /// <param name="command">Command cần kiểm tra.</param>
     IEnumerable<ValidationFailure> Validate(TCommand command);
 }

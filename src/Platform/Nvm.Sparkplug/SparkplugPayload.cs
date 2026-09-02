@@ -6,47 +6,47 @@ using ValueCase = Org.Eclipse.Tahu.Protobuf.Payload.Types.Metric.ValueOneofCase;
 
 namespace Nvm.Sparkplug;
 
-/// <summary>Turns Sparkplug B bytes into device readings.</summary>
+/// <summary>Biến các byte Sparkplug B thành device reading.</summary>
 /// <remarks>
 /// <para>
-/// The only door out of this assembly. <c>Org.Eclipse.Tahu.Protobuf</c> types are generated from a
-/// specification we do not own (ADR-026), and letting them into a signature anywhere else would make
-/// the whole system's shape depend on a file we are not allowed to edit.
+/// Cánh cửa duy nhất ra khỏi assembly này. Các type <c>Org.Eclipse.Tahu.Protobuf</c> được sinh ra từ
+/// một spec ta không sở hữu (ADR-026), và để chúng lọt vào một signature ở bất kỳ nơi nào khác sẽ khiến
+/// hình dạng của cả hệ thống phụ thuộc vào một file ta không được phép sửa.
 /// </para>
 /// <para>
-/// Birth and data are separate methods because a payload does not say which it is — the message type
-/// lives in the MQTT topic (<c>spBv1.0/{group}/DBIRTH/{node}/{device}</c>, docs/scope.md §7.1), and
-/// C03 is what reads it. Guessing from the shape of the payload would work most of the time, which is
-/// the worst frequency for a guess to work at.
+/// Birth và data là hai method riêng vì một payload không tự nói mình là loại nào — message type nằm
+/// trong MQTT topic (<c>spBv1.0/{group}/DBIRTH/{node}/{device}</c>, docs/scope.md §7.1), và C03 là nơi
+/// đọc nó. Đoán từ hình dạng của payload sẽ đúng phần lớn thời gian, và đó lại chính là tần suất tệ
+/// nhất để một phép đoán đúng.
 /// </para>
 /// <para>
-/// Nothing here keeps state. The alias table is passed in and handed back, so the lifetime that
-/// matters — one session of one edge node — stays the caller's to manage, and C11 is where that
-/// becomes node state keyed on <c>bdSeq</c>.
+/// Không có gì ở đây giữ state. Bảng alias được truyền vào rồi trả lại, nên vòng đời quan trọng — một
+/// session của một edge node — vẫn do caller quản lý, và C11 là nơi nó trở thành node state được khóa
+/// theo <c>bdSeq</c>.
 /// </para>
 /// </remarks>
 public static class SparkplugPayload
 {
-    /// <summary>Name of the metric carrying the session number in a birth or a death.</summary>
+    /// <summary>Tên của metric mang số session trong một birth hoặc một death.</summary>
     public const string BirthDeathSequenceMetric = "bdSeq";
 
     private const string NodeControlPrefix = "Node Control/";
     private const string DeviceControlPrefix = "Device Control/";
 
-    /// <summary>Whether a metric belongs to the protocol rather than to the plant.</summary>
-    /// <param name="metricName">The metric name as declared.</param>
+    /// <summary>Một metric có thuộc về protocol thay vì thuộc về nhà máy hay không.</summary>
+    /// <param name="metricName">Tên metric như đã khai báo.</param>
     /// <remarks>
     /// <para>
-    /// <c>bdSeq</c> and the <c>Control/</c> metrics are Sparkplug talking about its own session:
-    /// which connection this is, and whether a rebirth has been asked for. They travel as ordinary
-    /// metrics because the specification has nowhere else to put them, and that is exactly the trap.
+    /// <c>bdSeq</c> và các metric <c>Control/</c> là Sparkplug đang nói về session của chính nó: đây là
+    /// kết nối nào, và có ai đang yêu cầu rebirth hay không. Chúng đi như những metric bình thường vì
+    /// spec không có chỗ nào khác để đặt chúng, và đó chính xác là cái bẫy.
     /// </para>
     /// <para>
-    /// Stored as telemetry they would be measurements no instrument took, on a channel no cell sat
-    /// in — and D1 counts logical measurements against rows, so every node birth would put the
-    /// reconciliation out by the number of control metrics it carried. A total that is off by a
-    /// fixed amount is the hardest kind to notice, because it looks like a rounding argument rather
-    /// than like data that should not exist.
+    /// Nếu lưu thành telemetry, chúng sẽ là các phép đo mà không thiết bị nào thực hiện, trên một
+    /// channel không cell nào ngồi trong đó — và D1 đếm các phép đo logic theo số dòng, nên mỗi lần
+    /// node birth sẽ làm lệch việc đối soát đi đúng bằng số metric control mà nó mang theo. Một tổng
+    /// bị lệch một lượng cố định là loại khó nhận ra nhất, vì nó trông giống một tranh cãi về làm tròn
+    /// hơn là dữ liệu lẽ ra không nên tồn tại.
     /// </para>
     /// </remarks>
     public static bool IsProtocolMetric(string? metricName) =>
@@ -55,12 +55,12 @@ public static class SparkplugPayload
             || metricName.StartsWith(NodeControlPrefix, StringComparison.Ordinal)
             || metricName.StartsWith(DeviceControlPrefix, StringComparison.Ordinal));
 
-    /// <summary>Decodes a birth payload: every metric names and declares itself.</summary>
-    /// <param name="payload">The raw Sparkplug B bytes.</param>
-    /// <returns>The readings the birth carried and the alias table it establishes.</returns>
+    /// <summary>Decode một birth payload: mọi metric tự đặt tên và tự khai báo mình.</summary>
+    /// <param name="payload">Các byte Sparkplug B thô.</param>
+    /// <returns>Các reading mà birth mang theo, và bảng alias mà nó thiết lập.</returns>
     /// <exception cref="SparkplugDecodeException">
-    /// The bytes are not a Sparkplug payload, or a metric is missing the name, datatype, value or
-    /// timestamp that a birth is required to carry.
+    /// Các byte không phải một payload Sparkplug, hoặc một metric thiếu tên, datatype, giá trị hay
+    /// timestamp mà một birth bắt buộc phải mang theo.
     /// </exception>
     public static SparkplugBirth DecodeBirth(ReadOnlySpan<byte> payload)
     {
@@ -81,9 +81,9 @@ public static class SparkplugPayload
                     + "permanently unreadable.");
             }
 
-            // Strict rather than inferred from the value on the wire, and the reason is signedness:
-            // Int32 and UInt32 both travel in int_value, so a birth that does not declare leaves
-            // every reading of that metric ambiguous for the rest of the session.
+            // Bắt buộc chặt chẽ thay vì suy ra từ giá trị trên wire, và lý do là signedness: Int32 và
+            // UInt32 đều đi qua int_value, nên một birth không khai báo sẽ để mọi reading của metric
+            // đó mập mờ trong suốt phần còn lại của session.
             if (!metric.HasDatatype)
             {
                 throw new SparkplugDecodeException(
@@ -122,34 +122,36 @@ public static class SparkplugPayload
             ReadBirthDeathSequence(message));
     }
 
-    /// <summary>Decodes a data payload against the aliases its birth established.</summary>
-    /// <param name="payload">The raw Sparkplug B bytes.</param>
-    /// <param name="aliases">The table from the birth of this session of this node.</param>
-    /// <returns>The readings that changed. Report-by-exception means this is normally a short list.</returns>
+    /// <summary>Decode một data payload dựa trên các alias mà birth của nó đã thiết lập.</summary>
+    /// <param name="payload">Các byte Sparkplug B thô.</param>
+    /// <param name="aliases">Bảng từ birth của session này của node này.</param>
+    /// <returns>Các reading đã thay đổi. Report-by-exception nghĩa là bình thường đây là một danh sách ngắn.</returns>
     /// <exception cref="UnknownMetricAliasException">
-    /// A metric is identified only by an alias the table does not hold. Ask for a rebirth.
+    /// Một metric chỉ được định danh bằng một alias mà bảng không có. Hãy yêu cầu rebirth.
     /// </exception>
     /// <exception cref="SparkplugDecodeException">
-    /// The bytes are not a Sparkplug payload, or a metric carries no identity, value or timestamp.
+    /// Các byte không phải một payload Sparkplug, hoặc một metric không mang identity, giá trị hay
+    /// timestamp nào.
     /// </exception>
     public static ImmutableArray<DeviceReading> DecodeData(ReadOnlySpan<byte> payload, MetricAliasTable aliases) =>
         DecodeData(payload, aliases, out _);
 
-    /// <summary>Decodes a data payload and reports the <c>seq</c> that came with it.</summary>
-    /// <param name="payload">The raw Sparkplug B bytes.</param>
-    /// <param name="aliases">The table from the birth of this session of this node.</param>
-    /// <param name="sequence">The payload <c>seq</c>, or null when the payload omitted it.</param>
-    /// <returns>The readings that changed.</returns>
+    /// <summary>Decode một data payload và báo cáo <c>seq</c> đi kèm với nó.</summary>
+    /// <param name="payload">Các byte Sparkplug B thô.</param>
+    /// <param name="aliases">Bảng từ birth của session này của node này.</param>
+    /// <param name="sequence">Trường <c>seq</c> của payload, hoặc null khi payload bỏ qua nó.</param>
+    /// <returns>Các reading đã thay đổi.</returns>
     /// <remarks>
-    /// An overload rather than a richer return type, so that reading the sequence costs one parse
-    /// rather than two. At five thousand messages a second the difference is not academic, and the
-    /// sequence is exactly the field a caller must see on the message it is already decoding.
+    /// Một overload thay vì một kiểu trả về phong phú hơn, để việc đọc sequence chỉ tốn một lần parse
+    /// thay vì hai. Ở năm nghìn message mỗi giây, sự khác biệt này không chỉ là lý thuyết, và sequence
+    /// đúng là trường mà caller phải thấy trên message nó đang decode rồi.
     /// </remarks>
     /// <exception cref="UnknownMetricAliasException">
-    /// A metric is identified only by an alias the table does not hold. Ask for a rebirth.
+    /// Một metric chỉ được định danh bằng một alias mà bảng không có. Hãy yêu cầu rebirth.
     /// </exception>
     /// <exception cref="SparkplugDecodeException">
-    /// The bytes are not a Sparkplug payload, or a metric carries no identity, value or timestamp.
+    /// Các byte không phải một payload Sparkplug, hoặc một metric không mang identity, giá trị hay
+    /// timestamp nào.
     /// </exception>
     public static ImmutableArray<DeviceReading> DecodeData(
         ReadOnlySpan<byte> payload,
@@ -172,18 +174,19 @@ public static class SparkplugPayload
 
             if (metric.HasName && !string.IsNullOrWhiteSpace(metric.Name))
             {
-                // A named metric is self-describing, so it is accepted even mid-session. Its datatype
-                // still comes from the birth when the wire omitted it — the birth remains the only
-                // place the signedness of an integer was ever stated.
+                // Một metric có tên tự mô tả chính nó, nên nó được chấp nhận kể cả giữa session.
+                // Datatype của nó vẫn đến từ birth khi wire bỏ qua trường này — birth vẫn là nơi duy
+                // nhất từng nói ra signedness của một số nguyên.
                 name = metric.Name;
 
                 if (alias is { } named && aliases.TryResolve(named, out var byAlias))
                 {
                     if (!string.Equals(byAlias.Name, name, StringComparison.Ordinal))
                     {
-                        // This reading could be filed correctly — it named itself. The next one under
-                        // the same alias could not, and would go to the metric the stale table still
-                        // remembers. Renumbering is announced with a birth, not smuggled in a DDATA.
+                        // Reading này có thể được ghi nhận đúng — vì nó tự đặt tên mình. Reading kế
+                        // tiếp dùng cùng alias thì không thể, và sẽ bị gán cho metric mà bảng cũ vẫn
+                        // còn nhớ. Việc đánh số lại được công bố bằng một birth, không phải lén lút
+                        // trong một DDATA.
                         throw new UnknownMetricAliasException(
                             $"Alias {named} arrived naming '{name}', but the birth gave it to "
                             + $"'{byAlias.Name}'. The node has renumbered without announcing it; "
@@ -220,30 +223,30 @@ public static class SparkplugPayload
         return readings.DrainToImmutable();
     }
 
-    /// <summary>Decodes an <c>NDEATH</c> and reports which session it ends.</summary>
-    /// <param name="payload">The raw Sparkplug B bytes of the last will.</param>
-    /// <returns>The session identifier the death names.</returns>
-    /// <exception cref="SparkplugDecodeException">The bytes are not a Sparkplug payload.</exception>
+    /// <summary>Decode một <c>NDEATH</c> và báo cáo nó kết thúc session nào.</summary>
+    /// <param name="payload">Các byte Sparkplug B thô của last will.</param>
+    /// <returns>Định danh session mà death nêu tên.</returns>
+    /// <exception cref="SparkplugDecodeException">Các byte không phải một payload Sparkplug.</exception>
     /// <remarks>
-    /// Deliberately tolerant where the birth is strict. A death is published by the <b>broker</b>
-    /// from a will registered at connect time; the node is not there to correct it, and refusing a
-    /// death for a malformed metric would leave a node marked alive forever — the one outcome
-    /// <c>NDEATH</c> exists to prevent.
+    /// Cố tình khoan dung ở nơi birth thì nghiêm ngặt. Một death được <b>broker</b> publish từ một
+    /// will đã đăng ký lúc kết nối; node không có mặt ở đó để sửa nó, và từ chối một death vì một
+    /// metric lỗi định dạng sẽ khiến một node bị đánh dấu sống mãi mãi — chính là kết quả duy nhất mà
+    /// <c>NDEATH</c> tồn tại để ngăn chặn.
     /// </remarks>
     public static SparkplugDeath DecodeDeath(ReadOnlySpan<byte> payload) =>
         new(ReadBirthDeathSequence(Parse(payload)));
 
-    /// <summary>Encodes a birth: every metric declares its name, alias and type.</summary>
-    /// <param name="readings">The current value of every metric the device offers.</param>
-    /// <param name="sequence">The Sparkplug <c>seq</c> of this message.</param>
-    /// <param name="timestamp">When the device assembled the payload.</param>
+    /// <summary>Encode một birth: mọi metric khai báo tên, alias và type của nó.</summary>
+    /// <param name="readings">Giá trị hiện tại của mọi metric mà device cung cấp.</param>
+    /// <param name="sequence">Sparkplug <c>seq</c> của message này.</param>
+    /// <param name="timestamp">Thời điểm device lắp ráp payload.</param>
     /// <exception cref="ArgumentException">
-    /// A reading has no value to declare a type from, or two readings share a name or an alias.
+    /// Một reading không có giá trị để khai báo type từ đó, hoặc hai reading dùng chung tên hay alias.
     /// </exception>
     /// <remarks>
-    /// Written for the simulator in C05, and it is the only encoder in the repository. The captured
-    /// fixtures in <c>tests/Fixtures/sparkplug/</c> deliberately do not come from it — a decoder
-    /// checked against its own encoder agrees with itself even when both are wrong about the schema.
+    /// Viết cho simulator ở C05, và đây là encoder duy nhất trong repo. Các fixture đã ghi lại trong
+    /// <c>tests/Fixtures/sparkplug/</c> cố tình không đến từ nó — một decoder được kiểm tra dựa trên
+    /// chính encoder của nó sẽ tự đồng thuận với chính mình ngay cả khi cả hai đều sai về schema.
     /// </remarks>
     public static byte[] EncodeBirth(IReadOnlyList<DeviceReading> readings, ulong sequence, DateTimeOffset timestamp)
     {
@@ -253,9 +256,9 @@ public static class SparkplugPayload
 
         foreach (var reading in readings)
         {
-            // A birth is a declaration, and there is nothing to declare about a metric whose type is
-            // only knowable from a value it does not have. Sparkplug allows is_null at birth; this
-            // system does not produce it, and refusing is better than inventing a type for it.
+            // Một birth là một lời khai báo, và không có gì để khai báo về một metric mà type của nó
+            // chỉ có thể biết được từ một giá trị nó không có. Sparkplug cho phép is_null lúc birth;
+            // hệ thống này không tạo ra nó, và từ chối thì tốt hơn là bịa ra một type cho nó.
             if (reading.Value is MetricValue.Absent)
             {
                 throw new ArgumentException(
@@ -282,15 +285,15 @@ public static class SparkplugPayload
         return payload.ToByteArray();
     }
 
-    /// <summary>Encodes a report-by-exception update: aliases and values, nothing else.</summary>
-    /// <param name="readings">Only the metrics whose value moved.</param>
-    /// <param name="sequence">The Sparkplug <c>seq</c> of this message.</param>
-    /// <param name="timestamp">When the device assembled the payload.</param>
+    /// <summary>Encode một bản cập nhật report-by-exception: chỉ alias và giá trị, không gì khác.</summary>
+    /// <param name="readings">Chỉ những metric có giá trị thay đổi.</param>
+    /// <param name="sequence">Sparkplug <c>seq</c> của message này.</param>
+    /// <param name="timestamp">Thời điểm device lắp ráp payload.</param>
     /// <remarks>
-    /// A reading that has an alias is written as the alias alone — no name, no datatype — because
-    /// that is the whole economy of the protocol and because writing them anyway would make this
-    /// encoder produce traffic no real device produces, which is the opposite of what a simulator is
-    /// for. A reading with no alias falls back to its name.
+    /// Một reading có alias được ghi chỉ bằng alias mà thôi — không tên, không datatype — vì đó chính
+    /// là toàn bộ sự tiết kiệm của protocol này, và vì ghi thêm những thứ đó dù sao cũng sẽ khiến
+    /// encoder này tạo ra traffic mà không device thật nào tạo ra, ngược hẳn với mục đích của một
+    /// simulator. Một reading không có alias thì rơi về dùng tên của nó.
     /// </remarks>
     public static byte[] EncodeData(IReadOnlyList<DeviceReading> readings, ulong sequence, DateTimeOffset timestamp)
     {
@@ -319,8 +322,8 @@ public static class SparkplugPayload
         return payload.ToByteArray();
     }
 
-    // bdSeq travels as an ordinary metric rather than a payload field, so it is read by name. The
-    // spelling is fixed by the Sparkplug specification and is case-sensitive there too.
+    // bdSeq đi như một metric bình thường thay vì một trường của payload, nên nó được đọc theo tên.
+    // Cách viết được cố định bởi spec Sparkplug và cũng phân biệt hoa thường ở đó.
     private static ulong? ReadBirthDeathSequence(Payload message)
     {
         foreach (var metric in message.Metrics)
@@ -359,9 +362,9 @@ public static class SparkplugPayload
     private static DataType DataTypeOf(MetricValue value) =>
         value switch
         {
-            // Double and Int64 rather than the narrowest type that fits. A simulator that emitted
-            // Float for one reading and Double for the next — because one happened to be round —
-            // would produce a device whose declared type changes mid-session, which no real one does.
+            // Double và Int64 thay vì type hẹp nhất vừa vặn. Một simulator phát ra Float cho reading
+            // này rồi Double cho reading kế — chỉ vì một cái tình cờ tròn số — sẽ tạo ra một device có
+            // type khai báo thay đổi giữa session, điều không thiết bị thật nào làm.
             MetricValue.Real => DataType.Double,
             MetricValue.Integral => DataType.Int64,
             MetricValue.Flag => DataType.Boolean,
@@ -386,8 +389,9 @@ public static class SparkplugPayload
                 metric.StringValue = text.Value;
                 break;
             default:
-                // The device saying it has one and cannot read it. No value field is written, which is
-                // what makes is_null a statement rather than a zero.
+                // Device đang nói rằng nó có một giá trị nhưng không đọc được. Không trường giá trị
+                // nào được ghi, và chính điều đó khiến is_null là một lời khẳng định chứ không phải
+                // một số 0.
                 metric.IsNull = true;
                 break;
         }
@@ -401,8 +405,8 @@ public static class SparkplugPayload
         }
         catch (InvalidProtocolBufferException exception)
         {
-            // Wrapped so that callers — the gateway in C08, ingestion in C12 — have one exception
-            // type to route to `_error`, and do not have to know that protobuf is underneath.
+            // Được bọc lại để các caller — gateway ở C08, ingestion ở C12 — chỉ cần một loại exception
+            // để route sang `_error`, và không cần biết bên dưới là protobuf.
             throw new SparkplugDecodeException(
                 $"The {payload.Length} bytes offered are not a Sparkplug B payload.", exception);
         }
@@ -410,8 +414,8 @@ public static class SparkplugPayload
 
     private static MetricValue ReadValue(SparkplugMetric metric, DataType? declared, string metricName)
     {
-        // Checked before the value, because is_null is the device saying it has one and cannot read
-        // it. A sensor that has come loose reports this, and the oneof is then legitimately empty.
+        // Kiểm tra trước giá trị, vì is_null là device nói rằng nó có một giá trị nhưng không đọc
+        // được. Một sensor bị lỏng sẽ báo cái này, và khi đó oneof trống một cách hợp lệ.
         if (metric.HasIsNull && metric.IsNull)
         {
             return MetricValue.Absent.Instance;
@@ -432,8 +436,8 @@ public static class SparkplugPayload
     private static MetricValue ReadDeclared(SparkplugMetric metric, DataType dataType, string metricName) =>
         dataType switch
         {
-            // Signed integers travel in int_value, a protobuf uint32, so -1 arrives as 4294967295.
-            // The unchecked cast is the reinterpretation the specification asks for, not a rounding.
+            // Số nguyên có dấu đi trong int_value, một uint32 của protobuf, nên -1 tới nơi dưới dạng
+            // 4294967295. Phép cast unchecked là cách diễn giải lại mà spec yêu cầu, không phải làm tròn.
             DataType.Int8 or DataType.Int16 or DataType.Int32 =>
                 new MetricValue.Integral(unchecked((int)Require(metric, ValueCase.IntValue, dataType, metricName).IntValue)),
 
@@ -458,9 +462,10 @@ public static class SparkplugPayload
             DataType.String or DataType.Text or DataType.Uuid =>
                 new MetricValue.Text(Require(metric, ValueCase.StringValue, dataType, metricName).StringValue),
 
-            // DataSet, Template, Bytes, File, the arrays, the property sets — and any number that is
-            // not a datatype at all. Refused rather than skipped: a formation channel does not emit
-            // them, so meeting one means the payload is not what this pipeline thinks it is.
+            // DataSet, Template, Bytes, File, các array, các property set — và bất kỳ con số nào
+            // không phải một datatype nào cả. Bị từ chối thay vì bị bỏ qua: một formation channel
+            // không phát ra chúng, nên gặp phải một cái nghĩa là payload không phải thứ pipeline này
+            // nghĩ nó là.
             _ => throw new SparkplugDecodeException(
                 $"Metric '{metricName}' declares datatype {(uint)dataType}, which this decoder does "
                 + "not read. M2 handles the scalar types only."),
@@ -472,9 +477,10 @@ public static class SparkplugPayload
             ValueCase.FloatValue => new MetricValue.Real(metric.FloatValue),
             ValueCase.DoubleValue => new MetricValue.Real(metric.DoubleValue),
 
-            // No declaration means no way to know whether this is Int32 or UInt32, so it is read as
-            // written: unsigned. Reachable only for a metric that names itself, carries no datatype,
-            // and was never in a birth — which is a device the plant should not have.
+            // Không có khai báo nghĩa là không có cách nào biết đây là Int32 hay UInt32, nên nó được
+            // đọc đúng như đã ghi: unsigned. Chỉ đến được đây với một metric tự đặt tên mình, không
+            // mang datatype, và chưa từng xuất hiện trong một birth — tức là một device mà nhà máy
+            // không nên có.
             ValueCase.IntValue => new MetricValue.Integral(metric.IntValue),
             ValueCase.LongValue => new MetricValue.Integral(ToSignedOrThrow(metric.LongValue, metricName)),
 
@@ -511,9 +517,9 @@ public static class SparkplugPayload
 
     private static DateTimeOffset ReadTimestamp(SparkplugMetric metric, ulong? payloadTimestamp, string metricName)
     {
-        // Per-metric first, payload second. One message gathers readings taken at different instants —
-        // that is the whole reason a metric has a timestamp of its own — and collapsing them onto the
-        // payload's would quietly align samples that were never simultaneous.
+        // Ưu tiên timestamp riêng của metric trước, rồi mới tới payload. Một message gom các reading
+        // được lấy ở nhiều thời điểm khác nhau — đó là toàn bộ lý do một metric có timestamp riêng —
+        // và dồn chúng về timestamp của payload sẽ âm thầm căn chỉnh các mẫu chưa bao giờ đồng thời.
         var milliseconds = metric.HasTimestamp
             ? metric.Timestamp
             : payloadTimestamp ?? throw new SparkplugDecodeException(
@@ -521,8 +527,8 @@ public static class SparkplugPayload
                 + "device_timestamp is part of the natural key (docs/scope.md §7.2), so a reading "
                 + "without one could never be deduplicated.");
 
-        // A PLC with a corrupted clock must not take ingestion down with an ArgumentOutOfRangeException
-        // from somewhere in the BCL. It is a bad message, and it gets the same answer as any other.
+        // Một PLC có đồng hồ hỏng không được phép làm sập ingestion bằng một ArgumentOutOfRangeException
+        // từ đâu đó trong BCL. Đây là một message hỏng, và nó nhận cùng câu trả lời như bất kỳ cái nào khác.
         if (milliseconds > (ulong)DateTimeOffset.MaxValue.ToUnixTimeMilliseconds())
         {
             throw new SparkplugDecodeException(

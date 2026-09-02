@@ -3,12 +3,12 @@ using Nvm.Kernel.Identity;
 
 namespace Nvm.Sparkplug.Topics;
 
-/// <summary>An MQTT topic in the Sparkplug B namespace, and the place in the plant it names.</summary>
+/// <summary>Một topic MQTT trong namespace Sparkplug B, và vị trí trong nhà máy mà nó định danh.</summary>
 /// <remarks>
 /// <para>
-/// A Sparkplug payload carries no address. Which machine sent it, and whether the message declares or
-/// updates, is entirely in the topic — so this type is the join between the device world and the
-/// ISA-95 tree M1 built. The mapping is fixed by docs/scope.md §7.1:
+/// Một payload Sparkplug không mang địa chỉ nào. Máy nào đã gửi nó, và message này khai báo hay cập
+/// nhật, nằm trọn trong topic — nên type này là điểm nối giữa thế giới device và cây ISA-95 mà M1 đã
+/// xây. Ánh xạ này được cố định bởi docs/scope.md §7.1:
 /// </para>
 /// <code>
 /// spBv1.0/NOVAVOLT-NV1-FORMATION/DDATA/EDGE-F1/FORM-01-CH-0142
@@ -18,26 +18,25 @@ namespace Nvm.Sparkplug.Topics;
 ///                           └ work cell, from the model ┘
 /// </code>
 /// <para>
-/// <b>Upper case, and not by preference.</b> The same machines are also addressed by the Unified
-/// Namespace tree, which is lower case: <c>novavolt/nv1/formation/f1/form-01/ch-0142</c>. Accepting
-/// either spelling here would give one cycler two identities, and every count downstream would be
-/// taken over half its data. <see cref="EquipmentPath"/> already refuses lower case; parsing goes
-/// through it so that this type does not get a second opinion.
+/// <b>Chữ hoa, và không phải vì sở thích.</b> Cùng những máy đó còn được định danh bởi cây Unified
+/// Namespace, vốn là chữ thường: <c>novavolt/nv1/formation/f1/form-01/ch-0142</c>. Chấp nhận cả hai
+/// cách viết ở đây sẽ khiến một cycler có hai identity, và mọi phép đếm downstream sẽ bị chiếm mất
+/// một nửa dữ liệu. <see cref="EquipmentPath"/> đã từ chối chữ thường sẵn; việc parse đi qua nó để
+/// type này không cần đưa ra một ý kiến thứ hai.
 /// </para>
 /// <para>
-/// <b>The reverse direction loses the work cell.</b> A topic has four levels of plant and a path has
-/// up to six, so <see cref="For"/> drops the work cell and only
-/// <see cref="ResolveEquipmentPath"/> can put it back — by asking the model. That asymmetry is the
-/// reason the directory exists, and the round-trip test goes through both halves rather than through
-/// <see cref="For"/> alone.
+/// <b>Chiều ngược lại làm mất work cell.</b> Một topic có bốn cấp nhà máy còn một path có tới sáu, nên
+/// <see cref="For"/> bỏ work cell đi và chỉ có <see cref="ResolveEquipmentPath"/> mới đưa nó trở lại
+/// được — bằng cách hỏi model. Sự bất đối xứng đó là lý do directory tồn tại, và test round-trip đi
+/// qua cả hai chiều thay vì chỉ qua <see cref="For"/>.
 /// </para>
 /// </remarks>
 public sealed record SparkplugTopic
 {
-    /// <summary>The Sparkplug B namespace, the first level of every topic.</summary>
+    /// <summary>Namespace Sparkplug B, cấp đầu tiên của mọi topic.</summary>
     public const string Namespace = "spBv1.0";
 
-    /// <summary>The prefix an edge node id carries before the line code.</summary>
+    /// <summary>Tiền tố mà một edge node id mang trước line code.</summary>
     public const string EdgeNodePrefix = "EDGE-";
 
     private const char LevelSeparator = '/';
@@ -57,51 +56,51 @@ public sealed record SparkplugTopic
         DeviceCode = deviceCode;
     }
 
-    /// <summary>The topic exactly as it travels on MQTT.</summary>
+    /// <summary>Topic đúng như nó đi trên MQTT.</summary>
     public string Value { get; }
 
-    /// <summary>What this message is for.</summary>
+    /// <summary>Message này dùng để làm gì.</summary>
     public SparkplugMessageType MessageType { get; }
 
-    /// <summary>The line the edge node speaks for, as an ISA-95 path.</summary>
+    /// <summary>Line mà edge node đại diện, dưới dạng một ISA-95 path.</summary>
     /// <remarks>
-    /// Always four segments, and always what the topic <i>claims</i>. Whether the plant actually has
-    /// that line is <see cref="ResolveEquipmentPath"/>'s question, not this property's.
+    /// Luôn bốn segment, và luôn là những gì topic <i>khai báo</i>. Nhà máy có thực sự có line đó hay
+    /// không là câu hỏi của <see cref="ResolveEquipmentPath"/>, không phải của property này.
     /// </remarks>
     public EquipmentPath LinePath { get; }
 
-    /// <summary>The device code, or null for a node-level message.</summary>
+    /// <summary>Device code, hoặc null với một message ở mức node.</summary>
     public string? DeviceCode { get; }
 
-    /// <summary>The enterprise code.</summary>
+    /// <summary>Enterprise code.</summary>
     public string EnterpriseCode => LinePath.Segments[0];
 
-    /// <summary>The plant. First class everywhere, per K3.</summary>
+    /// <summary>Plant. First class ở mọi nơi, theo K3.</summary>
     public string SiteId => LinePath.Segments[1];
 
-    /// <summary>The area code.</summary>
+    /// <summary>Area code.</summary>
     public string AreaCode => LinePath.Segments[2];
 
-    /// <summary>The line code.</summary>
+    /// <summary>Line code.</summary>
     public string LineCode => LinePath.Segments[3];
 
-    /// <summary>The Sparkplug group id, <c>{enterprise}-{site}-{area}</c>.</summary>
+    /// <summary>Sparkplug group id, <c>{enterprise}-{site}-{area}</c>.</summary>
     public string GroupId => string.Join(GroupSeparator, EnterpriseCode, SiteId, AreaCode);
 
-    /// <summary>The Sparkplug edge node id, <c>EDGE-{line}</c>.</summary>
+    /// <summary>Sparkplug edge node id, <c>EDGE-{line}</c>.</summary>
     public string EdgeNodeId => EdgeNodePrefix + LineCode;
 
-    /// <summary>Parses a topic, throwing when it is not one.</summary>
-    /// <param name="value">The MQTT topic.</param>
-    /// <exception cref="FormatException">The topic is not a Sparkplug B topic this system can read.</exception>
+    /// <summary>Parse một topic, throw khi nó không phải một topic hợp lệ.</summary>
+    /// <param name="value">Topic MQTT.</param>
+    /// <exception cref="FormatException">Topic không phải một topic Sparkplug B mà hệ thống này đọc được.</exception>
     public static SparkplugTopic Parse(string? value) =>
         TryParse(value, out var topic)
             ? topic
             : throw new FormatException($"Not a Sparkplug B topic this system can read: '{value}'.");
 
-    /// <summary>Parses a topic, returning false when it is not one.</summary>
-    /// <param name="value">The MQTT topic.</param>
-    /// <param name="topic">The parsed topic.</param>
+    /// <summary>Parse một topic, trả về false khi nó không phải một topic hợp lệ.</summary>
+    /// <param name="value">Topic MQTT.</param>
+    /// <param name="topic">Topic đã parse.</param>
     public static bool TryParse([NotNullWhen(true)] string? value, [NotNullWhen(true)] out SparkplugTopic? topic)
     {
         topic = null;
@@ -128,9 +127,9 @@ public sealed record SparkplugTopic
             return false;
         }
 
-        // A DDATA with no device, or an NDATA with one, is a publisher that disagrees with the
-        // specification about what it is sending. Reading it anyway means guessing which half is
-        // right, on a message where the two halves say different things about the same machine.
+        // Một DDATA không có device, hoặc một NDATA có device, là một publisher không đồng thuận với
+        // spec về việc mình đang gửi gì. Vẫn đọc nó nghĩa là phải đoán nửa nào đúng, trên một message
+        // mà hai nửa nói hai điều khác nhau về cùng một máy.
         var deviceCode = levels.Length == DeviceLevelCount ? levels[DeviceLevelCount - 1] : null;
 
         if (messageType.IsDeviceLevel() != (deviceCode is not null))
@@ -138,9 +137,9 @@ public sealed record SparkplugTopic
             return false;
         }
 
-        // Remainder to the area, so an area code may contain a hyphen. Enterprise and site may not —
-        // For() refuses to build a topic from codes that would not survive this split, which is where
-        // the ambiguity is caught rather than here, where it is undetectable.
+        // Phần dư dồn vào area, nên một area code có thể chứa dấu gạch ngang. Enterprise và site thì
+        // không được — For() từ chối build một topic từ các code không sống sót qua phép split này,
+        // đó là nơi sự mập mờ bị bắt lại, chứ không phải ở đây, nơi nó không thể phát hiện được.
         var group = levels[1].Split(GroupSeparator, 3);
 
         if (group.Length != 3 || !levels[3].StartsWith(EdgeNodePrefix, StringComparison.Ordinal))
@@ -150,8 +149,8 @@ public sealed record SparkplugTopic
 
         var lineCode = levels[3][EdgeNodePrefix.Length..];
 
-        // Through EquipmentPath, which is where upper case, segment shape and depth are already
-        // decided. A second set of rules here would be a second answer to the same question.
+        // Đi qua EquipmentPath, nơi chữ hoa, hình dạng segment và độ sâu đã được quyết định sẵn. Một
+        // bộ quy tắc thứ hai ở đây sẽ là một câu trả lời thứ hai cho cùng một câu hỏi.
         if (!EquipmentPath.TryParse(string.Join(EquipmentPath.Separator, group[0], group[1], group[2], lineCode), out var linePath)
             || linePath.Kind != FactoryNodeKind.Line)
         {
@@ -168,28 +167,28 @@ public sealed record SparkplugTopic
         return true;
     }
 
-    /// <summary>Whether a topic is the Sparkplug host state topic, <c>spBv1.0/STATE/{host}</c>.</summary>
-    /// <param name="value">The MQTT topic.</param>
+    /// <summary>Một topic có phải topic host state của Sparkplug hay không, <c>spBv1.0/STATE/{host}</c>.</summary>
+    /// <param name="value">Topic MQTT.</param>
     /// <remarks>
-    /// A different shape entirely: it names a SCADA host, not a place in the plant, so
-    /// <see cref="TryParse"/> refuses it. The gateway subscribes to <c>spBv1.0/#</c> and will receive
-    /// it, and it needs to tell "not addressed to us" apart from "malformed" — one is routine and the
-    /// other is worth an alert.
+    /// Một hình dạng hoàn toàn khác: nó định danh một SCADA host, không phải một vị trí trong nhà máy,
+    /// nên <see cref="TryParse"/> từ chối nó. Gateway subscribe <c>spBv1.0/#</c> và sẽ nhận được nó,
+    /// và cần phân biệt "không gửi cho mình" với "lỗi định dạng" — một cái là bình thường, cái kia
+    /// đáng để cảnh báo.
     /// </remarks>
     public static bool IsHostState(string? value) =>
         value is not null
         && value.StartsWith($"{Namespace}{LevelSeparator}STATE{LevelSeparator}", StringComparison.Ordinal);
 
-    /// <summary>Builds the topic a place in the plant publishes on.</summary>
-    /// <param name="path">A line for a node-level message, or a work cell or equipment for a device-level one.</param>
-    /// <param name="messageType">What the message is for.</param>
+    /// <summary>Build topic mà một vị trí trong nhà máy publish lên.</summary>
+    /// <param name="path">Một line cho message ở mức node, hoặc một work cell/equipment cho message ở mức device.</param>
+    /// <param name="messageType">Message này dùng để làm gì.</param>
     /// <exception cref="ArgumentException">
-    /// The path is at the wrong level for the message type, or its enterprise or site code contains a
-    /// hyphen and so could not be read back out of the group id.
+    /// Path ở sai mức so với message type, hoặc enterprise/site code của nó chứa dấu gạch ngang nên
+    /// không thể đọc lại được từ group id.
     /// </exception>
     /// <remarks>
-    /// Needed by the simulator in C05, which publishes as the plant. It is also the half of the
-    /// round-trip that can be checked without a factory model.
+    /// Cần cho simulator ở C05, vốn publish thay mặt cho nhà máy. Đây cũng là nửa của round-trip có
+    /// thể kiểm tra được mà không cần factory model.
     /// </remarks>
     public static SparkplugTopic For(EquipmentPath path, SparkplugMessageType messageType)
     {
@@ -214,10 +213,10 @@ public sealed record SparkplugTopic
         var area = path.Segments[2];
         var line = path.Segments[3];
 
-        // The group id joins three codes with the same character a code may itself contain, so the
-        // split back out is only unambiguous if the first two are clean. Refused at the point of
-        // building, because at the point of parsing it is invisible — the topic would simply resolve
-        // to a line the plant does not have, which reads as a configuration mistake somewhere else.
+        // Group id nối ba code bằng đúng ký tự mà bản thân một code có thể chứa, nên phép split ngược
+        // lại chỉ hết mập mờ nếu hai code đầu sạch. Từ chối ngay tại điểm build, vì tại điểm parse thì
+        // chuyện này vô hình — topic sẽ chỉ resolve về một line mà nhà máy không có, đọc lên giống như
+        // một lỗi cấu hình ở đâu đó khác.
         if (enterprise.Contains(GroupSeparator, StringComparison.Ordinal)
             || site.Contains(GroupSeparator, StringComparison.Ordinal))
         {
@@ -238,22 +237,22 @@ public sealed record SparkplugTopic
         return new SparkplugTopic(value, messageType, linePath, deviceLevel ? path.Code : null);
     }
 
-    /// <summary>Finds where in the plant this topic points, or null when the plant has no such place.</summary>
-    /// <param name="directory">The model each plant is currently running.</param>
+    /// <summary>Tìm vị trí trong nhà máy mà topic này trỏ tới, hoặc null khi nhà máy không có vị trí đó.</summary>
+    /// <param name="directory">Model mà mỗi nhà máy đang chạy hiện tại.</param>
     /// <returns>
-    /// The line for a node-level message, the work cell or equipment for a device-level one, or null.
+    /// Line cho message ở mức node, work cell hoặc equipment cho message ở mức device, hoặc null.
     /// </returns>
     /// <remarks>
     /// <para>
-    /// Null rather than an exception, because this is where K3 is enforced and the answer is a routing
-    /// decision, not a fault: a topic quoting a plant nobody has activated, a line that was
-    /// decommissioned, or a device from a revision this plant has not been rolled out to yet all land
-    /// here. Ingestion refuses the message and says which topic it refused — it does not stop.
+    /// Null thay vì exception, vì đây là nơi K3 được thực thi và câu trả lời là một quyết định routing,
+    /// không phải một lỗi: một topic trích dẫn một nhà máy chưa ai kích hoạt, một line đã ngừng hoạt
+    /// động, hoặc một device thuộc một revision mà nhà máy này chưa được rollout tới đều rơi vào đây.
+    /// Ingestion từ chối message và nói rõ đã từ chối topic nào — nó không dừng lại.
     /// </para>
     /// <para>
-    /// It is also the only way back to a six-segment path. The topic knows the device code and not the
-    /// work cell holding it, so nothing but the model can say whether <c>FORM-01-CH-0142</c> hangs off
-    /// the line or off a cycler.
+    /// Đây cũng là cách duy nhất để quay lại một path sáu segment. Topic biết device code nhưng không
+    /// biết work cell nào đang chứa nó, nên chỉ có model mới nói được <c>FORM-01-CH-0142</c> treo dưới
+    /// line hay dưới một cycler.
     /// </para>
     /// </remarks>
     public EquipmentPath? ResolveEquipmentPath(IEquipmentDirectory directory)
@@ -268,14 +267,14 @@ public sealed record SparkplugTopic
         return directory.FindDevice(LinePath, DeviceCode);
     }
 
-    /// <summary>Returns the topic.</summary>
+    /// <summary>Trả về topic.</summary>
     public override string ToString() => Value;
 
-    /// <summary>Compares two topics by their text.</summary>
+    /// <summary>So sánh hai topic theo văn bản của chúng.</summary>
     /// <remarks>
-    /// The record's generated equality would compare <see cref="LinePath"/> by reference and call two
-    /// identical topics different. Ordinal, for the same reason the paths are: these are machine
-    /// addresses, and a culture-aware comparison can decide two different machines match.
+    /// Equality tự sinh của record sẽ so sánh <see cref="LinePath"/> theo reference và coi hai topic
+    /// giống hệt nhau là khác nhau. Ordinal, cùng lý do như các path: đây là địa chỉ máy, và một phép
+    /// so sánh theo culture có thể quyết định hai máy khác nhau lại trùng nhau.
     /// </remarks>
     public bool Equals(SparkplugTopic? other) =>
         other is not null && string.Equals(Value, other.Value, StringComparison.Ordinal);

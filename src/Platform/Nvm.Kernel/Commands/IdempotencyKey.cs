@@ -5,35 +5,35 @@ using Nvm.Kernel.Identity;
 namespace Nvm.Kernel.Commands;
 
 /// <summary>
-/// The value that answers "have I already handled this one?".
+/// Giá trị trả lời câu hỏi "mình đã xử lý cái này chưa?".
 /// </summary>
 /// <remarks>
 /// <para>
-/// Equipment resends when it gets no acknowledgement. A gateway that has been offline flushes its
-/// backlog. The bus itself is at-least-once. The same fact therefore arrives two or three times, and
-/// that is normal operation rather than a fault (docs/scope.md §7.2).
+/// Thiết bị gửi lại khi không nhận được acknowledgement. Một gateway từng offline sẽ đẩy hết backlog
+/// của nó. Bản thân bus là at-least-once. Vì vậy cùng một fact đến hai hoặc ba lần, và đó là vận hành
+/// bình thường chứ không phải một lỗi (docs/scope.md §7.2).
 /// </para>
 /// <para>
-/// So the key is never generated — it is <b>derived from the fact itself</b>, through a version 5
-/// GUID over the natural key. Two deliveries of one measurement produce the same value on any
-/// machine, in any process, three days apart.
+/// Nên khoá này không bao giờ được sinh ra — nó <b>được suy ra từ chính fact đó</b>, qua một version 5
+/// GUID trên natural key. Hai lần gửi của cùng một measurement cho ra cùng một giá trị, trên bất kỳ
+/// máy nào, trong bất kỳ process nào, cách nhau ba ngày.
 /// </para>
 /// <para>
-/// Deduplication happens in two places and both use this: at ingestion, to drop a repeated device
-/// message, and inside the command pipeline, because the bus can redeliver too (AGENTS.md K7). The
-/// two layers only compose if they key on the same value, which is why the CloudEvents <c>id</c> of
-/// an event produced by a command must equal that command's key.
+/// Deduplication xảy ra ở hai chỗ và cả hai đều dùng khoá này: ở ingestion, để loại một message thiết
+/// bị bị lặp lại, và bên trong command pipeline, vì bus cũng có thể redeliver (AGENTS.md K7). Hai tầng
+/// này chỉ ghép được với nhau nếu chúng cùng khoá trên một giá trị, đó là lý do <c>id</c> CloudEvents
+/// của một event do một command tạo ra phải bằng đúng khoá của command đó.
 /// </para>
 /// </remarks>
 public sealed record IdempotencyKey
 {
     /// <summary>
-    /// Root namespace for every deterministic identifier in this system.
+    /// Namespace gốc cho mọi định danh deterministic trong hệ thống này.
     /// </summary>
     /// <remarks>
-    /// Derived rather than invented, so anyone can recompute it: version 5 of the RFC 4122 DNS
-    /// namespace over <c>novavolt.example</c>. A hard-coded random GUID would work just as well and
-    /// would be impossible to check.
+    /// Được suy ra chứ không phải tự đặt, để bất kỳ ai cũng tính lại được: version 5 của DNS namespace
+    /// RFC 4122 trên <c>novavolt.example</c>. Một GUID ngẫu nhiên hard-code cũng chạy tốt như vậy
+    /// nhưng sẽ không thể kiểm chứng được.
     /// </remarks>
     public static readonly Guid NovaVoltNamespace =
         DeterministicGuid.CreateVersion5(DeterministicGuid.DnsNamespace, "novavolt.example");
@@ -43,15 +43,15 @@ public sealed record IdempotencyKey
 
     private IdempotencyKey(Guid value) => Value = value;
 
-    /// <summary>The key itself.</summary>
+    /// <summary>Chính khoá đó.</summary>
     public Guid Value { get; }
 
-    /// <summary>Wraps a key that was already derived elsewhere, for example read back from a message.</summary>
-    /// <exception cref="ArgumentException">The value is <see cref="Guid.Empty"/>.</exception>
+    /// <summary>Bọc lại một khoá đã được suy ra ở nơi khác, ví dụ đọc lại từ một message.</summary>
+    /// <exception cref="ArgumentException">Giá trị là <see cref="Guid.Empty"/>.</exception>
     public static IdempotencyKey From(Guid value)
     {
-        // An all-zero key is what a forgotten assignment looks like, and it would deduplicate every
-        // command that forgot into a single one — silently, and only under load.
+        // Một khoá toàn số 0 chính là hình dạng của một lần quên gán giá trị, và nó sẽ dedup mọi
+        // command bị quên đó thành một — âm thầm, và chỉ lộ ra khi có tải.
         if (value == Guid.Empty)
         {
             throw new ArgumentException("An idempotency key cannot be empty.", nameof(value));
@@ -60,18 +60,18 @@ public sealed record IdempotencyKey
         return new IdempotencyKey(value);
     }
 
-    /// <summary>Derives a key from the parts of a natural key, in the system's root namespace.</summary>
+    /// <summary>Suy ra một khoá từ các phần của natural key, trong namespace gốc của hệ thống.</summary>
     /// <param name="parts">
-    /// The fields that identify the fact, in a fixed order — for a measurement:
+    /// Các trường định danh fact đó, theo một thứ tự cố định — với một measurement:
     /// site, equipment, unit, step code, device timestamp, signal code.
     /// </param>
     public static IdempotencyKey FromNaturalKey(params string[] parts) =>
         FromNaturalKey(NovaVoltNamespace, parts);
 
-    /// <summary>Derives a key from the parts of a natural key, in an explicit namespace.</summary>
-    /// <param name="namespaceId">Namespace to derive within.</param>
-    /// <param name="parts">The fields that identify the fact, in a fixed order.</param>
-    /// <exception cref="ArgumentException">No parts were given, or one of them is null.</exception>
+    /// <summary>Suy ra một khoá từ các phần của natural key, trong một namespace tường minh.</summary>
+    /// <param name="namespaceId">Namespace để suy ra khoá bên trong đó.</param>
+    /// <param name="parts">Các trường định danh fact đó, theo một thứ tự cố định.</param>
+    /// <exception cref="ArgumentException">Không có phần nào được truyền vào, hoặc một phần là null.</exception>
     public static IdempotencyKey FromNaturalKey(Guid namespaceId, params string[] parts)
     {
         ArgumentNullException.ThrowIfNull(parts);
@@ -84,21 +84,21 @@ public sealed record IdempotencyKey
         return new IdempotencyKey(DeterministicGuid.CreateVersion5(namespaceId, Encode(parts)));
     }
 
-    /// <summary>Returns the key in the standard GUID form.</summary>
+    /// <summary>Trả về khoá dưới dạng GUID chuẩn.</summary>
     public override string ToString() => Value.ToString();
 
     /// <summary>
-    /// Joins the parts so that one string can only ever have come from one tuple.
+    /// Nối các phần lại sao cho một chuỗi chỉ có thể đến từ đúng một tuple.
     /// </summary>
     /// <remarks>
-    /// Each part is written as <c>length:value|</c>. Plain <c>string.Join('|', parts)</c> looks
-    /// equivalent and is not: <c>["a|b", "c"]</c> and <c>["a", "b|c"]</c> both flatten to
-    /// <c>"a|b|c"</c>, so two different facts derive the same key and one of them disappears at the
-    /// deduplication step. Supplier lot codes are free text from someone else's system, so a
-    /// separator turning up inside a value is a question of when.
+    /// Mỗi phần được viết dưới dạng <c>length:value|</c>. <c>string.Join('|', parts)</c> trần trụi
+    /// trông có vẻ tương đương nhưng không phải: <c>["a|b", "c"]</c> và <c>["a", "b|c"]</c> đều gộp
+    /// phẳng thành <c>"a|b|c"</c>, nên hai fact khác nhau suy ra cùng một khoá và một trong hai bị biến
+    /// mất ở bước deduplication. Mã lot của nhà cung cấp là free text từ hệ thống của bên khác, nên một
+    /// separator xuất hiện bên trong một giá trị chỉ là vấn đề thời gian.
     /// <para>
-    /// Prefixing the length makes the encoding injective, which is the property the whole scheme
-    /// rests on: different input, different key. Always.
+    /// Thêm tiền tố độ dài khiến phép mã hoá này trở thành injective, đây chính là tính chất mà toàn bộ
+    /// cơ chế này dựa vào: input khác nhau, khoá khác nhau. Luôn luôn.
     /// </para>
     /// </remarks>
     private static string Encode(string[] parts)

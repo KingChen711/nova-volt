@@ -6,28 +6,29 @@ using Nvm.Kernel.Identity;
 
 namespace Nvm.FactoryModel.Seeding;
 
-/// <summary>Reads the factory model documents and turns them into validated snapshots.</summary>
+/// <summary>Đọc các document của factory model và biến chúng thành các snapshot đã validate.</summary>
 /// <remarks>
 /// <para>
-/// Read from disk rather than embedded in the assembly, so the plant can be corrected without a
-/// rebuild — and so the file stays something an engineer can be shown, edited, and diffed in a review.
+/// Đọc từ đĩa thay vì embed vào assembly, để plant có thể được sửa lại mà không cần rebuild — và để
+/// file luôn là thứ có thể đưa cho một kỹ sư xem, chỉnh sửa và diff trong một review.
 /// </para>
 /// <para>
-/// <b>One file per revision</b>, named <c>factory-model.r2.json</c>. A revision is a document and
-/// documents are not edited (<see cref="IFactoryModelCatalog"/>), so a new revision is a new file
-/// next to the old one rather than a change to it. The directory is the whole shelf.
+/// <b>Một file cho mỗi revision</b>, đặt tên <c>factory-model.r2.json</c>. Một revision là một
+/// document và document thì không bị sửa tại chỗ (<see cref="IFactoryModelCatalog"/>), nên một
+/// revision mới là một file mới đứng cạnh file cũ chứ không phải một thay đổi lên nó. Directory chính
+/// là cả cái kệ sách.
 /// </para>
 /// </remarks>
 public static class FactoryModelSeed
 {
-    /// <summary>What every revision file name starts with.</summary>
+    /// <summary>Mọi tên file revision đều bắt đầu bằng gì.</summary>
     public const string FileNamePrefix = "factory-model.r";
 
-    /// <summary>What every revision file name ends with.</summary>
+    /// <summary>Mọi tên file revision đều kết thúc bằng gì.</summary>
     public const string FileNameSuffix = ".json";
 
-    /// <summary>The file name a given revision is expected to have.</summary>
-    /// <param name="revision">The revision number, at least 1.</param>
+    /// <summary>Tên file mà một revision cho trước được kỳ vọng phải có.</summary>
+    /// <param name="revision">Số revision, ít nhất là 1.</param>
     public static string FileNameFor(int revision)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(revision, 1);
@@ -35,17 +36,17 @@ public static class FactoryModelSeed
         return FileNamePrefix + revision.ToString(CultureInfo.InvariantCulture) + FileNameSuffix;
     }
 
-    /// <summary>Reads every revision document in a directory.</summary>
-    /// <param name="directoryPath">Directory holding the <c>factory-model.r*.json</c> files.</param>
-    /// <exception cref="DirectoryNotFoundException">The directory is not there.</exception>
+    /// <summary>Đọc mọi revision document trong một directory.</summary>
+    /// <param name="directoryPath">Directory chứa các file <c>factory-model.r*.json</c>.</param>
+    /// <exception cref="DirectoryNotFoundException">Directory không tồn tại.</exception>
     /// <exception cref="FactoryModelSeedException">
-    /// The directory holds no document, or one of them is not a valid plant, or a file name and the
-    /// revision inside it disagree.
+    /// Directory không chứa document nào, hoặc một trong số chúng không mô tả một plant hợp lệ, hoặc
+    /// tên file và revision bên trong nó không khớp nhau.
     /// </exception>
     /// <remarks>
-    /// Every problem here is fatal at startup, and none of the files is skipped quietly. A document
-    /// silently ignored is a published rollout that vanished, and nobody finds out until the day an
-    /// operator activates a revision the catalog never loaded.
+    /// Mọi vấn đề ở đây đều gây fatal lúc startup, và không file nào bị bỏ qua trong im lặng. Một
+    /// document bị bỏ qua âm thầm là một rollout đã publish nhưng biến mất, và không ai biết được cho
+    /// tới ngày một operator activate một revision mà catalog chưa bao giờ load.
     /// </remarks>
     public static InMemoryFactoryModelCatalog LoadCatalog(string directoryPath)
     {
@@ -83,9 +84,9 @@ public static class FactoryModelSeed
 
             var snapshot = Load(file);
 
-            // The name and the content have to agree. Copying r2 to r3 and forgetting to change the
-            // number inside is the easiest mistake to make here, and it would put the old tree in
-            // force under a new revision number — a change everybody believes happened and did not.
+            // Tên file và nội dung bên trong phải khớp nhau. Copy r2 thành r3 rồi quên đổi con số bên
+            // trong là lỗi dễ mắc nhất ở đây, và nó sẽ đưa cái cây cũ vào hiệu lực dưới một số revision
+            // mới — một thay đổi mà ai cũng tin là đã xảy ra trong khi thực chất không hề.
             if (snapshot.Revision != revision)
             {
                 throw new FactoryModelSeedException(
@@ -99,10 +100,10 @@ public static class FactoryModelSeed
         return new InMemoryFactoryModelCatalog(snapshots);
     }
 
-    /// <summary>Reads and validates a single revision document.</summary>
-    /// <param name="filePath">Full path to the JSON file.</param>
-    /// <exception cref="FileNotFoundException">The file is not there.</exception>
-    /// <exception cref="FactoryModelSeedException">The file is there and does not describe a valid plant.</exception>
+    /// <summary>Đọc và validate một revision document duy nhất.</summary>
+    /// <param name="filePath">Đường dẫn đầy đủ tới file JSON.</param>
+    /// <exception cref="FileNotFoundException">File không tồn tại.</exception>
+    /// <exception cref="FactoryModelSeedException">File tồn tại nhưng không mô tả một plant hợp lệ.</exception>
     public static FactoryModelSnapshot Load(string filePath)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
@@ -118,9 +119,9 @@ public static class FactoryModelSeed
         return Parse(File.ReadAllText(filePath));
     }
 
-    /// <summary>Validates seed content that has already been read.</summary>
-    /// <param name="json">The file's contents.</param>
-    /// <exception cref="FactoryModelSeedException">The content does not describe a valid plant.</exception>
+    /// <summary>Validate nội dung seed đã được đọc từ trước.</summary>
+    /// <param name="json">Nội dung của file.</param>
+    /// <exception cref="FactoryModelSeedException">Nội dung không mô tả một plant hợp lệ.</exception>
     public static FactoryModelSnapshot Parse(string json)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(json);
@@ -141,8 +142,8 @@ public static class FactoryModelSeed
             throw new FactoryModelSeedException("The factory model seed is empty.");
         }
 
-        // Revision 0 is what an uninitialised integer looks like, and a revision that never moves is
-        // indistinguishable from a plant that never changed.
+        // Revision 0 chính là hình dạng của một số integer chưa được khởi tạo, và một revision không
+        // bao giờ dịch chuyển thì không thể phân biệt được với một plant chưa bao giờ thay đổi.
         if (document.Revision < 1)
         {
             throw new FactoryModelSeedException(
@@ -162,8 +163,8 @@ public static class FactoryModelSeed
 
     private static FactoryNode BuildNode(FactoryNodeSeed seed, EquipmentPath path)
     {
-        // A time zone belongs to a plant and to nothing else. Finding one on a work cell means either
-        // the file is wrong or somebody is about to start reading it from the wrong level.
+        // Time zone chỉ thuộc về một plant và không thuộc về gì khác. Thấy nó xuất hiện trên một work
+        // cell nghĩa là hoặc file bị sai, hoặc ai đó sắp bắt đầu đọc nó từ sai cấp.
         var isSite = path.Kind == FactoryNodeKind.Site;
 
         if (isSite && string.IsNullOrWhiteSpace(seed.TimeZoneId))

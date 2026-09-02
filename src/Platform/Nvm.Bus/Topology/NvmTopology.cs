@@ -4,36 +4,36 @@ using Nvm.Contracts.CloudEvents;
 namespace Nvm.Bus.Topology;
 
 /// <summary>
-/// The names and patterns that make up the Manufacturing Service Bus: which exchange an event goes
-/// to, and how a consumer says what it wants.
+/// Các tên và pattern tạo nên Manufacturing Service Bus: một event đi tới exchange nào, và một
+/// consumer nói ra thứ nó muốn bằng cách nào.
 /// </summary>
 /// <remarks>
 /// <para>
-/// Topology is an architectural decision, not configuration. Once a service is publishing to
-/// <c>nvm.factory-model</c> and three consumers are bound to it, the name cannot be changed without
-/// coordinating every one of them — so it is decided here, once, and nobody assembles one by
-/// concatenating strings at the call site.
+/// Topology là một quyết định kiến trúc, không phải cấu hình. Một khi một service đã publish tới
+/// <c>nvm.factory-model</c> và ba consumer đã bind vào đó, cái tên không thể đổi mà không phối hợp với
+/// từng consumer một — nên nó được quyết định ở đây, một lần duy nhất, và không ai tự ráp một cái tên
+/// bằng cách nối chuỗi tại nơi gọi.
 /// </para>
 /// <para>
-/// One exchange per <b>bounded context</b> rather than per message type. A context is a stable unit
-/// with an owner; a message type is not. Adding a fourth event to Traceability should not add a
-/// fourth exchange for every consumer to discover.
+/// Một exchange cho mỗi <b>bounded context</b> chứ không phải cho mỗi loại message. Một context là một
+/// đơn vị ổn định có chủ sở hữu; một loại message thì không. Thêm event thứ tư vào Traceability không
+/// nên thêm exchange thứ tư để mọi consumer phải khám phá ra.
 /// </para>
 /// </remarks>
 public static class NvmTopology
 {
-    /// <summary>Prefix on every exchange and queue this system declares.</summary>
+    /// <summary>Tiền tố trên mọi exchange và queue mà hệ thống này khai báo.</summary>
     public const string Prefix = "nvm";
 
-    /// <summary>Matches exactly one segment of a routing key.</summary>
+    /// <summary>Khớp đúng một segment của routing key.</summary>
     public const string OneSegment = "*";
 
-    /// <summary>Matches zero or more trailing segments.</summary>
+    /// <summary>Khớp không hoặc nhiều segment ở cuối.</summary>
     public const string AnySegments = "#";
 
     private const char Separator = '.';
 
-    /// <summary>The exchange a bounded context publishes to, for example <c>nvm.factory-model</c>.</summary>
+    /// <summary>Exchange mà một bounded context publish tới, ví dụ <c>nvm.factory-model</c>.</summary>
     public static string ExchangeFor(string context)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(context);
@@ -41,7 +41,7 @@ public static class NvmTopology
         return string.Concat(Prefix, Separator.ToString(), context);
     }
 
-    /// <summary>The exchange an event type publishes to, read from its contract attributes.</summary>
+    /// <summary>Exchange mà một event type publish tới, đọc từ các contract attribute của nó.</summary>
     public static string ExchangeFor(EventTypeName eventType)
     {
         ArgumentNullException.ThrowIfNull(eventType);
@@ -49,16 +49,17 @@ public static class NvmTopology
         return ExchangeFor(eventType.Context);
     }
 
-    /// <summary>Everything happening at one plant: <c>nvm.NV1.#</c>.</summary>
+    /// <summary>Mọi thứ xảy ra ở một nhà máy: <c>nvm.NV1.#</c>.</summary>
     /// <remarks>
-    /// The subscription a site-local service wants. Multiplant falls out of the routing key rather
-    /// than out of a filter in every consumer — a service at Hai Phong never receives a Leipzig
-    /// message in the first place, so it cannot leak one by forgetting to check.
+    /// Subscription mà một service chỉ hoạt động trong một site mong muốn. Đa nhà máy (multiplant) tự
+    /// nhiên có được từ routing key chứ không phải từ một filter trong mỗi consumer — một service ở
+    /// Hải Phòng ngay từ đầu không bao giờ nhận được một message từ Leipzig, nên nó không thể để lộ
+    /// message đó chỉ vì quên kiểm tra.
     /// </remarks>
     public static string BindingForSite(string siteId) =>
         Join(Prefix, RequireSite(siteId), AnySegments);
 
-    /// <summary>One context at one plant: <c>nvm.NV1.traceability.#</c>.</summary>
+    /// <summary>Một context tại một nhà máy: <c>nvm.NV1.traceability.#</c>.</summary>
     public static string BindingForContext(string siteId, string context)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(context);
@@ -66,10 +67,10 @@ public static class NvmTopology
         return Join(Prefix, RequireSite(siteId), context, AnySegments);
     }
 
-    /// <summary>One event, at every plant: <c>nvm.*.factory-model.revision-activated.v1</c>.</summary>
+    /// <summary>Một event, ở mọi nhà máy: <c>nvm.*.factory-model.revision-activated.v1</c>.</summary>
     /// <remarks>
-    /// The single-segment wildcard, not the multi-segment one. <c>nvm.#</c> would also match, and
-    /// would also deliver every other event in the system to a consumer that asked for one.
+    /// Là wildcard một-segment, không phải wildcard nhiều-segment. <c>nvm.#</c> cũng sẽ khớp, nhưng
+    /// cũng sẽ gửi mọi event khác trong hệ thống tới một consumer chỉ yêu cầu một event.
     /// </remarks>
     public static string BindingForEventAtEverySite(EventTypeName eventType)
     {
@@ -78,7 +79,7 @@ public static class NvmTopology
         return Join(Prefix, OneSegment, eventType.Context, eventType.Name, VersionSegment(eventType));
     }
 
-    /// <summary>One event at one plant. The narrowest binding there is.</summary>
+    /// <summary>Một event tại một nhà máy. Binding hẹp nhất có thể có.</summary>
     public static string BindingForEvent(string siteId, EventTypeName eventType)
     {
         ArgumentNullException.ThrowIfNull(eventType);
@@ -89,10 +90,10 @@ public static class NvmTopology
     private static string VersionSegment(EventTypeName eventType) =>
         "v" + eventType.Version.ToString(CultureInfo.InvariantCulture);
 
-    // Upper case is not cosmetic here. AMQP compares routing keys byte for byte, so a publisher on
-    // nvm.NV1.* and a consumer bound to nvm.nv1.# never meet — and the broker reports nothing at all.
-    // Refusing the lower-case spelling at the only place bindings are built is the moment anyone finds
-    // out.
+    // Chữ hoa ở đây không phải để cho đẹp. AMQP so sánh routing key byte theo byte, nên một publisher
+    // trên nvm.NV1.* và một consumer bind vào nvm.nv1.# không bao giờ gặp nhau — và broker không báo
+    // lỗi gì cả. Từ chối cách viết chữ thường ngay tại nơi duy nhất binding được xây dựng chính là lúc
+    // ai đó phát hiện ra vấn đề.
     private static string RequireSite(string siteId)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(siteId);

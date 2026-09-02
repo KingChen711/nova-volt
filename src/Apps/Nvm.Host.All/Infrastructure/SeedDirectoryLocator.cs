@@ -2,36 +2,38 @@ using Nvm.FactoryModel.Seeding;
 
 namespace Nvm.Host.Infrastructure;
 
-/// <summary>Finds <c>deploy/seed</c> without anyone having to type a path.</summary>
+/// <summary>Tìm ra <c>deploy/seed</c> mà không ai phải gõ tay một đường dẫn.</summary>
 /// <remarks>
 /// <para>
-/// The model is read from disk rather than embedded (M1/C07) so that a plant change is a file added
-/// and not a rebuild. That leaves the question of where the files are, and the answer differs between
-/// <c>dotnet run</c> from the project directory and a binary started out of <c>artifacts/bin</c>.
+/// Model được đọc từ đĩa thay vì embed vào assembly (M1/C07), để một thay đổi plant là một file được
+/// thêm vào chứ không phải một lần rebuild. Điều đó để lại câu hỏi: các file đó nằm ở đâu, và câu trả
+/// lời khác nhau giữa chạy <c>dotnet run</c> từ project directory và chạy một binary xuất phát từ
+/// <c>artifacts/bin</c>.
 /// </para>
 /// <para>
-/// So the same upward walk <c>DotEnvLoader</c> uses: start where the process is and climb until the
-/// repository turns up. One rule, one behaviour, and nothing to configure until there is a real
-/// deployment — where <c>NVM_SEED_DIR</c> takes over and the walk never runs.
+/// Vì vậy dùng đúng cách đi ngược lên mà <c>DotEnvLoader</c> đã dùng: bắt đầu từ nơi process đang chạy
+/// và leo lên tới khi thấy repository. Một quy tắc, một hành vi, và không có gì phải cấu hình cho tới
+/// khi có một deployment thật — lúc đó <c>NVM_SEED_DIR</c> tiếp quản và việc đi ngược lên không bao
+/// giờ chạy nữa.
 /// </para>
 /// <para>
-/// A directory rather than a file, because a revision is a document and the plant has more than one
-/// (<see cref="Nvm.FactoryModel.Storage.IFactoryModelCatalog"/>). The walk looks for a directory that
-/// actually holds a revision document, not merely one named <c>seed</c>: an empty directory further
-/// down the tree would otherwise shadow the real one and the process would die reporting the wrong
-/// cause.
+/// Một directory chứ không phải một file, vì một revision là một document và một plant có nhiều hơn
+/// một revision (<see cref="Nvm.FactoryModel.Storage.IFactoryModelCatalog"/>). Việc đi ngược lên tìm
+/// một directory thực sự chứa một revision document, chứ không chỉ là một directory tên <c>seed</c>:
+/// nếu không, một directory rỗng nằm sâu hơn trong cây sẽ che khuất directory thật, và process sẽ chết
+/// trong khi báo sai nguyên nhân.
 /// </para>
 /// </remarks>
 internal static class SeedDirectoryLocator
 {
-    /// <summary>Environment variable that names the directory outright.</summary>
+    /// <summary>Biến môi trường nêu thẳng tên directory.</summary>
     public const string PathVariable = "NVM_SEED_DIR";
 
     private const string RelativePath = "deploy/seed";
 
-    /// <summary>Locates the seed directory, starting from where the process was launched.</summary>
-    /// <param name="contentRootPath">Directory to start searching upward from.</param>
-    /// <exception cref="DirectoryNotFoundException">No ancestor directory holds the seed documents.</exception>
+    /// <summary>Tìm seed directory, bắt đầu từ nơi process được khởi chạy.</summary>
+    /// <param name="contentRootPath">Directory để bắt đầu tìm ngược lên.</param>
+    /// <exception cref="DirectoryNotFoundException">Không có directory tổ tiên nào chứa các seed document.</exception>
     public static string Locate(string contentRootPath)
     {
         if (Environment.GetEnvironmentVariable(PathVariable) is { Length: > 0 } configured)

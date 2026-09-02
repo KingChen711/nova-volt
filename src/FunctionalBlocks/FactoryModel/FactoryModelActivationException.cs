@@ -1,27 +1,27 @@
 namespace Nvm.FactoryModel;
 
-/// <summary>Thrown when a factory model revision cannot be put in force.</summary>
+/// <summary>Được ném ra khi một revision của factory model không thể được đưa vào hiệu lực.</summary>
 /// <remarks>
-/// A business refusal, not a malformed request. The command was well formed and the answer is still
-/// no — because the plant is not in the document, because the document has moved on since the caller
-/// read it, or because the revision would take the plant backwards. Kept apart from validation so a
-/// caller can tell "fix your request" from "the world is not in the state you assumed".
+/// Một lời từ chối nghiệp vụ, không phải một request sai định dạng. Command đã đúng hình dạng và câu
+/// trả lời vẫn là không — vì plant không có trong document, vì document đã thay đổi kể từ lúc caller
+/// đọc nó, hoặc vì revision này sẽ đẩy plant lùi lại phía sau. Được tách riêng khỏi validation để
+/// caller phân biệt được "sửa lại request của bạn" với "thế giới không còn ở trạng thái bạn nghĩ".
 /// </remarks>
 public sealed class FactoryModelActivationException : Exception
 {
-    /// <summary>Creates the exception with a message describing the refusal.</summary>
+    /// <summary>Tạo exception với một message mô tả lý do từ chối.</summary>
     public FactoryModelActivationException(string message)
         : base(message)
     {
     }
 
-    /// <summary>Creates the exception with a message and the underlying failure.</summary>
+    /// <summary>Tạo exception với một message và lỗi gốc bên dưới.</summary>
     public FactoryModelActivationException(string message, Exception innerException)
         : base(message, innerException)
     {
     }
 
-    /// <summary>Creates the exception with no message.</summary>
+    /// <summary>Tạo exception không kèm message.</summary>
     public FactoryModelActivationException()
         : base("The factory model revision could not be activated.")
     {

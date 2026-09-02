@@ -1,26 +1,27 @@
 namespace Nvm.FactoryModel.Seeding;
 
-/// <summary>Thrown when the seed file does not describe a valid plant.</summary>
+/// <summary>Được ném ra khi seed file không mô tả một plant hợp lệ.</summary>
 /// <remarks>
-/// Always fatal at startup, never recoverable. A service running on a factory model it could not
-/// fully read would resolve some equipment paths and silently fail others, which is worse than not
-/// starting: the gaps would look like missing data rather than a bad configuration file.
+/// Luôn fatal lúc startup, không bao giờ có thể phục hồi. Một service chạy trên một factory model mà
+/// nó không đọc trọn vẹn được sẽ resolve được một số equipment path và âm thầm thất bại với những cái
+/// khác, điều này còn tệ hơn cả việc không khởi động được: những chỗ thiếu sẽ trông như dữ liệu bị
+/// thiếu thay vì một file cấu hình sai.
 /// </remarks>
 public sealed class FactoryModelSeedException : Exception
 {
-    /// <summary>Creates the exception with a message describing what is wrong with the file.</summary>
+    /// <summary>Tạo exception với một message mô tả file đang sai ở đâu.</summary>
     public FactoryModelSeedException(string message)
         : base(message)
     {
     }
 
-    /// <summary>Creates the exception with a message and the underlying failure.</summary>
+    /// <summary>Tạo exception với một message và lỗi gốc bên dưới.</summary>
     public FactoryModelSeedException(string message, Exception innerException)
         : base(message, innerException)
     {
     }
 
-    /// <summary>Creates the exception with no message.</summary>
+    /// <summary>Tạo exception không kèm message.</summary>
     public FactoryModelSeedException()
         : base("The factory model seed is not valid.")
     {

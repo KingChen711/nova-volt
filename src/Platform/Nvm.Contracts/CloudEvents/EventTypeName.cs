@@ -6,28 +6,28 @@ using Nvm.Contracts.Events;
 namespace Nvm.Contracts.CloudEvents;
 
 /// <summary>
-/// The CloudEvents <c>type</c> attribute: <c>com.novavolt.{context}.{event}.v{n}</c>.
+/// Attribute <c>type</c> của CloudEvents: <c>com.novavolt.{context}.{event}.v{n}</c>.
 /// </summary>
 /// <remarks>
 /// <para>
-/// Example: <c>com.novavolt.traceability.unit-serialized.v1</c>, per docs/scope.md §7.4.
+/// Ví dụ: <c>com.novavolt.traceability.unit-serialized.v1</c>, theo docs/scope.md §7.4.
 /// </para>
 /// <para>
-/// Reverse-DNS prefix, then the bounded context that owns the event, then the event in kebab-case,
-/// then the schema version. The version is part of the name rather than a separate field because a
-/// consumer decides whether it can read a message by looking at one string — and a message that
-/// cannot be deserialized has nothing but its headers left to look at.
+/// Tiền tố reverse-DNS, rồi tới bounded context sở hữu event, rồi tới event viết kebab-case, rồi tới
+/// schema version. Version là một phần của cái tên chứ không phải một field riêng vì một consumer
+/// quyết định nó có đọc được một message hay không chỉ bằng cách nhìn vào một chuỗi duy nhất — và một
+/// message không deserialize được thì chỉ còn lại header để nhìn vào.
 /// </para>
 /// <para>
-/// Parsing matters as much as formatting. When a message lands in the <c>_error</c> queue, the
-/// payload is by definition something the code could not understand; reading <c>type</c> back out of
-/// the header is how an operator finds out what it was supposed to be.
+/// Việc parse quan trọng không kém việc format. Khi một message rơi vào queue <c>_error</c>, theo
+/// định nghĩa payload là thứ mà code không hiểu được; đọc lại <c>type</c> từ header là cách một
+/// operator tìm ra nó đáng lẽ phải là gì.
 /// </para>
 /// </remarks>
 [System.Text.Json.Serialization.JsonConverter(typeof(EventTypeNameJsonConverter))]
 public sealed record EventTypeName
 {
-    /// <summary>Reverse-DNS prefix shared by every event type in the system.</summary>
+    /// <summary>Tiền tố reverse-DNS chung cho mọi event type trong hệ thống.</summary>
     public const string Prefix = "com.novavolt";
 
     private const char Separator = '.';
@@ -45,27 +45,27 @@ public sealed record EventTypeName
         Version = version;
     }
 
-    /// <summary>The full type string, exactly as it travels on the wire.</summary>
+    /// <summary>Chuỗi type đầy đủ, đúng như nó di chuyển trên wire.</summary>
     public string Value { get; }
 
-    /// <summary>Bounded context that owns the event, for example <c>traceability</c>.</summary>
+    /// <summary>Bounded context sở hữu event, ví dụ <c>traceability</c>.</summary>
     public string Context { get; }
 
-    /// <summary>Event name in kebab-case, for example <c>unit-serialized</c>.</summary>
+    /// <summary>Tên event viết kebab-case, ví dụ <c>unit-serialized</c>.</summary>
     public string Name { get; }
 
-    /// <summary>Schema version, starting at 1. Matches the type's <c>EventVersionAttribute</c>.</summary>
+    /// <summary>Schema version, bắt đầu từ 1. Khớp với <c>EventVersionAttribute</c> của type.</summary>
     public int Version { get; }
 
-    /// <summary>Builds a type name from its parts, throwing when any part is malformed.</summary>
-    /// <exception cref="FormatException">A segment is not lower-case kebab-case, or the version is below 1.</exception>
+    /// <summary>Xây dựng một type name từ các phần của nó, ném lỗi khi có phần bị sai định dạng.</summary>
+    /// <exception cref="FormatException">Một segment không phải kebab-case chữ thường, hoặc version dưới 1.</exception>
     public static EventTypeName Create(string? context, string? name, int version) =>
         TryCreate(context, name, version, out var type)
             ? type
             : throw new FormatException(
                 $"Not a valid event type: context '{context}', name '{name}', version {version.ToString(CultureInfo.InvariantCulture)}.");
 
-    /// <summary>Builds a type name from its parts, returning false when any part is malformed.</summary>
+    /// <summary>Xây dựng một type name từ các phần của nó, trả về false khi có phần bị sai định dạng.</summary>
     public static bool TryCreate(
         [NotNullWhen(true)] string? context,
         [NotNullWhen(true)] string? name,
@@ -93,13 +93,13 @@ public sealed record EventTypeName
         return true;
     }
 
-    /// <summary>Reads the wire name declared on an event type by its attributes.</summary>
-    /// <param name="eventType">A type carrying <c>EventContract</c> and <c>EventVersion</c>.</param>
-    /// <exception cref="InvalidOperationException">An attribute is missing, or the pair is malformed.</exception>
+    /// <summary>Đọc lại tên trên wire mà một event type khai báo qua các attribute của nó.</summary>
+    /// <param name="eventType">Một type mang <c>EventContract</c> và <c>EventVersion</c>.</param>
+    /// <exception cref="InvalidOperationException">Thiếu một attribute, hoặc cặp attribute bị sai định dạng.</exception>
     /// <remarks>
-    /// The one place that joins the two attributes into the single string that travels. Everything
-    /// that needs to know what an event is called on the wire — the exchange it publishes to, the
-    /// routing key, the CloudEvents <c>type</c> — asks here, so there is no second derivation to drift.
+    /// Nơi duy nhất ghép hai attribute lại thành chuỗi duy nhất di chuyển trên wire. Mọi thứ cần biết
+    /// một event được gọi là gì trên wire — exchange nó publish tới, routing key, CloudEvents
+    /// <c>type</c> — đều hỏi ở đây, nên không có phép suy dẫn thứ hai nào có thể lệch đi.
     /// </remarks>
     public static EventTypeName Of(Type eventType)
     {
@@ -120,14 +120,14 @@ public sealed record EventTypeName
                 + $"context '{contract.Context}', name '{contract.Name}', version {version.Version}.");
     }
 
-    /// <summary>Reads a type name back from the wire, throwing when the string is malformed.</summary>
-    /// <exception cref="FormatException">The string does not match the layout.</exception>
+    /// <summary>Đọc lại một type name từ wire, ném lỗi khi chuỗi bị sai định dạng.</summary>
+    /// <exception cref="FormatException">Chuỗi không khớp với cấu trúc quy định.</exception>
     public static EventTypeName Parse(string? value) =>
         TryParse(value, out var type)
             ? type
             : throw new FormatException("Not a valid event type name: '" + value + "'.");
 
-    /// <summary>Reads a type name back from the wire, returning false when the string is malformed.</summary>
+    /// <summary>Đọc lại một type name từ wire, trả về false khi chuỗi bị sai định dạng.</summary>
     public static bool TryParse([NotNullWhen(true)] string? value, [NotNullWhen(true)] out EventTypeName? type)
     {
         type = null;
@@ -154,10 +154,10 @@ public sealed record EventTypeName
             return false;
         }
 
-        // Rebuilding and comparing is what makes this a parser rather than a lenient reader. Anything
-        // that would round-trip to a different string — "v01", a wrong prefix, a stray plus sign the
-        // number parser tolerates — is rejected here instead of being silently normalised into the
-        // store. One event type must have exactly one spelling, forever.
+        // Xây dựng lại rồi so sánh chính là điều biến đây thành một parser thay vì một reader dễ dãi.
+        // Bất cứ gì sẽ round-trip ra một chuỗi khác — "v01", một tiền tố sai, một dấu cộng thừa mà bộ
+        // parse số vẫn chấp nhận — đều bị từ chối ở đây thay vì bị âm thầm chuẩn hóa rồi lưu vào store.
+        // Một event type phải chỉ có đúng một cách viết, mãi mãi.
         if (!string.Equals(candidate.Value, value, StringComparison.Ordinal))
         {
             return false;
@@ -167,7 +167,7 @@ public sealed record EventTypeName
         return true;
     }
 
-    /// <summary>Returns the full type string.</summary>
+    /// <summary>Trả về chuỗi type đầy đủ.</summary>
     public override string ToString() => Value;
 
     private static bool TryReadVersion(string segment, out int version)

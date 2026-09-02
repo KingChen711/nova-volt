@@ -1,27 +1,26 @@
 namespace Nvm.Sparkplug;
 
-/// <summary>Thrown when a payload refers to a metric by an alias no birth ever declared.</summary>
+/// <summary>Ném ra khi một payload tham chiếu tới một metric bằng alias mà không birth nào từng khai báo.</summary>
 /// <remarks>
 /// <para>
-/// Its own type because the answer is specific: ask the edge node for a <b>rebirth</b> (C11), then
-/// decode again. Every other decode failure is a bad payload; this one is a payload that is probably
-/// fine and a listener that started listening too late — after a reconnect, after a deploy, after
-/// the node restarted and renumbered everything.
+/// Có type riêng vì câu trả lời rất cụ thể: yêu cầu edge node <b>rebirth</b> (C11), rồi decode lại.
+/// Mọi lỗi decode khác đều là payload hỏng; còn cái này là một payload có lẽ vẫn ổn nhưng listener
+/// bắt đầu lắng nghe quá muộn — sau một lần reconnect, sau một lần deploy, sau khi node restart và
+/// đánh số lại toàn bộ.
 /// </para>
 /// <para>
-/// The alternative to throwing is guessing, and guessing here is expensive in a way that hides. An
-/// alias means whatever the <i>current</i> birth said it means; a node that restarts may hand 17 to
-/// temperature having handed it to voltage an hour ago. Carrying on with the old table writes 3,7 into
-/// a temperature column and 31,5 into a voltage column — correct shape, wrong meaning, no error
-/// anywhere. Nothing catches it until a process engineer looks at a chart and sees a cell running at
-/// 3,7 °C.
+/// Lựa chọn thay cho việc throw là đoán, và đoán ở đây tốn kém theo kiểu ẩn mình. Một alias mang
+/// nghĩa theo đúng những gì birth <i>hiện tại</i> nói; một node restart có thể gán 17 cho temperature
+/// dù một giờ trước đã gán nó cho voltage. Tiếp tục dùng bảng cũ sẽ ghi 3,7 vào cột temperature và
+/// 31,5 vào cột voltage — đúng hình dạng, sai ý nghĩa, không có lỗi nào cả. Không gì bắt được chuyện
+/// này cho tới khi một process engineer nhìn vào biểu đồ và thấy một cell đang chạy ở 3,7 °C.
 /// </para>
 /// </remarks>
 public sealed class UnknownMetricAliasException : SparkplugDecodeException
 {
-    /// <summary>Creates the exception for a specific alias.</summary>
-    /// <param name="alias">The alias the payload used.</param>
-    /// <param name="knownAliasCount">How many aliases the table did hold.</param>
+    /// <summary>Tạo exception cho một alias cụ thể.</summary>
+    /// <param name="alias">Alias mà payload đã dùng.</param>
+    /// <param name="knownAliasCount">Bảng đã có bao nhiêu alias.</param>
     public UnknownMetricAliasException(ulong alias, int knownAliasCount)
         : base(
             $"Metric alias {alias} is not in the alias table, which holds {knownAliasCount} "
@@ -32,31 +31,31 @@ public sealed class UnknownMetricAliasException : SparkplugDecodeException
         KnownAliasCount = knownAliasCount;
     }
 
-    /// <summary>Creates the exception with a message describing the unresolvable alias.</summary>
+    /// <summary>Tạo exception với một message mô tả alias không giải quyết được.</summary>
     public UnknownMetricAliasException(string message)
         : base(message)
     {
     }
 
-    /// <summary>Creates the exception with a message and the underlying failure.</summary>
+    /// <summary>Tạo exception với một message và lỗi gốc bên dưới.</summary>
     public UnknownMetricAliasException(string message, Exception innerException)
         : base(message, innerException)
     {
     }
 
-    /// <summary>Creates the exception with no message.</summary>
+    /// <summary>Tạo exception không có message.</summary>
     public UnknownMetricAliasException()
         : base("A metric alias is not in the alias table.")
     {
     }
 
-    /// <summary>The alias that could not be resolved, when the exception names one.</summary>
+    /// <summary>Alias không giải quyết được, khi exception nêu tên một alias cụ thể.</summary>
     public ulong? Alias { get; }
 
-    /// <summary>How many aliases the table held at the time, when the exception names it.</summary>
+    /// <summary>Bảng đã có bao nhiêu alias tại thời điểm đó, khi exception nêu rõ con số này.</summary>
     /// <remarks>
-    /// Zero is the case worth separating out while reading a log: it means no birth has been seen at
-    /// all, not that this one metric slipped through.
+    /// Zero là case đáng tách riêng khi đọc log: nó nghĩa là chưa thấy birth nào cả, chứ không phải
+    /// chỉ một metric này bị lọt qua.
     /// </remarks>
     public int? KnownAliasCount { get; }
 }

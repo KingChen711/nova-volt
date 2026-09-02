@@ -13,16 +13,16 @@ using Serilog.Events;
 const string logTemplate =
     "[{Timestamp:yyyy-MM-ddTHH:mm:ss.fffzzz} {Level:u3}] {Message:lj}{NewLine}{Exception}";
 
-// Deterministic formatting regardless of the machine locale.
-// This replaces InvariantGlobalization=true, which would have disabled ICU and made
-// TimeZoneInfo reject IANA ids such as "Europe/Berlin". See ADR-020.
+// Định dạng tất định (deterministic), không phụ thuộc locale của máy.
+// Cách này thay thế cho InvariantGlobalization=true, vốn sẽ tắt ICU và khiến
+// TimeZoneInfo từ chối các IANA id như "Europe/Berlin". Xem ADR-020.
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
 CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
 
-// Bootstrap logger: captures failures that happen before the host is built,
-// which is exactly when configuration mistakes surface.
-// formatProvider is explicit on every sink: CA1305 is what enforces the determinism
-// that InvariantGlobalization would otherwise have given us.
+// Bootstrap logger: bắt các lỗi xảy ra trước khi host được build xong,
+// đúng lúc mọi sai sót cấu hình lộ ra.
+// formatProvider được khai rõ ràng ở mọi sink: CA1305 chính là thứ ép buộc tính tất định
+// mà lẽ ra InvariantGlobalization đã cho ta.
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console(outputTemplate: logTemplate, formatProvider: CultureInfo.InvariantCulture)
     .CreateBootstrapLogger();
@@ -37,8 +37,8 @@ try
         .Enrich.FromLogContext()
         .WriteTo.Console(outputTemplate: logTemplate, formatProvider: CultureInfo.InvariantCulture));
 
-    // One source of truth for ports and credentials: the same .env docker-compose reads.
-    // Development only — see DotEnvLoader.
+    // Một nguồn sự thật duy nhất cho port và credential: cùng file .env mà docker-compose đọc.
+    // Chỉ dùng ở Development — xem DotEnvLoader.
     if (builder.Environment.IsDevelopment())
     {
         var envFile = DotEnvLoader.Load(builder.Environment.ContentRootPath);
@@ -47,35 +47,35 @@ try
 
     builder.Configuration.AddEnvironmentVariables();
 
-    // The only sanctioned clock in the codebase. AGENTS.md K1 forbids DateTime.UtcNow
-    // so that day-long sagas stay testable with FakeTimeProvider.
+    // Đồng hồ duy nhất được chấp nhận trong codebase. AGENTS.md K1 cấm DateTime.UtcNow
+    // để những saga kéo dài cả ngày vẫn test được bằng FakeTimeProvider.
     builder.Services.AddSingleton(TimeProvider.System);
 
-    // Manufacturing Service Bus. Credentials come from the same .env docker-compose reads —
-    // one source of truth, no second file holding the same password (M0/C10.2).
-    // No consumers here yet: this host publishes, and the probe worker consumes.
+    // Manufacturing Service Bus. Credential lấy từ cùng file .env mà docker-compose đọc —
+    // một nguồn sự thật duy nhất, không có file thứ hai giữ cùng một password (M0/C10.2).
+    // Chưa có consumer nào ở đây: host này chỉ publish, còn probe worker mới consume.
     builder.Services.AddNvmBus(bus =>
     {
-        // Host stays at its default of localhost, the same assumption every other dependency in
-        // this host makes (see HealthCheckRegistration). .env is the port and credential table;
-        // it does not carry host names.
+        // Host giữ nguyên mặc định là localhost, cùng một giả định mà mọi dependency khác trong
+        // host này đang dùng (xem HealthCheckRegistration). .env là bảng port và credential;
+        // nó không mang theo host name.
         bus.Port = ushort.Parse(DotEnvLoader.Required("NVM_PORT_RABBITMQ"), CultureInfo.InvariantCulture);
         bus.Username = DotEnvLoader.Required("NVM_RABBITMQ_USER");
         bus.Password = DotEnvLoader.Required("NVM_RABBITMQ_PASSWORD");
-        // Names this deployable in every CloudEvents source it publishes:
-        // urn:novavolt:nv1:host-all. Dev mode runs every App in one process (scope.md §5.3).
+        // Đặt tên cho deployable này trong mọi CloudEvents source nó publish ra:
+        // urn:novavolt:nv1:host-all. Chế độ dev chạy mọi App trong cùng một process (scope.md §5.3).
         bus.ApplicationName = "host-all";
     });
 
-    // Command pipeline plus the first Functional Block. The kernel is told which assemblies to scan
-    // rather than scanning everything loaded: a Functional Block that never announced itself should
-    // not be wired up because it happened to be in the output directory.
+    // Command pipeline cộng với Functional Block đầu tiên. Kernel được cho biết chính xác những
+    // assembly nào cần scan, thay vì scan mọi thứ đã load: một Functional Block chưa từng tự công bố
+    // mình thì không nên được wire up chỉ vì tình cờ nằm trong output directory.
     builder.Services.AddNvmKernel(typeof(ActivateFactoryModelRevisionCommand).Assembly);
     builder.Services.AddNvmFactoryModel(SeedDirectoryLocator.Locate(builder.Environment.ContentRootPath));
 
-    // The production calendar, reading each plant's time zone from the model above rather than from a
-    // second lookup table. Registered here and only here — M4 is the first screen that asks it
-    // "what has this shift produced".
+    // Production calendar, đọc time zone của từng plant từ model ở trên thay vì từ một bảng tra cứu
+    // thứ hai. Chỉ được đăng ký ở đây và duy nhất ở đây — M4 là màn hình đầu tiên hỏi nó
+    // "ca này đã sản xuất được gì".
     builder.Services.AddNvmProductionCalendar();
 
     builder.Services.AddDependencyHealthChecks();
@@ -87,8 +87,8 @@ try
             ? LogEventLevel.Error
             : httpContext.Response.StatusCode >= 500
                 ? LogEventLevel.Error
-                // Health probes run every few seconds; logging them at Information
-                // buries everything else.
+                // Health probe chạy vài giây một lần; log chúng ở mức Information
+                // sẽ chôn vùi mọi thứ khác.
                 : httpContext.Request.Path.StartsWithSegments("/health")
                     ? LogEventLevel.Verbose
                     : LogEventLevel.Information);
@@ -103,11 +103,11 @@ try
         UtcNow = clock.GetUtcNow(),
     });
 
-    // Liveness and readiness are deliberately separate.
-    //   live  = "the process is alive, do not restart me"
-    //   ready = "my dependencies are reachable, send me traffic"
-    // Merging them makes an orchestrator kill a healthy process whenever a
-    // database is briefly slow.
+    // Liveness và readiness cố ý được tách riêng.
+    //   live  = "process vẫn còn sống, đừng restart tôi"
+    //   ready = "dependency của tôi với tới được, hãy gửi traffic sang"
+    // Gộp chúng lại sẽ khiến orchestrator giết một process khoẻ mạnh mỗi khi
+    // database chỉ đang chậm tạm thời.
     app.MapHealthChecks("/health/live", new HealthCheckOptions
     {
         Predicate = registration => registration.Tags.Contains(HealthTags.Live),
@@ -120,9 +120,9 @@ try
         ResponseWriter = HealthReportWriter.Write,
     });
 
-    // Same rule as DotEnvLoader: a laptop convenience that must not exist anywhere else. These
-    // endpoints publish events on request, which is a tool in development and an unguarded write path
-    // into the plant's event stream in any other environment.
+    // Cùng quy tắc như DotEnvLoader: một tiện ích cho laptop mà không được phép tồn tại ở bất cứ đâu
+    // khác. Các endpoint này publish event theo yêu cầu, là một công cụ hữu ích khi ở development
+    // nhưng là một đường ghi không được canh gác vào event stream của nhà máy ở mọi môi trường khác.
     if (app.Environment.IsDevelopment())
     {
         app.MapDevBusEndpoints();

@@ -7,8 +7,8 @@ public sealed class IngestionLagTests
     [Fact]
     public void NoSamples_ReportsZerosRatherThanThrowing()
     {
-        // The stats endpoint is polled during a run that may not have stored anything yet, and a
-        // load lab that fails on an empty window fails for the wrong reason.
+        // Stats endpoint được poll trong một run có thể chưa lưu gì, và load lab fail trên window rỗng
+        // sẽ fail vì lý do sai.
         new IngestionLag().Snapshot().ShouldBe(new IngestionLagSnapshot(0, 0, 0, 0, 0));
     }
 
@@ -34,8 +34,8 @@ public sealed class IngestionLagTests
     [Fact]
     public void TheWindowIsRecent_SoAPipelineThatFellBehindCannotHideBehindEarlierGoodBehaviour()
     {
-        // D2 asks whether the rate is SUSTAINED. A cumulative percentile lets ten good minutes bury
-        // the two bad ones at the end, which is precisely the failure the criterion is about.
+        // D2 hỏi rate có SUSTAINED không. Percentile cumulative để mười phút tốt vùi hai phút tệ ở cuối,
+        // chính là failure mà criterion này nhắm đến.
         var lag = new IngestionLag();
 
         for (var index = 0; index < IngestionLag.WindowSize; index++)

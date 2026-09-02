@@ -17,10 +17,10 @@ public sealed class ActivateFactoryModelRevisionTests
 {
     private static readonly DateTimeOffset ShiftAStart = new(2026, 8, 25, 6, 0, 0, TimeSpan.FromHours(7));
 
-    // What each published revision did to the plant, so the assertions below read as the change they
-    // are checking rather than as strings. r2 widened Formation cycler 1 from four charging channels
-    // to eight; r3 took cycler 2 out for a long overhaul, put a fourth stacker on cell line 2, and —
-    // at Leipzig only — added an end-of-line tester.
+    // Mỗi revision đã publish đã thay đổi gì trên plant, để các assertion bên dưới đọc lên đúng như
+    // sự thay đổi đang được kiểm tra chứ không phải như những chuỗi ký tự vô nghĩa. r2 mở rộng
+    // Formation cycler 1 từ bốn charging channel lên tám; r3 đưa cycler 2 đi overhaul dài hạn, thêm
+    // một stacker thứ tư vào cell line 2, và — chỉ riêng ở Leipzig — thêm một end-of-line tester.
     private const string Cycler2 = "NOVAVOLT/NV1/FORMATION/F1/FORM-02";
     private const string Stacker4 = "NOVAVOLT/NV1/ASSEMBLY/L2/STACK-04";
     private const string LeipzigEolTester = "NOVAVOLT/DE1/PACK/P1/EOL-01";
@@ -34,7 +34,7 @@ public sealed class ActivateFactoryModelRevisionTests
             .AddNvmKernel(typeof(ActivateFactoryModelRevisionCommand).Assembly)
             .BuildServiceProvider();
 
-    /// <summary>Walks a plant up through the given revisions and hands back the last event.</summary>
+    /// <summary>Đưa một plant đi qua các revision đã cho và trả về event cuối cùng.</summary>
     private static async Task<FactoryModelRevisionActivated> RollForwardAsync(
         ICommandDispatcher dispatcher,
         string siteId,
@@ -58,8 +58,9 @@ public sealed class ActivateFactoryModelRevisionTests
     [Fact]
     public async Task Activating_APlantForTheFirstTime_ReportsEveryNodeAsAdded()
     {
-        // Nothing was in force, so the whole tree is new. The event has to say so rather than report an
-        // empty change: a consumer starting from nothing needs the full picture from the first message.
+        // Chưa có gì đang in force cả, nên toàn bộ cây là mới. Event phải nói rõ điều đó thay vì báo
+        // cáo một thay đổi rỗng: một consumer bắt đầu từ con số không cần bức tranh đầy đủ ngay từ
+        // message đầu tiên.
         await using var container = BuildContainer(new FakeTimeProvider(ShiftAStart));
         using var scope = container.CreateScope();
         var dispatcher = scope.ServiceProvider.GetRequiredService<ICommandDispatcher>();
@@ -76,8 +77,9 @@ public sealed class ActivateFactoryModelRevisionTests
     [Fact]
     public async Task Activating_OnePlant_LeavesTheOtherAlone()
     {
-        // Multiplant, asserted rather than assumed. A staged rollout means Hai Phong can move while
-        // Leipzig stays put, and a change at one plant must never appear in the other's event.
+        // Multiplant, được assert chứ không phải chỉ giả định. Một staged rollout nghĩa là Hai Phong
+        // có thể chuyển trong khi Leipzig đứng yên, và một thay đổi ở một plant không bao giờ được
+        // xuất hiện trong event của plant kia.
         await using var container = BuildContainer(new FakeTimeProvider(ShiftAStart));
         using var scope = container.CreateScope();
         var dispatcher = scope.ServiceProvider.GetRequiredService<ICommandDispatcher>();
@@ -92,9 +94,9 @@ public sealed class ActivateFactoryModelRevisionTests
     [Fact]
     public async Task Activating_TheSameRevisionAgain_IsRefusedBecauseItMovesNothingForward()
     {
-        // Not the same thing as a duplicate. A duplicate carries the same idempotency key and is
-        // replayed silently; this is a different intention that happens to be pointless, and emitting a
-        // second event would make every consumer rebuild its cache for a change that did not happen.
+        // Không giống một duplicate. Một duplicate mang cùng idempotency key và được replay âm thầm;
+        // đây là một ý định khác nhưng vô nghĩa, và việc phát ra một event thứ hai sẽ khiến mọi
+        // consumer phải rebuild cache của nó cho một thay đổi chưa từng xảy ra.
         await using var container = BuildContainer(new FakeTimeProvider(ShiftAStart));
         using var scope = container.CreateScope();
         var dispatcher = scope.ServiceProvider.GetRequiredService<ICommandDispatcher>();
@@ -114,10 +116,10 @@ public sealed class ActivateFactoryModelRevisionTests
     [Fact]
     public async Task Activating_ARevisionTheCatalogDoesNotHold_IsRefusedAndNamesWhatExists()
     {
-        // The revision is a guard, not a selector: the caller says which revision it read. Refusing an
-        // unpublished number is how a decommissioned work cell is kept off the shop floor — and the
-        // refusal names the shelf, because "revision 99 does not exist" leaves the operator guessing
-        // whether they mistyped or the rollout was never published.
+        // Revision là một guard, không phải một selector: caller nói rõ nó đã đọc revision nào. Từ
+        // chối một con số chưa publish là cách giữ một work cell đã ngừng hoạt động khỏi shop floor —
+        // và lời từ chối nêu tên cái shelf, vì "revision 99 does not exist" sẽ khiến operator phải
+        // đoán xem họ gõ nhầm hay rollout chưa từng được publish.
         await using var container = BuildContainer(new FakeTimeProvider(ShiftAStart));
         using var scope = container.CreateScope();
         var dispatcher = scope.ServiceProvider.GetRequiredService<ICommandDispatcher>();
@@ -151,8 +153,9 @@ public sealed class ActivateFactoryModelRevisionTests
         int revision,
         string reason)
     {
-        // A shape problem, so it fails as a validation error rather than a business refusal. The caller
-        // can tell "fix your request" from "the world is not in the state you assumed".
+        // Một vấn đề về hình dạng, nên nó fail như một validation error chứ không phải một business
+        // refusal. Caller có thể phân biệt "sửa lại request của bạn" với "thế giới không ở trạng thái
+        // bạn tưởng".
         await using var container = BuildContainer(new FakeTimeProvider(ShiftAStart));
         using var scope = container.CreateScope();
         var dispatcher = scope.ServiceProvider.GetRequiredService<ICommandDispatcher>();
@@ -170,9 +173,9 @@ public sealed class ActivateFactoryModelRevisionTests
     [Fact]
     public async Task SameActivationTwice_RunsOnceAndReplaysTheEvent()
     {
-        // The full loop the milestone is really about: command, three behaviours, handler, event — and
-        // a resend that changes nothing. AGENTS.md K7 exercised through a real handler rather than a
-        // probe.
+        // Vòng lặp đầy đủ mà milestone này thực sự nói tới: command, ba behaviour, handler, event —
+        // và một lần gửi lại không thay đổi gì. AGENTS.md K7 được kiểm chứng qua một handler thật
+        // thay vì một probe.
         await using var container = BuildContainer(new FakeTimeProvider(ShiftAStart));
         using var scope = container.CreateScope();
         var dispatcher = scope.ServiceProvider.GetRequiredService<ICommandDispatcher>();
@@ -188,9 +191,9 @@ public sealed class ActivateFactoryModelRevisionTests
     [Fact]
     public async Task EventId_EqualsTheCommandsIdempotencyKey()
     {
-        // The join between the two deduplication layers. Ingestion drops repeated device messages by
-        // this value and the pipeline drops repeated commands by it; if the event carried a different
-        // id, each layer would be keyed on something the other has never seen.
+        // Điểm nối giữa hai lớp deduplication. Ingestion loại bỏ các device message lặp lại dựa trên
+        // giá trị này và pipeline loại bỏ các command lặp lại cũng dựa trên nó; nếu event mang một id
+        // khác, mỗi lớp sẽ được keyed theo một thứ mà lớp kia chưa từng thấy.
         await using var container = BuildContainer(new FakeTimeProvider(ShiftAStart));
         using var scope = container.CreateScope();
         var dispatcher = scope.ServiceProvider.GetRequiredService<ICommandDispatcher>();
@@ -218,9 +221,10 @@ public sealed class ActivateFactoryModelRevisionTests
     [Fact]
     public void Event_IsVersionedFromV1AndCarriesNoBareDateTime()
     {
-        // AGENTS.md K6 and K2, checked on the first real event rather than left for the analyser that
-        // arrives later in the milestone. An event without a version cannot be upcast in 2036, and a
-        // DateTime without an offset is ambiguous for one hour every autumn at DE1.
+        // AGENTS.md K6 và K2, được kiểm tra ngay trên event thật đầu tiên thay vì để dành cho
+        // analyser xuất hiện sau này trong milestone. Một event không có version thì không thể
+        // upcast vào năm 2036, và một DateTime không có offset thì mập mờ trong một giờ mỗi mùa thu
+        // ở DE1.
         var eventType = typeof(FactoryModelRevisionActivated);
 
         eventType.GetCustomAttribute<EventVersionAttribute>()!.Version.ShouldBe(1);
@@ -240,16 +244,16 @@ public sealed class ActivateFactoryModelRevisionTests
             .ShouldNotBe(ActivateFactoryModelRevisionCommand.KeyFor("NV1", 2));
     }
 
-    // ── Moving a plant from one revision to the next ────────────────────────────────────────────
-    // Everything above activates revision 1 on a plant running nothing, where every path is new and
-    // nothing is ever removed. That is the easy half, and until now it was the only half.
+    // ── Chuyển một plant từ revision này sang revision kế tiếp ──────────────────────────────────
+    // Mọi thứ ở trên đều activate revision 1 trên một plant đang không chạy gì cả, nơi mọi path đều
+    // mới và không gì bị gỡ bỏ. Đó là nửa dễ, và cho tới giờ đó là nửa duy nhất.
 
     [Fact]
     public async Task Activating_RevisionTwoWhileOnOne_ReportsTheNewChannelsAndRemovesNothing()
     {
-        // Formation cycler 1 went from four charging channels to eight. Widening capacity takes
-        // nothing away, so the removed list has to stay empty: a diff that reported churn on a pure
-        // addition would send every consumer rebuilding a cache for equipment that never moved.
+        // Formation cycler 1 đi từ bốn charging channel lên tám. Mở rộng năng lực không lấy đi gì cả,
+        // nên danh sách removed phải giữ rỗng: một diff báo cáo có biến động trên một phép cộng thuần
+        // túy sẽ khiến mọi consumer phải rebuild cache cho thiết bị chưa từng dịch chuyển.
         await using var container = BuildContainer(new FakeTimeProvider(ShiftAStart));
         using var scope = container.CreateScope();
         var dispatcher = scope.ServiceProvider.GetRequiredService<ICommandDispatcher>();
@@ -269,9 +273,9 @@ public sealed class ActivateFactoryModelRevisionTests
     [Fact]
     public async Task Activating_RevisionThreeWhileOnTwo_ReportsBothWhatArrivedAndWhatLeft()
     {
-        // The case the plan asked for at C08 and the code could not perform. Cycler 2 went out for a
-        // long overhaul and a fourth stacker went in, so exactly one path leaves and one arrives —
-        // and the one that leaves is the half of the contract that had never run once.
+        // Trường hợp mà plan đã yêu cầu ở C08 nhưng code chưa làm được. Cycler 2 đi overhaul dài hạn
+        // và một stacker thứ tư được lắp vào, nên đúng một path rời đi và một path xuất hiện — và
+        // path rời đi chính là nửa của hợp đồng chưa từng chạy lần nào.
         await using var container = BuildContainer(new FakeTimeProvider(ShiftAStart));
         using var scope = container.CreateScope();
         var dispatcher = scope.ServiceProvider.GetRequiredService<ICommandDispatcher>();
@@ -294,13 +298,13 @@ public sealed class ActivateFactoryModelRevisionTests
     [Fact]
     public async Task Activating_ARevisionBehindTheOneInForce_IsRefused()
     {
-        // Rolling back is not an activation. A plant that has told the world it moved to 3 cannot
-        // quietly return to 2: the stream would then carry two contradictory claims and no consumer
-        // could work out which tree is on the floor.
+        // Rollback không phải một activation. Một plant đã báo cho cả thế giới biết rằng nó đã chuyển
+        // sang 3 thì không thể lặng lẽ quay lại 2: stream khi đó sẽ mang hai tuyên bố mâu thuẫn nhau
+        // và không consumer nào có thể xác định được cây nào đang thực sự ở trên sàn.
         //
-        // A fresh idempotency key on purpose. Reusing the key from the earlier step would be replayed
-        // as a duplicate and hand back the old event, which is correct behaviour and would test
-        // nothing about the refusal.
+        // Cố tình dùng một idempotency key mới. Dùng lại key từ bước trước sẽ bị replay như một
+        // duplicate và trả về event cũ, đó là hành vi đúng nhưng sẽ chẳng kiểm chứng được gì về lời
+        // từ chối.
         await using var container = BuildContainer(new FakeTimeProvider(ShiftAStart));
         using var scope = container.CreateScope();
         var dispatcher = scope.ServiceProvider.GetRequiredService<ICommandDispatcher>();
@@ -320,9 +324,9 @@ public sealed class ActivateFactoryModelRevisionTests
     [Fact]
     public async Task TwoPlants_SitOnDifferentRevisions_WhichIsWhatAStagedRolloutIs()
     {
-        // Hai Phong on 3 while Leipzig is still on 1. Not drift waiting to be corrected — a rollout
-        // reaches one plant at a time, and a model that could not express this would force both plants
-        // to move together, which is the one thing a factory never does.
+        // Hai Phong ở 3 trong khi Leipzig vẫn ở 1. Không phải drift cần được sửa — một rollout đến
+        // từng plant một, và một model không thể diễn đạt điều này sẽ ép cả hai plant phải chuyển
+        // cùng lúc, đó chính là điều một nhà máy không bao giờ làm.
         await using var container = BuildContainer(new FakeTimeProvider(ShiftAStart));
         using var scope = container.CreateScope();
         var dispatcher = scope.ServiceProvider.GetRequiredService<ICommandDispatcher>();
@@ -338,10 +342,10 @@ public sealed class ActivateFactoryModelRevisionTests
     [Fact]
     public async Task Activating_ASkippedRevision_DiffsAgainstWhatIsInForce_NotTheDocumentBeforeIt()
     {
-        // Leipzig never took revision 2 — nothing in it concerned Leipzig. Going straight from 1 to 3
-        // has to diff against what the plant is actually running, not against whichever document
-        // happens to sit next to 3 on the shelf. Getting this wrong would report the Hai Phong
-        // channels as arriving at Leipzig.
+        // Leipzig chưa từng nhận revision 2 — không có gì trong đó liên quan tới Leipzig. Đi thẳng từ
+        // 1 lên 3 phải diff dựa trên những gì plant thực sự đang chạy, không phải dựa trên bất kỳ
+        // document nào tình cờ nằm cạnh 3 trên shelf. Sai chỗ này sẽ báo cáo các channel của Hai
+        // Phong như thể chúng vừa xuất hiện ở Leipzig.
         await using var container = BuildContainer(new FakeTimeProvider(ShiftAStart));
         using var scope = container.CreateScope();
         var dispatcher = scope.ServiceProvider.GetRequiredService<ICommandDispatcher>();
@@ -356,9 +360,9 @@ public sealed class ActivateFactoryModelRevisionTests
     [Fact]
     public async Task TheSameRollout_RunTwice_ProducesTheSameEventBothTimes()
     {
-        // Deterministic, because these events end up in an audit trail and in a golden file. A payload
-        // whose order came from hash iteration would differ between two runs of the same change, and
-        // nothing would be comparable to anything ever again.
+        // Deterministic, vì các event này cuối cùng sẽ nằm trong một audit trail và trong một golden
+        // file. Một payload có thứ tự đến từ việc lặp qua hash sẽ khác nhau giữa hai lần chạy của
+        // cùng một thay đổi, và sẽ chẳng còn gì có thể so sánh được với nhau nữa.
         var first = await RunRolloutAsync();
         var second = await RunRolloutAsync();
 
@@ -384,10 +388,11 @@ public sealed class ActivateFactoryModelRevisionTests
     [Fact]
     public async Task ActiveRevision_IsLostOnRestart_WhileTheCatalogIsNot()
     {
-        // The boundary M1 stops at, asserted rather than described in a comment nobody re-checks. The
-        // documents are files, so a restart reads all three back; which revision each plant had in
-        // force lived in RAM and is gone. A plant that comes back believing it runs nothing will
-        // report its whole tree as added on the next activation. Closing that needs a database (M5).
+        // Ranh giới mà M1 dừng lại, được assert thay vì chỉ mô tả trong một comment không ai kiểm tra
+        // lại. Các document là file, nên một lần restart sẽ đọc lại được cả ba; nhưng plant nào đang
+        // ở revision nào thì sống trong RAM và đã mất. Một plant khởi động lại và tin rằng nó không
+        // chạy gì cả sẽ báo cáo toàn bộ cây của nó như added ở lần activation kế tiếp. Giải quyết
+        // việc này cần một database (M5).
         await using (var beforeRestart = BuildContainer(new FakeTimeProvider(ShiftAStart)))
         {
             using var scope = beforeRestart.CreateScope();
@@ -411,13 +416,13 @@ public sealed class ActivateFactoryModelRevisionTests
     [Fact]
     public async Task Activating_WhenThePlantMovedUnderneath_IsRefusedRatherThanOverwriting()
     {
-        // The compare-and-swap losing, seen from the handler rather than from the store. A scheduled
-        // rollout and an engineer at the console read the same current revision; whichever writes
-        // second has to be told it lost, because "the plant is on revision 3" is one fact and a work
-        // cell is either on the floor or it is not.
+        // Compare-and-swap thua cuộc, nhìn từ phía handler thay vì từ phía store. Một scheduled
+        // rollout và một engineer ở console cùng đọc một revision hiện tại như nhau; ai ghi sau thì
+        // phải được báo là đã thua, vì "the plant is on revision 3" là một fact duy nhất và một work
+        // cell hoặc đang trên sàn hoặc không.
         //
-        // Forced with a stand-in rather than a real race, so this branch runs on every build instead
-        // of on the builds where the scheduler happens to interleave the right way.
+        // Được ép xảy ra bằng một stand-in thay vì một race thật, để nhánh này chạy trên mọi build
+        // thay vì chỉ trên những build mà scheduler tình cờ interleave đúng cách.
         await using var container = new ServiceCollection()
             .AddSingleton<TimeProvider>(new FakeTimeProvider(ShiftAStart))
             .AddSingleton<IActiveFactoryModel>(new AlwaysLosesTheRace())
@@ -433,7 +438,7 @@ public sealed class ActivateFactoryModelRevisionTests
         thrown.Message.ShouldContain("moved to another revision");
     }
 
-    /// <summary>A plant that somebody else always moves first.</summary>
+    /// <summary>Một plant mà lúc nào cũng có người khác dịch chuyển trước.</summary>
     private sealed class AlwaysLosesTheRace : IActiveFactoryModel
     {
         public ActiveFactoryModelRevision? Current(string siteId) => null;

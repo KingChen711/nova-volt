@@ -15,9 +15,9 @@ public sealed class NvmTopologyTests
     [Fact]
     public void ExchangeFor_IsNamedAfterTheBoundedContextNotTheMessageType()
     {
-        // One exchange per context, not per event. A context has an owner and a lifetime; a message
-        // type does not, and adding a fourth event to Traceability should not add a fourth exchange
-        // for every consumer to discover.
+        // Một exchange cho mỗi context, không phải mỗi event. Một context có chủ sở hữu và có vòng
+        // đời; một message type thì không, và thêm một event thứ tư vào Traceability không nên tạo
+        // thêm một exchange thứ tư để mọi consumer phải tự khám phá.
         NvmTopology.ExchangeFor(RevisionActivated).ShouldBe("nvm.factory-model");
         NvmTopology.ExchangeFor("traceability").ShouldBe("nvm.traceability");
     }
@@ -25,17 +25,18 @@ public sealed class NvmTopologyTests
     [Fact]
     public void EventTypeName_IsReadFromTheAttributesRatherThanTheClassName()
     {
-        // The wire name is stated in [EventContract], not derived from FactoryModelRevisionActivated.
-        // Deriving it would turn an IDE rename into a topology change that nothing warns about.
+        // Tên trên wire được khai báo trong [EventContract], không được suy ra từ
+        // FactoryModelRevisionActivated. Nếu suy ra thì một lần rename bằng IDE sẽ biến thành một
+        // thay đổi topology mà không gì cảnh báo cả.
         RevisionActivated.Value.ShouldBe("com.novavolt.factory-model.revision-activated.v1");
     }
 
     [Fact]
     public void BindingForSite_SubscribesToOnePlantAndNothingElse()
     {
-        // Multiplant falls out of the routing key rather than out of a filter in every consumer: a
-        // service bound here never receives a Leipzig message, so it cannot leak one by forgetting to
-        // check (AGENTS.md K3).
+        // Multiplant nằm ở routing key chứ không phải ở một filter trong từng consumer: một service
+        // bind ở đây không bao giờ nhận được message từ Leipzig, nên nó không thể để lọt một message
+        // vì quên kiểm tra (AGENTS.md K3).
         NvmTopology.BindingForSite("NV1").ShouldBe("nvm.NV1.#");
     }
 
@@ -48,9 +49,8 @@ public sealed class NvmTopologyTests
     [Fact]
     public void BindingForEventAtEverySite_UsesTheSingleSegmentWildcard()
     {
-        // '*' matches exactly one segment, '#' matches the rest. Using '#' for the site would also
-        // match every other event in the system, delivering all of them to a consumer that asked for
-        // one.
+        // '*' khớp đúng một segment, '#' khớp phần còn lại. Dùng '#' cho site cũng sẽ khớp mọi event
+        // khác trong hệ thống, giao tất cả chúng cho một consumer chỉ yêu cầu một event.
         NvmTopology.BindingForEventAtEverySite(RevisionActivated)
             .ShouldBe("nvm.*.factory-model.revision-activated.v1");
     }
@@ -58,8 +58,8 @@ public sealed class NvmTopologyTests
     [Fact]
     public void BindingForEvent_IsExactlyTheRoutingKeyThePublisherUses()
     {
-        // The narrowest binding is the key itself. Asserting they are the same string is the check
-        // that a consumer's subscription and a publisher's address cannot drift apart.
+        // Binding hẹp nhất chính là bản thân routing key. Assert rằng chúng là cùng một string chính
+        // là phép kiểm tra rằng subscription của consumer và địa chỉ của publisher không thể lệch nhau.
         NvmTopology.BindingForEvent("NV1", RevisionActivated)
             .ShouldBe(RoutingKey.Create("NV1", RevisionActivated).Value);
     }
@@ -70,9 +70,9 @@ public sealed class NvmTopologyTests
     [InlineData("NV-1")]
     public void Binding_WithASiteThatIsNotUpperCase_IsRefused(string siteId)
     {
-        // The trap the whole convention exists to close. AMQP compares routing keys byte for byte, so
-        // a publisher on nvm.NV1.* and a consumer bound to nvm.nv1.# never meet — and the broker
-        // reports nothing at all. Refusing here is the only moment anybody finds out.
+        // Cái bẫy mà cả quy ước này tồn tại để chặn lại. AMQP so sánh routing key byte theo byte, nên
+        // một publisher trên nvm.NV1.* và một consumer bind vào nvm.nv1.# không bao giờ gặp nhau — và
+        // broker không báo cáo gì cả. Từ chối ngay tại đây là thời điểm duy nhất ai đó phát hiện ra.
         Should.Throw<FormatException>(() => NvmTopology.BindingForSite(siteId));
     }
 
@@ -85,9 +85,9 @@ public sealed class NvmTopologyTests
     [Fact]
     public void EndpointNameFormatter_RefusesAConsumerThatHasNotDeclaredItsQueue()
     {
-        // MassTransit would otherwise name the queue after the class. The rename that follows is
-        // correct, the build stays green, and the service quietly starts reading from a new empty
-        // queue while the old one holds messages nobody will process.
+        // Nếu không, MassTransit sẽ đặt tên queue theo tên class. Lần rename tiếp theo là đúng đắn,
+        // build vẫn xanh, và service âm thầm bắt đầu đọc từ một queue rỗng mới trong khi queue cũ vẫn
+        // giữ các message không ai xử lý.
         var thrown = Should.Throw<InvalidOperationException>(
             () => NvmEndpointNameFormatter.Instance.Consumer<UndeclaredProbe>());
 
@@ -98,8 +98,8 @@ public sealed class NvmTopologyTests
     [Fact]
     public void BusOptions_WithoutCredentials_AreRefusedWhileTheContainerIsBuilt()
     {
-        // Fail at startup as one clear line, rather than two hours later as a consumer that never
-        // received anything and a broker log nobody was watching.
+        // Fail ngay lúc startup thành một dòng rõ ràng, thay vì hai giờ sau đó dưới dạng một consumer
+        // chưa từng nhận được gì và một broker log không ai theo dõi.
         var options = new NvmBusOptions { Username = "nvm", Password = "" };
 
         var thrown = Should.Throw<InvalidOperationException>(options.Validate);
@@ -110,9 +110,9 @@ public sealed class NvmTopologyTests
     [Fact]
     public void EveryDeclaredEvent_HasBothAttributesSoItsTopologyCanBeBuilt()
     {
-        // The bus builds topology by scanning for [EventContract]. An event that carries one attribute
-        // and not the other would be skipped or would throw at startup, so the whole set is checked
-        // here rather than one event at a time.
+        // Bus xây dựng topology bằng cách quét tìm [EventContract]. Một event chỉ mang một attribute
+        // mà thiếu attribute kia sẽ bị bỏ qua hoặc ném exception lúc startup, nên toàn bộ tập hợp
+        // được kiểm tra ở đây thay vì kiểm tra từng event một.
         var events = typeof(IDomainEvent).Assembly.GetTypes()
             .Where(type => type is { IsAbstract: false, IsInterface: false } && type.IsAssignableTo(typeof(IDomainEvent)))
             .ToArray();

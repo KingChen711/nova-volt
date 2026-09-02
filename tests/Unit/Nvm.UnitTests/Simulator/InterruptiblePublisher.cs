@@ -4,12 +4,13 @@ using Nvm.Sparkplug;
 
 namespace Nvm.UnitTests.Simulator;
 
-/// <summary>A publisher a test can stand inside, in the middle of a batch.</summary>
+/// <summary>Một publisher mà một test có thể đứng bên trong, ngay giữa một batch.</summary>
 /// <remarks>
-/// The batch boundary is invisible from outside the worker, and both halves of J7 live exactly there:
-/// a graceful stop must not drop what is left of a batch the channels have already been read for, and
-/// a link that dies mid-batch must not let the readings it lost disappear from the reconciliation.
-/// Holding one publish open is how a test gets to stand at that boundary instead of racing for it.
+/// Ranh giới của batch là vô hình từ bên ngoài worker, và cả hai nửa của J7 sống đúng ngay tại đó:
+/// một graceful stop không được phép làm rớt phần còn lại của một batch mà các channel đã đọc xong,
+/// và một đường truyền chết giữa batch không được phép để những reading bị mất biến mất khỏi việc
+/// đối soát. Giữ một publish mở là cách một test được đứng đúng tại ranh giới đó thay vì phải chạy
+/// đua để bắt kịp nó.
 /// </remarks>
 internal sealed class InterruptiblePublisher : ISparkplugPublisher
 {
@@ -20,16 +21,16 @@ internal sealed class InterruptiblePublisher : ISparkplugPublisher
     private bool _caughtOne;
     private int _failAfter = int.MaxValue;
 
-    /// <summary>What was published, in order.</summary>
+    /// <summary>Những gì đã được publish, theo đúng thứ tự.</summary>
     public ConcurrentQueue<SparkplugMessage> Messages { get; } = new();
 
-    /// <summary>How many messages got through.</summary>
+    /// <summary>Có bao nhiêu message đã đi qua được.</summary>
     public int Count => Messages.Count;
 
-    /// <summary>Completes once a publish has been caught and is waiting to be let go.</summary>
+    /// <summary>Hoàn tất ngay khi một publish đã bị giữ lại và đang chờ được thả ra.</summary>
     public Task Caught => _caught.Task;
 
-    /// <summary>The handler the worker installed.</summary>
+    /// <summary>Handler mà worker đã cài đặt.</summary>
     public Func<CancellationToken, Task>? RebirthRequested { get; set; }
 
     /// <inheritdoc />
@@ -38,24 +39,24 @@ internal sealed class InterruptiblePublisher : ISparkplugPublisher
     /// <inheritdoc />
     public Func<CancellationToken, Task>? SessionRestored { get; set; }
 
-    /// <summary>Hold the next publish open until <see cref="Release"/>.</summary>
+    /// <summary>Giữ publish kế tiếp ở trạng thái mở cho tới <see cref="Release"/>.</summary>
     public void CatchNext() => _catching = true;
 
-    /// <summary>Let the caught publish finish.</summary>
+    /// <summary>Cho publish đã bị giữ lại hoàn tất.</summary>
     public void Release() => _released.TrySetResult();
 
-    /// <summary>Refuse every publish once this many messages have got through.</summary>
+    /// <summary>Từ chối mọi publish một khi đã có đủ số message này đi qua.</summary>
     /// <remarks>
-    /// A dead link rather than a dropout: the worker sees <see cref="SparkplugPublishException"/>, the
-    /// same thing the real publisher raises when the session is gone, and the rest of the batch it
-    /// composed never goes anywhere.
+    /// Một đường truyền chết chứ không phải một dropout: worker thấy <see cref="SparkplugPublishException"/>,
+    /// đúng thứ mà publisher thật ném ra khi session đã mất, và phần còn lại của batch nó đã soạn sẽ
+    /// không bao giờ đi tới đâu cả.
     /// </remarks>
     public void FailAfter(int published) => _failAfter = published;
 
     /// <inheritdoc />
     public Task ConnectAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
-    /// <summary>Always ready. Nothing here can lose a connection it never opened.</summary>
+    /// <summary>Luôn sẵn sàng. Không có gì ở đây có thể mất một kết nối mà nó chưa từng mở.</summary>
     public Task WaitForSessionAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
     /// <inheritdoc />

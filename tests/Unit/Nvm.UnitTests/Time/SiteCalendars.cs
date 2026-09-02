@@ -3,11 +3,11 @@ using Nvm.Time;
 
 namespace Nvm.UnitTests.Time;
 
-/// <summary>The two plants of the seed model, built the way the calendar tests need them.</summary>
+/// <summary>Hai nhà máy trong seed model, dựng theo cách calendar test cần.</summary>
 /// <remarks>
-/// The zone ids are the ones in <c>deploy/seed/factory-model.r3.json</c>, spelled the same way. C04
-/// replaces this stand-in with the adapter that reads the factory model itself; until then these
-/// tests are about the calendar, not about where a plant's zone is stored.
+/// Zone id là các id trong <c>deploy/seed/factory-model.r3.json</c>, giữ nguyên cách viết. C04 thay
+/// stand-in này bằng adapter đọc chính factory model; đến khi đó, test này nói về calendar, không nói
+/// về nơi lưu zone của nhà máy.
 /// </remarks>
 internal static class SiteCalendars
 {
@@ -22,10 +22,10 @@ internal static class SiteCalendars
                 new SiteCalendar(Leipzig, SiteTimeZone.Of("Europe/Berlin"), ShiftSchedule.Default)),
             clock ?? new FakeTimeProvider(DateTimeOffset.UnixEpoch));
 
-    /// <summary>An instant, written as a reading of one plant's clock.</summary>
+    /// <summary>Một instant, viết theo reading từ clock của một nhà máy.</summary>
     /// <remarks>
-    /// Goes through the calendar's own boundary resolution so that a test can say "23:47 local on the
-    /// 25th" without having to know what the offset was that night.
+    /// Đi qua boundary resolution của chính calendar để test có thể nói "23:47 local ngày 25" mà không
+    /// cần biết offset đêm đó là bao nhiêu.
     /// </remarks>
     internal static DateTimeOffset LocalAt(string siteId, int year, int month, int day, int hour, int minute)
     {

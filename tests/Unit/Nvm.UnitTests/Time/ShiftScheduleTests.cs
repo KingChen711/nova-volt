@@ -7,9 +7,9 @@ public sealed class ShiftScheduleTests
     [Fact]
     public void Default_CoversExactlyTwentyFourHours()
     {
-        // The property the whole type exists for. A table covering 23 hours would leave one hour of
-        // every day belonging to no shift, and the readings taken in it would be filed under nothing
-        // at all — a gap nobody notices until a monthly total comes up short.
+        // Tính chất mà cả type này tồn tại để đảm bảo. Một bảng chỉ phủ 23 giờ sẽ để một giờ mỗi ngày
+        // không thuộc về shift nào, và các reading đo được trong giờ đó sẽ không được ghi nhận vào
+        // đâu cả — một khoảng trống không ai nhận ra cho tới khi tổng số cuối tháng bị thiếu.
         var covered = ShiftSchedule.Default.Definitions
             .Aggregate(TimeSpan.Zero, (total, definition) => total + definition.NominalLength);
 
@@ -32,9 +32,10 @@ public sealed class ShiftScheduleTests
     [Fact]
     public void Default_ShiftCIsTheOnlyOneThatCrossesMidnight()
     {
-        // Every awkward case in this assembly comes from this single fact, so it is worth an
-        // assertion rather than a comment: if a future table made two shifts wrap, the production day
-        // rule ("the date shift A began on") would stop being enough to name a cycle.
+        // Mọi trường hợp rắc rối trong assembly này đều bắt nguồn từ đúng một sự thật này, nên nó
+        // đáng được viết thành một assertion thay vì chỉ một comment: nếu một bảng trong tương lai
+        // khiến hai shift cùng wrap qua nửa đêm, quy tắc production day ("ngày mà shift A bắt đầu")
+        // sẽ không còn đủ để đặt tên cho một chu kỳ nữa.
         var wrapping = ShiftSchedule.Default.Definitions
             .Where(definition => definition.LocalStart.Add(definition.NominalLength) <= definition.LocalStart)
             .Select(definition => definition.Shift)
@@ -60,9 +61,9 @@ public sealed class ShiftScheduleTests
     [Fact]
     public void ShiftAt_IsHalfOpenAtEveryBoundary()
     {
-        // 14:00 belongs to B, not to both A and B. One tick earlier still belongs to A. Getting this
-        // wrong double-counts one reading per shift change per machine, which is small enough to look
-        // like noise and large enough to move a yield figure.
+        // 14:00 thuộc về B, không thuộc cả A lẫn B. Sớm hơn một tick vẫn thuộc về A. Làm sai chỗ này
+        // sẽ đếm trùng một reading cho mỗi lần đổi shift trên mỗi máy, đủ nhỏ để trông giống nhiễu
+        // nhưng đủ lớn để làm lệch một con số yield.
         var schedule = ShiftSchedule.Default;
         var boundary = new TimeOnly(14, 0);
 
@@ -83,7 +84,7 @@ public sealed class ShiftScheduleTests
     [Fact]
     public void Create_RefusesATableWithAGap()
     {
-        // B starts an hour after A ends. The hour from 13:00 to 14:00 belongs to nobody.
+        // B bắt đầu một giờ sau khi A kết thúc. Giờ từ 13:00 tới 14:00 không thuộc về ai cả.
         var gapped = new[]
         {
             new ShiftDefinition(Shift.A, new TimeOnly(6, 0), TimeSpan.FromHours(7)),
@@ -97,8 +98,8 @@ public sealed class ShiftScheduleTests
     [Fact]
     public void Create_RefusesATableThatOverlapsItself()
     {
-        // A runs nine hours and B still starts at 14:00, so 14:00–15:00 belongs to two shifts. The
-        // total is 25 hours, and that is the check that catches it.
+        // A chạy chín giờ mà B vẫn bắt đầu lúc 14:00, nên 14:00–15:00 thuộc về hai shift. Tổng là 25
+        // giờ, và đó chính là phép kiểm tra bắt được lỗi này.
         var overlapping = new[]
         {
             new ShiftDefinition(Shift.A, new TimeOnly(6, 0), TimeSpan.FromHours(9)),
@@ -130,9 +131,9 @@ public sealed class ShiftScheduleTests
     [Fact]
     public void Create_AcceptsATableThatIsNotThreeEightHourShifts()
     {
-        // M10 brings a site with a different table, and the type has to be able to hold it. Two
-        // twelve-hour shifts starting at 07:00 — a real pattern, and one that moves the production
-        // day boundary with it.
+        // M10 mang tới một site với một bảng khác, và type này phải có khả năng chứa được nó. Hai
+        // shift mười hai giờ bắt đầu lúc 07:00 — một pattern có thật, và nó kéo theo cả boundary của
+        // production day di chuyển theo.
         var twelves = ShiftSchedule.Create(
         [
             new ShiftDefinition(Shift.A, new TimeOnly(7, 0), TimeSpan.FromHours(12)),

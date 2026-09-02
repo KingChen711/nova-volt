@@ -11,12 +11,12 @@ using Nvm.Sparkplug.Topics;
 
 namespace Nvm.UnitTests.Simulator;
 
-/// <summary>The three ways this plant misbehaves on purpose, and what each one must not change.</summary>
+/// <summary>Ba cách mà nhà máy này cố ý gây lỗi, và mỗi cách không được phép làm thay đổi điều gì.</summary>
 /// <remarks>
-/// M2 exists to survive equipment that sends badly. A simulator that only sends well proves that the
-/// happy path works, which nobody doubted — so these faults are the input the whole milestone is
-/// measured against, and getting one of them subtly wrong makes every later number agree with itself
-/// while measuring nothing.
+/// M2 tồn tại để sống sót qua thiết bị gửi dữ liệu tệ. Một simulator chỉ gửi tốt sẽ chứng minh rằng
+/// happy path hoạt động, điều mà chẳng ai nghi ngờ cả — nên các fault này chính là input mà toàn bộ
+/// milestone được đo lường dựa vào, và làm sai một cách tinh vi bất kỳ cái nào trong số đó sẽ khiến
+/// mọi con số về sau tự khớp với nhau trong khi chẳng đo được gì cả.
 /// </remarks>
 public sealed class SimulatorFaultTests
 {
@@ -38,19 +38,20 @@ public sealed class SimulatorFaultTests
         var messages = LogicalMessages(10_000);
         var run = await PublishAllAsync(messages, new SimulatorFaults { DuplicateRate = 0.10 });
 
-        // Roughly a tenth, not exactly: the fault rolls dice, and a rate that came out exactly right
-        // every time would be a schedule rather than a fault.
+        // Khoảng một phần mười, không phải chính xác: fault này tung xúc xắc, và một tỷ lệ ra đúng
+        // tuyệt đối mỗi lần sẽ là một lịch trình chứ không phải một fault.
         run.Publisher.DuplicateMessages.ShouldBeInRange(900, 1_100);
 
-        // The logical side is untouched. Ten thousand measurements were offered and ten thousand were
-        // offered — the extra traffic is the link repeating itself, not the plant measuring more.
+        // Phía logic không bị chạm tới. Mười nghìn measurement đã được đưa ra và mười nghìn đã được
+        // đưa ra — traffic thừa ra là do đường truyền tự lặp lại chính nó, không phải nhà máy đo
+        // nhiều hơn.
         run.Recorder.Count.ShouldBe(10_000 + (int)run.Publisher.DuplicateMessages);
         run.Publisher.PublishedMessages.ShouldBe(run.Recorder.Count);
 
-        // Every extra message is the one before it, byte for byte. This is the assertion that decides
-        // whether the fault is a duplicate at all: a message built afresh from the same readings would
-        // carry a new seq and a new device_timestamp, deduplication would be right to keep it, and D1
-        // would come out even having deduplicated nothing (R-M2-1).
+        // Mỗi message thừa ra chính là message trước nó, từng byte một. Đây là assertion quyết định
+        // liệu fault này có thực sự là một bản trùng lặp hay không: một message được dựng mới từ cùng
+        // các reading sẽ mang một seq mới và một device_timestamp mới, deduplication khi đó đúng khi
+        // giữ lại nó, và D1 sẽ ra kết quả khớp trong khi thực ra chẳng deduplicate được gì cả (R-M2-1).
         var repeats = run.Recorder.Messages
             .Zip(run.Recorder.Messages.Skip(1))
             .Count(pair => pair.First == pair.Second);
@@ -82,18 +83,18 @@ public sealed class SimulatorFaultTests
         var path = Channels.Single(channel => channel.Code == original.Topic.DeviceCode);
         var table = aliases[original.Topic.DeviceCode!];
 
-        // Decoded independently, the way ingestion will decode them — one now and one after a gateway
-        // has held it for three hours. Same identity both times is what makes ON CONFLICT DO NOTHING
-        // at C12 collapse them into a single row.
+        // Được decode độc lập, đúng cách ingestion sẽ decode chúng — một lần ngay bây giờ và một lần
+        // sau khi gateway đã giữ nó lại suốt ba giờ. Cùng một identity ở cả hai lần chính là điều
+        // khiến ON CONFLICT DO NOTHING ở C12 gộp chúng thành một dòng duy nhất.
         var first = Identities(SparkplugPayload.DecodeData(original.Payload.AsSpan(), table), path);
         var second = Identities(SparkplugPayload.DecodeData(again.Payload.AsSpan(), table), path);
 
         first.ShouldNotBeEmpty();
         second.ShouldBe(first);
 
-        // And that is not vacuous: the same signal on the same channel read one second later gets a
-        // different identity. Equality above really says "the same measurement", not "the key ignores
-        // time" — which is the mistake lab C13.2 exists to price.
+        // Và điều đó không phải là vô nghĩa: cùng một tín hiệu trên cùng một channel được đọc muộn hơn
+        // một giây sẽ nhận một identity khác. Phép bằng ở trên thực sự nói lên "cùng một measurement",
+        // không phải "key bỏ qua thời gian" — đó là sai lầm mà lab C13.2 tồn tại để định giá.
         var readings = SparkplugPayload.DecodeData(original.Payload.AsSpan(), table);
         var later = readings[0] with { DeviceTimestamp = readings[0].DeviceTimestamp.AddSeconds(1) };
 
@@ -111,9 +112,9 @@ public sealed class SimulatorFaultTests
 
         drifted.DriftedDeviceCount.ShouldBe(Channels.Length);
 
-        // The node birth is untouched. The drift is a device's front panel; an edge node is a
-        // different box, and stamping bdSeq with a device's error would put C11's session matching out
-        // for a fault that never touched the node.
+        // Node birth không bị chạm tới. Drift là mặt điều khiển của thiết bị; edge node là một hộp
+        // khác, và đóng dấu bdSeq bằng sai số của thiết bị sẽ khiến việc khớp session ở C11 bị lệch
+        // vì một fault chưa từng chạm tới node.
         wrong[0].ShouldBe(right[0]);
 
         for (var index = 1; index < right.Length; index++)
@@ -121,9 +122,9 @@ public sealed class SimulatorFaultTests
             var correct = SparkplugPayload.DecodeBirth(right[index].Payload.AsSpan()).Readings;
             var late = SparkplugPayload.DecodeBirth(wrong[index].Payload.AsSpan()).Readings;
 
-            // Same metrics, same values, same cell serial. A dead CMOS battery does not re-engrave the
-            // cell sitting in the channel, and a fault that changed the serial too would be simulating
-            // a mislabelled cell — a different failure, and a much louder one.
+            // Cùng metric, cùng giá trị, cùng cell serial. Một cục pin CMOS chết không khắc lại serial
+            // của cell đang nằm trong channel, và một fault làm thay đổi cả serial sẽ là đang mô
+            // phỏng một cell bị dán nhãn sai — một loại lỗi khác hẳn, và ồn ào hơn nhiều.
             late.Select(reading => reading.MetricName).ShouldBe(correct.Select(reading => reading.MetricName));
             late.Select(reading => reading.Value).ShouldBe(correct.Select(reading => reading.Value));
 
@@ -141,17 +142,19 @@ public sealed class SimulatorFaultTests
         var codes = Enumerable.Range(1, 1_000).Select(number => $"FORM-01-CH-{number:0000}").ToArray();
         var wrong = codes.Where(code => drift.For(code) != TimeSpan.Zero).ToArray();
 
-        // About a tenth of a real line's thousand channels. Not exactly a tenth — the choice comes out
-        // of a hash — but close enough that a drift count is worth reading.
+        // Xấp xỉ một phần mười trong số một nghìn channel của một line thật. Không phải đúng một phần
+        // mười — lựa chọn này đến từ một hash — nhưng đủ gần để số lượng drift còn đáng để đọc.
         wrong.Length.ShouldBeInRange(70, 130);
 
-        // Both directions occur. A device can be ahead of the gateway as well as behind it, and code
-        // that only ever met a late clock would be free to assume the difference is signed one way.
+        // Cả hai chiều đều xảy ra. Một thiết bị có thể chạy nhanh hơn gateway cũng như chạy chậm hơn,
+        // và code chỉ từng gặp một đồng hồ chạy chậm sẽ có xu hướng mặc định rằng chênh lệch luôn
+        // mang một dấu cố định.
         wrong.Select(drift.For).Distinct().Order().ShouldBe([TimeSpan.FromHours(-2), TimeSpan.FromHours(2)]);
 
-        // Fixed values, and this is what makes them worth writing down: string.GetHashCode is
-        // randomised per process, so a selection built on it would pass every assertion above and
-        // still hand the fault to different channels tomorrow. A run could then never be repeated.
+        // Các giá trị cố định, và đây là điều khiến chúng đáng được ghi lại: string.GetHashCode được
+        // ngẫu nhiên hóa theo từng process, nên một lựa chọn dựa trên nó sẽ pass mọi assertion ở trên
+        // mà vẫn giao fault cho các channel khác vào ngày mai. Một run khi đó sẽ không bao giờ có thể
+        // lặp lại được.
         var sample = Enumerable.Range(1, 20).Select(number => $"FORM-01-CH-{number:0000}").ToArray();
 
         sample.Where(code => drift.For(code) != TimeSpan.Zero)
@@ -198,15 +201,16 @@ public sealed class SimulatorFaultTests
         publisher.Dropouts.ShouldBeGreaterThan(0);
         publisher.HeldHighWater.ShouldBeGreaterThan(1);
 
-        // Nothing arrives while the link is down...
+        // Không có gì tới khi đường truyền đang gián đoạn...
         arrivals.ShouldContain(0);
 
-        // ...and then the whole backlog arrives on one publish. That burst is what C10's rate limit
-        // exists to survive; a fault that released the backlog gently would leave it nothing to prove.
+        // ...rồi cả backlog tới cùng lúc trong một publish. Đợt dồn đó chính là thứ mà rate limit
+        // của C10 tồn tại để chịu đựng; một fault thả backlog ra một cách nhẹ nhàng sẽ không còn gì
+        // để chứng minh cả.
         arrivals.ShouldContain(count => count > 1);
 
-        // A gap, not a loss. Everything offered arrived, which is why a run that ends mid-dropout has
-        // to flush before it writes its final count.
+        // Một khoảng trống, không phải một mất mát. Mọi thứ được đưa ra đều đã tới, đó là lý do một
+        // run kết thúc giữa lúc dropout phải flush trước khi ghi con số cuối cùng của nó.
         recorder.Count.ShouldBe(messages.Count);
     }
 
@@ -255,20 +259,21 @@ public sealed class SimulatorFaultTests
         var report = RunReportFile.Read(reportPath);
         File.Delete(reportPath);
 
-        // ★ The left-hand side of D1. Signals the channels actually took — not messages, not
-        // publishes, and unmoved by either fault.
+        // ★ Vế trái của D1. Các tín hiệu mà các channel thực sự đã đo — không phải message, không
+        // phải publish, và không bị ảnh hưởng bởi bất kỳ fault nào.
         report.LogicalMeasurements.ShouldBe(line.MeasurementCount);
         report.LogicalMeasurements.ShouldBeGreaterThan(0);
 
-        // The right-hand side of the same subtraction, kept apart from it. What the broker heard is
-        // larger, and the difference is stated rather than left to be worked out.
+        // Vế phải của cùng phép trừ đó, được giữ tách biệt với nó. Những gì broker nghe được thì lớn
+        // hơn, và chênh lệch được nêu rõ ra thay vì để mặc cho người ta tự tính.
         report.LogicalMessages.ShouldBe(worker.LogicalMessageCount);
         report.DuplicateMessages.ShouldBeGreaterThan(0);
         report.PublishedMessages.ShouldBe(report.LogicalMessages + report.DuplicateMessages);
         report.PublishedMessages.ShouldBe(recorder.Count);
 
-        // Written down beside the totals so that a reconciliation that came out even cannot be read
-        // as proof of deduplication when nothing was ever deduplicated (R-M2-1).
+        // Được ghi rõ bên cạnh các tổng số để một phép đối soát ra kết quả khớp không thể bị hiểu
+        // nhầm là bằng chứng của deduplication trong khi thực ra chưa từng có gì được deduplicate cả
+        // (R-M2-1).
         report.FaultsEnabled.ShouldBeTrue();
         report.DriftedDevices.ShouldBe(Channels.Length);
         report.Channels.ShouldBe(Channels.Length);
@@ -281,8 +286,8 @@ public sealed class SimulatorFaultTests
         Should.Throw<InvalidOperationException>(() => new SimulatorFaults { DuplicateRate = 1.5 }.Validate());
         Should.Throw<InvalidOperationException>(() => new SimulatorFaults { DriftedDeviceRate = -0.1 }.Validate());
 
-        // A dropout that lasts no time is a dropout nothing can observe, so it would sit in the
-        // configuration looking switched on and do nothing at all.
+        // Một dropout không kéo dài chút thời gian nào là một dropout mà không gì quan sát được, nên
+        // nó sẽ nằm trong cấu hình trông như đã bật mà chẳng làm gì cả.
         Should.Throw<InvalidOperationException>(() => new SimulatorFaults
         {
             DropoutMeanInterval = TimeSpan.FromSeconds(10),
@@ -295,8 +300,8 @@ public sealed class SimulatorFaultTests
     [Fact]
     public void NoFaultsConfiguredMeansTheInjectorIsATunnel()
     {
-        // The baseline every faulted run is compared against. If the injector were not transparent
-        // with everything off, the comparison would be measuring the injector.
+        // Baseline mà mọi run có fault được so sánh dựa trên. Nếu injector không trong suốt khi mọi
+        // thứ đều tắt, phép so sánh sẽ đang đo chính injector chứ không phải gì khác.
         new SimulatorFaults().AnyEnabled.ShouldBeFalse();
         new SimulatorFaults { DuplicateRate = 0.1 }.AnyEnabled.ShouldBeTrue();
         new SimulatorFaults { DriftedDeviceRate = 0.1 }.AnyEnabled.ShouldBeTrue();
@@ -312,9 +317,9 @@ public sealed class SimulatorFaultTests
     private static FormationLine NewLine(DeviceClockDrift? drift = null) =>
         new(LinePath, Channels, FormationProfile.Default, StartedAt, 0, drift);
 
-    // Unwrapped to the wire message on purpose. These tests drive the PUBLISHER, not the worker, so
-    // nothing here confirms anything back to the line - and taking ComposedMessage would invite a
-    // reader to think the run report is being kept up to date when it is not.
+    // Cố ý bóc ra thành wire message. Các test này điều khiển PUBLISHER, không phải worker, nên
+    // không có gì ở đây xác nhận ngược lại về line — và nếu dùng ComposedMessage sẽ khiến người đọc
+    // nghĩ rằng run report đang được cập nhật trong khi thực ra không phải vậy.
     private static List<SparkplugMessage> LogicalMessages(int count)
     {
         var line = NewLine();

@@ -4,7 +4,7 @@ namespace Nvm.UnitTests.Identity;
 
 public sealed class EquipmentPathTests
 {
-    // The worked example from docs/scope.md §2.1: charging channel 142 on formation machine 01.
+    // Ví dụ đã tính trong docs/scope.md §2.1: charging channel 142 trên formation machine 01.
     private const string Channel = "NOVAVOLT/NV1/FORMATION/F1/FORM-01/FORM-01-CH-0142";
 
     [Theory]
@@ -16,8 +16,8 @@ public sealed class EquipmentPathTests
     [InlineData(Channel, FactoryNodeKind.Equipment)]
     public void Parse_PathOfAnyDepth_ReadsTheLevelFromTheNumberOfSegments(string value, FactoryNodeKind expected)
     {
-        // A path may stop at any level, because different people ask questions at different levels: a
-        // supervisor's dashboard asks about an area, a recall asks about a channel.
+        // Path có thể dừng ở bất kỳ cấp nào, vì người khác nhau hỏi ở cấp khác nhau: dashboard của
+        // supervisor hỏi về một area, còn một đợt recall hỏi về một channel.
         var path = EquipmentPath.Parse(value);
 
         path.Kind.ShouldBe(expected);
@@ -38,8 +38,8 @@ public sealed class EquipmentPathTests
     [Fact]
     public void SiteId_OnAnEnterprisePath_IsNullRatherThanEmpty()
     {
-        // The one level where "which plant" has no answer. Null forces callers to deal with it; an
-        // empty string would sort and compare like a real site code and slip through a filter.
+        // Cấp duy nhất không trả lời được "nhà máy nào". Null buộc caller phải xử lý; chuỗi rỗng sẽ
+        // sort và compare như site code thật rồi lọt qua filter.
         var path = EquipmentPath.Parse("NOVAVOLT");
 
         path.SiteId.ShouldBeNull();
@@ -51,8 +51,8 @@ public sealed class EquipmentPathTests
     [InlineData(Channel, "NV1")]
     public void SiteId_BelowEnterprise_IsAlwaysPresent(string value, string expected)
     {
-        // AGENTS.md K3. Every level below the enterprise belongs to exactly one plant, and a leak
-        // across that boundary is a security defect rather than a display bug.
+        // AGENTS.md K3. Mọi cấp dưới enterprise thuộc đúng một nhà máy, và rò rỉ qua ranh giới đó là
+        // security defect chứ không phải display bug.
         EquipmentPath.Parse(value).SiteId.ShouldBe(expected);
     }
 
@@ -82,9 +82,9 @@ public sealed class EquipmentPathTests
     [Fact]
     public void Parse_LowerCasePath_IsRejectedRatherThanUpperCased()
     {
-        // Normalising would give one machine two nodes in the tree and split its history down the
-        // middle. Codes are stencilled on the machine in upper case; anything else means the scanner
-        // or the integration sending it is wrong, and that is worth finding out.
+        // Normalize sẽ cho một máy hai node trong tree và chia đôi history của nó. Code được stencil
+        // trên máy bằng chữ hoa; mọi dạng khác nghĩa là scanner hoặc integration gửi nó sai, và lỗi đó
+        // cần được phát hiện.
         Should.Throw<FormatException>(() => EquipmentPath.Parse(Channel.ToLowerInvariant()));
     }
 
@@ -119,8 +119,8 @@ public sealed class EquipmentPathTests
     [Fact]
     public void Append_BelowEquipment_IsRefused()
     {
-        // Six levels, fixed. A sensor inside a channel is an attribute of the equipment, not a seventh
-        // level — otherwise the depth no longer tells you what a path names.
+        // Sáu cấp, cố định. Sensor trong channel là attribute của equipment, không phải cấp thứ bảy —
+        // nếu không depth không còn nói được path đang gọi tên gì.
         var channel = EquipmentPath.Parse(Channel);
 
         Should.Throw<InvalidOperationException>(() => channel.Append("SENSOR-3"));
@@ -137,8 +137,8 @@ public sealed class EquipmentPathTests
     [Fact]
     public void Equality_ComparesTheText_NotTheSegmentArray()
     {
-        // The record's generated equality would compare the backing array by reference and call two
-        // identical paths different — which would quietly break every dictionary keyed by path.
+        // Equality do record sinh ra sẽ compare backing array theo reference và coi hai path giống hệt
+        // nhau là khác — âm thầm làm hỏng mọi dictionary dùng path làm key.
         var parsed = EquipmentPath.Parse("NOVAVOLT/NV1/FORMATION/F1/FORM-01");
         var built = EquipmentPath.Parse("NOVAVOLT/NV1/FORMATION").Append("F1").Append("FORM-01");
 

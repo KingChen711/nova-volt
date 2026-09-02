@@ -13,8 +13,8 @@ public sealed class FactoryNodeTests
     [Fact]
     public void Create_Leaf_TakesCodeKindAndSiteFromItsPath()
     {
-        // Derived rather than stored, so a node cannot claim to be in one plant while sitting in
-        // another's subtree.
+        // Được derive thay vì lưu trữ, nên một node không thể tự nhận đang ở một plant trong khi thực
+        // ra đang nằm trong subtree của plant khác.
         var node = Leaf("NOVAVOLT/NV1/FORMATION/F1/FORM-01/FORM-01-CH-0142", "Channel 142");
 
         node.Code.ShouldBe("FORM-01-CH-0142");
@@ -25,8 +25,8 @@ public sealed class FactoryNodeTests
     [Fact]
     public void Create_ChildOfAnotherParent_IsRefused()
     {
-        // The tree's shape lives in the paths. A node cannot adopt something from elsewhere in the
-        // plant, because its path would no longer describe where it actually is.
+        // Hình dạng của cây sống trong các path. Một node không thể nhận nuôi một thứ gì đó từ nơi
+        // khác trong plant, vì path của nó khi đó sẽ không còn mô tả đúng nơi nó thực sự đang ở.
         var stranger = Leaf("NOVAVOLT/DE1/MODULE", "Module area at Leipzig");
 
         var thrown = Should.Throw<ArgumentException>(
@@ -38,8 +38,8 @@ public sealed class FactoryNodeTests
     [Fact]
     public void Create_GrandchildPassedAsChild_IsRefused()
     {
-        // One segment deeper, not two. Allowing a skipped level would put a work cell where the depth
-        // says an area is, and the level is read off the depth.
+        // Sâu hơn đúng một segment, không phải hai. Cho phép bỏ qua một level sẽ đặt một work cell vào
+        // chỗ mà depth nói là một area, trong khi level lại được đọc ra từ depth.
         var grandchild = Leaf("NOVAVOLT/NV1/FORMATION/F1", "Formation line 1");
 
         Should.Throw<ArgumentException>(() => FactoryNode.Create(SitePath, "Hai Phong", [grandchild]));
@@ -48,8 +48,8 @@ public sealed class FactoryNodeTests
     [Fact]
     public void Create_TwoChildrenWithTheSameCode_IsRefused()
     {
-        // Two machines with one code would give the flat lookup two answers for one path, and
-        // whichever the index kept would be the one traceability believed.
+        // Hai máy dùng chung một code sẽ khiến flat lookup có hai câu trả lời cho cùng một path, và
+        // bất kỳ cái nào index giữ lại sẽ là cái mà traceability tin theo.
         var first = Leaf("NOVAVOLT/NV1/FORMATION", "Formation");
         var duplicate = Leaf("NOVAVOLT/NV1/FORMATION", "Formation, again");
 
@@ -59,10 +59,10 @@ public sealed class FactoryNodeTests
     [Fact]
     public void EquipmentUnderASite_IsNotEvenExpressible()
     {
-        // The invariant the plan asks for, and the reason there is no table of permitted parent levels.
-        // A child of a site is at depth three, and depth three is an area. Naming a channel there does
-        // not make it a channel — it makes it an area with an odd name, and the parent check refuses it
-        // as soon as the real channel path is used.
+        // Invariant mà plan yêu cầu, và cũng là lý do không có một bảng liệt kê các parent level được
+        // phép. Một con của một site nằm ở depth ba, và depth ba là một area. Đặt tên một channel ở đó
+        // không biến nó thành một channel — nó biến thành một area với cái tên kỳ quặc, và parent
+        // check sẽ từ chối ngay khi path channel thật được dùng.
         var channel = Leaf("NOVAVOLT/NV1/FORMATION/F1/FORM-01/FORM-01-CH-0142", "Channel 142");
 
         Should.Throw<ArgumentException>(() => FactoryNode.Create(SitePath, "Hai Phong", [channel]));
@@ -73,7 +73,7 @@ public sealed class FactoryNodeTests
     [Fact]
     public void SiteId_OnTheEnterpriseNode_IsNullAndOnEveryDescendantIsNot()
     {
-        // AGENTS.md K3, checked over a whole subtree rather than one node.
+        // AGENTS.md K3, được kiểm tra trên toàn bộ subtree thay vì chỉ một node.
         var tree = BuildSmallTree();
 
         tree.SiteId.ShouldBeNull();

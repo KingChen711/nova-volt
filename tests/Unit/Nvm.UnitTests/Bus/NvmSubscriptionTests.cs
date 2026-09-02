@@ -9,9 +9,9 @@ public sealed class NvmSubscriptionTests
     [Fact]
     public void Of_BindsToTheContextExchangeAndTheEventsOwnRoutingKey()
     {
-        // The publisher sends to nvm.factory-model with routing key
-        // nvm.NV1.factory-model.revision-activated.v1. Both halves come from the same place, so they
-        // cannot drift apart into a queue that exists, is bound, and stays empty.
+        // Publisher gửi tới nvm.factory-model với routing key
+        // nvm.NV1.factory-model.revision-activated.v1. Cả hai nửa đều đến từ cùng một nơi, nên chúng
+        // không thể lệch nhau thành một queue tồn tại, được bind, mà cứ mãi trống rỗng.
         var subscriptions = NvmSubscription.Of(typeof(CacheConsumer));
 
         subscriptions.ShouldHaveSingleItem();
@@ -22,16 +22,17 @@ public sealed class NvmSubscriptionTests
     [Fact]
     public void Of_UsesTheSingleSegmentWildcardSoOneSubscriptionMeansOneEvent()
     {
-        // '#' would also match, and would also deliver every other event in the system to a consumer
-        // that asked for one — including events from bounded contexts it has no business reading.
+        // '#' cũng sẽ khớp, và cũng sẽ giao mọi event khác trong hệ thống cho một consumer chỉ yêu
+        // cầu một event — kể cả những event từ các bounded context mà nó không có quyền đọc.
         NvmSubscription.Of(typeof(CacheConsumer))[0].RoutingKey.ShouldNotContain("#");
     }
 
     [Fact]
     public void Of_GivesTwoConsumersOfOneEventTheSameSubscription()
     {
-        // Fan-out is not a property of the binding: both consumers ask for exactly the same messages.
-        // What separates them is that each has its own queue — see NvmEndpointNameFormatter.
+        // Fan-out không phải một tính chất của binding: cả hai consumer đều yêu cầu chính xác cùng
+        // một tập message. Điều tách biệt chúng là mỗi consumer có queue riêng của mình — xem
+        // NvmEndpointNameFormatter.
         NvmSubscription.Of(typeof(AuditConsumer))
             .ShouldBe(NvmSubscription.Of(typeof(CacheConsumer)));
     }
@@ -39,16 +40,17 @@ public sealed class NvmSubscriptionTests
     [Fact]
     public void Of_DerivesOneSubscriptionPerEventTheConsumerHandles()
     {
-        // Read off the IConsumer<T> interfaces rather than declared a second time. A consumer that
-        // picks up another event gets its binding from the same edit that added the interface.
+        // Được đọc trực tiếp từ các interface IConsumer<T> thay vì khai báo thêm một lần nữa. Một
+        // consumer nhận thêm một event khác sẽ có binding của nó đến từ chính lần sửa đã thêm
+        // interface đó.
         NvmSubscription.Of(typeof(TwoEventConsumer)).Count.ShouldBe(1);
     }
 
     [Fact]
     public void Of_RefusesAConsumerThatHandlesNothingDeclaredAsAnEventContract()
     {
-        // Refused at startup, loudly. Silently binding nothing would produce a service that runs, is
-        // green in every dashboard, and processes not one message.
+        // Bị từ chối ngay lúc startup, một cách rõ ràng. Nếu âm thầm không bind gì cả thì sẽ tạo ra
+        // một service vẫn chạy, vẫn xanh trên mọi dashboard, mà không xử lý một message nào.
         var refusal = Should.Throw<InvalidOperationException>(
             () => NvmSubscription.Of(typeof(UndeclaredMessageConsumer)));
 
@@ -66,7 +68,7 @@ public sealed class NvmSubscriptionTests
         public Task Consume(ConsumeContext<FactoryModelRevisionActivated> context) => Task.CompletedTask;
     }
 
-    // Handles a declared event and a plain message. Only the declared one belongs on this bus.
+    // Xử lý một event đã khai báo và một message thường. Chỉ event đã khai báo mới thuộc về bus này.
     private sealed class TwoEventConsumer
         : IConsumer<FactoryModelRevisionActivated>, IConsumer<NotAnEvent>
     {

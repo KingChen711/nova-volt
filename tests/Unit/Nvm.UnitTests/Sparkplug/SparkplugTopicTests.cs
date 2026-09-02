@@ -3,7 +3,7 @@ using Nvm.Sparkplug.Topics;
 
 namespace Nvm.UnitTests.Sparkplug;
 
-/// <summary>Reading and writing Sparkplug topics, without asking the plant anything.</summary>
+/// <summary>Đọc và ghi Sparkplug topic, không hỏi nhà máy điều gì.</summary>
 public sealed class SparkplugTopicTests
 {
     private const string DeviceTopic = "spBv1.0/NOVAVOLT-NV1-FORMATION/DDATA/EDGE-F1/FORM-01-CH-0142";
@@ -38,7 +38,7 @@ public sealed class SparkplugTopicTests
     [Fact]
     public void APlaceInThePlantKnowsTheTopicItPublishesOn()
     {
-        // The direction C05 needs: the simulator publishes as the plant, so it starts from a path.
+        // Hướng mà C05 cần: simulator publish với tư cách nhà máy, nên bắt đầu từ path.
         SparkplugTopic
             .For(EquipmentPath.Parse("NOVAVOLT/NV1/FORMATION/F1/FORM-01/FORM-01-CH-0142"), SparkplugMessageType.DeviceData)
             .Value
@@ -53,9 +53,9 @@ public sealed class SparkplugTopicTests
     [Fact]
     public void WritingATopicAndReadingItBackGivesTheSameTopic()
     {
-        // The round-trip that closes without a factory model. Note what it does not prove: the work
-        // cell FORM-01 is gone from the topic and cannot come back from it — only the directory can
-        // return the six-segment path, which is what SparkplugTopicResolutionTests checks.
+        // Round-trip khép kín không cần factory model. Lưu ý điều nó không chứng minh: work cell
+        // FORM-01 mất khỏi topic và không thể quay lại từ đó — chỉ directory mới trả về path sáu segment,
+        // là điều SparkplugTopicResolutionTests kiểm.
         foreach (var (path, messageType) in new (string Path, SparkplugMessageType Type)[]
         {
             ("NOVAVOLT/NV1/FORMATION/F1/FORM-01/FORM-01-CH-0142", SparkplugMessageType.DeviceData),
@@ -73,9 +73,8 @@ public sealed class SparkplugTopicTests
     [Fact]
     public void AnAreaCodeMayContainAHyphenBecauseTheAreaTakesTheRemainder()
     {
-        // The group id joins three codes with the character a code may itself contain. Splitting into
-        // exactly three with the remainder going last is what keeps that reversible for the one code
-        // that is allowed to be compound.
+        // Group id nối ba code bằng ký tự mà một code cũng có thể chứa. Tách đúng thành ba, với phần dư
+        // đứng cuối, giúp nó reversible cho code duy nhất được phép là compound.
         var written = SparkplugTopic.For(
             EquipmentPath.Parse("NOVAVOLT/NV1/CELL-FINISHING/F1"),
             SparkplugMessageType.NodeData);
@@ -87,10 +86,9 @@ public sealed class SparkplugTopicTests
     [Fact]
     public void AnEnterpriseOrSiteCodeWithAHyphenIsRefusedWhereItIsStillVisible()
     {
-        // Caught while writing, because while reading it is undetectable: "NOVA-VOLT-NV1-FORMATION"
-        // splits into enterprise NOVA, site VOLT, area NV1-FORMATION, which is a perfectly well-formed
-        // topic for a plant that does not exist. The failure would surface much later as "this line is
-        // not in the model".
+        // Bắt lúc ghi vì lúc đọc không thể phát hiện: "NOVA-VOLT-NV1-FORMATION" tách thành enterprise
+        // NOVA, site VOLT, area NV1-FORMATION, là topic well-formed hoàn hảo của nhà máy không tồn tại.
+        // Failure chỉ lộ muộn hơn nhiều thành "this line is not in the model".
         var thrown = Should.Throw<ArgumentException>(() => SparkplugTopic.For(
             EquipmentPath.Parse("NOVA-VOLT/NV1/FORMATION/F1"),
             SparkplugMessageType.NodeData));
@@ -101,8 +99,8 @@ public sealed class SparkplugTopicTests
     [Fact]
     public void ThePathMustBeAtTheLevelTheMessageTypeAddresses()
     {
-        // DDATA is about a device and NBIRTH is about the node above it. Publishing one at the other's
-        // level produces a topic that subscribers bind to but nothing consistent ever arrives on.
+        // DDATA nói về device còn NBIRTH nói về node bên trên. Publish một cái ở cấp của cái kia tạo ra
+        // topic mà subscriber bind được nhưng không có gì nhất quán đến trên đó.
         Should.Throw<ArgumentException>(() => SparkplugTopic.For(
             EquipmentPath.Parse("NOVAVOLT/NV1/FORMATION/F1"),
             SparkplugMessageType.DeviceData));
@@ -113,18 +111,18 @@ public sealed class SparkplugTopicTests
     }
 
     [Theory]
-    // Lower case is the Unified Namespace convention for the same machines (docs/scope.md §7.1).
-    // Accepting it here is how one cycler acquires two identities and every count is taken over half
-    // its data. This is the M1/C02.1 trap, one layer down.
+    // Chữ thường là convention của Unified Namespace cho cùng các máy (docs/scope.md §7.1). Chấp nhận
+    // nó ở đây khiến một cycler có hai identity và mọi count được tính trên nửa dữ liệu. Đây là bẫy
+    // M1/C02.1 ở tầng thấp hơn.
     [InlineData("spbv1.0/NOVAVOLT-NV1-FORMATION/DDATA/EDGE-F1/FORM-01-CH-0142")]
     [InlineData("spBv1.0/novavolt-nv1-formation/DDATA/EDGE-F1/FORM-01-CH-0142")]
     [InlineData("spBv1.0/NOVAVOLT-NV1-FORMATION/ddata/EDGE-F1/FORM-01-CH-0142")]
     [InlineData("spBv1.0/NOVAVOLT-NV1-FORMATION/DDATA/EDGE-F1/form-01-ch-0142")]
     [InlineData("spBv1.0/NOVAVOLT-NV1-FORMATION/DDATA/edge-F1/FORM-01-CH-0142")]
-    // A device-level type with no device, and a node-level type with one.
+    // Type device-level không có device, và type node-level lại có một device.
     [InlineData("spBv1.0/NOVAVOLT-NV1-FORMATION/DDATA/EDGE-F1")]
     [InlineData("spBv1.0/NOVAVOLT-NV1-FORMATION/NDATA/EDGE-F1/FORM-01-CH-0142")]
-    // Shapes that are not this namespace at all.
+    // Shape hoàn toàn không thuộc namespace này.
     [InlineData("spBv1.0/NOVAVOLT-NV1/DDATA/EDGE-F1/FORM-01-CH-0142")]
     [InlineData("spBv1.0/NOVAVOLT-NV1-FORMATION/DDATA/F1/FORM-01-CH-0142")]
     [InlineData("spBv1.0/NOVAVOLT-NV1-FORMATION/HELLO/EDGE-F1/FORM-01-CH-0142")]
@@ -141,8 +139,8 @@ public sealed class SparkplugTopicTests
     [Fact]
     public void TheHostStateTopicIsRecognisedRatherThanCalledMalformed()
     {
-        // The gateway subscribes to spBv1.0/# and will receive this. "Not addressed to us" is routine;
-        // "malformed" is worth an alert. Collapsing the two teaches everyone to ignore the alert.
+        // Gateway subscribe spBv1.0/# nên sẽ nhận nó. "Not addressed to us" là bình thường;
+        // "malformed" đáng alert. Gộp hai trường hợp sẽ dạy mọi người phớt lờ alert.
         const string HostState = "spBv1.0/STATE/nvm-scada-1";
 
         SparkplugTopic.TryParse(HostState, out _).ShouldBeFalse();
@@ -159,7 +157,7 @@ public sealed class SparkplugTopicTests
             parsed.ShouldBe(messageType);
         }
 
-        // Case-sensitively, and this is the assertion that says so.
+        // Case-sensitive, và đây là assertion nói rõ điều đó.
         SparkplugMessageTypes.TryParse("dbirth", out _).ShouldBeFalse();
     }
 }

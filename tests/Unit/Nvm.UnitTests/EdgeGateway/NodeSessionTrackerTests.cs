@@ -37,9 +37,9 @@ public sealed class NodeSessionTrackerTests
         snapshot.StaleSince.ShouldBe(ReceivedAt);
         harness.Tracker.StaleNodeCount.ShouldBe(1);
 
-        // STALE is not null and not zero. The last reading and the moment it was taken both survive,
-        // because "3,82 V at 07:15, and untrustworthy since" is what sends someone to check the
-        // network instead of the cell.
+        // STALE không phải là null và không phải là zero. Reading cuối cùng và thời điểm nó được đo
+        // đều còn nguyên, vì "3,82 V lúc 07:15, và không còn đáng tin từ đó" mới là thứ khiến ai đó
+        // đi kiểm tra mạng thay vì kiểm tra cell.
         var voltage = snapshot.Metrics.ShouldHaveSingleItem();
         voltage.MetricName.ShouldBe("Formation/Voltage");
         voltage.Liveness.ShouldBe(NodeLiveness.Stale);
@@ -50,8 +50,8 @@ public sealed class NodeSessionTrackerTests
     [Fact]
     public void NodeDeath_ProducesNoReadingsToForward()
     {
-        // D4's structural half. A death that returned readings would reach the buffer, then
-        // ingestion, and the only question left would be what it wrote there.
+        // Nửa cấu trúc của D4. Một death mà trả về reading sẽ tới được buffer, rồi tới ingestion, và
+        // câu hỏi duy nhất còn lại sẽ là nó ghi gì vào đó.
         var harness = new Harness();
         harness.Decode(NodeBirthTopic, SparkplugPayloads.NodeBirth(birthDeathSequence: 6));
 
@@ -61,8 +61,8 @@ public sealed class NodeSessionTrackerTests
     [Fact]
     public void LateNodeDeath_FromAReplacedSession_DoesNotKillTheLiveOne()
     {
-        // The broker held session 6's will while the node reconnected as session 7. Without the
-        // bdSeq comparison, a node that is publishing right now would be marked dead.
+        // Broker đã giữ will của session 6 trong khi node kết nối lại thành session 7. Nếu không có
+        // phép so sánh bdSeq, một node đang publish ngay lúc này vẫn sẽ bị đánh dấu là đã chết.
         var harness = new Harness();
         harness.Decode(NodeBirthTopic, SparkplugPayloads.NodeBirth(birthDeathSequence: 6));
         harness.Decode(NodeBirthTopic, SparkplugPayloads.NodeBirth(birthDeathSequence: 7));
@@ -77,8 +77,8 @@ public sealed class NodeSessionTrackerTests
     [Fact]
     public void DeviceDeath_DoesNotEndTheNodeSession()
     {
-        // A DDEATH carries no bdSeq and speaks for one channel. Treating it as a node death would
-        // let one failing cycler mark a thousand healthy ones stale.
+        // Một DDEATH không mang bdSeq và chỉ đại diện cho một channel. Coi nó như một node death sẽ
+        // để một cycler lỗi đánh dấu cả nghìn cycler đang khỏe mạnh thành stale.
         var harness = new Harness();
         harness.Decode(NodeBirthTopic, SparkplugPayloads.NodeBirth(birthDeathSequence: 6));
 
@@ -118,7 +118,7 @@ public sealed class NodeSessionTrackerTests
 
         harness.Counters.RebirthRequests.ShouldBe(0);
 
-        // 5 to 7. One message was missed, and it may have been the one that renumbered an alias.
+        // Từ 5 tới 7. Một message đã bị thiếu, và rất có thể đó chính là message đánh số lại một alias.
         harness.Decode(DeviceDataTopic, SparkplugPayloads.DataAt(seq: 7, alias: 1, value: 3.9f));
 
         harness.Counters.RebirthRequests.ShouldBe(1);
@@ -126,8 +126,8 @@ public sealed class NodeSessionTrackerTests
         (await harness.Tracker.RebirthRequests.ReadAsync(TestContext.Current.CancellationToken))
             .ShouldBe(new NodeAddress(Line));
 
-        // 7 became the new baseline, so 8 is in order and asks for nothing further. A tracker that
-        // kept comparing against 5 would request a rebirth on every message for the rest of the run.
+        // 7 trở thành baseline mới, nên 8 là đúng thứ tự và không yêu cầu thêm gì. Một tracker vẫn
+        // cứ so sánh với 5 sẽ yêu cầu rebirth trên mọi message cho tới hết lần chạy.
         harness.Decode(DeviceDataTopic, SparkplugPayloads.DataAt(seq: 8, alias: 1, value: 4.0f));
         harness.Counters.RebirthRequests.ShouldBe(1);
     }
@@ -135,8 +135,8 @@ public sealed class NodeSessionTrackerTests
     [Fact]
     public void SequenceWrap_At255To0_IsNotAGap()
     {
-        // Driven through the tracker rather than the decoder: reaching 255 honestly would mean
-        // encoding 254 payloads to assert one rule about the counter.
+        // Được lái qua tracker thay vì qua decoder: để đạt tới 255 một cách trung thực sẽ phải encode
+        // 254 payload chỉ để assert một quy tắc về bộ đếm.
         var harness = new Harness();
         var topic = SparkplugTopic.Parse(DeviceDataTopic);
 
@@ -160,8 +160,8 @@ public sealed class NodeSessionTrackerTests
 
         harness.Decode(NodeBirthTopic, SparkplugPayloads.NodeBirth(birthDeathSequence: 7));
 
-        // The new session is free to give 1 to a different metric. Keeping the old table "just in
-        // case" would file the next reading under the previous meaning and raise nothing at all.
+        // Session mới hoàn toàn có quyền gán 1 cho một metric khác. Giữ lại bảng cũ "phòng khi cần"
+        // sẽ khiến reading tiếp theo bị ghi nhận dưới ý nghĩa cũ mà không dấy lên cảnh báo nào cả.
         Should.Throw<UnknownMetricAliasException>(() =>
             harness.Decode(DeviceDataTopic, SparkplugPayloads.DataAt(seq: 1, alias: 1, value: 3.9f)));
 
@@ -172,10 +172,10 @@ public sealed class NodeSessionTrackerTests
     [Fact]
     public void ARedeliveredNodeBirth_KeepsTheAliasTableItAlreadyHas()
     {
-        // MQTT is at-least-once and the simulator duplicates on purpose, so the same NBIRTH arrives
-        // twice with the same bdSeq. Treating that as a new session wipes a valid alias table and
-        // makes every alias-only message after it unreadable — measured at 10.000+ rejected messages
-        // in one short run before the bdSeq comparison existed.
+        // MQTT là at-least-once và simulator cố tình tạo message trùng lặp, nên cùng một NBIRTH tới
+        // hai lần với cùng bdSeq. Coi đó là một session mới sẽ xóa sạch một alias table đang hợp lệ
+        // và khiến mọi message chỉ mang alias sau đó trở nên không đọc được — đo được hơn 10.000
+        // message bị từ chối trong một lần chạy ngắn, trước khi có phép so sánh bdSeq.
         var harness = new Harness();
         harness.Decode(NodeBirthTopic, SparkplugPayloads.NodeBirth(birthDeathSequence: 6));
         harness.Decode(DeviceBirthTopic, SparkplugPayloads.BirthDeclaring(seq: 1, ("Formation/Voltage", 1)));
@@ -190,8 +190,8 @@ public sealed class NodeSessionTrackerTests
     [Fact]
     public void ARedeliveredDataMessage_IsNotAGap()
     {
-        // The duplicate carries the seq it carried the first time. A gap means a message was MISSED,
-        // and asking for a rebirth on every duplicate buries the real gaps in the noise.
+        // Message trùng lặp mang cùng seq như lần đầu. Một gap nghĩa là một message đã bị THIẾU, và
+        // yêu cầu rebirth trên mọi message trùng lặp sẽ chôn vùi các gap thật sự trong nhiễu.
         var harness = new Harness();
         harness.Decode(NodeBirthTopic, SparkplugPayloads.NodeBirth(birthDeathSequence: 6));
         harness.Decode(DeviceBirthTopic, SparkplugPayloads.BirthDeclaring(seq: 1, ("Formation/Voltage", 1)));

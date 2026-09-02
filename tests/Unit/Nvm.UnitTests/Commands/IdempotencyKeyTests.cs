@@ -5,7 +5,7 @@ namespace Nvm.UnitTests.Commands;
 
 public sealed class IdempotencyKeyTests
 {
-    // A measurement's natural key, per docs/scope.md §7.2:
+    // Natural key của một measurement, theo docs/scope.md §7.2:
     // (site_id, equipment_id, unit_id, step_code, device_timestamp, signal_code)
     private static readonly string[] OcvMeasurement =
     [
@@ -20,9 +20,9 @@ public sealed class IdempotencyKeyTests
     [Fact]
     public void FromNaturalKey_SameFactTwice_ProducesTheSameKey()
     {
-        // The whole point. The formation cycler that got no acknowledgement sends the same
-        // measurement again 800 ms later, from a different process after a restart, or three days
-        // later when a gateway flushes its backlog. All of them have to land on this one value.
+        // Toàn bộ vấn đề nằm ở đây. Formation cycler không nhận được acknowledgement sẽ gửi lại đúng
+        // measurement đó 800 ms sau, từ một process khác sau khi restart, hoặc ba ngày sau khi một
+        // gateway xả backlog. Tất cả những lần đó đều phải rơi vào đúng một giá trị này.
         var first = IdempotencyKey.FromNaturalKey(OcvMeasurement);
         var second = IdempotencyKey.FromNaturalKey(OcvMeasurement);
 
@@ -32,9 +32,10 @@ public sealed class IdempotencyKeyTests
     [Fact]
     public void FromNaturalKey_KnownFact_ProducesAStableValueAcrossRunsAndMachines()
     {
-        // Pinning the literal is what makes "deterministic" mean something beyond this process.
-        // If this value ever changes, every row already in the deduplication table stops matching
-        // the traffic arriving today, and duplicates start getting through silently.
+        // Ghim cứng literal này chính là điều khiến "deterministic" có ý nghĩa vượt ra ngoài process
+        // hiện tại. Nếu giá trị này từng thay đổi, mọi dòng đã có sẵn trong bảng deduplication sẽ
+        // không còn khớp với traffic đến hôm nay nữa, và các duplicate sẽ bắt đầu lọt qua một cách
+        // âm thầm.
         var key = IdempotencyKey.FromNaturalKey(OcvMeasurement);
 
         key.Value.ShouldBe(Guid.Parse("c82fd38e-f3ec-5601-a915-1c8af2eb00a9"));
@@ -53,10 +54,11 @@ public sealed class IdempotencyKeyTests
     [Fact]
     public void FromNaturalKey_PartsThatWouldFlattenToTheSameString_StillProduceDifferentKeys()
     {
-        // The failure a naive string.Join('|', parts) would create: ["a|b","c"] and ["a","b|c"] both
-        // flatten to "a|b|c", so two different facts derive one key and the deduplication step drops
-        // one of them for good. Supplier lot codes are free text from someone else's system, so a
-        // separator inside a value is a matter of when, not whether.
+        // Lỗi mà một string.Join('|', parts) ngây thơ sẽ tạo ra: ["a|b","c"] và ["a","b|c"] đều
+        // flatten thành "a|b|c", nên hai fact khác nhau lại suy ra cùng một key, và bước
+        // deduplication sẽ vĩnh viễn drop một trong hai. Supplier lot code là free text đến từ hệ
+        // thống của bên khác, nên việc có separator lọt vào bên trong một giá trị chỉ là vấn đề thời
+        // gian, không phải có xảy ra hay không.
         var left = IdempotencyKey.FromNaturalKey("NV1", "ROL|004", "STACK");
         var right = IdempotencyKey.FromNaturalKey("NV1", "ROL", "004|STACK");
 
@@ -78,8 +80,8 @@ public sealed class IdempotencyKeyTests
     [Fact]
     public void NovaVoltNamespace_IsDerivedFromTheDnsNamespaceAndNotInvented()
     {
-        // Anyone can recompute this from the RFC's DNS namespace and the domain name. A hard-coded
-        // random GUID would behave identically and could never be checked.
+        // Ai cũng có thể tính lại giá trị này từ DNS namespace của RFC và domain name. Một GUID ngẫu
+        // nhiên hard-code sẽ hoạt động y hệt nhưng không bao giờ có thể kiểm chứng được.
         var expected = DeterministicGuid.CreateVersion5(DeterministicGuid.DnsNamespace, "novavolt.example");
 
         IdempotencyKey.NovaVoltNamespace.ShouldBe(expected);
@@ -89,8 +91,8 @@ public sealed class IdempotencyKeyTests
     [Fact]
     public void From_EmptyGuid_IsRejected()
     {
-        // An all-zero key is what a forgotten assignment looks like. Accepting it would collapse every
-        // command that forgot into one, and only under load.
+        // Một key toàn số 0 chính là hình dạng của một phép gán bị quên. Chấp nhận nó sẽ gộp mọi
+        // command bị quên gán key thành một, và chỉ lộ ra khi có tải.
         Should.Throw<ArgumentException>(() => IdempotencyKey.From(Guid.Empty));
     }
 
@@ -109,8 +111,8 @@ public sealed class IdempotencyKeyTests
     [Fact]
     public void FromNaturalKey_EmptyPart_IsAllowedAndDistinct()
     {
-        // An absent optional field is a legitimate part of a natural key, and it must not collide with
-        // a key that simply has fewer fields.
+        // Một field optional bị thiếu vẫn là một phần hợp lệ của natural key, và nó không được phép
+        // đụng độ với một key chỉ đơn giản là có ít field hơn.
         var withEmpty = IdempotencyKey.FromNaturalKey("NV1", "", "STACK");
         var withoutIt = IdempotencyKey.FromNaturalKey("NV1", "STACK");
 

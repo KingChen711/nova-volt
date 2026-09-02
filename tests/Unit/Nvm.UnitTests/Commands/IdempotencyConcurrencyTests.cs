@@ -7,9 +7,9 @@ using Nvm.Kernel.Commands.Idempotency;
 namespace Nvm.UnitTests.Commands;
 
 /// <summary>
-/// The concurrent half of AGENTS.md K7. <see cref="CommandPipelineTests"/> covers duplicates that
-/// arrive one after another; these cover duplicates that arrive together, which is the case a gateway
-/// flushing a backlog actually produces.
+/// Nửa phần concurrent của AGENTS.md K7. <see cref="CommandPipelineTests"/> bao phủ các duplicate đến
+/// lần lượt trước sau; các test ở đây bao phủ duplicate đến cùng lúc, đúng là trường hợp mà một
+/// gateway xả hết backlog thực sự tạo ra.
 /// </summary>
 public sealed class IdempotencyConcurrencyTests
 {
@@ -24,15 +24,15 @@ public sealed class IdempotencyConcurrencyTests
             .AddNvmKernel(typeof(IdempotencyConcurrencyTests).Assembly)
             .BuildServiceProvider();
 
-    // ── The store on its own ────────────────────────────────────────────────────────────────────
-    // Deterministic, with no threads at all: the second claim is made while the first is still in
-    // flight, so the interleaving that matters is forced rather than hoped for.
+    // ── Bản thân store ───────────────────────────────────────────────────────────────────────────
+    // Deterministic, không dùng thread nào cả: claim thứ hai được thực hiện trong khi claim đầu vẫn
+    // đang in flight, nên phần interleaving quan trọng được ép xảy ra thay vì trông chờ vào may rủi.
 
     [Fact]
     public async Task SecondClaimWhileTheFirstIsInFlight_WaitsAndReplaysTheFirstResult()
     {
-        // The exact shape a check-then-act cannot handle. Under the old Find/Record store the second
-        // call would have missed, been granted, and run the handler a second time.
+        // Đúng hình dạng mà một check-then-act không xử lý nổi. Với store Find/Record kiểu cũ, lệnh
+        // gọi thứ hai sẽ bị miss, được cấp claim, và chạy handler lần thứ hai.
         var cancellationToken = TestContext.Current.CancellationToken;
         var store = new InMemoryIdempotencyStore(NewClock());
         var key = IdempotencyKey.FromNaturalKey("NV1", "in-flight");
@@ -40,8 +40,8 @@ public sealed class IdempotencyConcurrencyTests
         var first = await store.ClaimAsync<string>(key, "CompleteStep", cancellationToken);
         first.IsGranted.ShouldBeTrue();
 
-        // Started, not awaited. ClaimAsync runs synchronously up to its await, so by the time this
-        // returns a task it has already found the claim taken and parked on it.
+        // Đã start, chưa await. ClaimAsync chạy đồng bộ cho tới await của nó, nên tới lúc dòng này
+        // trả về một task thì nó đã phát hiện claim đang bị giữ và đứng chờ ở đó rồi.
         var second = store.ClaimAsync<string>(key, "CompleteStep", cancellationToken);
         second.IsCompleted.ShouldBeFalse();
 
@@ -56,8 +56,8 @@ public sealed class IdempotencyConcurrencyTests
     [Fact]
     public async Task SecondClaimWhileTheFirstIsInFlight_IsGrantedWhenTheFirstGivesUp()
     {
-        // A handler that threw did not happen, so the caller waiting behind it must be allowed to do
-        // the work rather than be handed a result that was never produced.
+        // Một handler ném exception coi như chưa từng xảy ra, nên caller đang chờ phía sau nó phải
+        // được phép làm công việc đó thay vì nhận một kết quả chưa bao giờ được tạo ra.
         var cancellationToken = TestContext.Current.CancellationToken;
         var store = new InMemoryIdempotencyStore(NewClock());
         var key = IdempotencyKey.FromNaturalKey("NV1", "abandoned");
@@ -74,8 +74,9 @@ public sealed class IdempotencyConcurrencyTests
     [Fact]
     public async Task ClaimHeldWithoutSettling_TimesOutAndNamesTheCommandThatIsStuck()
     {
-        // A handler that hangs must not park every duplicate of its command for ever. The clock is
-        // fake, so this asserts the timeout without spending the timeout (AGENTS.md K1).
+        // Một handler bị treo không được phép giữ mọi duplicate của command đó chờ mãi mãi. Đồng hồ
+        // là fake, nên test này assert timeout mà không cần tốn thời gian chờ timeout thật (AGENTS.md
+        // K1).
         var cancellationToken = TestContext.Current.CancellationToken;
         var clock = NewClock();
         var store = new InMemoryIdempotencyStore(clock, TimeSpan.FromSeconds(30));
@@ -94,8 +95,8 @@ public sealed class IdempotencyConcurrencyTests
     [Fact]
     public async Task SameKeyFromADifferentCommand_IsRefusedAtClaimTime()
     {
-        // Two commands deriving one natural key is a modelling fault upstream. Caught on the way in
-        // now, rather than at replay time as an unrelated cast failure somewhere else.
+        // Hai command cùng suy ra một natural key là lỗi modelling từ phía trên. Bắt lỗi ngay từ lúc
+        // đi vào, thay vì để nó thành một lỗi cast không liên quan ở đâu đó lúc replay.
         var cancellationToken = TestContext.Current.CancellationToken;
         var store = new InMemoryIdempotencyStore(NewClock());
         var key = IdempotencyKey.FromNaturalKey("NV1", "collision");
@@ -130,9 +131,10 @@ public sealed class IdempotencyConcurrencyTests
     [Fact]
     public async Task TwoStoreInstances_DoNotShareAClaim()
     {
-        // Not a defect to be fixed here — it is the limit, asserted so that nobody reads the tests
-        // above and concludes K7 is met. Two instances behind a load balancer are two stores, and a
-        // restart is the same thing spread over time. Closing this needs a database (ADR-023).
+        // Không phải một defect cần sửa ở đây — đây chính là giới hạn, được assert để không ai đọc
+        // các test ở trên rồi kết luận rằng K7 đã được đáp ứng. Hai instance đứng sau một load
+        // balancer là hai store khác nhau, và một lần restart cũng là chuyện tương tự trải dài theo
+        // thời gian. Giải quyết việc này cần một database (ADR-023).
         var cancellationToken = TestContext.Current.CancellationToken;
         var clock = NewClock();
         var beforeRestart = new InMemoryIdempotencyStore(clock);
@@ -147,14 +149,14 @@ public sealed class IdempotencyConcurrencyTests
         claim.IsGranted.ShouldBeTrue();
     }
 
-    // ── The whole pipeline under real threads ───────────────────────────────────────────────────
+    // ── Toàn bộ pipeline dưới thread thật ───────────────────────────────────────────────────────
 
     [Fact]
     public async Task ThirtyTwoCallersOneKey_RunTheHandlerOnceAndAllReceiveTheSameResult()
     {
-        // A recovered gateway does not resend politely one at a time; it opens its buffer. Every
-        // caller is parked on a barrier first, so all thirty-two are released into the dispatcher
-        // together rather than trickling in.
+        // Một gateway hồi phục không gửi lại một cách lịch sự từng cái một; nó xả hết buffer ra cùng
+        // lúc. Mỗi caller được giữ ở một barrier trước, để cả ba mươi hai caller được thả vào
+        // dispatcher cùng lúc thay vì rỉ rả từng chút.
         const int callers = 32;
         var cancellationToken = TestContext.Current.CancellationToken;
         var gate = new GateState();
@@ -183,8 +185,9 @@ public sealed class IdempotencyConcurrencyTests
         arrived.Wait(TimeSpan.FromSeconds(30), cancellationToken).ShouldBeTrue();
         start.SetResult();
 
-        // The winner is now inside the handler and cannot leave until released, so every other caller
-        // is either parked on the claim or about to be. Exactly one claim exists while that is true.
+        // Người thắng giờ đang ở trong handler và không thể rời đi cho tới khi được release, nên mọi
+        // caller còn lại hoặc đang chờ ở claim hoặc sắp chờ. Đúng một claim tồn tại trong suốt khoảng
+        // thời gian đó.
         await gate.Entered.Task.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
         store.InFlightCount.ShouldBe(1);
         gate.Release.SetResult();
@@ -200,9 +203,10 @@ public sealed class IdempotencyConcurrencyTests
     [Fact]
     public async Task EightCallersOneKey_FiftyRoundsRunning_NeverHandleTwice()
     {
-        // Repeated because a concurrency test that passes once has proven nothing about a race; it has
-        // proven that one interleaving was fine. Fifty rounds with a handler that yields is not a
-        // proof either, but it is the difference between an assertion and a coincidence.
+        // Lặp lại vì một concurrency test chỉ pass một lần chẳng chứng minh được gì về một race
+        // condition; nó chỉ chứng minh rằng một cách interleaving cụ thể là ổn. Năm mươi vòng với một
+        // handler có yield cũng không phải một bằng chứng, nhưng đó là khác biệt giữa một assertion
+        // và một sự trùng hợp.
         const int rounds = 50;
         const int callers = 8;
         var cancellationToken = TestContext.Current.CancellationToken;
@@ -244,9 +248,9 @@ public sealed class IdempotencyConcurrencyTests
     [Fact]
     public async Task ConcurrentCallersWhenTheHandlerThrows_AllFailAndTheKeyIsLeftFreeForARetry()
     {
-        // The failure path under contention. Whoever wins the claim throws; everyone waiting behind it
-        // must be let through rather than handed a result nobody produced — and because the handler
-        // fails only on its first invocation, exactly one of them then succeeds.
+        // Đường đi khi thất bại dưới tranh chấp. Ai thắng claim thì ném exception; mọi người đang chờ
+        // phía sau phải được cho đi tiếp thay vì nhận một kết quả không ai tạo ra — và vì handler chỉ
+        // fail ở lần gọi đầu tiên, nên đúng một trong số họ sau đó sẽ thành công.
         const int callers = 8;
         var cancellationToken = TestContext.Current.CancellationToken;
         var gate = new GateState();
@@ -284,7 +288,8 @@ public sealed class IdempotencyConcurrencyTests
 
         var results = await Task.WhenAll(calls);
 
-        // One caller met the failure. The rest were released by the abandon and share one success.
+        // Một caller gặp lỗi. Những caller còn lại được release nhờ abandon và cùng chia sẻ một kết
+        // quả thành công.
         results.Count(result => result is null).ShouldBe(1);
         gate.Invocations.ShouldBe(2);
         results
@@ -295,7 +300,7 @@ public sealed class IdempotencyConcurrencyTests
         store.InFlightCount.ShouldBe(0);
     }
 
-    // ── Fixtures ────────────────────────────────────────────────────────────────────────────────
+    // ── Fixture ─────────────────────────────────────────────────────────────────────────────────
 
     public sealed record HeldStep(IdempotencyKey IdempotencyKey) : ICommand<string>;
 
@@ -303,15 +308,15 @@ public sealed class IdempotencyConcurrencyTests
 
     public sealed record FailFirstStep(IdempotencyKey IdempotencyKey) : ICommand<string>;
 
-    /// <summary>Lets a test hold the handler open and count how often it actually ran.</summary>
+    /// <summary>Cho một test giữ handler mở và đếm xem nó thực sự chạy bao nhiêu lần.</summary>
     public sealed class GateState
     {
         private int _invocations;
 
-        /// <summary>Completed by the handler as it enters, so a test knows the claim is held.</summary>
+        /// <summary>Được handler complete khi nó bắt đầu vào, để một test biết claim đang được giữ.</summary>
         public TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        /// <summary>Completed by the test to let the handler finish.</summary>
+        /// <summary>Được test complete để cho handler kết thúc.</summary>
         public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public int Invocations => Volatile.Read(ref _invocations);
@@ -342,8 +347,8 @@ public sealed class IdempotencyConcurrencyTests
         {
             var invocation = gate.Enter();
 
-            // Yields the thread inside the claim, so the window a check-then-act would lose in is as
-            // wide as this test can make it without pinning the clock.
+            // Yield thread ngay bên trong claim, để khoảng hở mà một check-then-act sẽ bị mất vào đó
+            // rộng hết mức mà test này có thể tạo ra mà không cần ghim đồng hồ.
             await Task.Yield();
 
             return $"handled by invocation {invocation}";

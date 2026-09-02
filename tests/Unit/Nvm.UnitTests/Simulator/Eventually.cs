@@ -2,24 +2,24 @@ using System.Diagnostics;
 
 namespace Nvm.UnitTests.Simulator;
 
-/// <summary>Waits for the worker to catch up with a clock that was moved under it.</summary>
+/// <summary>Chờ cho worker bắt kịp một clock vừa bị đẩy đi dưới nó.</summary>
 /// <remarks>
-/// A fake clock advances on the calling thread and the tick it releases is continued on the thread
-/// pool, so moving the clock is not the same as the worker having acted on it. Waiting on the
-/// worker's own progress rather than on a sleep is what keeps these tests deterministic instead of
-/// merely usually right.
+/// Một fake clock tiến trên thread gọi nó, còn tick mà nó giải phóng lại được tiếp tục trên thread
+/// pool, nên việc đẩy clock đi không đồng nghĩa với việc worker đã hành động theo đó. Chờ trên chính
+/// tiến độ của worker thay vì chờ bằng một sleep là điều giữ cho các test này tất định thay vì chỉ
+/// thường đúng.
 /// </remarks>
 internal static class Eventually
 {
-    /// <summary>Polls until the condition holds, or gives up loudly.</summary>
-    /// <param name="condition">What is being waited for.</param>
-    /// <param name="because">What it means when this never happens.</param>
-    /// <exception cref="TimeoutException">The condition did not hold in time.</exception>
+    /// <summary>Poll cho tới khi điều kiện đúng, hoặc bỏ cuộc một cách ồn ào.</summary>
+    /// <param name="condition">Cái đang được chờ.</param>
+    /// <param name="because">Ý nghĩa của việc điều này không bao giờ xảy ra.</param>
+    /// <exception cref="TimeoutException">Điều kiện không đúng kịp lúc.</exception>
     public static async Task TrueAsync(Func<bool> condition, string because)
     {
-        // Stopwatch rather than a clock. NVM001 refuses DateTime.UtcNow across the repository and is
-        // right to: this is a deadline on a hung test, not a moment in the plant's day, and the two
-        // must not be reachable through the same call.
+        // Stopwatch thay vì một clock. NVM001 từ chối DateTime.UtcNow trên toàn repository, và điều
+        // đó đúng: đây là deadline cho một test bị treo, không phải một thời điểm trong ngày của nhà
+        // máy, và hai cái này không được phép truy cập được qua cùng một lời gọi.
         var started = Stopwatch.GetTimestamp();
 
         while (!condition())

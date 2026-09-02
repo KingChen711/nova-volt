@@ -3,7 +3,7 @@ using Nvm.Kernel.Identity;
 
 namespace Nvm.UnitTests.Identity;
 
-/// <summary>The step a machine performs, read off its code.</summary>
+/// <summary>Step mà máy thực hiện, đọc từ code của nó.</summary>
 public sealed class ProcessStepCodeTests
 {
     [Theory]
@@ -19,8 +19,8 @@ public sealed class ProcessStepCodeTests
     [Fact]
     public void TheStepComesFromTheWorkCellAndNotFromTheDeepestSegment()
     {
-        // A formation channel is called FORM-01-CH-0142 and would give the same answer by accident.
-        // An aging rack position would not, and that is the case this rule is written for.
+        // Formation channel có tên FORM-01-CH-0142 nên tình cờ cho cùng kết quả. Vị trí trên aging
+        // rack thì không, và đó là case mà rule này được viết ra để xử lý.
         ProcessStepCode
             .FromEquipmentPath(EquipmentPath.Parse("NOVAVOLT/NV1/AGING/A1/AGE-RACK-01/SLOT-07"))
             .ShouldBe("AGE");
@@ -37,9 +37,9 @@ public sealed class ProcessStepCodeTests
     [Fact]
     public void EveryWorkCellInTheSeedYieldsAStep()
     {
-        // The convention this rule rests on is a property of the documents, not of the code — so it is
-        // checked against the documents. A work cell added later that does not follow it makes this
-        // red, which is the moment to decide whether the naming or the rule is wrong.
+        // Convention làm nền cho rule này là property của document, không phải code — nên nó được
+        // kiểm với document. Work cell thêm sau không theo convention sẽ làm test đỏ; đó là lúc quyết
+        // định naming hay rule mới sai.
         var catalog = FactoryModelSeed.LoadCatalog(Path.Combine(AppContext.BaseDirectory, "seed"));
 
         var workCells = catalog.Revisions

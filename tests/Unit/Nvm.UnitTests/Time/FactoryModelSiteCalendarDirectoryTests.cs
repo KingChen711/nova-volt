@@ -9,8 +9,8 @@ namespace Nvm.UnitTests.Time;
 
 public sealed class FactoryModelSiteCalendarDirectoryTests
 {
-    // The real seed, not a fixture: the whole claim of this commit is that the zone comes from the
-    // document a plant is actually running.
+    // Seed thật, không phải fixture: toàn bộ khẳng định của commit này là zone đến từ chính document
+    // mà một nhà máy đang thực sự chạy.
     private static readonly FactoryModelSnapshot Seed =
         FactoryModelSeed.Load(Path.Combine(AppContext.BaseDirectory, "seed", FactoryModelSeed.FileNameFor(3)));
 
@@ -31,9 +31,9 @@ public sealed class FactoryModelSiteCalendarDirectoryTests
     [Fact]
     public void ChangingTheZoneInTheModel_ChangesTheProductionDay_WithNoCodeChange()
     {
-        // The property that makes the factory model the single source of truth. The same instant is
-        // filed under two different production days at two plants because their clocks read
-        // differently — and nothing in Nvm.Time knows either plant exists.
+        // Tính chất khiến factory model trở thành single source of truth. Cùng một thời điểm được ghi
+        // nhận dưới hai production day khác nhau ở hai nhà máy vì đồng hồ của chúng đọc khác nhau —
+        // và không có gì trong Nvm.Time biết bất kỳ nhà máy nào tồn tại cả.
         var active = new InMemoryActiveFactoryModel();
         ActivateBoth(active, Seed);
 
@@ -41,8 +41,8 @@ public sealed class FactoryModelSiteCalendarDirectoryTests
             new FactoryModelSiteCalendarDirectory(active),
             new FakeTimeProvider(DateTimeOffset.UnixEpoch));
 
-        // 2026-08-25T23:30Z is 06:30 on the 26th in Hai Phong — shift A of production day 26 — and
-        // 01:30 on the 26th in Leipzig, still shift C of production day 25.
+        // 2026-08-25T23:30Z là 06:30 ngày 26 ở Hải Phòng — shift A của production day 26 — và là
+        // 01:30 ngày 26 ở Leipzig, vẫn còn thuộc shift C của production day 25.
         var instant = new DateTimeOffset(2026, 8, 25, 23, 30, 0, TimeSpan.Zero);
 
         calendar.GetProductionDay(instant, "NV1").ShouldBe(ProductionDay.On(2026, 8, 26));
@@ -55,9 +55,10 @@ public sealed class FactoryModelSiteCalendarDirectoryTests
     [Fact]
     public void MovingAPlantToARevisionWithADifferentZone_MovesItsProductionDay()
     {
-        // Editing the seed file in a test would edit a published revision, which is the one thing a
-        // revision may never be. So the plant is moved to a document that says something different —
-        // the same operation a real re-homing would be — and the calendar follows without a rebuild.
+        // Sửa file seed ngay trong một test tức là sửa một revision đã được publish, mà đó chính là
+        // điều một revision không bao giờ được phép là. Nên nhà máy được chuyển sang một document nói
+        // một điều khác — cùng thao tác như một lần re-homing thật sự — và calendar đi theo mà không
+        // cần rebuild.
         var active = new InMemoryActiveFactoryModel();
         var haiPhong = Seed.FindSite("NV1").ShouldNotBeNull();
         var instant = new DateTimeOffset(2026, 8, 25, 23, 30, 0, TimeSpan.Zero);
@@ -79,8 +80,9 @@ public sealed class FactoryModelSiteCalendarDirectoryTests
     [Fact]
     public void TheZoneComesFromTheRevisionInForce_NotTheNewestOnTheShelf()
     {
-        // ADR-024: a staged rollout is normal. NV1 sitting on revision 3 while DE1 is still on 1 must
-        // not make DE1 answer from revision 3 — the calendar reads what the plant is running.
+        // ADR-024: một staged rollout là bình thường. NV1 đang ở revision 3 trong khi DE1 vẫn ở
+        // revision 1 không được phép khiến DE1 trả lời theo revision 3 — calendar đọc theo cái mà
+        // nhà máy đang thực sự chạy.
         var active = new InMemoryActiveFactoryModel();
         var leipzig = Seed.FindSite("DE1").ShouldNotBeNull();
         var directory = new FactoryModelSiteCalendarDirectory(active);
@@ -94,8 +96,8 @@ public sealed class FactoryModelSiteCalendarDirectoryTests
     [Fact]
     public void APlantWithNoActivatedRevision_HasNoCalendar()
     {
-        // Not a bug and not a default. A plant nobody has switched on has no shifts to report against,
-        // and answering "UTC, three eight-hour shifts" would be an invented fact.
+        // Không phải bug và cũng không phải giá trị mặc định. Một nhà máy chưa ai bật lên thì không
+        // có shift nào để báo cáo theo, và trả lời "UTC, ba shift tám giờ" sẽ là một sự kiện bịa đặt.
         var directory = new FactoryModelSiteCalendarDirectory(new InMemoryActiveFactoryModel());
 
         directory.Find("NV1").ShouldBeNull();

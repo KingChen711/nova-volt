@@ -182,16 +182,17 @@ public sealed class FileStoreAndForwardBufferTests
             Enumerable.Range(0, 12).Select(index => (ReadOnlyMemory<byte>)Payload(index)).ToArray(),
             TestContext.Current.CancellationToken);
 
-        // A full segment is durably closed before rotation; the final segment is committed once at
-        // the end. Therefore one cross-segment append performs one data fsync per resulting segment.
+        // Một segment đầy được đóng lại bền vững (durable) trước khi rotate; segment cuối cùng được
+        // commit một lần ở cuối. Vì vậy một lần append vắt qua nhiều segment thực hiện đúng một data
+        // fsync cho mỗi segment kết quả.
         buffer.Snapshot.DataFsyncs.ShouldBe(directory.Segments().Length);
     }
 
     [Fact]
     public async Task RecordTrailer_KnownVector_IsStandardCrc32IsoHdlc()
     {
-        // The public on-disk format is useless if writer and reader share the same wrong checksum.
-        // 123456789 is the standard check vector for CRC-32/ISO-HDLC.
+        // Định dạng on-disk công khai sẽ vô dụng nếu writer và reader cùng chia sẻ một checksum sai.
+        // 123456789 là check vector chuẩn cho CRC-32/ISO-HDLC.
         await using var directory = new BufferTestDirectory();
         await using (var buffer = new FileStoreAndForwardBuffer(directory.Options()))
         {

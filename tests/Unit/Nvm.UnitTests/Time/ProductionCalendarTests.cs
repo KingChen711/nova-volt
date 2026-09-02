@@ -10,9 +10,9 @@ public sealed class ProductionCalendarTests
     [InlineData(SiteCalendars.Leipzig)]
     public void D4_FiveFiftyNineAndSixOhOne_AreOneProductionDayApart(string siteId)
     {
-        // ★ D4. Stated for BOTH plants because one plant proves nothing about the other: NV1 is a
-        // fixed UTC+7 and DE1 moves its clock, and a calculation that got the boundary from an offset
-        // rather than from the wall clock would pass at NV1 every day of the year.
+        // ★ D4. Được phát biểu cho CẢ HAI nhà máy vì một nhà máy không chứng minh được gì về nhà máy
+        // kia: NV1 là UTC+7 cố định còn DE1 đổi giờ, và một phép tính lấy boundary từ offset thay vì
+        // từ đồng hồ tường sẽ pass ở NV1 mọi ngày trong năm.
         var calendar = SiteCalendars.Build();
 
         var before = calendar.GetProductionDay(
@@ -30,8 +30,8 @@ public sealed class ProductionCalendarTests
     [InlineData(SiteCalendars.Leipzig)]
     public void NightShift_BelongsToTheDayItStartedOn(string siteId)
     {
-        // 23:47 on the 25th and 02:13 on the 26th are the same shift and the same production day,
-        // which is the sentence the whole assembly exists to make true (docs/scope.md §2.3).
+        // 23:47 ngày 25 và 02:13 ngày 26 là cùng một shift và cùng một production day, đó chính là
+        // điều mà toàn bộ assembly này tồn tại để làm cho nó đúng (docs/scope.md §2.3).
         var calendar = SiteCalendars.Build();
         var beforeMidnight = SiteCalendars.LocalAt(siteId, 2026, 8, 25, 23, 47);
         var afterMidnight = SiteCalendars.LocalAt(siteId, 2026, 8, 26, 2, 13);
@@ -60,9 +60,9 @@ public sealed class ProductionCalendarTests
     [Fact]
     public void GetShiftBoundaries_ReturnsAbsoluteInstants_NotClockReadings()
     {
-        // NV1 is UTC+7 with no daylight saving, so shift C of the 25th runs from 22:00 local — 15:00
-        // UTC — to 06:00 local the next day. The point of the assertion is the offset: a caller
-        // selecting rows uses these, and rows carry instants.
+        // NV1 là UTC+7 không có daylight saving, nên shift C của ngày 25 chạy từ 22:00 giờ địa phương
+        // — 15:00 UTC — tới 06:00 giờ địa phương ngày hôm sau. Trọng tâm của assertion này là offset:
+        // một caller chọn row dựa vào các giá trị này, và row mang theo các thời điểm cụ thể.
         var calendar = SiteCalendars.Build();
 
         var boundaries = calendar.GetShiftBoundaries(
@@ -79,8 +79,9 @@ public sealed class ProductionCalendarTests
     [InlineData(SiteCalendars.Leipzig)]
     public void GetShiftBoundaries_LeavesNoGapAndNoOverlapBetweenConsecutiveShifts(string siteId)
     {
-        // Half-open intervals that meet exactly. A millisecond owned by two shifts is a measurement
-        // counted twice; a millisecond owned by none is one that vanishes from every shift report.
+        // Các khoảng half-open khớp nhau chính xác. Một millisecond thuộc về hai shift là một phép đo
+        // bị đếm hai lần; một millisecond không thuộc về shift nào là một phép đo biến mất khỏi mọi
+        // báo cáo shift.
         var calendar = SiteCalendars.Build();
         var day = ProductionDay.On(2026, 8, 25);
 
@@ -103,9 +104,9 @@ public sealed class ProductionCalendarTests
     [InlineData(SiteCalendars.Leipzig)]
     public void GetShiftBoundaries_AgreesWithGetShiftAtEveryEdge(string siteId)
     {
-        // The invariant that ties the two halves of the interface together: an instant is inside a
-        // shift's boundaries exactly when GetShift names that shift. Checked at the edges, where a
-        // resolution rule chosen differently in the two methods would show up.
+        // Bất biến gắn kết hai nửa của interface lại với nhau: một thời điểm nằm trong boundary của
+        // một shift đúng khi GetShift đặt tên shift đó. Được kiểm tra ở các mép, nơi một quy tắc
+        // resolution được chọn khác nhau giữa hai method sẽ lộ ra.
         var calendar = SiteCalendars.Build();
         var day = ProductionDay.On(2026, 8, 25);
 
@@ -127,12 +128,12 @@ public sealed class ProductionCalendarTests
     [Fact]
     public void CurrentProductionDay_ReadsTheInjectedClock()
     {
-        // K1: the clock is a dependency. A calendar calling DateTime.UtcNow could not be asked what
-        // production day it is at 05:59 without a test that waits until 05:59.
+        // K1: đồng hồ là một dependency. Một calendar gọi DateTime.UtcNow sẽ không thể được hỏi bây
+        // giờ là production day nào lúc 05:59 nếu không có một test phải chờ tới đúng 05:59.
         var clock = new FakeTimeProvider(new DateTimeOffset(2026, 8, 25, 22, 59, 0, TimeSpan.Zero));
         var calendar = SiteCalendars.Build(clock);
 
-        // 22:59 UTC is 05:59 the next morning in Hai Phong: still the night shift of the 25th.
+        // 22:59 UTC là 05:59 sáng hôm sau ở Hải Phòng: vẫn là night shift của ngày 25.
         calendar.CurrentProductionDay(SiteCalendars.HaiPhong).ShouldBe(ProductionDay.On(2026, 8, 25));
         calendar.CurrentShift(SiteCalendars.HaiPhong).ShouldBe(Shift.C);
 
@@ -145,8 +146,9 @@ public sealed class ProductionCalendarTests
     [Fact]
     public void AnUnknownSite_ThrowsAndNamesIt()
     {
-        // Same rule M2/C02 applied to an unrecognised Sparkplug alias: do not guess. Defaulting to UTC
-        // would give a new plant plausible-looking numbers filed against the wrong day for a month.
+        // Cùng quy tắc M2/C02 áp dụng cho một Sparkplug alias không nhận diện được: không được đoán.
+        // Mặc định về UTC sẽ cho một nhà máy mới những con số trông có vẻ hợp lý nhưng bị ghi nhận
+        // sai ngày suốt cả một tháng.
         var calendar = SiteCalendars.Build();
 
         var thrown = Should.Throw<UnknownSiteException>(
@@ -161,9 +163,9 @@ public sealed class ProductionCalendarTests
     [InlineData("Europe/Berlin")]
     public void BothIanaIdsResolve_WhichIsWhatAdr020Bought(string ianaId)
     {
-        // R-M3-4. These ids only resolve because InvariantGlobalization is off (ADR-020). Someone
-        // turning it back on to shrink a container would otherwise break the production calendar, and
-        // the first symptom would be a shift report six months later rather than a red test.
+        // R-M3-4. Các id này chỉ resolve được vì InvariantGlobalization đang tắt (ADR-020). Nếu ai đó
+        // bật lại nó để thu nhỏ container thì sẽ làm hỏng production calendar, và triệu chứng đầu
+        // tiên sẽ là một báo cáo shift sai sáu tháng sau đó chứ không phải một test đỏ.
         var zone = Should.NotThrow(() => SiteTimeZone.Of(ianaId));
 
         zone.ShouldNotBeNull();

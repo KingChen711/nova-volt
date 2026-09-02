@@ -24,9 +24,9 @@ public sealed class CommandPipelineTests
     [Fact]
     public async Task SameCommandTwice_RunsTheHandlerOnceAndReplaysTheFirstResult()
     {
-        // The whole reason the pipeline exists. An operator taps "complete step", the network stutters,
-        // the client resends. Running twice would complete the step twice and consume the material lot
-        // twice, and the numbers would be wrong with nothing to show for it.
+        // Toàn bộ lý do pipeline này tồn tại. Operator bấm "complete step", mạng chập chờn, client
+        // gửi lại. Chạy hai lần sẽ complete step hai lần và tiêu tốn material lot hai lần, số liệu sẽ
+        // sai mà chẳng có gì để giải trình.
         await using var container = BuildContainer(NewClock());
         using var scope = container.CreateScope();
         var dispatcher = scope.ServiceProvider.GetRequiredService<ICommandDispatcher>();
@@ -61,10 +61,9 @@ public sealed class CommandPipelineTests
     [Fact]
     public async Task InvalidCommand_IsRejectedAndLeavesNoTraceInTheIdempotencyStore()
     {
-        // Order proof. If validation ran after deduplication, the bad command's key would already be
-        // marked handled — and the corrected resend, which carries the same natural key, would be
-        // swallowed as a duplicate. The operator fixes the form, presses submit, sees success, and
-        // nothing happens.
+        // Bằng chứng về thứ tự. Nếu validation chạy sau deduplication, key của command sai đã bị
+        // đánh dấu là handled — và lần gửi lại đã được sửa, mang cùng natural key, sẽ bị nuốt như một
+        // duplicate. Operator sửa form, bấm submit, thấy thành công, nhưng chẳng có gì xảy ra.
         await using var container = BuildContainer(NewClock());
         using var scope = container.CreateScope();
         var dispatcher = scope.ServiceProvider.GetRequiredService<ICommandDispatcher>();
@@ -99,8 +98,9 @@ public sealed class CommandPipelineTests
     [Fact]
     public async Task FailingHandler_LeavesTheKeyUnseenSoARetryCanStillSucceed()
     {
-        // A handler that threw did not happen. Recording its key would turn a transient failure into
-        // permanent data loss: the retry would be mistaken for a duplicate and quietly do nothing.
+        // Một handler ném exception coi như chưa từng xảy ra. Ghi lại key của nó sẽ biến một lỗi tạm
+        // thời thành mất dữ liệu vĩnh viễn: lần retry sẽ bị nhầm là duplicate và âm thầm không làm gì
+        // cả.
         await using var container = BuildContainer(NewClock());
         using var scope = container.CreateScope();
         var dispatcher = scope.ServiceProvider.GetRequiredService<ICommandDispatcher>();
@@ -120,8 +120,8 @@ public sealed class CommandPipelineTests
     [Fact]
     public async Task Audit_RecordsTheFakeClockAndNotTheRealOne()
     {
-        // AGENTS.md K1. A pipeline reading DateTimeOffset.UtcNow would still pass every other test here
-        // and make the aging saga untestable four milestones from now.
+        // AGENTS.md K1. Một pipeline đọc DateTimeOffset.UtcNow vẫn sẽ pass mọi test khác ở đây, và
+        // khiến aging saga không thể test được sau bốn milestone nữa.
         var clock = NewClock();
         await using var container = BuildContainer(clock);
         using var scope = container.CreateScope();
@@ -142,7 +142,8 @@ public sealed class CommandPipelineTests
     [Fact]
     public async Task Audit_RecordsFailuresToo()
     {
-        // A trail holding only successes cannot answer the question an investigation starts with.
+        // Một audit trail chỉ ghi lại thành công thì không thể trả lời câu hỏi mà một cuộc điều tra
+        // bắt đầu bằng.
         await using var container = BuildContainer(NewClock());
         using var scope = container.CreateScope();
         var dispatcher = scope.ServiceProvider.GetRequiredService<ICommandDispatcher>();
@@ -161,9 +162,9 @@ public sealed class CommandPipelineTests
     [Fact]
     public async Task Audit_DoesNotRecordASuppressedDuplicate()
     {
-        // The consequence of putting audit innermost, asserted rather than left to be discovered. A
-        // duplicate changed nothing, so there is nothing for the trail to say about it; it is counted
-        // as a metric instead.
+        // Hệ quả của việc đặt audit ở trong cùng, được assert thay vì để tự phát hiện ra sau. Một
+        // duplicate không thay đổi gì cả, nên trail không có gì để nói về nó; nó được đếm như một
+        // metric thay vào đó.
         await using var container = BuildContainer(NewClock());
         using var scope = container.CreateScope();
         var dispatcher = scope.ServiceProvider.GetRequiredService<ICommandDispatcher>();
@@ -179,8 +180,8 @@ public sealed class CommandPipelineTests
     [Fact]
     public async Task BehaviourOrder_IsValidationThenIdempotencyThenAudit()
     {
-        // The order is a correctness property, not a preference, so it is asserted directly instead of
-        // being inferred from the behaviours that happen to depend on it.
+        // Thứ tự này là một correctness property, không phải sở thích, nên nó được assert trực tiếp
+        // thay vì suy ra từ các behaviour vốn phụ thuộc vào nó.
         await using var container = BuildContainer(NewClock());
         using var scope = container.CreateScope();
 
@@ -200,7 +201,7 @@ public sealed class CommandPipelineTests
 
     public sealed record FailOnce(IdempotencyKey IdempotencyKey) : ICommand<string>;
 
-    /// <summary>Shared across scopes so a test can count handler invocations.</summary>
+    /// <summary>Dùng chung giữa các scope để một test có thể đếm số lần handler được gọi.</summary>
     public sealed class CountingHandlerState
     {
         public int Invocations { get; private set; }
@@ -224,8 +225,8 @@ public sealed class CommandPipelineTests
             }
             else if (!command.StepCode.All(char.IsAsciiLetterUpper))
             {
-                // Two failures from one bad value, so the "report everything" test has something to
-                // report. Step codes are engraved in upper case on the routing sheet.
+                // Hai lỗi từ một giá trị sai, để test "report everything" có gì đó để báo cáo. Step
+                // code được khắc bằng chữ hoa trên routing sheet.
                 yield return new ValidationFailure(nameof(CompleteStep.StepCode), "Step code must be upper case.");
                 yield return new ValidationFailure(nameof(CompleteStep.StepCode), "Step code is not on the routing.");
             }

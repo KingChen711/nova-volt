@@ -4,7 +4,7 @@ namespace Nvm.UnitTests.Contracts;
 
 public sealed class EventSourceTests
 {
-    // The worked example from docs/scope.md §7.4. Note the lower-case site, unlike a routing key.
+    // Ví dụ minh họa từ docs/scope.md §7.4. Lưu ý site viết thường, khác với routing key.
     private const string ExecutionAtNv1 = "urn:novavolt:nv1:app-execution";
 
     [Fact]
@@ -18,10 +18,10 @@ public sealed class EventSourceTests
     [Fact]
     public void Create_SiteAndApplication_KeepsTheSiteUpperCaseOnTheObject()
     {
-        // The URN spelling and the canonical spelling are different on purpose. Everywhere else in
-        // the system a SiteId is upper case — in a serial number, in an equipment path, in the
-        // site_id claim from Keycloak — so a caller comparing source.SiteId against any of those
-        // must not have to remember that this one came out of a URN.
+        // Cách viết trong URN và cách viết chuẩn cố tình khác nhau. Ở mọi nơi khác trong hệ thống,
+        // SiteId đều viết hoa — trong serial number, trong equipment path, trong claim site_id từ
+        // Keycloak — nên một caller so sánh source.SiteId với bất kỳ cái nào trong số đó không cần
+        // phải nhớ rằng giá trị này đến từ một URN.
         var source = EventSource.Create("NV1", "app-execution");
 
         source.SiteId.ShouldBe("NV1");
@@ -70,9 +70,9 @@ public sealed class EventSourceTests
     [Fact]
     public void Create_LowerCaseSite_Throws()
     {
-        // Callers hand over the canonical form and let this type do the lower-casing. Accepting both
-        // spellings would mean two callers can produce the same URN from different inputs, and the
-        // SiteId property would then mean different things depending on who built the object.
+        // Caller đưa vào dạng chuẩn và để type này tự chuyển sang chữ thường. Nếu chấp nhận cả hai
+        // cách viết thì hai caller có thể tạo ra cùng một URN từ input khác nhau, và property SiteId
+        // khi đó sẽ mang ý nghĩa khác nhau tùy vào ai đã tạo ra object.
         Should.Throw<FormatException>(() => EventSource.Create("nv1", "app-execution"));
     }
 }

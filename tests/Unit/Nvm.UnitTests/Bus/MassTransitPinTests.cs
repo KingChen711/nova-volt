@@ -7,12 +7,12 @@ public sealed class MassTransitPinTests
     [Fact]
     public void MassTransit_StaysOnTheMajorVersionThatIsStillOpenSource()
     {
-        // ADR-021, enforced rather than written down. MassTransit 9 moved to a commercial licence
-        // (massient.com/license); version 8 remains Apache-2.0. A routine "update all packages" would
-        // otherwise pull v9 in silently, and nothing about the code would look different — the
-        // difference only shows up in a licence audit.
+        // ADR-021, được thực thi thay vì chỉ ghi trên giấy. MassTransit 9 chuyển sang giấy phép
+        // thương mại (massient.com/license); phiên bản 8 vẫn là Apache-2.0. Một lần "update all
+        // packages" thông thường sẽ âm thầm kéo v9 vào, và không có gì trong code trông khác đi cả —
+        // sự khác biệt chỉ lộ ra khi audit giấy phép.
         //
-        // If this test is red, do not bump the number. Read ADR-021 first, and decide deliberately.
+        // Nếu test này đỏ, đừng tăng con số lên. Đọc ADR-021 trước, rồi quyết định một cách có chủ ý.
         var version = typeof(IBus).Assembly.GetName().Version;
 
         version.ShouldNotBeNull();
@@ -22,9 +22,10 @@ public sealed class MassTransitPinTests
     [Fact]
     public void MassTransit_RunsOnTheTargetFrameworkThisRepositoryBuilds()
     {
-        // The other half of the pin. Staying on v8 is only viable while v8 still ships a net10.0
-        // build; the day it does not, the licence decision has to be reopened rather than worked
-        // around. Touching a MassTransit type from a net10.0 assembly is what proves it today.
+        // Nửa còn lại của việc pin phiên bản. Ở lại v8 chỉ khả thi chừng nào v8 còn ship một build
+        // net10.0; ngày nó không còn ship nữa, quyết định về giấy phép phải được mở lại chứ không
+        // phải tìm cách lách qua. Chạm vào một type của MassTransit từ một assembly net10.0 chính là
+        // cách chứng minh điều đó ngay hôm nay.
         typeof(IBus).Assembly.GetName().Name.ShouldBe("MassTransit.Abstractions");
     }
 }

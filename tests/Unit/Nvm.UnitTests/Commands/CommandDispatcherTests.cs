@@ -6,9 +6,9 @@ namespace Nvm.UnitTests.Commands;
 
 public sealed class CommandDispatcherTests
 {
-    // One key per command. Two commands sharing a natural key is a modelling fault, and the
-    // idempotency store refuses it — an earlier version of this file shared one key and only found
-    // out when the pipeline gained a deduplication stage.
+    // Mỗi command có một key riêng. Hai command dùng chung một natural key là lỗi modelling, và
+    // idempotency store sẽ từ chối nó — một phiên bản trước của file này từng dùng chung một key và
+    // chỉ phát hiện ra khi pipeline có thêm giai đoạn deduplication.
     private static IdempotencyKey KeyFor(string command) =>
         IdempotencyKey.FromNaturalKey("NV1", "probe", command);
 
@@ -32,8 +32,8 @@ public sealed class CommandDispatcherTests
     [Fact]
     public async Task DispatchAsync_TwoCommandTypes_EachReachesItsOwnHandler()
     {
-        // The dispatcher caches an invoker per command type. This is the assertion that the cache is
-        // keyed correctly: get it wrong and the second command silently runs the first one's handler.
+        // Dispatcher cache một invoker cho mỗi command type. Đây là assertion để kiểm tra cache được
+        // keyed đúng: sai chỗ này thì command thứ hai sẽ âm thầm chạy handler của command đầu tiên.
         await using var container = BuildContainer();
         using var scope = container.CreateScope();
         var dispatcher = scope.ServiceProvider.GetRequiredService<ICommandDispatcher>();
@@ -48,8 +48,8 @@ public sealed class CommandDispatcherTests
     [Fact]
     public async Task DispatchAsync_CommandWithNoHandler_ThrowsNamingTheCommand()
     {
-        // Always a wiring mistake, so the message has to say which command, or the person reading the
-        // log at 3 a.m. has nothing to go on.
+        // Luôn là lỗi wiring, nên message phải nêu rõ command nào, nếu không người đọc log lúc 3 giờ
+        // sáng sẽ chẳng có manh mối nào để bắt đầu.
         await using var container = BuildContainer();
         using var scope = container.CreateScope();
         var dispatcher = scope.ServiceProvider.GetRequiredService<ICommandDispatcher>();
@@ -64,9 +64,9 @@ public sealed class CommandDispatcherTests
     [Fact]
     public async Task DispatchAsync_CancelledToken_ReachesTheHandler()
     {
-        // CA2016 is a warning in this repo, but a token that is passed and then ignored still compiles.
-        // Formation runs take hours and hold cascades touch thousands of packs; a command that cannot
-        // be cancelled is a command that keeps a shutdown waiting.
+        // CA2016 chỉ là warning trong repo này, nhưng một token được truyền vào rồi bị bỏ qua vẫn
+        // compile được. Formation run kéo dài hàng giờ và hold cascade chạm tới hàng nghìn pack; một
+        // command không thể cancel được là một command khiến shutdown phải chờ.
         await using var container = BuildContainer();
         using var scope = container.CreateScope();
         var dispatcher = scope.ServiceProvider.GetRequiredService<ICommandDispatcher>();
@@ -80,15 +80,15 @@ public sealed class CommandDispatcherTests
     [Fact]
     public async Task DispatchAsync_ContainerWithScopeValidation_StillReachesTheHandler()
     {
-        // ValidateScopes is what a real ASP.NET Core host turns on in Development, and BuildContainer
-        // above does not. That gap hid a wiring fault for two commits: a singleton dispatcher holds
-        // the root provider, and the root provider refuses to hand out a scoped handler. Every test
-        // here passed, and the first dispatch inside the host threw
+        // ValidateScopes là thứ mà một host ASP.NET Core thật bật lên ở Development, còn BuildContainer
+        // ở trên thì không. Khoảng trống đó đã che giấu một lỗi wiring suốt hai commit: một dispatcher
+        // singleton giữ root provider, và root provider từ chối cấp một scoped handler. Mọi test ở
+        // đây đều pass, và lần dispatch đầu tiên bên trong host lại ném ra
         // "Cannot resolve scoped service ... from root provider".
         //
-        // ValidateScopes only. ValidateOnBuild would also be realistic but it walks every registration
-        // in this assembly, including handlers other tests register their own fixtures for — it fails
-        // here for a reason that has nothing to do with what is being asserted.
+        // Chỉ ValidateScopes thôi. ValidateOnBuild cũng thực tế không kém nhưng nó duyệt qua mọi
+        // registration trong assembly này, kể cả handler mà các test khác tự đăng ký fixture riêng —
+        // nó fail ở đây vì một lý do chẳng liên quan gì tới điều đang được assert.
         await using var container = new ServiceCollection()
             .AddNvmKernel(typeof(CommandDispatcherTests).Assembly)
             .BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
@@ -109,7 +109,7 @@ public sealed class CommandDispatcherTests
 
     public sealed record CancellableProbe(IdempotencyKey IdempotencyKey) : ICommand<string>;
 
-    /// <summary>Deliberately has no handler.</summary>
+    /// <summary>Cố tình không có handler.</summary>
     public sealed record OrphanProbe(IdempotencyKey IdempotencyKey) : ICommand<string>;
 
     public sealed class ActivateProbeHandler : ICommandHandler<ActivateProbe, string>

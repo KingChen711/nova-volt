@@ -5,9 +5,10 @@ namespace Nvm.UnitTests.Contracts;
 
 public sealed class EventVersionAttributeTests
 {
-    // Shaped like a real event so that this file also proves a positional record can satisfy
-    // IDomainEvent with nothing added. If the interface ever grows a member that records cannot
-    // supply cleanly, this stops compiling before anyone writes an event against it.
+    // Được tạo hình giống một event thật để file này cũng chứng minh rằng một positional record có
+    // thể thỏa mãn IDomainEvent mà không cần thêm gì cả. Nếu interface này từng có thêm một member mà
+    // record không thể cung cấp gọn gàng, việc này sẽ ngừng compile trước khi ai đó kịp viết một event
+    // dựa trên nó.
     [EventVersion(1)]
     private sealed record ProbeEvent(Guid EventId, DateTimeOffset OccurredAt, string SiteId) : IDomainEvent;
 

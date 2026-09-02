@@ -85,8 +85,8 @@ public sealed class HttpGatewayBatchSinkTests
     [Fact]
     public void ReadRetryAfter_DateAlreadyPassed_IsIgnoredRatherThanNegative()
     {
-        // A clock-skewed or queued response must not hand the flusher a negative wait: Task.Delay
-        // would throw and turn "slow down" into a crash loop.
+        // Một response bị lệch đồng hồ hoặc bị xếp hàng chờ không được phép trao cho flusher một
+        // khoảng chờ âm: Task.Delay sẽ ném exception và biến "chậm lại" thành một vòng lặp crash.
         var header = new RetryConditionHeaderValue(Now.AddSeconds(-30));
 
         HttpGatewayBatchSink.ReadRetryAfter(header, Now).ShouldBeNull();

@@ -7,21 +7,21 @@ using Nvm.Kernel.Identity;
 namespace Nvm.UnitTests.FactoryModel;
 
 /// <summary>
-/// The factory model is read-only, and these pin what that actually means.
+/// Factory model là read-only, và các test này ghim chặt điều đó thực sự nghĩa là gì.
 /// </summary>
 /// <remarks>
 /// <para>
-/// Every one of these started as a working exploit against the previous shape. `IReadOnlyList` says
-/// only that <i>this reference</i> offers no mutators; it says nothing about the object behind it. A
-/// caller could keep the list it passed in, or cast the property back to `IList`, and edit the tree
-/// afterwards.
+/// Mỗi test ở đây từng bắt đầu như một exploit thực sự chống lại hình dạng trước đó. `IReadOnlyList`
+/// chỉ nói rằng <i>chính reference này</i> không cung cấp mutator; nó không nói gì về object đứng sau
+/// nó. Một caller vẫn có thể giữ lại list mà nó đã truyền vào, hoặc cast property trở lại `IList`, rồi
+/// sửa cây sau đó.
 /// </para>
 /// <para>
-/// What that costs on the floor: <see cref="FactoryModelSnapshot"/> builds a flat index once, at load,
-/// and every message arriving from a machine is resolved through it. Edit the tree after that and the
-/// two never agree again — the walk finds a charging channel the lookup says does not exist. Neither
-/// side is obviously wrong, nothing throws, and the disagreement surfaces months later as telemetry
-/// that will not attach to any equipment.
+/// Cái giá phải trả trên sàn nhà máy: <see cref="FactoryModelSnapshot"/> xây dựng một flat index đúng
+/// một lần, lúc load, và mọi message đến từ một máy đều được resolve qua nó. Sửa cây sau thời điểm đó
+/// thì hai bên sẽ không bao giờ khớp nhau nữa — bước walk tìm thấy một charging channel mà lookup lại
+/// nói là không tồn tại. Không bên nào rõ ràng là sai, không gì ném exception cả, và sự bất đồng này
+/// chỉ lộ ra nhiều tháng sau dưới dạng telemetry không gắn được vào bất kỳ thiết bị nào.
 /// </para>
 /// </remarks>
 public sealed class FactoryModelImmutabilityTests
@@ -34,9 +34,10 @@ public sealed class FactoryModelImmutabilityTests
     [Fact]
     public void MutatingTheCollectionPassedToCreate_DoesNotReachTheNode()
     {
-        // Create validates what it is given and then keeps a copy. Keeping the caller's collection
-        // instead would check one thing and store another: the caller adds an unvalidated node the
-        // moment Create returns, and the invariants it just enforced are gone.
+        // Create kiểm tra những gì được đưa vào rồi mới giữ một bản sao. Nếu giữ collection của caller
+        // thay vào đó thì sẽ kiểm tra một thứ nhưng lưu trữ một thứ khác: caller thêm một node chưa
+        // được validate ngay khi Create vừa trả về, và các invariant vừa được enforce coi như biến
+        // mất.
         var children = new List<FactoryNode> { Leaf("NOVAVOLT/NV1/ASSEMBLY/L1/STACK-01") };
         var line = FactoryNode.Create(EquipmentPath.Parse("NOVAVOLT/NV1/ASSEMBLY/L1"), "Cell line 1", children);
 
@@ -50,8 +51,8 @@ public sealed class FactoryModelImmutabilityTests
     [Fact]
     public void Children_CannotBeMutatedThroughTheCollectionInterfaces()
     {
-        // The cast that used to work. It still compiles — ImmutableArray implements IList so that it
-        // can be passed to code expecting one — but every mutator refuses.
+        // Cách cast từng hoạt động được. Nó vẫn compile — ImmutableArray implement IList để có thể
+        // được truyền cho code đang mong đợi một IList — nhưng mọi mutator đều từ chối.
         var line = FactoryNode.Create(
             EquipmentPath.Parse("NOVAVOLT/NV1/ASSEMBLY/L1"),
             "Cell line 1",
@@ -69,9 +70,10 @@ public sealed class FactoryModelImmutabilityTests
     [Fact]
     public void Segments_CannotBeMutatedThroughTheCollectionInterfaces()
     {
-        // Writing through the segments used to leave Value saying one thing and SiteId, Code and Kind
-        // saying another — one path naming two different machines depending on which member you asked.
-        // The array cast no longer compiles at all; this covers the interface route that still does.
+        // Ghi qua segments trước đây từng khiến Value nói một đằng còn SiteId, Code và Kind nói một
+        // nẻo — một path đặt tên cho hai máy khác nhau tùy vào member nào được hỏi. Cast sang array
+        // giờ không còn compile được nữa; test này bao phủ con đường qua interface vẫn còn compile
+        // được.
         var path = EquipmentPath.Parse("NOVAVOLT/NV1/FORMATION/F1/FORM-01/FORM-01-CH-0001");
 
         IList<string> asList = path.Segments;
@@ -97,8 +99,8 @@ public sealed class FactoryModelImmutabilityTests
     [Fact]
     public void TheTreeAndTheFlatIndex_TellTheSameStory()
     {
-        // Two views of one revision, and the only way they can now disagree is a bug in how the index
-        // is built — there is no longer a way to edit one of them afterwards.
+        // Hai góc nhìn của cùng một revision, và cách duy nhất chúng có thể bất đồng bây giờ là một
+        // bug trong cách index được xây dựng — không còn cách nào để sửa một trong hai sau đó nữa.
         var snapshot = FactoryModelSeed.Load(SeedPath);
         var walked = snapshot.Root.Descend().ToArray();
 
@@ -117,9 +119,9 @@ public sealed class FactoryModelImmutabilityTests
     [MemberData(nameof(CollectionsOnThePublicSurface))]
     public void EveryCollectionOnThePublicSurface_IsDeclaredImmutable(Type declaringType, string memberName)
     {
-        // The guarantees above are mostly enforced by the compiler, which means they vanish silently
-        // the day somebody widens one of these back to IReadOnlyList to make a signature tidier. This
-        // is the test that notices.
+        // Các đảm bảo ở trên chủ yếu được compiler enforce, nghĩa là chúng sẽ âm thầm biến mất vào
+        // ngày ai đó nới rộng một trong số này trở lại thành IReadOnlyList để signature gọn hơn. Đây
+        // là test phát hiện ra điều đó.
         var propertyType = declaringType.GetProperty(memberName)!.PropertyType;
 
         propertyType.IsGenericType.ShouldBeTrue($"{declaringType.Name}.{memberName}");

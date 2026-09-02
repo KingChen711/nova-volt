@@ -8,10 +8,10 @@ public sealed class ProductionDayTests
     [Fact]
     public void ProductionDay_HasNoConversionToOrFromACalendarDate()
     {
-        // The entire reason the type exists. DateOnly and ProductionDay hold the same three numbers,
-        // so a conversion operator — in either direction — would let `CAST(device_timestamp AS date)`
-        // be assigned to a production day with the compiler's blessing. That is wrong for six hours
-        // out of every twenty-four, and it is wrong silently.
+        // Đây là toàn bộ lý do type này tồn tại. DateOnly và ProductionDay giữ cùng ba con số, nên
+        // một toán tử chuyển đổi — theo bất kỳ chiều nào — sẽ để cho `CAST(device_timestamp AS date)`
+        // được gán cho một production day dưới sự chấp thuận của compiler. Điều đó sai trong sáu giờ
+        // trên mỗi hai mươi bốn giờ, và nó sai một cách âm thầm.
         var conversions = typeof(ProductionDay)
             .GetMethods(BindingFlags.Public | BindingFlags.Static)
             .Where(method => method.Name is "op_Implicit" or "op_Explicit")
@@ -61,8 +61,8 @@ public sealed class ProductionDayTests
     [Fact]
     public void ToString_IsIsoAndCultureIndependent()
     {
-        // This string reaches reports, log lines and SQL. A machine running de-DE writing
-        // "25.08.2026" would produce a second spelling of the same day, and the two would not join.
+        // Chuỗi này đi vào report, log line và SQL. Một máy chạy de-DE viết ra "25.08.2026" sẽ tạo ra
+        // một cách viết thứ hai cho cùng một ngày, và hai cách viết đó sẽ không join được với nhau.
         var original = Thread.CurrentThread.CurrentCulture;
 
         try

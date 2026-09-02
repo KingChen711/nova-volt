@@ -44,7 +44,7 @@ public sealed class SparkplugMessageDecoderTests
             ["Formation/Voltage", "Formation/Temperature"],
             ignoreOrder: false);
 
-        // The device time came from the fixture and is not overwritten by the gateway stamp.
+        // Thời gian của device đến từ fixture và không bị ghi đè bởi stamp của gateway.
         data.Readings.ShouldAllBe(reading => reading.DeviceTimestamp != data.GatewayTimestamp);
     }
 

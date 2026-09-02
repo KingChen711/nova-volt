@@ -5,8 +5,8 @@ using Nvm.FactoryModel.Storage;
 namespace Nvm.UnitTests.FactoryModel;
 
 /// <summary>
-/// Activation is a read, a decision and a write, and something can happen in between. These pin the
-/// compare-and-swap that makes the three into one.
+/// Activation là một read, một decision và một write, và có thể có chuyện xảy ra ở giữa. Các test
+/// này ghim chặt compare-and-swap để biến ba bước đó thành một.
 /// </summary>
 public sealed class ActiveFactoryModelConcurrencyTests
 {
@@ -20,9 +20,10 @@ public sealed class ActiveFactoryModelConcurrencyTests
     [Fact]
     public void ActivatingOnAStaleRead_IsRefusedRatherThanOverwriting()
     {
-        // The scenario: a scheduled rollout and an engineer both read "nothing in force yet", and both
-        // decide their revision is the one to install. Without the guard the plant ends up on whichever
-        // wrote last, and two events go out each claiming to have moved it forward from the same place.
+        // Kịch bản: một scheduled rollout và một engineer đều đọc "chưa có gì in force cả", và cả hai
+        // đều quyết định revision của mình là cái cần cài đặt. Không có guard, plant sẽ dừng ở bất kỳ
+        // ai ghi sau, và hai event sẽ được phát ra, mỗi cái đều tự nhận đã đưa plant tiến lên từ cùng
+        // một điểm xuất phát.
         var site = Site();
         var active = new InMemoryActiveFactoryModel();
 
@@ -38,8 +39,8 @@ public sealed class ActiveFactoryModelConcurrencyTests
     [Fact]
     public void ActivatingOnAFreshRead_Succeeds()
     {
-        // The other half. A guard that refuses everything would also pass the test above, so the
-        // legitimate move has to be asserted next to it.
+        // Nửa còn lại. Một guard từ chối mọi thứ cũng sẽ pass test ở trên, nên bước dịch chuyển hợp lệ
+        // phải được assert ngay bên cạnh nó.
         var site = Site();
         var active = new InMemoryActiveFactoryModel();
 
@@ -53,9 +54,9 @@ public sealed class ActiveFactoryModelConcurrencyTests
     public async Task SixteenActivationsAtOnce_ExactlyOneWins()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
-        // Every caller reads the same current revision and then tries to move the plant on from it.
-        // One must win and fifteen must be told they lost, because "the plant is on revision 12" is a
-        // single fact and a work cell either exists on the shop floor or it does not.
+        // Mọi caller đều đọc cùng một revision hiện tại rồi cố dịch chuyển plant từ đó. Đúng một
+        // caller phải thắng và mười lăm caller còn lại phải được báo là đã thua, vì "the plant is on
+        // revision 12" là một fact duy nhất và một work cell hoặc tồn tại trên shop floor hoặc không.
         const int callers = 16;
         var site = Site();
         var active = new InMemoryActiveFactoryModel();
@@ -90,8 +91,8 @@ public sealed class ActiveFactoryModelConcurrencyTests
     [Fact]
     public void TwoPlantsMovingAtOnce_DoNotBlockOrOverwriteEachOther()
     {
-        // Staged rollout. Hai Phong and Leipzig are separate facts, and a guard written as one lock
-        // over one slot would have made them one.
+        // Staged rollout. Hai Phong và Leipzig là hai fact riêng biệt, và một guard được viết như một
+        // lock duy nhất trên một slot duy nhất sẽ biến chúng thành một.
         var snapshot = FactoryModelSeed.Load(SeedPath);
         var haiPhong = snapshot.FindSite("NV1").ShouldNotBeNull();
         var leipzig = snapshot.FindSite("DE1").ShouldNotBeNull();

@@ -4,7 +4,7 @@ using Nvm.Sparkplug;
 
 namespace Nvm.UnitTests.Sparkplug;
 
-/// <summary>The whole Phase A path, end to end: bytes in, an identity out.</summary>
+/// <summary>Toàn bộ đường đi của Phase A, từ đầu đến cuối: bytes vào, một identity ra.</summary>
 public sealed class DeviceReadingIdentityTests
 {
     private static readonly EquipmentPath Channel =
@@ -13,9 +13,9 @@ public sealed class DeviceReadingIdentityTests
     [Fact]
     public void DecodingTheSamePayloadTwiceGivesTheSameIdentities()
     {
-        // The at-least-once case, on real bytes. The device that got no acknowledgement resends
-        // exactly these bytes; the gateway flushing a backlog sends them hours later. Both have to
-        // land on the identity that is already in the deduplication table.
+        // Trường hợp at-least-once, trên bytes thật. Thiết bị không nhận được acknowledgement sẽ gửi
+        // lại chính xác các bytes này; gateway xả một backlog thì gửi chúng nhiều giờ sau. Cả hai đều
+        // phải rơi vào đúng identity đã có sẵn trong bảng deduplication.
         var first = KeysFrom(SparkplugFixture.ReadBytes(SparkplugFixture.DeviceData));
         var second = KeysFrom(SparkplugFixture.ReadBytes(SparkplugFixture.DeviceData));
 
@@ -27,9 +27,9 @@ public sealed class DeviceReadingIdentityTests
     [Fact]
     public void TwoMetricsOfOneMessageAreTwoMeasurements()
     {
-        // Voltage and temperature arrive in one payload, at one instant, from one channel. They differ
-        // in the signal code alone — so if that field were dropped from the key, one of the two would
-        // vanish at the deduplication step and nothing would report it.
+        // Voltage và temperature tới trong cùng một payload, tại cùng một thời điểm, từ cùng một
+        // channel. Chúng chỉ khác nhau ở signal code — nên nếu trường đó bị bỏ khỏi key, một trong
+        // hai sẽ biến mất ở bước deduplication mà không gì báo cáo lại điều đó.
         var keys = NaturalKeysFrom(SparkplugFixture.ReadBytes(SparkplugFixture.DeviceData));
 
         keys.Select(key => key.SignalCode).ShouldBe(["Formation/Voltage", "Formation/Temperature"]);
@@ -51,9 +51,9 @@ public sealed class DeviceReadingIdentityTests
     [Fact]
     public void TheSameReadingFromTwoPlantsIsTwoMeasurements()
     {
-        // Multiplant, at the level where it is cheapest to get wrong. Two channels with the same code
-        // in two factories reporting the same voltage at the same instant are two facts, and a key
-        // that left the plant out would store one of them.
+        // Multiplant, ở mức mà sai sót ít tốn kém nhất để phát hiện. Hai channel cùng code ở hai nhà
+        // máy báo cùng một voltage tại cùng một thời điểm là hai sự kiện thật, và một key bỏ sót plant
+        // ra ngoài sẽ chỉ lưu được một trong hai.
         var reading = Readings(SparkplugFixture.ReadBytes(SparkplugFixture.DeviceData))[0];
 
         var atHaiPhong = reading.NaturalKey(Channel);
@@ -66,8 +66,8 @@ public sealed class DeviceReadingIdentityTests
     [Fact]
     public void APlaceThatPerformsNoStepCannotHaveMeasuredAnything()
     {
-        // A line is where an edge node lives, not where a reading is taken. NDATA from the node itself
-        // is node health, and C11 is what does something with it — it is not a process signal.
+        // Một line là nơi một edge node sống, không phải nơi một reading được đo. NDATA từ chính node
+        // là node health, và C11 là thứ xử lý nó — đó không phải một process signal.
         var reading = Readings(SparkplugFixture.ReadBytes(SparkplugFixture.DeviceData))[0];
 
         Should.Throw<ArgumentException>(() =>

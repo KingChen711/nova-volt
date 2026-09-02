@@ -18,8 +18,8 @@ public sealed class ClockQualityTests
     [Fact]
     public void TwoHoursBehind_IsDrifted()
     {
-        // D5. The reading is still classified rather than refused; whether it is stored is
-        // IngestionDriftedReadingTests' question, and the answer there is yes.
+        // D5. Reading vẫn được classify thay vì bị từ chối; có lưu nó hay không là câu hỏi của
+        // IngestionDriftedReadingTests, và câu trả lời ở đó là có.
         ClockQualityClassifier
             .Classify(Gateway.AddHours(-2), Gateway, Threshold)
             .ShouldBe(ClockQuality.Drifted);
@@ -28,8 +28,8 @@ public sealed class ClockQualityTests
     [Fact]
     public void TwoHoursAhead_IsAlsoDrifted()
     {
-        // A board replaced this morning comes up on its factory default and stamps into the future.
-        // Comparing in one direction only would call that Good.
+        // Board thay sáng nay khởi động với factory default và gắn timestamp vào tương lai. Chỉ compare
+        // theo một chiều sẽ gọi nó là Good.
         ClockQualityClassifier
             .Classify(Gateway.AddHours(2), Gateway, Threshold)
             .ShouldBe(ClockQuality.Drifted);
@@ -38,8 +38,8 @@ public sealed class ClockQualityTests
     [Fact]
     public void ExactlyOnTheThreshold_IsStillGood()
     {
-        // Five minutes is the tolerance, not the first failure. A strict comparison here would make
-        // the boundary depend on millisecond noise nobody configured.
+        // Năm phút là tolerance, không phải failure đầu tiên. Compare nghiêm ngặt ở đây sẽ làm boundary
+        // phụ thuộc vào nhiễu millisecond mà không ai cấu hình.
         ClockQualityClassifier
             .Classify(Gateway - Threshold, Gateway, Threshold)
             .ShouldBe(ClockQuality.Good);
@@ -52,8 +52,8 @@ public sealed class ClockQualityTests
     [Fact]
     public void NoDeviceClockAtAll_IsUnknownRatherThanAThrow()
     {
-        // The CSV file drop of C15 is the real source: an end-of-line tester exports rows and no
-        // device clock was ever involved. Unknown says that; Good would be a claim nobody made.
+        // CSV file drop của C15 là nguồn thực: thiết bị test end-of-line export row và chưa từng có
+        // device clock tham gia. Unknown nói đúng điều đó; Good sẽ là khẳng định không ai đưa ra.
         ClockQualityClassifier
             .Classify(deviceTimestamp: null, Gateway, Threshold)
             .ShouldBe(ClockQuality.Unknown);
@@ -62,9 +62,9 @@ public sealed class ClockQualityTests
     [Fact]
     public void ALongBufferedDelay_DoesNotMakeAGoodClockDrifted()
     {
-        // Store-and-forward can hold a reading for hours (ADR-028). The threshold is on the two
-        // clocks disagreeing, not on the reading being late — otherwise every message that survived
-        // an outage would arrive flagged, and the flag would stop meaning anything.
+        // Store-and-forward có thể giữ reading nhiều giờ (ADR-028). Threshold đặt ở việc hai clock
+        // bất đồng, không phải reading đến trễ — nếu không mọi message sống qua outage sẽ đến với flag,
+        // và flag sẽ không còn mang nghĩa gì.
         var device = Gateway.AddSeconds(-3);
 
         ClockQualityClassifier.Classify(device, Gateway, Threshold).ShouldBe(ClockQuality.Good);
@@ -83,8 +83,8 @@ public sealed class ClockQualityTests
     [InlineData(ClockQuality.Unknown, "Unknown")]
     public void ColumnValues_MatchTheCheckConstraint(ClockQuality quality, string expected)
     {
-        // The database CHECK lists these three spellings. Renaming an enum member is a refactor
-        // nobody expects to break an INSERT, so the mapping is pinned here rather than inferred.
+        // Database CHECK liệt kê ba cách viết này. Rename enum member là refactor mà không ai kỳ vọng
+        // sẽ làm hỏng INSERT, nên mapping được pin ở đây thay vì suy luận.
         quality.ToColumnValue().ShouldBe(expected);
     }
 }

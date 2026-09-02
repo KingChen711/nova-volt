@@ -9,11 +9,11 @@ using Nvm.Sparkplug.Topics;
 
 namespace Nvm.UnitTests.Simulator;
 
-/// <summary>Compressing time must change how long a run takes and nothing else.</summary>
+/// <summary>Nén thời gian phải chỉ làm thay đổi thời lượng một run mất, không gì khác.</summary>
 /// <remarks>
-/// A formation cycle is eighteen hours and no test can wait eighteen hours — but a test that got
-/// there by skipping samples would be measuring a different plant. The count of measurements is the
-/// left-hand side of D1's reconciliation, so it has to survive the compression exactly.
+/// Một formation cycle kéo dài mười tám giờ và không test nào có thể chờ mười tám giờ — nhưng một
+/// test đạt được điều đó bằng cách bỏ qua sample thì lại đang đo một nhà máy khác. Số lượng
+/// measurement là vế trái của phép đối soát D1, nên nó phải sống sót qua việc nén một cách chính xác.
 /// </remarks>
 public sealed class SimulatorWorkerTests
 {
@@ -33,15 +33,15 @@ public sealed class SimulatorWorkerTests
         var slow = await RunOneCycleAsync(compression: 1);
         var fast = await RunOneCycleAsync(compression: 1000);
 
-        // Identical plant.
+        // Cùng một nhà máy y hệt.
         fast.Messages.ShouldBe(slow.Messages);
         fast.Measurements.ShouldBe(slow.Measurements);
         fast.ProcessElapsed.ShouldBe(slow.ProcessElapsed);
         fast.ProcessElapsed.ShouldBe(FormationProfile.Default.CycleDuration);
 
-        // A thousandth of the clock. This is the only thing the compression is allowed to change, and
-        // it is checked rather than assumed — a compression that quietly did nothing would make every
-        // assertion above pass while an eighteen-hour test still took eighteen hours.
+        // Một phần nghìn của đồng hồ. Đây là thứ duy nhất mà việc nén được phép làm thay đổi, và nó
+        // được kiểm tra thay vì mặc định là đúng — một phép nén âm thầm không làm gì cả sẽ khiến mọi
+        // assertion ở trên vẫn pass trong khi một test mười tám giờ vẫn mất mười tám giờ.
         slow.ClockElapsed.ShouldBe(FormationProfile.Default.CycleDuration);
         fast.ClockElapsed.ShouldBe(slow.ClockElapsed / 1000);
     }
@@ -59,11 +59,11 @@ public sealed class SimulatorWorkerTests
     [Fact]
     public async Task ARebirthRequest_MakesTheNodeDeclareItselfAgain()
     {
-        // Without this the gateway is blind for the rest of the run. It subscribes a second after the
-        // simulator published its births, cannot read one alias-only message afterwards, asks for a
-        // rebirth on every gap — and if nothing answers, the next DBIRTH is a cell change away, which
-        // on a formation line is eighteen hours. Measured before this existed: 10.000+ messages
-        // rejected in a few minutes.
+        // Thiếu điều này, gateway sẽ mù cho suốt phần còn lại của run. Nó subscribe một giây sau khi
+        // simulator đã publish các birth của mình, không đọc được bất kỳ message chỉ-mang-alias nào
+        // sau đó, yêu cầu rebirth ở mỗi khoảng trống — và nếu không gì trả lời, DBIRTH kế tiếp cách
+        // đó một lần đổi cell, mà trên một formation line là mười tám giờ. Đo được trước khi điều này
+        // tồn tại: hơn 10.000 message bị từ chối chỉ trong vài phút.
         var options = new SimulatorOptions
         {
             LinePath = LinePath.Value,
@@ -90,18 +90,19 @@ public sealed class SimulatorWorkerTests
 
         await recorder.RebirthRequested!(CancellationToken.None);
 
-        // One NBIRTH and one DBIRTH per channel, exactly as at connect.
+        // Một NBIRTH và một DBIRTH cho mỗi channel, y hệt như lúc connect.
         (recorder.Messages.Count - afterConnect).ShouldBe(Channels.Length + 1);
         worker.Rebirths.ShouldBe(1);
 
-        // Republished, not re-measured. The rebirth restates the same cell at the same instant, so
-        // it carries the same natural key and deduplication stores it once. A run report that
-        // counted it again would put the left side of D1 above the right by one full DBIRTH per
-        // rebirth — measured at exactly -48 on an eight-channel line before this held.
+        // Được publish lại, không phải đo lại. Rebirth công bố lại cùng một cell tại cùng một thời
+        // điểm, nên nó mang cùng natural key và deduplication chỉ lưu nó một lần. Một run report đếm
+        // nó lần nữa sẽ khiến vế trái của D1 vượt vế phải một DBIRTH đầy đủ cho mỗi rebirth — trước
+        // khi điều này được giữ vững thì đo được chính xác -48 trên một line tám channel.
         line.MeasurementCount.ShouldBe(measurementsBeforeRebirth);
 
-        // A consumer that missed the births asks once per detected gap, so it asks thousands of times
-        // before the first answer reaches it. Answering each would drown the data it wants to read.
+        // Một consumer bỏ lỡ các birth sẽ hỏi một lần cho mỗi khoảng trống phát hiện được, nên nó hỏi
+        // hàng nghìn lần trước khi câu trả lời đầu tiên tới được nó. Trả lời từng lần một sẽ nhấn
+        // chìm dữ liệu mà nó muốn đọc.
         await recorder.RebirthRequested!(CancellationToken.None);
         worker.Rebirths.ShouldBe(1);
 
@@ -112,21 +113,20 @@ public sealed class SimulatorWorkerTests
     [Fact]
     public async Task AGracefulStopFinishesTheBatchItHasAlreadyComposed()
     {
-        // Where the plant is when a stop arrives: the channels have been read, the deadbands have
-        // moved, and half the batch is still on its way out. Dropping the rest would be the cheapest
-        // possible shutdown and it would put readings on D1's left-hand side that no database is
-        // ever offered — the D3 lab stops the source on purpose, so it stands exactly here nearly
-        // every run.
+        // Nhà máy đang ở đâu khi một lệnh stop tới: các channel đã được đọc, các deadband đã dịch
+        // chuyển, và nửa batch vẫn đang trên đường đi ra. Bỏ phần còn lại sẽ là cách shutdown rẻ nhất
+        // có thể, và nó sẽ đặt các reading vào vế trái của D1 mà không database nào từng được cấp —
+        // lab D3 cố ý dừng nguồn, nên nó đứng đúng ngay đây gần như mọi run.
         //
-        // The plant stops between TICKS instead, where nothing has been measured yet and stopping
-        // costs nothing.
+        // Thay vào đó, nhà máy dừng giữa các TICK, nơi chưa gì được đo cả và việc dừng lại không tốn
+        // gì hết.
         var rig = Rig();
 
         await rig.Worker.StartAsync(CancellationToken.None);
         await Eventually.TrueAsync(() => rig.Worker.IsRunning, "The simulator never armed its tick loop.");
 
-        // Stand inside the batch rather than racing for it: the first publish of the next tick is
-        // held open until this test lets it go.
+        // Đứng bên trong batch thay vì phải chạy đua để bắt kịp nó: publish đầu tiên của tick kế tiếp
+        // được giữ mở cho tới khi test này thả nó ra.
         rig.Link.CatchNext();
         rig.Time.Advance(rig.Options.TickInterval);
 
@@ -139,15 +139,15 @@ public sealed class SimulatorWorkerTests
 
         await stopping;
 
-        // The message that was caught, plus at least one composed behind it that the cancel could
-        // have taken. Without the second one this test would pass on an empty batch.
+        // Message đã bị giữ lại, cộng thêm ít nhất một message được soạn phía sau nó mà lệnh cancel
+        // có thể đã lấy đi. Thiếu message thứ hai này, test sẽ pass trên một batch rỗng.
         (rig.Link.Count - caughtAt).ShouldBeGreaterThan(1);
 
         rig.Worker.AbandonedMeasurements.ShouldBe(0);
         rig.Worker.LogicalMessageCount.ShouldBe(rig.Link.Count);
 
-        // Both sides, and neither derived from the other: what a consumer could store out of the
-        // payloads, against what the plant says its channels took.
+        // Cả hai vế, và không vế nào được suy ra từ vế còn lại: những gì một consumer có thể lưu được
+        // từ các payload, đối chiếu với những gì nhà máy nói các channel của nó đã đo.
         var ledger = new MeasurementLedger();
 
         ledger.AddAll(rig.Link.Messages);
@@ -162,20 +162,20 @@ public sealed class SimulatorWorkerTests
     [Fact]
     public async Task ALinkThatDiesMidBatchCannotMakeTheReconciliationComeOutEven()
     {
-        // The other half of J7, and the one that decides whether the oracle can see anything at all.
-        // A publish that throws leaves the rest of a composed batch on the floor: those readings were
-        // taken, and a database will never be offered them.
+        // Nửa còn lại của J7, và là nửa quyết định liệu oracle có thấy được gì hay không. Một publish
+        // ném ra exception sẽ bỏ lại phần còn lại của một batch đã soạn nằm trên sàn: những reading
+        // đó đã được đo, và một database sẽ không bao giờ được cấp chúng.
         //
-        // If the left-hand side were counted after the publish, it would drop by exactly the amount
-        // the right-hand side is about to be short — and D1 would come out even over a plant that
-        // lost data. What must happen instead is that the count stays, the difference shows, and the
-        // gate goes red with a number saying which side of the wire the loss was on.
+        // Nếu vế trái được đếm sau khi publish, nó sẽ giảm đúng bằng lượng mà vế phải sắp thiếu hụt —
+        // và D1 sẽ ra kết quả khớp trên một nhà máy đã mất dữ liệu. Điều phải xảy ra thay vào đó là:
+        // con số đếm giữ nguyên, chênh lệch hiện ra, và gate chuyển đỏ với một con số nói rõ mất mát
+        // nằm ở phía nào của đường truyền.
         var rig = Rig();
 
         await rig.Worker.StartAsync(CancellationToken.None);
         await Eventually.TrueAsync(() => rig.Worker.IsRunning, "The simulator never armed its tick loop.");
 
-        // One more message gets through, and the rest of the batch behind it does not.
+        // Thêm một message nữa đi qua được, còn phần còn lại của batch phía sau thì không.
         rig.Link.FailAfter(rig.Link.Count + 1);
         rig.Time.Advance(rig.Options.TickInterval);
 
@@ -189,8 +189,9 @@ public sealed class SimulatorWorkerTests
 
         ledger.AddAll(rig.Link.Messages);
 
-        // Stated as an equation because that is what the gate has to be able to say: what the plant
-        // measured, minus what the link carried, is the loss — reported, not netted off.
+        // Được nêu ra như một phương trình vì đó chính là điều gate phải có khả năng nói ra: những gì
+        // nhà máy đã đo, trừ đi những gì đường truyền đã mang theo, chính là mất mát — được báo cáo,
+        // không phải bị bù trừ đi mất.
         (rig.Line.MeasurementCount - ledger.Total).ShouldBe(rig.Worker.AbandonedMeasurements);
 
         var report = rig.ReadReport();
@@ -198,33 +199,34 @@ public sealed class SimulatorWorkerTests
         report.LogicalMeasurements.ShouldBe(rig.Line.MeasurementCount);
         report.AbandonedMeasurements.ShouldBe(rig.Worker.AbandonedMeasurements);
 
-        // The false pass this exists to prevent. A database holding everything the link carried is
-        // still short of the report, so the subtraction D1 runs cannot come out at zero.
+        // Cái pass giả mà điều này tồn tại để ngăn chặn. Một database chứa mọi thứ đường truyền đã
+        // mang theo vẫn còn thiếu so với report, nên phép trừ mà D1 thực hiện không thể ra bằng
+        // không.
         report.LogicalMeasurements.ShouldBeGreaterThan(ledger.Total);
     }
 
     [Fact]
     public void SettingsThatCannotProduceAPlantAreRefusedBeforeAnythingConnects()
     {
-        // Every one of these would otherwise fail somewhere in the middle of a run, where the cause is
-        // a great deal harder to see than it is here.
+        // Mỗi cái trong số này nếu không sẽ thất bại ở đâu đó giữa một run, nơi nguyên nhân khó nhìn
+        // thấy hơn rất nhiều so với ở đây.
         Should.Throw<InvalidOperationException>(() => new SimulatorOptions { TimeCompression = 0 }.Validate());
         Should.Throw<InvalidOperationException>(() => new SimulatorOptions { SamplePeriod = TimeSpan.Zero }.Validate());
 
-        // 18 hours is not a whole number of 7-minute samples, so the last sample of one cell would sit
-        // closer to the first of the next than any other pair in the run.
+        // 18 giờ không phải là một số nguyên lần sample 7 phút, nên sample cuối cùng của một cell sẽ
+        // nằm gần sample đầu tiên của cell kế tiếp hơn bất kỳ cặp nào khác trong run.
         Should.Throw<InvalidOperationException>(
             () => new SimulatorOptions { SamplePeriod = TimeSpan.FromMinutes(7) }.Validate());
 
-        // Below a millisecond a timer stops keeping up and the run becomes slower than the compression
-        // claims — which would turn a throughput number into a lie.
+        // Dưới một millisecond, một timer không còn theo kịp nữa và run trở nên chậm hơn những gì
+        // compression tuyên bố — điều này sẽ biến một con số throughput thành một lời nói dối.
         Should.Throw<InvalidOperationException>(
             () => new SimulatorOptions { SamplePeriod = TimeSpan.FromSeconds(1), TimeCompression = 5000 }.Validate());
     }
 
-    // A worker with a link a test can stand inside, wired the way the simulator actually runs: the
-    // fault injector is in the path with every rate at zero, because that pass-through is what a
-    // faultless run goes through too.
+    // Một worker với một đường truyền mà test có thể đứng bên trong, được nối dây đúng theo cách
+    // simulator thực sự chạy: fault injector nằm trên đường đi với mọi tỷ lệ bằng không, vì
+    // pass-through đó cũng chính là thứ một run không lỗi phải đi qua.
     private static WorkerRig Rig()
     {
         var options = new SimulatorOptions
@@ -260,9 +262,9 @@ public sealed class SimulatorWorkerTests
         FakeTimeProvider Time,
         SimulatorOptions Options)
     {
-        // Read from the file rather than from the worker. D1 and D3 read this file and nothing else,
-        // so a counter that was right in memory and missing from the JSON would still leave both
-        // labs comparing a number they never saw.
+        // Đọc từ file thay vì từ worker. D1 và D3 chỉ đọc file này và không gì khác, nên một counter
+        // đúng trong bộ nhớ nhưng thiếu trong JSON vẫn sẽ khiến cả hai lab so sánh một con số chúng
+        // chưa từng thấy.
         public RunReport ReadReport()
         {
             var report = RunReportFile.Read(Options.ReportPath);
@@ -287,10 +289,10 @@ public sealed class SimulatorWorkerTests
         var recorder = new RecordingPublisher();
         var line = new FormationLine(LinePath, Channels, FormationProfile.Default, StartedAt);
 
-        // Through the fault injector with every rate at zero, because that is the arrangement the
-        // simulator actually runs in. Testing the worker against a bare publisher would leave the
-        // pass-through untested exactly where it matters most: the run with no faults is the baseline
-        // every faulted run is compared against.
+        // Đi qua fault injector với mọi tỷ lệ bằng không, vì đó chính là cách sắp xếp mà simulator
+        // thực sự chạy trong đó. Test worker với một publisher trần trụi sẽ bỏ qua việc kiểm thử
+        // pass-through đúng ngay chỗ nó quan trọng nhất: run không có fault chính là baseline mà mọi
+        // run có fault được so sánh dựa trên.
         var publisher = new FaultInjectingPublisher(
             recorder,
             options.Faults,
@@ -301,10 +303,10 @@ public sealed class SimulatorWorkerTests
 
         await worker.StartAsync(CancellationToken.None);
 
-        // Advancing a fake clock before the tick loop is armed moves the plant's time past a tick that
-        // nothing is holding, and the run silently comes up one sample short. Real time cannot deliver
-        // a tick that early, so this is a hazard the fake clock introduces and the fake clock must
-        // answer for.
+        // Đẩy một fake clock đi trước khi tick loop được nạp sẵn sẽ đưa thời gian của nhà máy vượt
+        // qua một tick mà không gì đang giữ, và run âm thầm thiếu mất một sample. Thời gian thật
+        // không thể tạo ra một tick sớm như vậy, nên đây là một rủi ro do fake clock gây ra và fake
+        // clock phải chịu trách nhiệm cho nó.
         await Eventually.TrueAsync(() => worker.IsRunning, "The simulator never armed its tick loop.");
 
         var ticks = (int)(FormationProfile.Default.CycleDuration / options.SamplePeriod);

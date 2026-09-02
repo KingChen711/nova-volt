@@ -5,7 +5,7 @@ using SparkplugMetric = Org.Eclipse.Tahu.Protobuf.Payload.Types.Metric;
 
 namespace Nvm.UnitTests.Sparkplug;
 
-/// <summary>Where a reading's timestamp comes from, and what type it is allowed to be.</summary>
+/// <summary>Timestamp của reading đến từ đâu, và type nào được phép dùng cho nó.</summary>
 public sealed class SparkplugTimeTests
 {
     private const ulong PayloadMs = 1787901330500;
@@ -13,14 +13,13 @@ public sealed class SparkplugTimeTests
     [Fact]
     public void NoTypeInThisAssemblyPutsADateTimeOnADeviceReading()
     {
-        // AGENTS.md K2, checked here because no analyzer covers it. NVM002 refuses DateTime across
-        // Nvm.Contracts and this assembly is not Nvm.Contracts, so without this test the rule holds
-        // everywhere except the one place device clocks actually enter the system.
+        // AGENTS.md K2, được check ở đây vì không analyzer nào cover nó. NVM002 từ chối DateTime trong
+        // Nvm.Contracts còn assembly này không phải Nvm.Contracts, nên thiếu test này rule đúng ở mọi
+        // nơi trừ đúng chỗ device clock thực sự đi vào hệ thống.
         //
-        // Site DE1 observes daylight saving: one hour every autumn happens twice there. A wall-clock
-        // reading with no offset cannot say which of the two it was, telemetry is kept 400 days, and
-        // the store is append-only — so the ambiguity would still be in the table, uncorrectable, when
-        // somebody came to investigate it.
+        // Site DE1 có daylight saving: mỗi mùa thu một giờ xảy ra hai lần. Reading wall-clock không có
+        // offset không nói được đó là lần nào, telemetry được giữ 400 ngày, và store là append-only —
+        // nên ambiguity vẫn nằm trong table, không thể sửa, khi ai đó đến điều tra.
         var offenders = typeof(DeviceReading).Assembly
             .GetExportedTypes()
             .Where(type => string.Equals(type.Namespace, "Nvm.Sparkplug", StringComparison.Ordinal))
@@ -34,8 +33,8 @@ public sealed class SparkplugTimeTests
     [Fact]
     public void Control_TheDateTimeWalkFindsOneBuriedInAGeneric()
     {
-        // Without this, a walk that looked only at the outermost type — or at no types at all, because
-        // the namespace filter was misspelled — would report "no offenders" forever.
+        // Không có nó, walk chỉ nhìn outermost type — hoặc không nhìn type nào vì namespace filter viết
+        // sai — sẽ báo "no offenders" mãi mãi.
         MembersMentioningDateTime(typeof(ReadingWithForbiddenClock))
             .ShouldContain($"{nameof(ReadingWithForbiddenClock)}.{nameof(ReadingWithForbiddenClock.Samples)}");
     }
@@ -43,8 +42,8 @@ public sealed class SparkplugTimeTests
     [Fact]
     public void AMetricWithoutItsOwnTimestampInheritsThePayloadsOne()
     {
-        // Legal and common: a device that reads everything in one sweep stamps the payload and leaves
-        // the metrics bare.
+        // Hợp lệ và phổ biến: device đọc mọi thứ trong một lượt sẽ gắn timestamp cho payload và để
+        // metric trống.
         var metric = new SparkplugMetric
         {
             Name = "Formation/Voltage",
@@ -61,9 +60,9 @@ public sealed class SparkplugTimeTests
     [Fact]
     public void MetricsKeepTheirOwnInstantsRatherThanThePayloadsOne()
     {
-        // One message routinely gathers readings taken at different moments — that is why a Sparkplug
-        // metric has a timestamp of its own at all. Collapsing them onto the payload's would align
-        // samples that were never simultaneous, and process engineering reads exactly those gaps.
+        // Một message thường gom các reading ở thời điểm khác nhau — đó là lý do Sparkplug metric có
+        // timestamp riêng. Gộp chúng vào timestamp của payload sẽ căn các sample vốn không đồng thời,
+        // trong khi process engineering đọc chính những khoảng lệch đó.
         var readings = SparkplugPayload.DecodeData(
             SparkplugPayloads.Encode(
                 PayloadMs,
@@ -82,9 +81,9 @@ public sealed class SparkplugTimeTests
     [Fact]
     public void AReadingWithNoTimestampAnywhereIsRefused()
     {
-        // device_timestamp is part of the natural key (docs/scope.md §7.2), so a reading without one
-        // has no dedup identity. Accepting it would mean writing a measurement that could never be
-        // recognised as a duplicate of itself — and C04 would have no way to notice.
+        // device_timestamp là phần của natural key (docs/scope.md §7.2), nên reading thiếu nó không có
+        // dedup identity. Chấp nhận nó sẽ ghi measurement không bao giờ được nhận ra là duplicate của
+        // chính nó — C04 không có cách phát hiện.
         var metric = new SparkplugMetric
         {
             Name = "Formation/Voltage",
@@ -100,8 +99,8 @@ public sealed class SparkplugTimeTests
     [Fact]
     public void AClockSoWrongItIsNotAnInstantIsRefusedAsABadMessage()
     {
-        // A PLC with a corrupted clock must not take ingestion down with an ArgumentOutOfRangeException
-        // thrown from somewhere in the BCL. It is a bad message and it gets a bad message's answer.
+        // PLC có clock hỏng không được làm ingestion dừng bởi ArgumentOutOfRangeException ném ở đâu đó
+        // trong BCL. Nó là bad message và nhận câu trả lời dành cho bad message.
         var metric = new SparkplugMetric
         {
             Name = "Formation/Voltage",
@@ -133,7 +132,7 @@ public sealed class SparkplugTimeTests
         || (type.IsArray && Mentions(type.GetElementType()!))
         || (type.IsGenericType && type.GetGenericArguments().Any(Mentions));
 
-    /// <summary>A deliberately wrong reading, so the walk above can be shown to be able to fail.</summary>
+    /// <summary>Reading sai có chủ ý, để chứng minh walk ở trên có thể fail.</summary>
     public sealed record ReadingWithForbiddenClock(
         string MetricName,
         DateTimeOffset DeviceTimestamp,

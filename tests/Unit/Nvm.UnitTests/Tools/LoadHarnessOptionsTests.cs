@@ -43,9 +43,8 @@ public sealed class LoadHarnessOptionsTests
     [Fact]
     public void AnEmptyBrokerHost_IsRefused()
     {
-        // The harness must be pointed at the EMQX service name on ot-net. An empty host would fall
-        // back to whatever a default resolves to, and the measurement would be of a path production
-        // does not have (R-M2-2).
+        // Harness phải trỏ tới EMQX service name trên ot-net. Host rỗng sẽ fallback về default nào đó,
+        // và measurement sẽ đo path mà production không có (R-M2-2).
         var options = new LoadHarnessOptions { BrokerHost = " " };
 
         Should.Throw<ArgumentException>(options.Validate);

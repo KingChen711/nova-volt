@@ -4,10 +4,10 @@ using SparkplugMetric = Org.Eclipse.Tahu.Protobuf.Payload.Types.Metric;
 
 namespace Nvm.UnitTests.Sparkplug;
 
-/// <summary>Which Sparkplug datatype becomes which <see cref="MetricValue"/>.</summary>
+/// <summary>Datatype Sparkplug nào trở thành <see cref="MetricValue"/> nào.</summary>
 /// <remarks>
-/// Payloads are built in-process here rather than captured — see <see cref="SparkplugPayloads"/> for
-/// why that is the right trade for this particular question and the wrong one for the schema itself.
+/// Payload được build in-process ở đây thay vì capture — xem <see cref="SparkplugPayloads"/> để biết
+/// vì sao đó là trade phù hợp cho câu hỏi này nhưng sai cho chính schema.
 /// </remarks>
 public sealed class SparkplugValueTests
 {
@@ -36,8 +36,8 @@ public sealed class SparkplugValueTests
     [Fact]
     public void AFloatIsWidenedToDoubleWithoutLosingAnything()
     {
-        // Widened because ts.process_signal.value is DOUBLE PRECISION (docs/scope.md §8.3), and the
-        // widening from binary32 is exact in a way the narrowing back would not be.
+        // Widen vì ts.process_signal.value là DOUBLE PRECISION (docs/scope.md §8.3), và widen từ
+        // binary32 là chính xác tuyệt đối theo cách narrow ngược lại không làm được.
         Decode(Named("Formation/Voltage", DataType.Float, metric => metric.FloatValue = 3.6875f))
             .Value.ShouldBe(new MetricValue.Real(3.6875));
     }
@@ -45,9 +45,9 @@ public sealed class SparkplugValueTests
     [Fact]
     public void ASignedIntegerKeepsTheSignItsDeclarationGivesIt()
     {
-        // Int8, Int16 and Int32 all travel in int_value, which is a protobuf uint32, so -1 arrives on
-        // the wire as 4294967295. Only the declared datatype separates the two readings below, and
-        // that declaration comes from the birth — a second reason an unknown alias cannot be guessed.
+        // Int8, Int16 và Int32 đều truyền trong int_value, một protobuf uint32, nên -1 đến trên wire là
+        // 4294967295. Chỉ datatype được khai báo phân biệt hai reading dưới đây, và khai báo đến từ
+        // birth — lý do thứ hai không thể đoán alias không biết.
         const uint OnTheWire = 4_294_967_295;
 
         Decode(Named("Formation/Trim", DataType.Int32, metric => metric.IntValue = OnTheWire))
@@ -63,10 +63,9 @@ public sealed class SparkplugValueTests
     [Fact]
     public void AnAliasedIntegerTakesItsSignFromTheBirthAndNotFromTheWire()
     {
-        // Why the alias table carries the datatype and not only the name. A DDATA metric sends the
-        // alias and the bytes and nothing else; 4294967295 is a perfectly good UInt32 and a perfectly
-        // good -1, and the birth is the only place that ever said which. A table that remembered names
-        // alone would read a trim of -1 as four billion, in a column that accepts it.
+        // Lý do alias table mang datatype chứ không chỉ name. DDATA metric chỉ gửi alias, byte và không
+        // gì khác; 4294967295 là UInt32 hợp lệ và cũng là -1 hợp lệ, còn birth là chỗ duy nhất từng nói
+        // đó là cái nào. Table chỉ nhớ name sẽ đọc trim -1 thành bốn tỷ trong column chấp nhận nó.
         var birth = SparkplugPayload.DecodeBirth(SparkplugPayloads.Encode(
             SparkplugPayloads.DefaultTimestampMs,
             seq: 0,
@@ -97,8 +96,8 @@ public sealed class SparkplugValueTests
     [Fact]
     public void AnUnsignedSixtyFourBitValueTooLargeToRepresentIsRefused()
     {
-        // The one place the Integral case cannot hold what the wire can. Refused rather than wrapped
-        // into a negative number, which would be a reading that is not merely wrong but plausible.
+        // Chỗ duy nhất case Integral không chứa được thứ wire chứa được. Từ chối thay vì wrap thành số
+        // âm, vốn sẽ là reading không chỉ sai mà còn nghe có vẻ hợp lý.
         Should.Throw<SparkplugDecodeException>(() =>
             Decode(Named("Formation/Ticks", DataType.Uint64, metric => metric.LongValue = ulong.MaxValue)));
     }
@@ -106,9 +105,9 @@ public sealed class SparkplugValueTests
     [Fact]
     public void ADeviceThatSaysItHasNoValueIsRecordedAsSayingSo()
     {
-        // A thermocouple that has come loose sends is_null. Reading that as 0 °C puts a plausible
-        // number into a traceability record; dropping the metric makes it indistinguishable from
-        // report-by-exception deciding nothing had changed. Both turn a known unknown into a fact.
+        // Thermocouple bị lỏng gửi is_null. Đọc nó thành 0 °C đưa con số nghe hợp lý vào traceability
+        // record; bỏ metric thì nó không khác report-by-exception quyết định không có gì thay đổi. Cả
+        // hai đều biến known unknown thành fact.
         var metric = Named("Formation/Temperature", DataType.Float, _ => { });
         metric.IsNull = true;
 
@@ -118,7 +117,7 @@ public sealed class SparkplugValueTests
     [Fact]
     public void AMetricWithNeitherAValueNorIsNullIsRefused()
     {
-        // "No value" and "explicitly null" are different statements, and this payload makes neither.
+        // "No value" và "explicitly null" là hai phát biểu khác nhau, còn payload này không đưa ra cái nào.
         Should.Throw<SparkplugDecodeException>(() =>
             Decode(Named("Formation/Voltage", DataType.Float, _ => { })));
     }
@@ -126,8 +125,8 @@ public sealed class SparkplugValueTests
     [Fact]
     public void ADeclarationThatContradictsTheWireIsRefused()
     {
-        // The birth said Float and the payload carried text. Taking either side would be a guess about
-        // which of the two is the mistake, and the guess would be recorded as a measurement.
+        // Birth nói Float còn payload mang text. Chọn bên nào cũng là đoán cái nào sai, và phỏng đoán đó
+        // sẽ được ghi thành measurement.
         var thrown = Should.Throw<SparkplugDecodeException>(() =>
             Decode(Named("Formation/Voltage", DataType.Float, metric => metric.StringValue = "3.6875")));
 
@@ -137,9 +136,9 @@ public sealed class SparkplugValueTests
     [Fact]
     public void ADatatypeThisPipelineDoesNotReadIsRefusedRatherThanSkipped()
     {
-        // DataSet, Template, Bytes, File, the arrays. A formation channel emits none of them, so one
-        // arriving means the payload is not what this pipeline thinks it is — which is worth stopping
-        // on, not worth quietly dropping a metric over.
+        // DataSet, Template, Bytes, File, array. Formation channel không emit cái nào trong số đó, nên
+        // một cái đến nghĩa là payload không như pipeline này nghĩ — đáng dừng lại, không đáng âm thầm
+        // bỏ một metric.
         var metric = Named("Formation/Curve", DataType.DataSet, _ => { });
         metric.DatasetValue = new Payload.Types.DataSet();
 

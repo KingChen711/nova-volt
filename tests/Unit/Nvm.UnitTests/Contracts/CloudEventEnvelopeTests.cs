@@ -43,9 +43,9 @@ public sealed class CloudEventEnvelopeTests
     [Fact]
     public void Id_CannotDisagreeWithThePayloadEvenWhenTheDataIsReplaced()
     {
-        // The point of deriving Id instead of storing it. A `with` expression that swaps the payload
-        // would leave a stale id behind if the envelope kept its own copy — and a stale id is a
-        // deduplication key pointing at the wrong fact.
+        // Đây chính là lý do Id được derive thay vì lưu riêng. Một biểu thức `with` thay payload sẽ
+        // để lại một id cũ nếu envelope giữ bản sao riêng của nó — và một id cũ là một deduplication
+        // key trỏ vào sai fact.
         var replacement = Guid.Parse("019a0000-0000-7000-8000-000000000001");
         var envelope = BuildEnvelope();
 
@@ -66,9 +66,9 @@ public sealed class CloudEventEnvelopeTests
     [Fact]
     public void SiteId_OnThePayload_AgreesWithTheSourceAndTheRoutingKey()
     {
-        // Three strings name the same plant in three different spellings: NV1 in the payload, nv1 in
-        // the source URN, NV1 again in the routing key. This is the assertion that they all resolve
-        // back to one canonical site code.
+        // Ba chuỗi cùng đặt tên cho một nhà máy theo ba cách viết khác nhau: NV1 trong payload, nv1
+        // trong source URN, NV1 một lần nữa trong routing key. Đây là assertion rằng tất cả đều quy
+        // về cùng một site code chuẩn.
         var envelope = BuildEnvelope();
 
         var route = RoutingKey.Create(envelope.Data.SiteId, envelope.Type);

@@ -1,11 +1,12 @@
 namespace Nvm.UnitTests.Sparkplug;
 
-/// <summary>Reads the Sparkplug artefacts that were copied next to the test assembly.</summary>
+/// <summary>Đọc các artefact Sparkplug đã được copy ra cạnh test assembly.</summary>
 /// <remarks>
-/// Same shape as <c>GoldenFile</c> in the contract tests, and for the same reason: a missing file
-/// must not read as "the copy step is broken". Here it matters more than usual, because the payloads
-/// are binary — an empty or truncated read produces a <c>Payload</c> with zero metrics, which is a
-/// perfectly valid protobuf message and would quietly fail an assertion about the wrong thing.
+/// Cùng hình dạng với <c>GoldenFile</c> trong contract test, và vì cùng một lý do: một file bị thiếu
+/// không được phép đọc như "bước copy đang hỏng". Ở đây điều đó quan trọng hơn bình thường, vì các
+/// payload là dữ liệu nhị phân — một lần đọc rỗng hoặc bị cắt cụt sẽ tạo ra một <c>Payload</c> với
+/// không metric nào cả, đó là một protobuf message hoàn toàn hợp lệ và sẽ âm thầm khiến một assertion
+/// thất bại vì lý do sai.
 /// </remarks>
 internal static class SparkplugFixture
 {

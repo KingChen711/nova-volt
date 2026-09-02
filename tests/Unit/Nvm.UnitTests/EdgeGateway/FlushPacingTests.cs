@@ -18,7 +18,7 @@ public sealed class FlushPacingTests
 
         (await limiter.AcquireAsync(100, TestContext.Current.CancellationToken)).ShouldBe(TimeSpan.Zero);
 
-        // The bucket is empty and refills at 100/s, so 50 more messages cost half a second.
+        // Bucket đã cạn và refill ở tốc độ 100/s, nên 50 message tiếp theo tốn nửa giây.
         var pending = limiter.AcquireAsync(50, TestContext.Current.CancellationToken).AsTask();
         pending.IsCompleted.ShouldBeFalse();
 
@@ -30,9 +30,10 @@ public sealed class FlushPacingTests
     [Fact]
     public async Task RateLimiter_BatchLargerThanTheBurst_StillPasses()
     {
-        // A single buffered batch can hold more messages than one second of allowance. Charging it
-        // the whole bucket paces it; refusing it would stall the cursor on a record it could never
-        // afford, and the buffer would grow until the disk cap stopped MQTT acceptance.
+        // Một batch đã buffer có thể chứa nhiều message hơn hạn mức của một giây. Tính phí cả bucket
+        // cho nó là cách điều tiết tốc độ; từ chối nó sẽ làm cursor kẹt tại một record mà nó không
+        // bao giờ đủ khả năng chi trả, và buffer sẽ phình to cho tới khi trần dung lượng đĩa chặn
+        // việc nhận MQTT lại.
         var clock = new FakeTimeProvider(Start);
         var limiter = new FlushRateLimiter(
             new PersistentBufferOptions { FlushMessagesPerSecond = 10, FlushBurstMessages = 10 },
@@ -94,8 +95,8 @@ public sealed class FlushPacingTests
     [Fact]
     public void Backoff_JitterOnlyEverStretches()
     {
-        // Symmetric jitter, as NvmRetryPolicy uses, would let the gateway come back sooner than the
-        // Retry-After it was just given. Here the floor must hold for every draw.
+        // Jitter đối xứng, kiểu mà NvmRetryPolicy dùng, sẽ để gateway quay lại sớm hơn cả Retry-After
+        // mà nó vừa được cấp. Ở đây, sàn (floor) phải luôn đúng cho mọi lần lấy mẫu.
         var options = new PersistentBufferOptions
         {
             FlushRetryDelay = TimeSpan.FromSeconds(1),

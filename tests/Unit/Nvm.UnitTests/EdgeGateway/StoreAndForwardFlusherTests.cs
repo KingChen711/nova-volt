@@ -30,8 +30,8 @@ public sealed class StoreAndForwardFlusherTests
     [Fact]
     public async Task Backpressure_WaitsAtLeastTheDelayIngestionAskedFor()
     {
-        // The first delay would be 5 ms on its own. Ingestion asks for 300 ms, so a gateway that
-        // ignored the header would be back long before the server said it could cope.
+        // Tự thân, độ trễ đầu tiên sẽ là 5 ms. Ingestion yêu cầu 300 ms, nên một gateway phớt lờ
+        // header này sẽ quay lại từ rất lâu trước khi server nói rằng nó đã chịu đựng nổi.
         var options = Options();
         options.FlushRetryDelay = TimeSpan.FromMilliseconds(5);
         var sink = new ThrottleOnceSink(TimeSpan.FromMilliseconds(300));
@@ -50,8 +50,8 @@ public sealed class StoreAndForwardFlusherTests
     [Fact]
     public async Task RateLimit_HoldsTheSecondBatchAndCountsTheWait()
     {
-        // One message per second with a burst of one: the first batch passes immediately, the
-        // second cannot, and the flusher must record why it waited rather than just being slow.
+        // Một message mỗi giây với burst bằng một: batch đầu tiên đi qua ngay lập tức, batch thứ hai
+        // thì không, và flusher phải ghi lại lý do nó chờ chứ không chỉ đơn thuần là chạy chậm.
         var options = Options();
         options.FlushMessagesPerSecond = 1;
         options.FlushBurstMessages = 1;
@@ -61,8 +61,8 @@ public sealed class StoreAndForwardFlusherTests
 
         await FlusherHarness.WaitForAsync(() => harness.Counters.ForwardedMessages == 1);
 
-        // Far shorter than the one second the second message must wait for a token, so this asserts
-        // the limiter is holding it rather than that the machine happened to be slow.
+        // Ngắn hơn nhiều so với một giây mà message thứ hai phải chờ để có token, nên phép assert này
+        // xác nhận rằng limiter đang giữ nó lại chứ không phải máy chạy chậm một cách tình cờ.
         await Task.Delay(TimeSpan.FromMilliseconds(200), TestContext.Current.CancellationToken);
         harness.Counters.ForwardedMessages.ShouldBe(1);
         harness.Buffer.Snapshot.Depth.ShouldBe(1);
@@ -75,14 +75,14 @@ public sealed class StoreAndForwardFlusherTests
     [Fact]
     public async Task AnIngestionTimeout_IsRetried_NotAHostStop()
     {
-        // HttpClient throws TaskCanceledException when its own timeout elapses, and
-        // TaskCanceledException derives from OperationCanceledException. A catch filter written as
-        // "is not OperationCanceledException" therefore let every ingestion timeout through, and the
-        // host stopped. Measured in lab §5.C10.2 before this held: six gateway restarts during one
-        // two-minute backend outage, and a backlog that missed its three-minute budget.
+        // HttpClient ném TaskCanceledException khi timeout của chính nó hết hạn, và
+        // TaskCanceledException lại kế thừa từ OperationCanceledException. Một catch filter viết theo
+        // kiểu "is not OperationCanceledException" vì vậy sẽ để lọt mọi ingestion timeout, và host bị
+        // dừng lại. Đo được trong lab §5.C10.2 trước khi điều này được chốt: sáu lần gateway restart
+        // trong một sự cố backend kéo dài hai phút, và một backlog trễ mất ngân sách ba phút của nó.
         //
-        // Restarting the edge because the backend is unreachable is what N15 forbids, and it is the
-        // one failure the store-and-forward buffer exists to prevent.
+        // Restart edge chỉ vì backend không kết nối được chính là điều N15 cấm, và đó cũng là thất
+        // bại duy nhất mà store-and-forward buffer tồn tại để ngăn chặn.
         var options = Options();
         var sink = new TimeOutOnceSink();
 
@@ -263,7 +263,8 @@ public sealed class StoreAndForwardFlusherTests
         {
             if (attempt == 1)
             {
-                // Exactly what HttpClient raises on its own timeout, wrapped the same way.
+                // Chính xác là những gì HttpClient ném ra khi timeout của chính nó xảy ra, được bọc
+                // theo đúng cách như vậy.
                 throw new TaskCanceledException(
                     "The request was canceled due to the configured HttpClient.Timeout of 5 seconds elapsing.",
                     new TimeoutException("A task was canceled."));

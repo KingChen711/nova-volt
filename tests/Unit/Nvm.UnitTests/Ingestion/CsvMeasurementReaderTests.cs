@@ -16,8 +16,8 @@ public sealed class CsvMeasurementReaderTests
     [Fact]
     public void OneBadLineAmongMany_DoesNotCostTheGoodOnes()
     {
-        // The claim C15 exists to make. A hundred cells were tested and ninety-nine results are fine;
-        // rejecting the file would make an operator hand-edit an export to recover them.
+        // Đây là khẳng định mà C15 tồn tại để đưa ra. Một trăm cell đã được test, chín mươi chín kết quả
+        // ổn; từ chối file sẽ bắt operator sửa tay export để khôi phục chúng.
         var lines = new List<string> { CsvMeasurementReader.Header };
         lines.AddRange(Enumerable.Range(0, 99).Select(index => Good.Replace(
             "2026-08-28T09:28:11.004Z",
@@ -37,8 +37,8 @@ public sealed class CsvMeasurementReaderTests
     [Fact]
     public void AParsedLine_BuildsTheSameNaturalKeyAsTheMqttPath()
     {
-        // C15.1. Two adapters with two key definitions drift within months, and the symptom is one
-        // measurement stored twice for exactly the machines that report through both routes.
+        // C15.1. Hai adapter với hai định nghĩa key sẽ drift trong vài tháng, và triệu chứng là một
+        // measurement được lưu hai lần đúng ở các máy report qua cả hai route.
         var measurement = Reader().Read([CsvMeasurementReader.Header, Good]).Measurements.ShouldHaveSingleItem();
 
         var fromFile = measurement.Reading.NaturalKey(measurement.EquipmentPath, measurement.UnitId);
@@ -54,15 +54,15 @@ public sealed class CsvMeasurementReaderTests
     [Fact]
     public void MissingOrWrongHeader_RejectsTheWholeFile()
     {
-        // Not a line fault. With no header the columns can only be guessed, and a guess that puts the
-        // value in the signal column produces rows that look valid and mean nothing.
+        // Không phải line fault. Không có header thì chỉ có thể đoán cột, và đoán đưa value vào signal
+        // column sẽ tạo các row trông hợp lệ nhưng vô nghĩa.
         Should.Throw<FileDropFormatException>(() => Reader().Read([Good]));
         Should.Throw<FileDropFormatException>(() => Reader().Read([]));
     }
 
     [Theory]
-    // A local wall-clock time with no offset. Ambiguous for one hour every autumn at DE1, and
-    // measured_at is part of the natural key — an ambiguous key merges two different measurements.
+    // Local wall-clock time không có offset. Nó ambiguous trong một giờ mỗi mùa thu ở DE1, và
+    // measured_at là một phần natural key — key ambiguous sẽ gộp hai measurement khác nhau.
     [InlineData("2026-08-28T09:28:11.004", "offset")]
     [InlineData("not-a-time", "offset")]
     [InlineData("", "offset")]
@@ -78,8 +78,8 @@ public sealed class CsvMeasurementReaderTests
     [Fact]
     public void AnEquipmentPathOutsideTheActiveModel_IsRefusedAtTheServer()
     {
-        // K3, and the same check the MQTT path makes. A row stored under a path that resolves to
-        // nothing is a row no query finds and no report misses.
+        // K3, cũng là check mà MQTT path thực hiện. Row lưu dưới path resolve thành nothing sẽ là row
+        // không query nào tìm được và không report nào bỏ sót.
         var line = Good.Replace("FORM-01-CH-0142", "FORM-99-CH-9999", StringComparison.Ordinal);
 
         var rejected = Reader().Read([CsvMeasurementReader.Header, line]).Rejected.ShouldHaveSingleItem();
@@ -101,8 +101,8 @@ public sealed class CsvMeasurementReaderTests
     [Fact]
     public void BlankLines_AreSkippedRatherThanRejected()
     {
-        // A trailing newline is not an operator error, and a .error file for one would train people
-        // to ignore the rejected directory.
+        // Trailing newline không phải operator error, và file .error chỉ vì nó sẽ khiến mọi người học
+        // cách phớt lờ rejected directory.
         var result = Reader().Read([CsvMeasurementReader.Header, Good, string.Empty, "   "]);
 
         result.Measurements.Count.ShouldBe(1);

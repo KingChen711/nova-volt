@@ -2,12 +2,11 @@ using Nvm.Kernel.Identity;
 
 namespace Nvm.UnitTests.Identity;
 
-/// <summary>The identity a measurement derives from itself, and the ways it could fail to.</summary>
+/// <summary>Identity mà một measurement tự suy ra, và các cách nó có thể không làm được vậy.</summary>
 /// <remarks>
-/// Every assertion here is about one property: <b>different fact, different key; same fact, same
-/// key</b>. Losing the first half stores two readings as one and the count comes out short. Losing the
-/// second half stores one reading twice and the count comes out long. Neither raises an error
-/// anywhere, which is why this is checked rather than argued.
+/// Mọi assertion ở đây nói về một property: <b>fact khác, key khác; cùng fact, cùng key</b>. Mất nửa
+/// đầu sẽ lưu hai reading thành một và cho ra số đếm thiếu. Mất nửa sau sẽ lưu một reading hai lần và
+/// cho ra số đếm thừa. Cả hai đều không phát sinh error ở đâu, nên phải kiểm chứng thay vì tranh luận.
 /// </remarks>
 public sealed class MeasurementNaturalKeyTests
 {
@@ -26,8 +25,8 @@ public sealed class MeasurementNaturalKeyTests
     [Fact]
     public void TheIdentityIsAVersionFiveGuidAndNotEmpty()
     {
-        // Version 5 because it is derived from its input; version 7 mixes in a clock and would give
-        // one measurement a new identity every time it arrived (ADR-010).
+        // Version 5 vì nó được suy ra từ input; version 7 trộn clock vào và sẽ cho một measurement
+        // identity mới mỗi lần nó đến (ADR-010).
         var value = Key().SourceEventId.Value;
 
         value.ShouldNotBe(Guid.Empty);
@@ -37,8 +36,8 @@ public sealed class MeasurementNaturalKeyTests
     [Fact]
     public void ChangingAnyOneFieldChangesTheIdentity()
     {
-        // Six fields, six assertions, because a derivation that quietly ignored one of them would
-        // still pass every "same fact, same key" test in this file.
+        // Sáu field, sáu assertion, vì derivation âm thầm bỏ qua một trong chúng vẫn sẽ pass mọi test
+        // "cùng fact, cùng key" trong file này.
         var baseline = Key().SourceEventId;
 
         var variants = new[]
@@ -58,16 +57,15 @@ public sealed class MeasurementNaturalKeyTests
     [Fact]
     public void OneInstantWrittenTwoWaysGivesOneIdentity()
     {
-        // The most expensive way to get this wrong, and the least visible. NV1 runs at UTC+7 and DE1
-        // observes daylight saving, so the same moment genuinely arrives spelled differently depending
-        // on which gateway serialised it. Hashing the spelling instead of the instant gives one
-        // measurement two identities, and the deduplication step then reports success on a row it has
-        // just written for the second time.
+        // Cách sai tốn kém nhất và khó thấy nhất. NV1 chạy UTC+7, DE1 có daylight saving, nên cùng một
+        // moment thực sự đến với cách viết khác nhau tùy gateway nào serialise nó. Hash cách viết thay vì
+        // instant sẽ cho một measurement hai identity, rồi bước deduplication báo thành công trên row nó
+        // vừa ghi lần thứ hai.
         var utc = Key(measured: new DateTimeOffset(2026, 8, 28, 7, 15, 30, 500, TimeSpan.Zero));
         var haiPhong = Key(measured: new DateTimeOffset(2026, 8, 28, 14, 15, 30, 500, TimeSpan.FromHours(7)));
         var leipzig = Key(measured: new DateTimeOffset(2026, 8, 28, 9, 15, 30, 500, TimeSpan.FromHours(2)));
 
-        // Three spellings, three different offsets, one instant.
+        // Ba cách viết, ba offset khác nhau, một instant.
         haiPhong.DeviceTimestamp.Offset.ShouldNotBe(utc.DeviceTimestamp.Offset);
         leipzig.DeviceTimestamp.Offset.ShouldNotBe(utc.DeviceTimestamp.Offset);
 
@@ -78,9 +76,8 @@ public sealed class MeasurementNaturalKeyTests
     [Fact]
     public void SubMillisecondPrecisionIsNotRoundedAway()
     {
-        // Sparkplug is millisecond-resolution, but the CSV drop in C15 and anything replayed out of a
-        // historian need not be. A format that truncated would merge two readings taken 100
-        // microseconds apart into one.
+        // Sparkplug có resolution millisecond, nhưng CSV drop ở C15 và dữ liệu replay từ historian thì
+        // không nhất thiết vậy. Format truncate sẽ gộp hai reading cách nhau 100 microsecond thành một.
         Key(measured: Measured.AddTicks(1)).SourceEventId
             .ShouldNotBe(Key(measured: Measured).SourceEventId);
     }
@@ -88,16 +85,16 @@ public sealed class MeasurementNaturalKeyTests
     [Fact]
     public void AReadingWithNoUnitAndOneWithAnEmptyUnitAreTheSameReading()
     {
-        // Deliberate: "no cell in the channel" and "the cell field was blank" are the same statement
-        // from a device, and giving them separate identities would store the same coater reading twice
-        // depending on which spelling that shift's gateway used.
+        // Có chủ ý: "không có cell trong channel" và "field cell để trống" là cùng một phát biểu từ
+        // device; cho chúng identity riêng sẽ lưu cùng một coater reading hai lần tùy cách viết mà
+        // gateway của shift đó dùng.
         Key(unitId: null).SourceEventId.ShouldBe(Key(unitId: string.Empty).SourceEventId);
     }
 
     [Fact]
     public void TheKeyRemembersThePlantSeparatelyFromThePath()
     {
-        // K3 wants site_id as a field of its own, not something a reader has to slice out of a path.
+        // K3 yêu cầu site_id là field riêng, không phải thứ reader phải tách khỏi path.
         Key().SiteId.ShouldBe("NV1");
     }
 

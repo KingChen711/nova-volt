@@ -23,11 +23,11 @@ public sealed class EdgeGatewayOptionsTests
     {
         var buffer = new EdgeGatewayOptions().Buffer;
 
-        // The ceiling is batch size times fsync rate. Measured on 2026-08-29: the fsync batch ran
-        // saturated at 127,4 of 128 records while the disk sustained ~40 fsync/s, which is 5.120
-        // msg/s - just under N1, and the gateway then backpressured the publisher through EMQX down
-        // to 4.981 msg/s. Widening the batch buys headroom without acknowledging before fsync; the
-        // latency an individual publish waits is still bounded by FsyncInterval.
+        // Trần này bằng batch size nhân với tốc độ fsync. Đo được vào ngày 2026-08-29: fsync batch
+        // chạy bão hòa ở mức 127,4 trên 128 record trong khi ổ đĩa duy trì được ~40 fsync/s, tức là
+        // 5.120 msg/s - vừa dưới N1, và gateway sau đó backpressure ngược publisher qua EMQX xuống
+        // còn 4.981 msg/s. Nới rộng batch mua thêm dư địa mà không cần acknowledge trước khi fsync;
+        // độ trễ mà một lần publish đơn lẻ phải chờ vẫn bị giới hạn bởi FsyncInterval.
         buffer.FsyncBatchSize.ShouldBe(128);
         buffer.FlushBatchSize.ShouldBe(1_024);
         buffer.FlushBatchBytes.ShouldBe(1_024 * 1_024);

@@ -4,7 +4,7 @@ namespace Nvm.UnitTests.Contracts;
 
 public sealed class EventTypeNameTests
 {
-    // The worked example from docs/scope.md §7.4.
+    // Ví dụ minh họa từ docs/scope.md §7.4.
     private const string UnitSerialized = "com.novavolt.traceability.unit-serialized.v1";
 
     [Fact]
@@ -68,8 +68,9 @@ public sealed class EventTypeNameTests
     [Fact]
     public void Parse_LeadingZeroVersion_IsRejectedRatherThanNormalised()
     {
-        // int.TryParse is happy with "01". Accepting it would put two spellings of the same event
-        // type into the store, and only one of them would ever match a routing key.
+        // int.TryParse chấp nhận "01" một cách thoải mái. Nếu chấp nhận nó, hai cách viết của cùng
+        // một event type sẽ cùng tồn tại trong store, mà chỉ một trong hai từng khớp được với một
+        // routing key.
         Should.Throw<FormatException>(() => EventTypeName.Parse("com.novavolt.quality.measurement-recorded.v01"));
     }
 

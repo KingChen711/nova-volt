@@ -6,10 +6,11 @@ namespace Nvm.UnitTests.FactoryModel;
 
 public sealed class FactoryModelSeedTests
 {
-    // Revision 1 specifically, and the real file rather than a trimmed fixture. The counts below
-    // belong to that document and to no other: revisions 2 and 3 exist next to it and have different
-    // numbers on purpose. Editing r1 turns these red, and that is the point — a change to a published
-    // revision should be impossible to make by accident, because it is not a thing a plant may do.
+    // Cụ thể là revision 1, và là file thật chứ không phải một fixture đã bị cắt gọn. Các con số đếm
+    // bên dưới thuộc về đúng document đó và không thuộc về bất kỳ cái nào khác: revision 2 và 3 tồn
+    // tại song song với nó và cố tình có con số khác. Sửa r1 sẽ khiến các test này đỏ, và đó chính là
+    // mục đích — một thay đổi lên một revision đã publish phải là điều không thể xảy ra một cách vô
+    // tình, vì đó không phải là việc một plant được phép làm.
     private static readonly FactoryModelSnapshot Snapshot =
         FactoryModelSeed.Load(Path.Combine(AppContext.BaseDirectory, "seed", FactoryModelSeed.FileNameFor(1)));
 
@@ -37,8 +38,9 @@ public sealed class FactoryModelSeedTests
     [Fact]
     public void Seed_TotalNodeCountMatchesTheIndex()
     {
-        // The flat index is built from the walk, so a mismatch would mean two nodes collapsed into one
-        // dictionary entry — which is exactly the duplicate-path failure the index must not hide.
+        // Flat index được xây dựng từ bước walk, nên một sự sai lệch sẽ nghĩa là hai node đã bị gộp
+        // vào cùng một dictionary entry — đúng là loại lỗi duplicate-path mà index không được phép
+        // che giấu.
         Snapshot.NodeCount.ShouldBe(41);
         Snapshot.Paths.Length.ShouldBe(Snapshot.Root.Descend().Count());
     }
@@ -54,8 +56,8 @@ public sealed class FactoryModelSeedTests
     [Fact]
     public void Seed_EveryNodeBelowTheEnterpriseCarriesASite()
     {
-        // AGENTS.md K3, over the whole tree rather than one node. A leak across the site boundary is a
-        // security defect, and it starts with a record that does not know which plant it came from.
+        // AGENTS.md K3, trên toàn bộ cây thay vì chỉ một node. Một sự rò rỉ qua ranh giới site là một
+        // lỗi bảo mật, và nó bắt đầu từ một record không biết mình đến từ plant nào.
         var withoutSite = Snapshot.Root.Descend()
             .Where(node => node.Kind != FactoryNodeKind.Enterprise && string.IsNullOrEmpty(node.SiteId))
             .ToArray();
@@ -66,9 +68,9 @@ public sealed class FactoryModelSeedTests
     [Fact]
     public void Seed_HasBothPlantsWithTheirTimeZones()
     {
-        // DE1 is in the model on purpose: Europe/Berlin observes daylight saving, which makes its
-        // shift C nine hours long once a year and seven once a year (docs/scope.md §2.3). M3 has to
-        // get that right, and it cannot if the plant is not there to get it wrong on.
+        // DE1 có mặt trong model là cố ý: Europe/Berlin áp dụng daylight saving, khiến shift C của nó
+        // dài chín giờ một lần mỗi năm và bảy giờ một lần mỗi năm (docs/scope.md §2.3). M3 phải xử lý
+        // đúng chuyện đó, và nó không thể làm được nếu plant này không có mặt để mà sai trên đó.
         Snapshot.Sites.Select(site => site.SiteId).ShouldBe(["NV1", "DE1"], ignoreOrder: true);
         Snapshot.FindSite("NV1")!.TimeZoneId.ShouldBe("Asia/Ho_Chi_Minh");
         Snapshot.FindSite("DE1")!.TimeZoneId.ShouldBe("Europe/Berlin");
@@ -77,9 +79,9 @@ public sealed class FactoryModelSeedTests
     [Fact]
     public void Seed_ContainsTheStackerNamedInTheEventContract()
     {
-        // docs/scope.md §7.4 uses this exact path as the equipmentId of a serialization event. If the
-        // documented example does not resolve against the documented plant, one of the two documents
-        // is describing a system that does not exist.
+        // docs/scope.md §7.4 dùng chính path này làm equipmentId của một serialization event. Nếu ví
+        // dụ trong tài liệu không resolve được trên đúng plant đã tài liệu hóa, thì một trong hai tài
+        // liệu đang mô tả một hệ thống không tồn tại.
         var stacker = Snapshot.Find("NOVAVOLT/NV1/ASSEMBLY/L1/STACK-02");
 
         stacker.ShouldNotBeNull();
@@ -100,9 +102,9 @@ public sealed class FactoryModelSeedTests
     [Fact]
     public void Find_PathThatIsNotInThisRevision_ReturnsNullRatherThanThrowing()
     {
-        // The normal case when reading history. A channel decommissioned last year is still named by
-        // every traceability record written while it existed, and that is valid history rather than
-        // corrupt data.
+        // Trường hợp bình thường khi đọc lịch sử. Một channel đã decommission năm ngoái vẫn được nêu
+        // tên trong mọi traceability record được ghi trong lúc nó còn tồn tại, và đó là lịch sử hợp lệ
+        // chứ không phải dữ liệu hỏng.
         Snapshot.Find("NOVAVOLT/NV1/FORMATION/F1/FORM-01/FORM-01-CH-9999").ShouldBeNull();
     }
 
@@ -128,9 +130,9 @@ public sealed class FactoryModelSeedTests
     [InlineData("{\"revision\":1,\"generatedAt\":\"2026-08-26T09:00:00+00:00\",\"enterprise\":{\"code\":\"novavolt\",\"name\":\"N\"}}", "lower-case enterprise code")]
     public void Parse_MalformedSeed_ThrowsRatherThanLoadingHalfAPlant(string json, string reason)
     {
-        // Fatal at startup on purpose. A service running on a partially read factory model would
-        // resolve some equipment paths and silently fail others, and the gaps would look like missing
-        // data rather than a bad file.
+        // Cố tình fatal ngay lúc startup. Một service chạy trên một factory model đọc dở dang sẽ
+        // resolve được một số equipment path và âm thầm fail những cái khác, và các lỗ hổng đó sẽ
+        // trông như dữ liệu bị thiếu chứ không phải một file hỏng.
         Should.Throw<FactoryModelSeedException>(() => FactoryModelSeed.Parse(json), reason);
     }
 
@@ -158,8 +160,8 @@ public sealed class FactoryModelSeedTests
     [Fact]
     public void Parse_SiteWithoutATimeZone_IsRejected()
     {
-        // Without it, M3 has no way to decide which production day a night shift belongs to, and the
-        // failure would appear months later as reports that disagree with the shift log.
+        // Thiếu nó, M3 không có cách nào quyết định một ca đêm thuộc về ngày sản xuất nào, và lỗi này
+        // sẽ chỉ xuất hiện nhiều tháng sau dưới dạng các báo cáo không khớp với shift log.
         var json = """
             {
               "revision": 1,
@@ -178,8 +180,9 @@ public sealed class FactoryModelSeedTests
     [Fact]
     public void Parse_NodeTooDeepForTheHierarchy_IsRejected()
     {
-        // A sensor inside a charging channel is an attribute of the equipment, not a seventh level.
-        // Allowing one would break the rule that depth tells you what a path names.
+        // Một sensor bên trong một charging channel là một thuộc tính của thiết bị, không phải một
+        // level thứ bảy. Cho phép điều đó sẽ phá vỡ quy tắc rằng depth cho biết một path đang đặt tên
+        // cho cái gì.
         var json = """
             {
               "revision": 1,

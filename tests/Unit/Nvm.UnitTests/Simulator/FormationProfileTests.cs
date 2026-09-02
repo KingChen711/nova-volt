@@ -2,11 +2,12 @@ using Nvm.Simulator.Formation;
 
 namespace Nvm.UnitTests.Simulator;
 
-/// <summary>The shape of a formation cycle, and why it has to be a shape at all.</summary>
+/// <summary>Hình dạng của một formation cycle, và vì sao nó bắt buộc phải có hình dạng.</summary>
 /// <remarks>
-/// Random numbers would let everything downstream appear to work while nobody could tell that a
-/// projection had started computing the curve wrongly — there would be no right curve to compare
-/// against, and the mistake would sleep until M8. These assertions are what makes the curve a curve.
+/// Các con số ngẫu nhiên sẽ khiến mọi thứ downstream trông như vẫn hoạt động trong khi không ai
+/// nhận ra một projection đã bắt đầu tính sai đường cong — sẽ không có đường cong đúng nào để so
+/// sánh, và sai sót sẽ ngủ yên cho tới M8. Các assertion này chính là thứ khiến đường cong thực sự
+/// là một đường cong.
 /// </remarks>
 public sealed class FormationProfileTests
 {
@@ -29,8 +30,8 @@ public sealed class FormationProfileTests
             FormationStep.Discharge,
         ]);
 
-        // Distinct() preserves first-seen order, so the assertion above already says "in order" —
-        // but only if no stage is ever revisited. This is the half that says that.
+        // Distinct() giữ nguyên thứ tự xuất hiện lần đầu, nên assertion ở trên đã nói "đúng thứ tự" —
+        // nhưng chỉ khi không stage nào bị quay lại. Đây là nửa còn lại xác nhận điều đó.
         steps.Zip(steps.Skip(1)).ShouldAllBe(pair => pair.Second >= pair.First);
     }
 
@@ -44,7 +45,8 @@ public sealed class FormationProfileTests
         climbing.Zip(climbing.Skip(1)).ShouldAllBe(pair => pair.Second > pair.First);
         climbing[^1].ShouldBeLessThan(4.20);
 
-        // Held flat through CV — that is what makes it constant-voltage rather than a longer climb.
+        // Giữ phẳng suốt CV — đó chính là điều khiến nó là constant-voltage chứ không phải một đợt
+        // leo dốc dài hơn.
         Samples(TimeSpan.FromHours(8.5), TimeSpan.FromHours(10.5), TimeSpan.FromMinutes(30))
             .Select(sample => sample.Volts)
             .Distinct()
@@ -84,7 +86,8 @@ public sealed class FormationProfileTests
         Profile.At(TimeSpan.FromMinutes(5)).AmpHours.ShouldBe(0);
         charged.ShouldBeGreaterThan(3.5);
 
-        // The rest between charge and discharge moves no charge at all, which is what a rest is.
+        // Khoảng nghỉ giữa charge và discharge không dịch chuyển điện tích nào cả, đúng như bản chất
+        // của một rest.
         Profile.At(TimeSpan.FromHours(11.2)).AmpHours.ShouldBe(charged, 0.001);
         Profile.At(TimeSpan.FromHours(17)).AmpHours.ShouldBeLessThan(charged);
     }
@@ -92,9 +95,9 @@ public sealed class FormationProfileTests
     [Fact]
     public void TheCellWarmsWithTheCurrentAndSitsAtAmbientWhenItRests()
     {
-        // Temperature drifts with the current rather than with the clock. A cell that warmed while
-        // resting would be a cell with a fault, and a simulator that produced one would train
-        // everyone downstream to ignore the signal.
+        // Temperature trôi theo current chứ không theo đồng hồ. Một cell nóng lên khi đang nghỉ sẽ là
+        // một cell có lỗi, và một simulator tạo ra điều đó sẽ tập cho mọi người ở downstream thói
+        // quen bỏ qua tín hiệu này.
         Profile.At(TimeSpan.FromMinutes(5)).Celsius.ShouldBe(25);
         Profile.At(TimeSpan.FromHours(4)).Celsius.ShouldBeGreaterThan(30);
         Profile.At(TimeSpan.FromHours(11.2)).Celsius.ShouldBe(25);
@@ -103,8 +106,8 @@ public sealed class FormationProfileTests
     [Fact]
     public void TheDischargeSitsOnAPlateauAndFallsAwayAtTheEnd()
     {
-        // The knee is the feature a grading rule looks for, so a straight line here would make every
-        // grading test downstream pass against data that has nothing to grade.
+        // Cái "knee" là đặc trưng mà một grading rule tìm kiếm, nên một đường thẳng ở đây sẽ khiến
+        // mọi grading test ở downstream pass trên dữ liệu chẳng có gì để chấm cả.
         var start = Profile.At(TimeSpan.FromHours(11.5));
         var middle = Profile.At(TimeSpan.FromHours(14.75));
         var end = Profile.At(TimeSpan.FromHours(18));
@@ -125,16 +128,16 @@ public sealed class FormationProfileTests
     [Fact]
     public void ACycleShorterThanItsOwnStagesIsRefused()
     {
-        // The stage boundaries are absolute, so an eight-hour cycle would put the cell in a discharge
-        // that starts after the cycle has ended.
+        // Các ranh giới stage là tuyệt đối, nên một cycle tám giờ sẽ đặt cell vào một discharge bắt
+        // đầu sau khi cycle đã kết thúc.
         Should.Throw<ArgumentOutOfRangeException>(() => new FormationProfile(TimeSpan.FromHours(8)));
     }
 
     [Fact]
     public void TheProfileIsAFunctionOfElapsedTimeAndNothingElse()
     {
-        // The property the whole time-compression argument rests on. If reading the profile depended
-        // on how often it had been read, compressing a run would change its measurements.
+        // Tính chất mà toàn bộ lập luận về time-compression dựa vào. Nếu việc đọc profile phụ thuộc
+        // vào số lần nó đã được đọc, việc nén một run sẽ làm thay đổi các measurement của nó.
         foreach (var minutes in new[] { 0, 14, 15, 300, 480, 660, 690, 1000, 1080 })
         {
             var elapsed = TimeSpan.FromMinutes(minutes);

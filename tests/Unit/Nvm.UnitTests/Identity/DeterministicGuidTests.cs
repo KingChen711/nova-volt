@@ -7,13 +7,12 @@ public sealed class DeterministicGuidTests
     [Fact]
     public void CreateVersion5_SetsTheVersionNibbleToFive()
     {
-        // Forgetting the two bit-twiddling lines still yields a deterministic 128-bit value that
-        // deduplicates perfectly, so every behavioural test would stay green. What it does not yield
-        // is a UUID — and that only surfaces at the boundary, when a PostgreSQL uuid column or an
-        // auditor's tool refuses to read data that is already in the store.
+        // Quên hai dòng bit-twiddling vẫn cho ra một giá trị 128 bit deterministic deduplicate hoàn
+        // hảo, nên mọi behavioural test vẫn xanh. Nhưng nó không cho ra UUID — điều đó chỉ lộ ở
+        // boundary, khi cột uuid của PostgreSQL hoặc công cụ của auditor không đọc dữ liệu đã trong store.
         var value = DeterministicGuid.CreateVersion5(DeterministicGuid.DnsNamespace, "novavolt.example");
 
-        // Version lives in the high nibble of byte 6, which is character 14 of the canonical form.
+        // Version nằm ở nibble cao của byte 6, tức ký tự 14 của canonical form.
         value.ToString()[14].ShouldBe('5');
     }
 
@@ -22,7 +21,7 @@ public sealed class DeterministicGuidTests
     {
         var value = DeterministicGuid.CreateVersion5(DeterministicGuid.DnsNamespace, "novavolt.example");
 
-        // Variant 10xx binary, so the nibble at character 19 is one of 8, 9, a, b.
+        // Variant là 10xx nhị phân, nên nibble ở ký tự 19 là một trong 8, 9, a, b.
         value.ToString()[19].ShouldBeOneOf('8', '9', 'a', 'b');
     }
 
@@ -31,9 +30,9 @@ public sealed class DeterministicGuidTests
     [InlineData("python.org", "886313e1-3b8a-5372-9b90-0c9aee199e5d")]
     public void CreateVersion5_MatchesTheValuesOtherImplementationsProduce(string name, string expected)
     {
-        // Two published vectors for uuid5 over the DNS namespace. They are the check that this is
-        // RFC 4122 version 5 and not merely something self-consistent: byte order, hash input and bit
-        // masking all have to be right at once for these to come out.
+        // Hai vector đã công bố cho uuid5 trên DNS namespace. Chúng xác nhận đây là RFC 4122 version 5
+        // chứ không chỉ là thứ tự nhất quán với chính nó: byte order, hash input và bit masking đều phải
+        // đúng đồng thời mới ra được các giá trị này.
         var value = DeterministicGuid.CreateVersion5(DeterministicGuid.DnsNamespace, name);
 
         value.ShouldBe(Guid.Parse(expected));
@@ -51,9 +50,9 @@ public sealed class DeterministicGuidTests
     [Fact]
     public void CreateVersion7_ForComparison_IsNeverIdentical()
     {
-        // Documents why version 5 rather than the newer version 7. A UUID version names an algorithm,
-        // not a generation: version 7 mixes in the current time, so it cannot answer "have I seen this
-        // fact before". See docs/plans/M1-factory-model-bus.md §C04.1.
+        // Ghi lại lý do dùng version 5 thay vì version 7 mới hơn. UUID version gọi tên một algorithm,
+        // không phải một generation: version 7 trộn thời điểm hiện tại vào, nên không trả lời được "đã
+        // từng thấy fact này chưa". Xem docs/plans/M1-factory-model-bus.md §C04.1.
         var first = Guid.CreateVersion7();
         var second = Guid.CreateVersion7();
 

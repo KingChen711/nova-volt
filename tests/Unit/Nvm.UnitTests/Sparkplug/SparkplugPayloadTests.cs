@@ -2,25 +2,26 @@ using Org.Eclipse.Tahu.Protobuf;
 
 namespace Nvm.UnitTests.Sparkplug;
 
-/// <summary>Decodes real Sparkplug B bytes with the code generated from the vendored schema.</summary>
+/// <summary>Decode các bytes Sparkplug B thật bằng code sinh ra từ schema đã vendor.</summary>
 /// <remarks>
 /// <para>
-/// The payloads were produced by <c>pysparkplug</c>, which carries its own copy of the Sparkplug
-/// schema — see <c>tests/Fixtures/sparkplug/README.md</c>. That is the whole point of them. Encoding
-/// with our own generated code and decoding it again passes just as happily when both directions are
-/// wrong, and a schema is exactly the kind of thing that is wrong in both directions at once.
+/// Các payload được tạo ra bởi <c>pysparkplug</c>, thứ mang theo bản copy schema Sparkplug của riêng
+/// nó — xem <c>tests/Fixtures/sparkplug/README.md</c>. Đó chính là toàn bộ mục đích của chúng. Encode
+/// bằng code tự sinh của chúng ta rồi decode lại nó cũng sẽ pass vui vẻ y hệt khi cả hai chiều đều
+/// sai, và một schema chính xác là loại thứ có thể sai ở cả hai chiều cùng một lúc.
 /// </para>
 /// <para>
-/// The pair is a DBIRTH and the DDATA that follows it, because on a real line neither one means
-/// anything alone. That relationship is what C11 turns into node state; here it is only decoded.
+/// Cặp này là một DBIRTH và DDATA theo sau nó, vì trên một line thật thì không cái nào có ý nghĩa gì
+/// khi đứng một mình. Mối quan hệ đó là thứ C11 biến thành node state; ở đây nó chỉ được decode mà
+/// thôi.
 /// </para>
 /// </remarks>
 public sealed class SparkplugPayloadTests
 {
-    /// <summary>2026-08-28T07:15:30.500Z. Sparkplug timestamps are milliseconds since the Unix epoch, UTC.</summary>
+    /// <summary>2026-08-28T07:15:30.500Z. Timestamp Sparkplug là số mili-giây kể từ Unix epoch, UTC.</summary>
     private const ulong BirthTimestampMs = 1787901330500;
 
-    /// <summary>Two seconds later — the report-by-exception update.</summary>
+    /// <summary>Hai giây sau đó — bản update report-by-exception.</summary>
     private const ulong DataTimestampMs = 1787901332500;
 
     [Fact]
@@ -41,20 +42,20 @@ public sealed class SparkplugPayloadTests
             "Formation/CellSerial",
         ]);
 
-        // Aliases are assigned here and nowhere else. Everything after this message refers to a
-        // measurement by its number.
+        // Alias chỉ được gán ở đây và không nơi nào khác. Mọi thứ sau message này tham chiếu tới một
+        // measurement bằng con số của nó.
         birth.Metrics.Select(metric => metric.Alias).ShouldBe([1UL, 2UL, 3UL, 4UL, 5UL]);
 
-        // Exact equality, not a tolerance: the fixture uses values binary32 represents exactly, so a
-        // decoder that read four bytes from the wrong offset lands somewhere obviously different
-        // rather than somewhere close enough to pass.
+        // So sánh bằng chính xác, không phải dung sai: fixture dùng các giá trị mà binary32 biểu diễn
+        // chính xác, nên một decoder đọc bốn byte từ sai offset sẽ rơi vào một giá trị rõ ràng khác
+        // hẳn thay vì một giá trị đủ gần để pass.
         var voltage = birth.Metrics[0];
         voltage.Datatype.ShouldBe((uint)DataType.Float);
         voltage.ValueCase.ShouldBe(Payload.Types.Metric.ValueOneofCase.FloatValue);
         voltage.FloatValue.ShouldBe(3.6875f);
 
-        // Three datatypes in one payload, so the oneof is actually exercised. A decoder that always
-        // reads float_value passes a payload made only of floats.
+        // Ba datatype trong một payload, nên oneof thực sự được kiểm thử. Một decoder luôn đọc
+        // float_value sẽ pass một payload chỉ toàn float.
         birth.Metrics[3].Datatype.ShouldBe((uint)DataType.Int32);
         birth.Metrics[3].IntValue.ShouldBe(2U);
 
@@ -70,9 +71,10 @@ public sealed class SparkplugPayloadTests
         data.Timestamp.ShouldBe(DataTimestampMs);
         data.Seq.ShouldBe(2UL);
 
-        // Two of the five, because only two values moved. "Nothing arrived" on this device therefore
-        // means "nothing changed" just as often as it means "the link is down", and only NDEATH tells
-        // the two apart — see the report-by-exception entry in docs/glossary.md.
+        // Hai trong số năm, vì chỉ có hai giá trị thay đổi. "Không gì tới" trên thiết bị này do đó
+        // vừa có thể nghĩa là "không gì thay đổi" vừa có thể nghĩa là "đường truyền đang gián đoạn",
+        // và chỉ NDEATH mới phân biệt được hai trường hợp đó — xem mục report-by-exception trong
+        // docs/glossary.md.
         data.Metrics.Count.ShouldBe(2);
 
         foreach (var metric in data.Metrics)
@@ -89,9 +91,9 @@ public sealed class SparkplugPayloadTests
     [Fact]
     public void OnlyTheBirthMakesTheUpdateReadable()
     {
-        // The join C11 will have to keep in memory per edge node, done here by hand so the cost of
-        // losing it is visible: without the birth, alias 1 is a number with a float attached to it,
-        // and no amount of retrying the DDATA recovers what it measured.
+        // Phép join mà C11 sẽ phải giữ trong bộ nhớ cho mỗi edge node, được làm thủ công ở đây để cái
+        // giá của việc mất nó trở nên rõ ràng: thiếu birth, alias 1 chỉ là một con số với một float
+        // gắn theo nó, và dù retry DDATA bao nhiêu lần cũng không khôi phục lại được nó đã đo gì.
         var birth = Payload.Parser.ParseFrom(SparkplugFixture.ReadBytes(SparkplugFixture.DeviceBirth));
         var data = Payload.Parser.ParseFrom(SparkplugFixture.ReadBytes(SparkplugFixture.DeviceData));
 

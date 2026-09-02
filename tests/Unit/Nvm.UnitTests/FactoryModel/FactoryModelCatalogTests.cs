@@ -4,10 +4,11 @@ using Nvm.FactoryModel.Storage;
 namespace Nvm.UnitTests.FactoryModel;
 
 /// <summary>
-/// The shelf itself: what counts as a published revision and what a directory of documents is not
-/// allowed to be. Everything here is checked while the container is being built, so every failure is
-/// fatal at startup — which is the point. A service that came up on a half-read catalog would refuse
-/// activations for revisions that exist, and the refusal would look like an operator error.
+/// Chính bản thân cái shelf: điều gì được tính là một revision đã publish và một thư mục document
+/// không được phép là gì. Mọi thứ ở đây được kiểm tra trong lúc container đang được build, nên mọi
+/// lỗi đều fatal ngay lúc startup — đó chính là mục đích. Một service khởi động với một catalog đọc
+/// dở dang sẽ từ chối activation cho những revision thực sự tồn tại, và lời từ chối đó sẽ trông như
+/// một lỗi của operator.
 /// </summary>
 public sealed class FactoryModelCatalogTests
 {
@@ -26,8 +27,9 @@ public sealed class FactoryModelCatalogTests
     [Fact]
     public void Find_ARevisionThatWasNeverPublished_ReturnsNullRatherThanThrowing()
     {
-        // A caller working from stale information asking for a revision that does not exist is normal.
-        // The handler turns it into a refusal that names the shelf; the catalog just says "not here".
+        // Một caller làm việc dựa trên thông tin cũ và hỏi về một revision không tồn tại là chuyện
+        // bình thường. Handler biến nó thành một lời từ chối có nêu tên cái shelf; còn catalog chỉ
+        // đơn giản nói "không có ở đây".
         FactoryModelSeed.LoadCatalog(SeedDirectory).Find(99).ShouldBeNull();
     }
 
@@ -53,9 +55,9 @@ public sealed class FactoryModelCatalogTests
     [Fact]
     public void LoadCatalog_AFileNameThatDisagreesWithTheDocumentInside_IsRejected()
     {
-        // Copying r2 to r3 and forgetting to change the number inside is the easiest mistake available
-        // here, and the most damaging: the old tree would go into force under a new revision number,
-        // and everyone would believe a change happened that did not.
+        // Copy r2 thành r3 rồi quên đổi con số bên trong là lỗi dễ mắc nhất có thể xảy ra ở đây, và
+        // cũng gây hại nhất: cây cũ sẽ được đưa vào force dưới một revision number mới, và mọi người
+        // sẽ tin rằng một thay đổi đã xảy ra trong khi thực ra không có.
         InATemporaryDirectory(directory =>
         {
             WriteDocument(directory, FactoryModelSeed.FileNameFor(3), revision: 2);
@@ -71,8 +73,8 @@ public sealed class FactoryModelCatalogTests
     [Fact]
     public void LoadCatalog_AFileNameThatIsNotARevision_IsRejectedRatherThanSkipped()
     {
-        // Skipping quietly is how a published rollout disappears at startup, and nobody finds out
-        // until the shift the plant is asked to activate it.
+        // Bỏ qua âm thầm chính là cách một rollout đã publish biến mất lúc startup, và không ai phát
+        // hiện ra cho tới ca làm việc mà plant được yêu cầu activate nó.
         InATemporaryDirectory(directory =>
         {
             WriteDocument(directory, FactoryModelSeed.FileNameFor(1), revision: 1);
@@ -88,9 +90,9 @@ public sealed class FactoryModelCatalogTests
     [Fact]
     public void LoadCatalog_RevisionNumbersWithGaps_AreAccepted()
     {
-        // Revisions 2, 3 and 4 were drafted and never published. Refusing that would invent a rule the
-        // business does not have — the numbers say what order changes happened in, not that every
-        // number was used.
+        // Revision 2, 3 và 4 đã được soạn ra nhưng chưa bao giờ publish. Từ chối điều đó sẽ tự đặt ra
+        // một quy tắc mà business không có — các con số chỉ nói lên thứ tự các thay đổi đã xảy ra,
+        // không phải mọi con số đều phải được dùng.
         InATemporaryDirectory(directory =>
         {
             WriteDocument(directory, FactoryModelSeed.FileNameFor(1), revision: 1);
@@ -106,8 +108,8 @@ public sealed class FactoryModelCatalogTests
     [Fact]
     public void Catalog_TwoDocumentsClaimingOneRevision_IsRejected()
     {
-        // Which tree was in force would then depend on load order, and "the plant ran revision 4" would
-        // stop being a single fact.
+        // Cây nào đang in force khi đó sẽ phụ thuộc vào thứ tự load, và "the plant ran revision 4" sẽ
+        // không còn là một fact duy nhất nữa.
         var one = FactoryModelSeed.Parse(DocumentJson(4));
         var other = FactoryModelSeed.Parse(DocumentJson(4));
 
@@ -137,8 +139,8 @@ public sealed class FactoryModelCatalogTests
     private static void WriteDocument(string directory, string fileName, int revision) =>
         File.WriteAllText(Path.Combine(directory, fileName), DocumentJson(revision));
 
-    // The smallest thing the parser accepts as a plant. These tests are about the shelf, not about
-    // what is on the pages.
+    // Thứ nhỏ nhất mà parser chấp nhận như một plant. Các test này nói về cái shelf, không phải về
+    // nội dung trên các trang.
     private static string DocumentJson(int revision) => $$"""
         {
           "revision": {{revision}},

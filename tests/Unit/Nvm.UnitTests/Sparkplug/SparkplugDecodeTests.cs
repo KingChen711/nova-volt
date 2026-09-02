@@ -2,21 +2,21 @@ using Nvm.Sparkplug;
 
 namespace Nvm.UnitTests.Sparkplug;
 
-/// <summary>Decodes the real captured payloads into readings.</summary>
+/// <summary>Decode các payload thật đã ghi lại thành các reading.</summary>
 /// <remarks>
-/// The bytes come from <c>tests/Fixtures/sparkplug/</c> and were produced by a different Sparkplug
-/// implementation, so these tests check the decoder against the specification rather than against
-/// itself. <c>SparkplugValueTests</c> builds its payloads in-process instead, which is fine for the
-/// question it asks — which datatype maps to which case — because the schema is already pinned here
-/// and by <c>SparkplugPinTests</c>.
+/// Các bytes tới từ <c>tests/Fixtures/sparkplug/</c> và được tạo ra bởi một implementation Sparkplug
+/// khác, nên các test này kiểm tra decoder dựa trên specification chứ không phải dựa trên chính nó.
+/// <c>SparkplugValueTests</c> thay vào đó tự dựng payload trong process, điều này ổn cho câu hỏi nó
+/// đặt ra — datatype nào map vào case nào — vì schema đã được pin sẵn ở đây và bởi
+/// <c>SparkplugPinTests</c>.
 /// </remarks>
 public sealed class SparkplugDecodeTests
 {
-    /// <summary>2026-08-28T07:15:30.500Z, the instant the fixture birth is stamped with.</summary>
+    /// <summary>2026-08-28T07:15:30.500Z, thời điểm mà fixture birth được đóng dấu.</summary>
     private static readonly DateTimeOffset BirthInstant =
         DateTimeOffset.FromUnixTimeMilliseconds(1787901330500);
 
-    /// <summary>Two seconds later — the report-by-exception update.</summary>
+    /// <summary>Hai giây sau đó — bản update report-by-exception.</summary>
     private static readonly DateTimeOffset DataInstant =
         DateTimeOffset.FromUnixTimeMilliseconds(1787901332500);
 
@@ -36,9 +36,9 @@ public sealed class SparkplugDecodeTests
 
         birth.Readings.Select(reading => reading.Alias).ShouldBe([1UL, 2UL, 3UL, 4UL, 5UL]);
 
-        // The birth reports current values as well as declaring names. That is what lets a listener
-        // which has just connected show a full picture instead of a blank one until every metric
-        // happens to change.
+        // Birth báo cáo cả giá trị hiện tại lẫn khai báo tên. Đó chính là điều cho phép một listener
+        // vừa mới kết nối hiển thị một bức tranh đầy đủ thay vì một bức tranh trống rỗng cho tới khi
+        // mọi metric tình cờ thay đổi.
         birth.Readings[0].Value.ShouldBe(new MetricValue.Real(3.6875));
         birth.Readings[3].Value.ShouldBe(new MetricValue.Integral(2));
         birth.Readings[4].Value.ShouldBe(new MetricValue.Text("NV1CL16238A00123"));
@@ -58,8 +58,8 @@ public sealed class SparkplugDecodeTests
             SparkplugFixture.ReadBytes(SparkplugFixture.DeviceData),
             birth.Aliases);
 
-        // Two of the five, because only two values moved. The payload itself carries neither name nor
-        // datatype for them — everything below is recovered from the birth.
+        // Hai trong số năm, vì chỉ có hai giá trị thay đổi. Bản thân payload không mang tên cũng
+        // không mang datatype cho chúng — mọi thứ bên dưới được khôi phục từ birth.
         readings.Length.ShouldBe(2);
 
         readings.Select(reading => reading.MetricName)
@@ -72,10 +72,11 @@ public sealed class SparkplugDecodeTests
     [Fact]
     public void TheSameUpdateWithoutABirthThrowsRatherThanReturningNothing()
     {
-        // The failure this test exists for is not the exception; it is the alternative. A decoder that
-        // skipped the aliases it could not resolve would return an empty array here, and an empty
-        // array is exactly what report-by-exception produces when nothing changed. Ingestion would
-        // record a healthy channel with no readings, and the gap would look like a quiet machine.
+        // Thất bại mà test này tồn tại vì nó không phải là exception; đó là phương án thay thế. Một
+        // decoder bỏ qua các alias nó không resolve được sẽ trả về một mảng rỗng ở đây, và một mảng
+        // rỗng chính xác là những gì report-by-exception tạo ra khi không có gì thay đổi. Ingestion
+        // sẽ ghi nhận một channel khỏe mạnh mà không có reading nào, và khoảng trống đó sẽ trông như
+        // một cỗ máy đang im lặng.
         var thrown = Should.Throw<UnknownMetricAliasException>(() => SparkplugPayload.DecodeData(
             SparkplugFixture.ReadBytes(SparkplugFixture.DeviceData),
             MetricAliasTable.Empty));
@@ -87,9 +88,9 @@ public sealed class SparkplugDecodeTests
     [Fact]
     public void AnAliasTableFromTheWrongSessionIsNotSilentlyAcceptedEither()
     {
-        // A node that reconnects renumbers freely. Here the table knows alias 1 but not alias 3, which
-        // is the shape of a partially stale table — and the half it does resolve is the dangerous
-        // half, because it makes the result look plausible.
+        // Một node kết nối lại có thể đánh số lại tự do. Ở đây bảng biết alias 1 nhưng không biết
+        // alias 3, đó chính là hình dạng của một bảng cũ một phần — và nửa nó resolve được mới là
+        // nửa nguy hiểm, vì nó khiến kết quả trông có vẻ hợp lý.
         var partial = SparkplugPayload
             .DecodeBirth(SparkplugPayloads.BirthDeclaring(("Formation/Voltage", 1)))
             .Aliases;
@@ -114,9 +115,9 @@ public sealed class SparkplugDecodeTests
         birth.Readings.ShouldAllBe(reading => reading.DeviceTimestamp == BirthInstant);
         readings.ShouldAllBe(reading => reading.DeviceTimestamp == DataInstant);
 
-        // Not the moment of decoding, and not the gateway's clock. docs/scope.md §7.3 keeps the three
-        // apart because the device's is the one that is routinely hours wrong, and C13 has to be able
-        // to say so rather than having it quietly replaced here.
+        // Không phải thời điểm decode, và không phải đồng hồ của gateway. docs/scope.md §7.3 giữ ba
+        // cái này tách biệt vì đồng hồ của thiết bị là cái thường xuyên sai lệch hàng giờ, và C13
+        // phải có khả năng nói ra điều đó thay vì bị âm thầm thay thế ở đây.
         readings[0].DeviceTimestamp.ShouldBe(DataInstant);
         readings[0].DeviceTimestamp.Offset.ShouldBe(TimeSpan.Zero);
     }
@@ -124,9 +125,9 @@ public sealed class SparkplugDecodeTests
     [Fact]
     public void ATruncatedPayloadIsRefused()
     {
-        // Not hypothetical: C09 buffers payloads on disk, and a record cut short by a power cut is the
-        // failure that buffer is designed around. It has to arrive here as a decode error rather than
-        // as a payload with fewer metrics than were written.
+        // Không phải giả định suông: C09 buffer các payload trên đĩa, và một bản ghi bị cắt cụt bởi
+        // sự cố mất điện chính là loại lỗi mà buffer đó được thiết kế để đối phó. Nó phải tới đây
+        // dưới dạng một lỗi decode chứ không phải một payload có ít metric hơn số đã được ghi.
         var complete = SparkplugFixture.ReadBytes(SparkplugFixture.DeviceBirth);
         var truncated = complete[..^5];
 

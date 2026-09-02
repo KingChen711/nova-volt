@@ -4,7 +4,7 @@ namespace Nvm.UnitTests.Contracts;
 
 public sealed class RoutingKeyTests
 {
-    // The worked example from docs/scope.md §7.4. Note the upper-case site.
+    // Ví dụ minh họa từ docs/scope.md §7.4. Lưu ý site viết hoa.
     private const string UnitSerializedAtNv1 = "nvm.NV1.traceability.unit-serialized.v1";
 
     private static readonly EventTypeName UnitSerialized =
@@ -42,10 +42,10 @@ public sealed class RoutingKeyTests
     [Fact]
     public void TryParse_LowerCaseSite_IsRejected()
     {
-        // The trap this whole type exists to close. AMQP matches routing keys byte for byte, so a
-        // publisher on nvm.NV1.* and a consumer bound to nvm.nv1.# never meet — and the broker
-        // reports nothing at all. Refusing the lower-case spelling is the only moment anyone finds
-        // out, so it has to be a hard failure rather than a tolerated variant.
+        // Cái bẫy mà toàn bộ type này tồn tại để chặn lại. AMQP so khớp routing key từng byte một, nên
+        // một publisher trên nvm.NV1.* và một consumer bind vào nvm.nv1.# sẽ không bao giờ gặp nhau —
+        // và broker không báo lỗi gì cả. Từ chối cách viết chữ thường là khoảnh khắc duy nhất ai đó
+        // phát hiện ra, nên nó phải là một lỗi cứng chứ không phải một biến thể được dung thứ.
         var parsed = RoutingKey.TryParse("nvm.nv1.traceability.unit-serialized.v1", out var key);
 
         parsed.ShouldBeFalse();
@@ -81,9 +81,9 @@ public sealed class RoutingKeyTests
     [Fact]
     public void EventType_OnAParsedKey_MatchesTheCloudEventsTypeForTheSameEvent()
     {
-        // A routing key and the CloudEvents type attribute describe the same event in two different
-        // strings. This is the assertion that they cannot drift: the key carries the type itself
-        // rather than a copy of its parts.
+        // Một routing key và attribute type của CloudEvents mô tả cùng một event bằng hai chuỗi khác
+        // nhau. Đây là assertion rằng chúng không thể lệch nhau: key mang chính cái type đó chứ không
+        // phải một bản sao các phần của nó.
         var key = RoutingKey.Parse(UnitSerializedAtNv1);
 
         key.EventType.Value.ShouldBe("com.novavolt.traceability.unit-serialized.v1");

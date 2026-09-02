@@ -11,22 +11,22 @@ using Nvm.Sparkplug.Topics;
 namespace Nvm.UnitTests.EdgeGateway;
 
 /// <summary>
-/// The topology `scope.md` §9/M2 promised and nothing had run: <b>1.000 formation channels under one
-/// edge node</b>. The demo seed stays at eight because it is the file people read to understand the
-/// plant, so the load topology is a separate catalog — see `deploy/seed-load/make-load-topology.py`.
+/// Topology mà `scope.md` §9/M2 đã hứa và chưa từng được chạy: <b>1.000 formation channel dưới một
+/// edge node</b>. Demo seed vẫn giữ ở tám vì đó là file mà mọi người đọc để hiểu nhà máy, nên load
+/// topology là một catalog riêng — xem `deploy/seed-load/make-load-topology.py`.
 /// </summary>
 /// <remarks>
 /// <para>
-/// Cardinality here is ingestion's problem, not the simulator's. Sparkplug gives one edge node one
-/// <c>seq</c> stream and one <c>bdSeq</c>, but every device under it gets <b>its own alias table</b>,
-/// declared once in its <c>DBIRTH</c> and never restated. A thousand devices is a thousand tables
-/// alive at once under a single session.
+/// Cardinality ở đây là vấn đề của ingestion, không phải của simulator. Sparkplug cho một edge node
+/// một dòng <c>seq</c> và một <c>bdSeq</c>, nhưng mỗi device dưới nó lại có <b>alias table riêng của
+/// chính nó</b>, được khai báo một lần trong <c>DBIRTH</c> của nó và không bao giờ khai báo lại. Một
+/// nghìn device là một nghìn table cùng tồn tại song song dưới một session.
 /// </para>
 /// <para>
-/// What goes wrong if they are not kept apart is silent and permanent for the session: alias 7 means
-/// one metric on one channel and another metric on the next, so a shared table does not fail — it
-/// attributes a temperature to a voltage and stores it. A reading nobody can tell is wrong is worse
-/// than a reading that was refused.
+/// Điều sẽ xảy ra nếu chúng không được tách biệt là âm thầm và vĩnh viễn cho cả session: alias 7
+/// nghĩa là một metric ở channel này và một metric khác ở channel kế tiếp, nên một table dùng chung
+/// không fail — nó gán một giá trị nhiệt độ cho một điện áp rồi lưu lại như vậy. Một reading mà không
+/// ai nhận ra là sai còn tệ hơn một reading bị từ chối.
 /// </para>
 /// </remarks>
 public sealed class ThousandChannelTopologyTests
@@ -43,9 +43,9 @@ public sealed class ThousandChannelTopologyTests
     [Fact]
     public void TheLoadTopologyModelsAThousandChannels_AndTheDemoSeedStillModelsEight()
     {
-        // Both halves matter. A load fixture that quietly became the demo would put a thousand
-        // hand-unreadable lines in front of the next person opening the factory model, and a demo
-        // that quietly became the load fixture would leave D2 measuring eight channels again.
+        // Cả hai nửa đều quan trọng. Một load fixture âm thầm biến thành demo sẽ đặt một nghìn dòng
+        // không ai đọc nổi bằng tay trước mặt người tiếp theo mở factory model ra, còn một demo âm
+        // thầm biến thành load fixture sẽ khiến D2 lại chỉ đo có tám channel.
         ChannelsOf(LoadSeed).Length.ShouldBe(1_000);
         ChannelsOf(DemoSeed).Length.ShouldBe(8);
     }
@@ -53,9 +53,9 @@ public sealed class ThousandChannelTopologyTests
     [Fact]
     public void TheLoadTopologySpreadsChannelsAcrossCyclers_TheWayALineIsBuilt()
     {
-        // Ten cyclers of a hundred, not one cycler of a thousand. No cycler on any line has a
-        // thousand channels, and the number of work cells is itself a dimension the gateway has to
-        // resolve when it turns a topic into an equipment path.
+        // Mười cycler mỗi cái một trăm, không phải một cycler một nghìn. Không cycler nào trên bất kỳ
+        // line nào có một nghìn channel, và số lượng work cell tự nó cũng là một chiều mà gateway
+        // phải giải quyết khi biến một topic thành một equipment path.
         var channels = ChannelsOf(LoadSeed);
         var cyclers = channels
             .Select(channel => channel.Segments[4])
@@ -76,13 +76,13 @@ public sealed class ThousandChannelTopologyTests
 
         var sequence = 0UL;
 
-        // Null, and that is the correct answer: an NBIRTH carries bdSeq and the control metrics and
-        // nothing a machine measured, so the session tracker consumes it and there is nothing to
-        // forward. The session is open all the same, which is what the thousand births below need.
+        // Null, và đó là câu trả lời đúng: một NBIRTH mang bdSeq cùng các control metric mà không
+        // mang gì máy móc đo được, nên session tracker tiêu thụ nó và không có gì để forward cả.
+        // Session vẫn được mở như thường, và đó là điều mà một nghìn birth bên dưới cần tới.
         decoder.Decode(Topic(Line, SparkplugMessageType.NodeBirth), NodeBirth(ref sequence)).ShouldBeNull();
 
-        // Every channel declares voltage. Only the first also declares capacity, which is what makes
-        // the tables provably separate a few lines further down.
+        // Mọi channel đều khai báo voltage. Chỉ channel đầu tiên khai báo thêm capacity, và đó chính
+        // là điều chứng minh các table thực sự tách biệt ở vài dòng bên dưới.
         foreach (var channel in channels)
         {
             var declaresCapacity = channel == channels[0];
@@ -94,8 +94,8 @@ public sealed class ThousandChannelTopologyTests
             birth.EquipmentPath.ShouldBe(channel);
         }
 
-        // Alias-only data on all thousand. This is the whole point of a birth: nothing in these
-        // payloads says "voltage", and every one of them still resolves to it.
+        // Data chỉ mang alias trên cả một nghìn channel. Đây chính là toàn bộ mục đích của một birth:
+        // không gì trong các payload này nói "voltage" cả, vậy mà mỗi payload vẫn giải ra đúng nó.
         foreach (var channel in channels)
         {
             var data = decoder.Decode(
@@ -106,10 +106,10 @@ public sealed class ThousandChannelTopologyTests
             data.Readings.ShouldHaveSingleItem().MetricName.ShouldBe("Formation/Voltage");
         }
 
-        // The tables are per device and not one table shared by the node. Alias 7 was declared on
-        // the first channel only, so it reads there and is refused everywhere else - and refusing is
-        // the correct outcome, because the alternative is attributing one channel's metric to
-        // another and storing it as if it had been measured.
+        // Các table là theo từng device, không phải một table dùng chung cho cả node. Alias 7 chỉ
+        // được khai báo trên channel đầu tiên, nên nó đọc được ở đó và bị từ chối ở mọi nơi khác -
+        // và từ chối chính là kết quả đúng, bởi vì lựa chọn thay thế là gán metric của channel này
+        // cho channel khác rồi lưu nó như thể đã thực sự đo được.
         decoder.Decode(
                 Topic(channels[0], SparkplugMessageType.DeviceData),
                 AliasOnlyData(ref sequence, CapacityAlias))
@@ -134,7 +134,7 @@ public sealed class ThousandChannelTopologyTests
     private static string Topic(EquipmentPath path, SparkplugMessageType messageType) =>
         SparkplugTopic.For(path, messageType).Value;
 
-    // seq counts across the whole session, births and data alike, exactly as a real node numbers it.
+    // seq đếm xuyên suốt cả session, cả birth lẫn data như nhau, đúng như cách một node thật đánh số.
     private static ulong Next(ref ulong sequence)
     {
         var current = sequence;

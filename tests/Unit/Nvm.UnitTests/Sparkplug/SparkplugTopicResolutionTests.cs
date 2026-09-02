@@ -5,11 +5,10 @@ using Nvm.Sparkplug.Topics;
 
 namespace Nvm.UnitTests.Sparkplug;
 
-/// <summary>Turning a topic into a place in the plant, against the model the plant is running.</summary>
+/// <summary>Đổi topic thành vị trí trong nhà máy, đối chiếu với model nhà máy đang chạy.</summary>
 /// <remarks>
-/// The real seed, not a fixture tree — the same documents the host loads. A device that resolves here
-/// resolves because NV1 genuinely has it, and one that does not is missing for a reason somebody could
-/// look up.
+/// Seed thật, không phải fixture tree — cùng document mà host load. Device resolve được ở đây vì NV1
+/// thực sự có nó, còn device không resolve được thì thiếu vì lý do ai đó có thể tra cứu.
 /// </remarks>
 public sealed class SparkplugTopicResolutionTests
 {
@@ -18,8 +17,8 @@ public sealed class SparkplugTopicResolutionTests
     [Fact]
     public void ADeviceInsideAWorkCellResolvesToTheSixSegmentPath()
     {
-        // The half of the round-trip a topic cannot do alone. FORM-01 appears nowhere in the topic;
-        // the only reason the answer has six segments is that the model was asked.
+        // Nửa round-trip mà topic không tự làm được. FORM-01 không xuất hiện trong topic; lý do duy
+        // nhất kết quả có sáu segment là model đã được hỏi.
         Resolve("spBv1.0/NOVAVOLT-NV1-FORMATION/DDATA/EDGE-F1/FORM-01-CH-0001")
             .ShouldNotBeNull()
             .Value
@@ -29,8 +28,8 @@ public sealed class SparkplugTopicResolutionTests
     [Fact]
     public void ADeviceThatIsItselfAWorkCellResolvesToTheFiveSegmentPath()
     {
-        // STACK-01 hangs straight off line L1. The topic looks identical in shape to the one above,
-        // which is exactly why the depth cannot be a rule in the parser.
+        // STACK-01 treo trực tiếp dưới line L1. Topic có shape giống hệt topic trên, nên depth không
+        // thể là rule trong parser.
         Resolve("spBv1.0/NOVAVOLT-NV1-ASSEMBLY/DBIRTH/EDGE-L1/STACK-01")
             .ShouldNotBeNull()
             .Value
@@ -49,9 +48,9 @@ public sealed class SparkplugTopicResolutionTests
     [Fact]
     public void APlantThatHasActivatedNothingResolvesNothing()
     {
-        // K3, and the shape it takes at ingestion. DE1 is a real plant in the document and has not been
-        // rolled out here, so a topic quoting it gets no answer — not a guess drawn from NV1's tree,
-        // and not the newest document on the shelf either.
+        // K3, và hình dạng nó có ở ingestion. DE1 là nhà máy thật trong document nhưng chưa được rollout
+        // ở đây, nên topic nói về nó không có kết quả — không đoán từ tree của NV1, cũng không lấy
+        // document mới nhất trên kệ.
         var directory = DirectoryWith(("NV1", 1));
 
         SparkplugTopic
@@ -59,8 +58,8 @@ public sealed class SparkplugTopicResolutionTests
             .ResolveEquipmentPath(directory)
             .ShouldBeNull();
 
-        // The same topic against a directory where DE1 has been activated does resolve, so the null
-        // above is about activation and not about the topic being unreadable.
+        // Cùng topic với directory đã activate DE1 thì resolve được, nên null ở trên nói về activation
+        // chứ không phải topic không đọc được.
         SparkplugTopic
             .Parse("spBv1.0/NOVAVOLT-DE1-PACK/DBIRTH/EDGE-P1/PLOAD-01")
             .ResolveEquipmentPath(DirectoryWith(("NV1", 1), ("DE1", 1)))
@@ -72,9 +71,8 @@ public sealed class SparkplugTopicResolutionTests
     [Fact]
     public void CodesThatRepeatAcrossPlantsResolveWithinTheirOwnPlant()
     {
-        // NV1 and DE1 both have MLOAD-01 on line M1. A plant-wide code index would answer with
-        // whichever it happened to store last, and half the module loader's history would be filed
-        // under the wrong factory.
+        // NV1 và DE1 đều có MLOAD-01 trên line M1. Code index toàn nhà máy sẽ trả về cái được lưu sau
+        // cùng, và một nửa history của module loader sẽ bị ghi dưới nhà máy sai.
         var directory = DirectoryWith(("NV1", 1), ("DE1", 1));
 
         SparkplugTopic.Parse("spBv1.0/NOVAVOLT-NV1-MODULE/DDATA/EDGE-M1/MLOAD-01")
@@ -93,17 +91,17 @@ public sealed class SparkplugTopicResolutionTests
     [Fact]
     public void ADeviceThePlantDoesNotHaveResolvesToNothing()
     {
-        // Revision 1 of NV1 has channels 0001 to 0004. A cycler reporting 0142 is either a plant that
-        // has been extended without a new revision, or a topic somebody typed. Both are refusals.
+        // Revision 1 của NV1 có channel 0001 đến 0004. Cycler report 0142 hoặc là nhà máy đã mở rộng
+        // mà không có revision mới, hoặc topic do ai đó gõ. Cả hai đều phải từ chối.
         Resolve("spBv1.0/NOVAVOLT-NV1-FORMATION/DDATA/EDGE-F1/FORM-01-CH-0142").ShouldBeNull();
     }
 
     [Fact]
     public void ADeviceAddedInALaterRevisionAppearsOnlyOnceThePlantIsRunningIt()
     {
-        // Revision 2 adds channels 0005 to 0008 (ADR-024). The same topic resolving differently at
-        // different revisions is staged rollout working, not an inconsistency: NV1 answers for the
-        // document NV1 has activated.
+        // Revision 2 thêm channel 0005 đến 0008 (ADR-024). Cùng topic resolve khác nhau giữa revision
+        // là staged rollout hoạt động đúng, không phải inconsistency: NV1 trả lời theo document NV1 đã
+        // activate.
         const string Topic = "spBv1.0/NOVAVOLT-NV1-FORMATION/DDATA/EDGE-F1/FORM-01-CH-0005";
 
         SparkplugTopic.Parse(Topic).ResolveEquipmentPath(DirectoryWith(("NV1", 1))).ShouldBeNull();
@@ -118,24 +116,23 @@ public sealed class SparkplugTopicResolutionTests
     [Fact]
     public void ALineThePlantDoesNotHaveResolvesToNothing()
     {
-        // The node-level version of the same refusal. NV1 has no line F9.
+        // Phiên bản node-level của cùng sự từ chối. NV1 không có line F9.
         Resolve("spBv1.0/NOVAVOLT-NV1-FORMATION/NBIRTH/EDGE-F9").ShouldBeNull();
     }
 
     [Fact]
     public void ADeviceOnTheWrongLineResolvesToNothing()
     {
-        // FORM-01-CH-0001 exists, on F1. Reported under AGING/A1 it is either a machine that moved
-        // without a new revision or a mis-addressed gateway; resolving it anyway would file formation
-        // readings under an aging rack.
+        // FORM-01-CH-0001 tồn tại trên F1. Report dưới AGING/A1 thì hoặc máy đã di chuyển mà không có
+        // revision mới, hoặc gateway address sai; vẫn resolve nó sẽ ghi formation reading dưới aging rack.
         Resolve("spBv1.0/NOVAVOLT-NV1-AGING/DDATA/EDGE-A1/FORM-01-CH-0001").ShouldBeNull();
     }
 
     [Fact]
     public void WritingATopicFromAResolvedPathAndResolvingItAgainReturnsTheSamePath()
     {
-        // The full round-trip, and the only one that closes for a six-segment path: path → topic loses
-        // the work cell, topic → path recovers it from the model.
+        // Full round-trip, và là round-trip duy nhất khép kín cho path sáu segment: path → topic mất
+        // work cell, topic → path khôi phục nó từ model.
         var directory = DirectoryWith(("NV1", 1));
         var original = EquipmentPath.Parse("NOVAVOLT/NV1/FORMATION/F1/FORM-01/FORM-01-CH-0003");
 

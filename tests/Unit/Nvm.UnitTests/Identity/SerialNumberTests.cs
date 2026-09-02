@@ -4,7 +4,7 @@ namespace Nvm.UnitTests.Identity;
 
 public sealed class SerialNumberTests
 {
-    // The worked example from docs/scope.md §6.1.
+    // Ví dụ đã tính trong docs/scope.md §6.1.
     private const string ValidCellSerial = "NV1CL16238A00123";
 
     [Fact]
@@ -55,8 +55,8 @@ public sealed class SerialNumberTests
     [Fact]
     public void TryParse_LowerCaseCode_IsRejectedRatherThanNormalized()
     {
-        // Deliberate: the code is engraved upper case, so a lower-case read means the
-        // scanner is misconfigured. Normalizing would hide an equipment fault.
+        // Có chủ ý: code được khắc bằng chữ hoa, nên đọc ra chữ thường nghĩa là scanner bị
+        // cấu hình sai. Normalize sẽ che giấu equipment fault.
         SerialNumber.TryParse(ValidCellSerial.ToLowerInvariant(), out _).ShouldBeFalse();
     }
 
@@ -65,7 +65,7 @@ public sealed class SerialNumberTests
     {
         var exception = Should.Throw<FormatException>(() => SerialNumber.Parse("NOPE"));
 
-        // The operator needs to see what was actually scanned, not just "invalid input".
+        // Operator cần thấy thứ đã scan thực sự, không chỉ "invalid input".
         exception.Message.ShouldContain("NOPE");
     }
 
@@ -88,8 +88,8 @@ public sealed class SerialNumberTests
     [Fact]
     public void Parse_DoesNotExposeACalendarDate()
     {
-        // A single year digit cannot name a year. Resolving it needs a reference year and
-        // belongs to the production calendar (M3), so no DateOnly property may appear here.
+        // Một chữ số năm không gọi tên được một năm. Resolve nó cần reference year và thuộc về
+        // production calendar (M3), nên ở đây không được có property DateOnly.
         typeof(SerialNumber)
             .GetProperties()
             .ShouldNotContain(property => property.PropertyType == typeof(DateOnly));

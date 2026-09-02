@@ -32,8 +32,8 @@ public sealed class CloudEventHeaderTests
             {
                 bus.AddConsumer<RecordingProbeConsumer>();
 
-                // The real filter, over the in-memory transport. Stamping the headers in the test
-                // instead would leave a test that still passes with the filter deleted.
+                // Filter thật, chạy trên in-memory transport. Nếu thay bằng việc tự stamp header
+                // ngay trong test thì test vẫn pass kể cả khi filter bị xóa mất.
                 bus.UsingInMemory((context, configurator) =>
                 {
                     configurator.UseNvmCloudEvents("host-all");
@@ -46,9 +46,9 @@ public sealed class CloudEventHeaderTests
     [Fact]
     public async Task EveryOutgoingEvent_CarriesTheMandatoryCloudEventsAttributes()
     {
-        // The point of the whole commit: the §7.4 envelope is not only in the documentation. An
-        // operator with rabbitmqadmin, a bridge to another system, or a message sitting in an error
-        // queue that no code could deserialize can all still see what the message claims to be.
+        // Đây là trọng tâm của cả commit: envelope ở §7.4 không chỉ nằm trên tài liệu. Một operator
+        // dùng rabbitmqadmin, một bridge sang hệ thống khác, hay một message đang nằm trong error
+        // queue mà không code nào deserialize nổi — tất cả vẫn có thể thấy message tự nhận là gì.
         await using var provider = BuildHarness();
         var harness = await StartHarnessAsync(provider);
         var received = provider.GetRequiredService<ReceivedAttributes>();
@@ -68,17 +68,17 @@ public sealed class CloudEventHeaderTests
     [Fact]
     public async Task AnEventSentStraightToAnEndpoint_IsStampedToo()
     {
-        // Publish and Send are separate pipes, and a filter on one does not run on the other. Every
-        // event this system emits goes out through Publish, so the send pipe is the one nobody
-        // exercises — which is exactly why it is the one that would rot unnoticed. Without this test,
-        // deleting the ConfigureSend registration keeps the whole suite green while a direct send to
-        // an endpoint carries no CloudEvents metadata at all.
+        // Publish và Send là hai pipe tách biệt, và một filter gắn trên pipe này không chạy trên pipe
+        // kia. Mọi event hệ thống này phát ra đều đi qua Publish, nên send pipe là cái không ai từng
+        // đụng tới — và chính vì thế nó là cái sẽ mục ruỗng mà không ai hay. Nếu thiếu test này, xóa
+        // registration ConfigureSend vẫn để cả suite xanh trong khi một send trực tiếp tới endpoint
+        // lại không mang bất kỳ CloudEvents metadata nào.
         await using var provider = BuildHarness();
         var harness = await StartHarnessAsync(provider);
         var received = provider.GetRequiredService<ReceivedAttributes>();
 
-        // Derived, not hard-coded: renaming the consumer must move this address with it, otherwise the
-        // test starts sending into the void and fails for a reason that has nothing to do with filters.
+        // Được suy ra, không hard-code: đổi tên consumer thì địa chỉ này phải đổi theo, nếu không
+        // test sẽ gửi vào khoảng không và fail vì một lý do chẳng liên quan gì tới filter cả.
         var endpoint = await harness.Bus.GetSendEndpoint(new Uri(
             harness.Bus.Address,
             DefaultEndpointNameFormatter.Instance.Consumer<RecordingProbeConsumer>()));
@@ -97,9 +97,10 @@ public sealed class CloudEventHeaderTests
     [Fact]
     public async Task CloudEventId_IsTheEventIdAndThereforeTheCommandsIdempotencyKey()
     {
-        // The join between the two deduplication layers, checked on the wire rather than in a record.
-        // Ingestion drops repeated device messages by this value and the command pipeline drops
-        // repeated commands by it; a second source for it would be a second thing to drift.
+        // Điểm nối giữa hai lớp deduplication, được kiểm tra trên wire thay vì trong một record.
+        // Ingestion loại bỏ device message trùng lặp dựa trên giá trị này, và command pipeline cũng
+        // loại bỏ command trùng lặp dựa trên nó; có thêm một nguồn thứ hai cho giá trị này thì sẽ có
+        // thêm một thứ có thể lệch nhau.
         await using var provider = BuildHarness();
         var harness = await StartHarnessAsync(provider);
         var received = provider.GetRequiredService<ReceivedAttributes>();
@@ -114,8 +115,8 @@ public sealed class CloudEventHeaderTests
     [Fact]
     public async Task Source_NamesThePlantTheEventCameFromNotTheProcessesDefault()
     {
-        // Source is site plus application, and the site comes off the payload. A process publishing
-        // for both plants must not stamp every message with whichever one it started with.
+        // Source là site cộng với application, và site được lấy từ payload. Một process publish cho
+        // cả hai nhà máy không được phép stamp mọi message bằng nhà máy mà nó khởi động cùng.
         await using var provider = BuildHarness();
         var harness = await StartHarnessAsync(provider);
         var received = provider.GetRequiredService<ReceivedAttributes>();
@@ -132,8 +133,8 @@ public sealed class CloudEventHeaderTests
     [Fact]
     public void HeaderNames_UseTheKafkaStylePrefixThisSystemChose()
     {
-        // AMQP 0-9-1 has no CloudEvents binding, so this prefix is a local convention rather than a
-        // standard. Pinned here so it cannot drift, and explained in ADR-008.
+        // AMQP 0-9-1 không có binding cho CloudEvents, nên prefix này là một quy ước cục bộ chứ không
+        // phải một chuẩn. Được pin ở đây để không thể lệch đi, và được giải thích trong ADR-008.
         CloudEventHeaders.SpecVersion.ShouldBe("ce_specversion");
         CloudEventHeaders.Id.ShouldBe("ce_id");
         CloudEventHeaders.Type.ShouldBe("ce_type");
@@ -145,8 +146,9 @@ public sealed class CloudEventHeaderTests
     [Fact]
     public async Task AMessageWithNoCloudEventsHeaders_ReadsAsNullRatherThanThrowing()
     {
-        // Not every message on a bus comes from this system's publish path. Absent attributes are a
-        // fact about the message, not a failure to report — so this harness deliberately has no filter.
+        // Không phải mọi message trên bus đều đến từ publish path của hệ thống này. Các attribute
+        // vắng mặt là một sự thật về message, không phải một lỗi cần báo cáo — nên harness này cố
+        // tình không có filter.
         await using var provider = new ServiceCollection()
             .AddMassTransitTestHarness(bus => bus.AddConsumer<RecordingProbeConsumer>())
             .AddSingleton<ReceivedAttributes>()
@@ -172,13 +174,13 @@ public sealed class CloudEventHeaderTests
     public async Task AMessageMissingAnyOneMandatoryAttribute_IsRefusedRatherThanReadAsAPartialSet(
         string omitted)
     {
-        // Every header in turn, because "the set" has no privileged member. Checking one of them first
-        // and treating its absence as "this message has no attributes" is exactly the bug this covers:
-        // it would let a message missing that one header pass as a message carrying nothing, while the
-        // other five sit on it saying otherwise.
+        // Lần lượt từng header một, vì "tập hợp" này không có thành viên nào được ưu tiên. Kiểm tra
+        // một header trước rồi coi việc nó vắng mặt là "message này không có attribute nào" chính là
+        // con bug mà test này bao phủ: nó sẽ để một message thiếu đúng một header đó lọt qua như thể
+        // không mang gì cả, trong khi năm header còn lại vẫn nằm đó nói điều ngược lại.
         //
-        // The headers are written by hand here — the point is a message the real filter would never
-        // produce, from a publisher that does not agree with this system about what the set is.
+        // Các header ở đây được viết bằng tay — mục đích là tạo một message mà filter thật sẽ không
+        // bao giờ tạo ra, từ một publisher không đồng thuận với hệ thống này về tập hợp đó là gì.
         await using var provider = new ServiceCollection()
             .AddMassTransitTestHarness(bus => bus.AddConsumer<RecordingProbeConsumer>())
             .AddSingleton<ReceivedAttributes>()
@@ -204,9 +206,10 @@ public sealed class CloudEventHeaderTests
     [Fact]
     public async Task AHeaderCarryingSomethingOtherThanText_IsMalformedRatherThanAbsent()
     {
-        // The type-level twin of the sentinel bug. A header read with `as string` comes back null when
-        // it holds anything else, so a message with six headers — one of them an integer — would read
-        // as a message with five, and be refused for the wrong reason, or worse, read as one with none.
+        // Phiên bản ở mức type của con bug sentinel. Một header đọc bằng `as string` trả về null khi
+        // nó mang bất kỳ kiểu gì khác, nên một message với sáu header — một trong số đó là số nguyên
+        // — sẽ bị đọc như một message chỉ có năm header, và bị từ chối vì sai lý do, hoặc tệ hơn, bị
+        // đọc như một message không có header nào.
         await using var provider = new ServiceCollection()
             .AddMassTransitTestHarness(bus => bus.AddConsumer<RecordingProbeConsumer>())
             .AddSingleton<ReceivedAttributes>()
@@ -232,10 +235,10 @@ public sealed class CloudEventHeaderTests
     [Fact]
     public async Task AHeaderPresentButEmpty_IsMalformedRatherThanAbsent()
     {
-        // CloudEvents treats "no attribute" and "attribute with an empty value" as different claims —
-        // the reason the five optional attributes are omitted rather than written blank. Read the other
-        // way round, an empty ce_datacontenttype is a publisher asserting an encoding of "", and that
-        // must not pass as a well-formed set.
+        // CloudEvents coi "không có attribute" và "attribute với giá trị rỗng" là hai khẳng định khác
+        // nhau — đó là lý do năm attribute tùy chọn được bỏ qua thay vì ghi trống. Đọc theo chiều
+        // ngược lại, một ce_datacontenttype rỗng là publisher đang khẳng định một encoding là "", và
+        // điều đó không được phép trôi qua như một tập hợp hợp lệ.
         await using var provider = new ServiceCollection()
             .AddMassTransitTestHarness(bus => bus.AddConsumer<RecordingProbeConsumer>())
             .AddSingleton<ReceivedAttributes>()
@@ -262,8 +265,8 @@ public sealed class CloudEventHeaderTests
     {
         var error = received.Error?.Message;
 
-        // Reported before the null check so that a stamp deleted from the filter fails with the name
-        // of the header that went missing, rather than with "received.Value was null".
+        // Được báo cáo trước khi kiểm tra null, để nếu một stamp bị xóa khỏi filter thì test fail với
+        // tên của header bị thiếu, thay vì với "received.Value was null".
         error.ShouldBeNull();
 
         return received.Value.ShouldNotBeNull();
@@ -312,8 +315,9 @@ public sealed class CloudEventHeaderTests
             }
             catch (InvalidOperationException exception)
             {
-                // Recorded, not rethrown: a throw here becomes a fault and five retries, and the
-                // assertion is about what the reader refused, not about what the bus did afterwards.
+                // Được ghi lại, không rethrow: throw ở đây sẽ trở thành một fault và năm lần retry,
+                // trong khi assertion đang quan tâm tới việc reader từ chối cái gì, không phải bus
+                // làm gì sau đó.
                 received.Error = exception;
             }
 

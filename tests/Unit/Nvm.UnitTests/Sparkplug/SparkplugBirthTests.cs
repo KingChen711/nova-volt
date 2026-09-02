@@ -4,19 +4,19 @@ using SparkplugMetric = Org.Eclipse.Tahu.Protobuf.Payload.Types.Metric;
 
 namespace Nvm.UnitTests.Sparkplug;
 
-/// <summary>What a birth is required to say, and what happens when it does not say it.</summary>
+/// <summary>Những gì một birth bắt buộc phải nói, và điều gì xảy ra khi nó không nói ra.</summary>
 /// <remarks>
-/// Strict on purpose. A birth is the only statement of what every later message of the session means,
-/// and it arrives once; a birth accepted with a hole in it turns into hours of readings that cannot be
-/// interpreted, discovered long after the node has moved on.
+/// Nghiêm ngặt một cách có chủ đích. Một birth là lời khai báo duy nhất về ý nghĩa của mọi message
+/// sau đó trong session, và nó chỉ tới một lần; một birth được chấp nhận dù có một lỗ hổng sẽ biến
+/// thành hàng giờ reading không thể diễn giải được, chỉ phát hiện ra rất lâu sau khi node đã đi tiếp.
 /// </remarks>
 public sealed class SparkplugBirthTests
 {
     [Fact]
     public void ABirthMetricWithoutANameIsRefused()
     {
-        // An alias-only metric is normal in a DDATA and meaningless in a birth: the birth is where the
-        // number is supposed to acquire a meaning.
+        // Một metric chỉ mang alias là bình thường trong một DDATA và vô nghĩa trong một birth: birth
+        // chính là nơi con số đó phải có được ý nghĩa.
         var metric = new SparkplugMetric
         {
             Alias = 1,
@@ -32,10 +32,10 @@ public sealed class SparkplugBirthTests
     [Fact]
     public void ABirthMetricWithoutADatatypeIsRefused()
     {
-        // The value could be inferred from the field it arrived in, and for a float it would even be
-        // right. It is refused anyway because of the integers: int_value carries both Int32 and
-        // UInt32, so a birth that does not declare leaves -1 and 4294967295 indistinguishable for
-        // every message of the rest of the session.
+        // Giá trị có thể suy ra được từ trường nó tới trong đó, và với một float thì suy đoán đó thậm
+        // chí đúng. Nó vẫn bị từ chối vì các số nguyên: int_value mang cả Int32 lẫn UInt32, nên một
+        // birth không khai báo sẽ khiến -1 và 4294967295 không thể phân biệt được cho mọi message
+        // trong suốt phần còn lại của session.
         var metric = new SparkplugMetric
         {
             Name = "Formation/Voltage",
@@ -53,9 +53,9 @@ public sealed class SparkplugBirthTests
     [Fact]
     public void ABirthThatGivesOneAliasToTwoMetricsIsRefused()
     {
-        // Whichever of the two was read last would win, and every later message using that alias would
-        // be filed under it. Refusing the birth costs one rebirth; accepting it costs a session of
-        // readings attributed to the wrong signal.
+        // Bất kể cái nào trong hai cái được đọc sau cùng sẽ thắng, và mọi message sau đó dùng alias
+        // này sẽ bị gán vào nó. Từ chối birth tốn một lần rebirth; chấp nhận nó tốn cả một session
+        // reading bị gán nhầm cho sai tín hiệu.
         var payload = SparkplugPayloads.BirthDeclaring(
             ("Formation/Voltage", 1),
             ("Formation/Temperature", 1));
@@ -79,7 +79,8 @@ public sealed class SparkplugBirthTests
     [Fact]
     public void AMetricWithNeitherANameNorAnAliasIsRefused()
     {
-        // Nothing to attribute the value to. Sparkplug allows it on the wire; there is no reading it.
+        // Không có gì để gán giá trị này vào. Sparkplug cho phép nó xuất hiện trên wire; nhưng không
+        // có cách nào đọc được nó.
         var metric = new SparkplugMetric
         {
             Timestamp = SparkplugPayloads.DefaultTimestampMs,
@@ -93,9 +94,9 @@ public sealed class SparkplugBirthTests
     [Fact]
     public void ANamedMetricIsAcceptedMidSessionWithoutAnAliasTable()
     {
-        // The other half of the alias rule, and the one that keeps it from being a blanket refusal:
-        // a metric that names itself needs no table, because it is not asking anyone to remember
-        // anything.
+        // Nửa còn lại của quy tắc alias, và là nửa khiến nó không trở thành một sự từ chối trên diện
+        // rộng: một metric tự đặt tên mình không cần bảng nào cả, vì nó không yêu cầu ai phải nhớ gì
+        // hết.
         var metric = new SparkplugMetric
         {
             Name = "Formation/Voltage",
@@ -115,10 +116,10 @@ public sealed class SparkplugBirthTests
     [Fact]
     public void AnAliasThatArrivesUnderADifferentNameThanTheBirthGaveItIsRefused()
     {
-        // This one reading could have been filed correctly — it named itself. The next message under
-        // alias 1 could not: it would carry no name, and the stale table would send it to
-        // Formation/Voltage. Accepting the contradiction here buys one correct reading and pays for it
-        // with every alias-only message that follows.
+        // Reading này lẽ ra có thể được gán đúng — vì nó tự đặt tên mình. Message kế tiếp dùng alias 1
+        // thì không thể: nó sẽ không mang tên, và bảng cũ sẽ gửi nó tới Formation/Voltage. Chấp nhận
+        // mâu thuẫn này ở đây mua được một reading đúng và phải trả giá bằng mọi message chỉ-mang-alias
+        // theo sau.
         var birth = SparkplugPayload.DecodeBirth(SparkplugPayloads.BirthDeclaring(("Formation/Voltage", 1)));
 
         var renamed = new SparkplugMetric
@@ -140,8 +141,8 @@ public sealed class SparkplugBirthTests
     [Fact]
     public void ABirthWithNoAliasesAtAllProducesAnEmptyTableRatherThanFailing()
     {
-        // Aliases are an optimisation, not a requirement. A device that spells every name out in full
-        // is wasteful and perfectly legal, and its birth still has to decode.
+        // Alias là một tối ưu hóa, không phải một yêu cầu bắt buộc. Một thiết bị viết đầy đủ mọi tên
+        // ra là lãng phí nhưng hoàn toàn hợp lệ, và birth của nó vẫn phải decode được.
         var metric = new SparkplugMetric
         {
             Name = "Formation/Voltage",

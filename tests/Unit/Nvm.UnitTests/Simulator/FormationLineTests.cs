@@ -6,11 +6,11 @@ using Nvm.Sparkplug.Topics;
 
 namespace Nvm.UnitTests.Simulator;
 
-/// <summary>What the line publishes, and the property that makes time compression honest.</summary>
+/// <summary>Những gì line publish, và tính chất khiến time compression trở nên trung thực.</summary>
 public sealed class FormationLineTests
 {
-    // Voltage, current, temperature, capacity, step and the cell serial. The serial is one of them:
-    // the gateway forwards it and the pipeline stores a row for it like any other declared metric.
+    // Voltage, current, temperature, capacity, step và cell serial. Serial cũng là một trong số đó:
+    // gateway forward nó và pipeline lưu một dòng cho nó như bất kỳ metric đã khai báo nào khác.
     private const int ReadingsPerDeclaration = 6;
 
     private static readonly EquipmentPath LinePath = EquipmentPath.Parse("NOVAVOLT/NV1/FORMATION/F1");
@@ -32,8 +32,8 @@ public sealed class FormationLineTests
         messages[0].Topic.MessageType.ShouldBe(SparkplugMessageType.NodeBirth);
         messages[0].Topic.DeviceCode.ShouldBeNull();
 
-        // The order is not decoration: a device birth arriving before its node's would belong to a
-        // session the consumer has never heard of, which is what C11 asks for a rebirth over.
+        // Thứ tự này không phải trang trí: một device birth tới trước node birth của nó sẽ thuộc về
+        // một session mà consumer chưa từng nghe tới, và đó chính là điều C11 yêu cầu rebirth để xử lý.
         messages.Skip(1).ShouldAllBe(message => message.Topic.MessageType == SparkplugMessageType.DeviceBirth);
 
         messages.Skip(1).Select(message => message.Topic.DeviceCode)
@@ -43,9 +43,9 @@ public sealed class FormationLineTests
     [Fact]
     public void TheNodeBirthCarriesBdSeqWithoutAnAlias()
     {
-        // bdSeq has to be readable in an NDEATH the broker publishes as a last will, and a last will
-        // is composed before the birth that would have assigned an alias. Giving it one would make the
-        // death certificate unreadable — and a death nobody can read is a node that looks alive.
+        // bdSeq phải đọc được trong một NDEATH mà broker publish như một last will, và một last will
+        // được soạn trước birth — thứ lẽ ra đã gán một alias. Gán alias cho nó sẽ khiến death
+        // certificate không đọc được — và một death không ai đọc được là một node trông như vẫn sống.
         var birth = SparkplugPayload.DecodeBirth(Line(birthDeathSequence: 7).Connect(TimeSpan.Zero)[0].Payload.AsSpan());
 
         birth.Readings.Select(reading => reading.MetricName).ShouldBe(["bdSeq", "Node Control/Rebirth"]);
@@ -72,8 +72,8 @@ public sealed class FormationLineTests
             "Formation/CellSerial",
         ]);
 
-        // The round trip that matters: what the simulator writes, the decoder reads — and the update
-        // that follows is unreadable without the birth, exactly as a real one is.
+        // Vòng lặp khép kín quan trọng: những gì simulator ghi ra, decoder đọc lại — và update theo
+        // sau không đọc được nếu thiếu birth, y hệt như một thiết bị thật.
         var update = line.Advance(TimeSpan.FromMinutes(30))
             .First(message => message.Topic.DeviceCode == Channels[0].Code);
 
@@ -102,9 +102,9 @@ public sealed class FormationLineTests
     [Fact]
     public void ChannelsAreStaggeredAcrossTheCycleRatherThanStartedTogether()
     {
-        // A line loads cells continuously, so at any moment some channels are charging and some are
-        // resting. A line where all four stepped between stages at the same instant would produce a
-        // traffic shape nothing downstream will ever see again.
+        // Một line nạp cell liên tục, nên tại bất kỳ thời điểm nào cũng có channel đang sạc và channel
+        // đang nghỉ. Một line mà cả bốn channel chuyển stage cùng một thời điểm sẽ tạo ra một traffic
+        // shape mà downstream sẽ không bao giờ gặp lại.
         var line = Line();
         var births = line.Connect(TimeSpan.Zero);
 
@@ -121,8 +121,8 @@ public sealed class FormationLineTests
     [Fact]
     public void ANewCellProducesAFreshDeviceBirth()
     {
-        // A cycler publishes DBIRTH at the start of every cell: the serial has changed, and a birth is
-        // the only message that carries names.
+        // Một cycler publish DBIRTH ở đầu mỗi cell: serial đã thay đổi, và birth là message duy nhất
+        // mang theo tên.
         var line = Line();
 
         line.Connect(TimeSpan.Zero);
@@ -136,8 +136,8 @@ public sealed class FormationLineTests
     [Fact]
     public void ReportByExceptionMeansMostChannelsSayNothingMostOfTheTime()
     {
-        // The traffic shape the whole protocol exists for. If every channel published on every sample
-        // the aliases would be pointless and so would the deadbands.
+        // Traffic shape mà cả protocol tồn tại vì nó. Nếu mọi channel đều publish ở mọi sample thì
+        // alias sẽ vô nghĩa, và deadband cũng vậy.
         var line = Line();
 
         line.Connect(TimeSpan.Zero);
@@ -158,17 +158,17 @@ public sealed class FormationLineTests
     [Fact]
     public void RunningTheSameCycleTwiceProducesTheSameMeasurements()
     {
-        // The property time compression rests on. Everything the line publishes is a function of
-        // process time, so a run is reproducible — and a compressed run is the same run, finished
-        // sooner. SimulatorWorkerTests is where the clock is actually compressed.
+        // Tính chất mà time compression dựa vào. Mọi thứ line publish đều là một hàm của process
+        // time, nên một run có thể tái lập được — và một run bị nén là cùng một run, chỉ xong sớm
+        // hơn. SimulatorWorkerTests là nơi clock thực sự bị nén.
         RunOneCycle().ShouldBe(RunOneCycle());
     }
 
     [Fact]
     public void SamplingTwiceAsOftenMeasuresMoreRatherThanDifferently()
     {
-        // Stated so that the invariant above is not mistaken for a wider one. The sample period is a
-        // real decision about resolution; the compression factor is not.
+        // Nói rõ ra để invariant ở trên không bị hiểu nhầm thành một invariant rộng hơn. Sample period
+        // là một quyết định thật về độ phân giải; compression factor thì không.
         var coarse = RunOneCycle(TimeSpan.FromMinutes(10));
         var fine = RunOneCycle(TimeSpan.FromMinutes(5));
 
@@ -188,8 +188,8 @@ public sealed class FormationLineTests
     [Fact]
     public void ALineWithNoChannelsIsRefused()
     {
-        // An empty list means the line was decommissioned or never rolled out, and a simulator that
-        // started anyway would sit there publishing nothing and looking healthy.
+        // Một danh sách rỗng nghĩa là line đã ngừng hoạt động hoặc chưa từng được triển khai, và một
+        // simulator vẫn khởi động sẽ ngồi đó publish không gì cả mà vẫn trông khỏe mạnh.
         Should.Throw<ArgumentException>(() => new FormationLine(
             LinePath,
             [],
@@ -200,15 +200,15 @@ public sealed class FormationLineTests
     [Fact]
     public void TheCountIsEveryReadingTheChannelsTook()
     {
-        // D1's left-hand side, pinned structurally. A birth declares six readings, and a hard-coded
-        // "five" beside that array made the run report claim one fewer per DBIRTH — for every
-        // channel, for the whole run. Nothing failed: the reconciliation simply came out short and
-        // read as data loss. Counting the array cannot drift from the array.
+        // Vế trái của D1, được pin theo cấu trúc. Một birth khai báo sáu reading, và một con số "năm"
+        // hard-code cạnh mảng đó từng khiến run report báo thiếu một reading mỗi DBIRTH — cho mọi
+        // channel, suốt cả run. Không gì thất bại cả: việc đối soát đơn giản là ra kết quả thiếu và
+        // đọc như một sự mất dữ liệu. Đếm dựa trên mảng thì không thể lệch khỏi chính mảng đó.
         //
-        // Counted here out of the payloads, the way the pipeline counts rows, so what is compared is
-        // "what a consumer could store" against "what the plant says it measured" — the two sides D1
-        // subtracts. Comparing the line's counter against a number derived from the same counter
-        // would pass on any arithmetic at all.
+        // Ở đây được đếm ra từ các payload, giống cách pipeline đếm dòng, nên cái được so sánh là
+        // "những gì một consumer có thể lưu được" đối chiếu với "những gì nhà máy nói nó đã đo" — hai
+        // vế mà D1 lấy hiệu. So sánh counter của line với một con số được suy ra từ chính counter đó
+        // sẽ pass với bất kỳ phép tính nào.
         var line = Line();
         var ledger = new MeasurementLedger();
 
@@ -227,17 +227,18 @@ public sealed class FormationLineTests
     [Fact]
     public void ReadingTheChannelIsWhatMakesAMeasurement()
     {
-        // J7, pinned the way round the plant works. The instrument has read the cell by the time
-        // Advance returns: the deadband state has moved, so the next sample compares against a value
-        // this one produced and the reading can never be taken again. Whether the message carrying it
-        // then reaches a broker is the link's business, and a batch that is dropped afterwards is a
-        // LOSS rather than a measurement that never happened.
+        // J7, được pin đúng theo cách nhà máy vận hành. Instrument đã đọc cell xong vào lúc Advance
+        // trả về: trạng thái deadband đã dịch chuyển, nên sample kế tiếp so sánh với một giá trị mà
+        // sample này đã tạo ra, và reading này không bao giờ có thể được đo lại. Việc message mang nó
+        // có tới được broker hay không là chuyện của đường truyền, và một batch bị rớt sau đó là một
+        // LOSS chứ không phải một measurement chưa từng xảy ra.
         //
-        // Counting on the far side of the publish instead looks stricter and is the opposite: the
-        // readings would leave D1's left-hand side at the same moment the rows they owed failed to
-        // arrive on the right, so the equality would hold across data the plant took and nobody has.
-        // A 40-second broker outage would then reconcile exactly, and the formation curve of a cell
-        // in a recalled lot would have a hole in it that no record calls a loss.
+        // Đếm ở phía bên kia của publish trông có vẻ chặt chẽ hơn nhưng lại là điều ngược lại: các
+        // reading sẽ rời khỏi vế trái của D1 đúng vào lúc các dòng lẽ ra chúng nợ lại không tới được
+        // vế phải, nên phép so sánh bằng sẽ đúng trên chính dữ liệu mà nhà máy đã đo nhưng không ai có
+        // được. Một sự cố broker kéo dài 40 giây khi đó sẽ đối soát khớp tuyệt đối, và đường cong
+        // formation của một cell trong một lô bị thu hồi sẽ có một lỗ hổng mà không bản ghi nào gọi
+        // đó là mất dữ liệu.
         var line = Line();
 
         line.Connect(TimeSpan.Zero);
@@ -248,24 +249,25 @@ public sealed class FormationLineTests
 
         var dropped = line.Advance(TimeSpan.FromMinutes(30));
 
-        // The batch is real and carries real readings — this is not a test of an empty tick.
+        // Batch này là thật và mang theo các reading thật — đây không phải một test cho một tick rỗng.
         dropped.ShouldNotBeEmpty();
         dropped.Sum(message => message.Measurements).ShouldBeGreaterThan(0);
 
-        // Composed, never published, and still measured. The count is the plant's, not the wire's.
+        // Đã được soạn, chưa từng được publish, nhưng vẫn được tính là đã đo. Con số đếm là của nhà
+        // máy, không phải của đường truyền.
         line.MeasurementCount.ShouldBe(afterBirth + dropped.Sum(message => message.Measurements));
     }
 
     [Fact]
     public void ARebirthRestatesAChannelRatherThanMeasuringItAgain()
     {
-        // Same cell, same values, same device clock — therefore the same natural key, which the
-        // database is right to store once. A second count here would put D1's left side above its
-        // right by one full DBIRTH per channel per rebirth: measured at exactly -48 on an
-        // eight-channel line. A restatement of a measurement is not another measurement.
+        // Cùng cell, cùng giá trị, cùng device clock — do đó cùng natural key, và database hoàn toàn
+        // đúng khi chỉ lưu một lần. Đếm lần thứ hai ở đây sẽ khiến vế trái của D1 vượt vế phải đúng
+        // một DBIRTH đầy đủ cho mỗi channel mỗi rebirth: đo được chính xác -48 trên một line tám
+        // channel. Một lần công bố lại một measurement không phải là một measurement khác.
         //
-        // The line-level half of this. SimulatorWorkerTests drives the same property through the
-        // worker, where the rebirth arrives on an MQTT thread instead of being called for.
+        // Nửa còn lại ở cấp độ line của điều này. SimulatorWorkerTests kiểm chứng cùng tính chất đó
+        // qua worker, nơi rebirth tới trên một MQTT thread thay vì được gọi trực tiếp.
         var line = Line();
 
         line.Connect(TimeSpan.Zero);
@@ -277,7 +279,8 @@ public sealed class FormationLineTests
         rebirth.Sum(message => message.Measurements).ShouldBe(0);
         line.MeasurementCount.ShouldBe(afterBirth);
 
-        // And a rebirth is not a wall around the channel: the next real reading still counts.
+        // Và một rebirth không phải là một bức tường quanh channel: reading thật tiếp theo vẫn được
+        // tính.
         line.Advance(TimeSpan.FromMinutes(30)).Sum(message => message.Measurements).ShouldBeGreaterThan(0);
         line.MeasurementCount.ShouldBeGreaterThan(afterBirth);
     }

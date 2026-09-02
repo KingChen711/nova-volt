@@ -36,7 +36,7 @@ public sealed class ActivateFactoryModelRevisionHandler(
     private readonly TimeProvider _clock = clock;
 
     /// <inheritdoc />
-    /// <exception cref="FactoryModelActivationException">The revision cannot be put in force.</exception>
+    /// <exception cref="FactoryModelActivationException">Không thể đưa revision vào hiệu lực.</exception>
     public Task<FactoryModelRevisionActivated> HandleAsync(
         ActivateFactoryModelRevisionCommand command,
         CancellationToken cancellationToken)

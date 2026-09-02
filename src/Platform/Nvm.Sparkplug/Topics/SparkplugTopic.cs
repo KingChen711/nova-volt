@@ -15,7 +15,7 @@ namespace Nvm.Sparkplug.Topics;
 ///         └ enterprise, site, area ┘      └line┘ └── device ──┘
 ///
 /// NOVAVOLT/NV1/FORMATION/F1/FORM-01/FORM-01-CH-0142
-///                           └ work cell, from the model ┘
+///                           └ work cell, từ model ┘
 /// </code>
 /// <para>
 /// <b>Chữ hoa, và không phải vì sở thích.</b> Cùng những máy đó còn được định danh bởi cây Unified

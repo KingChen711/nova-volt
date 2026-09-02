@@ -23,7 +23,7 @@ public static class LabConsumerSelection
     /// <summary>Consumer cache giữ giá trị mới nhất.</summary>
     public const string Cache = "cache";
 
-    /// <summary>Consumer audit trail.</summary>
+    /// <summary>Audit trail của consumer.</summary>
     public const string Audit = "audit";
 
     /// <summary>Consumer cố tình fail.</summary>

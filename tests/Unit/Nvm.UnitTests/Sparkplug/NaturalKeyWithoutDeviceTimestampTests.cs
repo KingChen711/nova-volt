@@ -7,19 +7,18 @@ using Nvm.Sparkplug.Topics;
 namespace Nvm.UnitTests.Sparkplug;
 
 /// <summary>
-/// Lab phá hoại #2 of scope.md §9/M2, written as a repeatable measurement rather than a one-off.
+/// Lab phá hoại #2 của scope.md §9/M2, viết thành phép đo có thể lặp lại thay vì one-off.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The lesson is not that dropping <c>device_timestamp</c> from the natural key breaks something.
-/// It is that it breaks something <b>silently</b>: deduplication reports success, every insert
-/// returns without an error, and the only symptom is that the table holds fewer rows than the plant
-/// measured. This is the one class of defect where a green test suite means nothing without a count.
+/// Bài học không phải là bỏ <c>device_timestamp</c> khỏi natural key sẽ làm hỏng thứ gì đó. Nó làm hỏng
+/// thứ gì đó <b>âm thầm</b>: deduplication báo thành công, mọi insert trả về không error, và triệu
+/// chứng duy nhất là table có ít row hơn số nhà máy đã đo. Đây là loại defect mà test suite xanh không
+/// nói lên điều gì nếu không có count.
 /// </para>
 /// <para>
-/// Measured on real simulator output rather than synthetic keys, because the shape of the data is
-/// the whole question: how many readings share an equipment path and a signal code and differ only
-/// in when they were taken.
+/// Đo trên output simulator thật thay vì key synthetic, vì data shape là toàn bộ câu hỏi: bao nhiêu
+/// reading cùng equipment path và signal code, chỉ khác thời điểm được đo.
 /// </para>
 /// </remarks>
 public sealed class NaturalKeyWithoutDeviceTimestampTests
@@ -27,8 +26,8 @@ public sealed class NaturalKeyWithoutDeviceTimestampTests
     private static readonly EquipmentPath LinePath = EquipmentPath.Parse("NOVAVOLT/NV1/FORMATION/F1");
     private static readonly DateTimeOffset StartedAt = new(2026, 8, 29, 7, 0, 0, TimeSpan.Zero);
 
-    // A fixed instant standing in for "the key does not carry a device timestamp". The value is
-    // irrelevant; what matters is that every reading shares it.
+    // Instant cố định đại diện cho "key không mang device timestamp". Giá trị không quan trọng; điều
+    // quan trọng là mọi reading cùng dùng nó.
     private static readonly DateTimeOffset NoTimestamp = DateTimeOffset.UnixEpoch;
 
     [Fact]
@@ -54,15 +53,15 @@ public sealed class NaturalKeyWithoutDeviceTimestampTests
                 NoTimestamp).SourceEventId)
             .ToHashSet();
 
-        // Every measurement keeps its own identity when the instant is part of the key.
+        // Mọi measurement giữ identity riêng khi instant là một phần của key.
         withTimestamp.Count.ShouldBe(readings.Count);
 
-        // Without it, identity collapses to (channel, signal) — one row per channel per signal, for
-        // the whole eighteen-hour cycle. A formation curve becomes a single point.
+        // Thiếu nó, identity co lại thành (channel, signal) — một row mỗi channel mỗi signal, cho cả
+        // cycle mười tám giờ. Formation curve thành một point duy nhất.
         var swallowed = readings.Count - withoutTimestamp.Count;
 
-        // Printed, not only asserted. This is a lab: the number is the result, and benchmarks.md
-        // needs it verbatim rather than a re-derivation from an inequality.
+        // In ra, không chỉ assert. Đây là lab: con số là kết quả, và benchmarks.md cần nguyên văn nó
+        // thay vì suy ra lại từ inequality.
         TestContext.Current.TestOutputHelper?.WriteLine(
             $"measurements={readings.Count} keys_with_timestamp={withTimestamp.Count} "
             + $"keys_without={withoutTimestamp.Count} swallowed={swallowed} "
@@ -88,8 +87,8 @@ public sealed class NaturalKeyWithoutDeviceTimestampTests
 
         Collect(line.Connect(TimeSpan.Zero), readings, aliases);
 
-        // Five-second samples over the whole cycle: the sample period the plant actually runs at,
-        // so the ratio being measured is the plant's ratio and not one chosen to make a point.
+        // Sample năm giây trong cả cycle: sample period mà nhà máy thực sự chạy, nên ratio đo được là
+        // ratio của nhà máy chứ không phải tỷ lệ được chọn để minh họa.
         for (var elapsed = TimeSpan.FromSeconds(5);
             elapsed <= FormationProfile.Default.CycleDuration;
             elapsed += TimeSpan.FromSeconds(5))
@@ -107,7 +106,7 @@ public sealed class NaturalKeyWithoutDeviceTimestampTests
     {
         foreach (var message in messages)
         {
-            // Node-level messages carry protocol metrics only, and the gateway never forwards those.
+            // Message node-level chỉ mang protocol metric, và gateway không bao giờ forward chúng.
             if (message.Topic.DeviceCode is not { } deviceCode)
             {
                 continue;

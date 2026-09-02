@@ -156,15 +156,14 @@ public sealed record EquipmentPath
             _segments.Add(childCode));
     }
 
-    /// <summary>Returns the full path.</summary>
+    /// <summary>Trả về toàn bộ path.</summary>
     public override string ToString() => Value;
 
-    /// <summary>Compares two paths by their text.</summary>
+    /// <summary>So sánh hai path theo văn bản của chúng.</summary>
     /// <remarks>
-    /// The record's generated equality would compare the segments by reference and report two
-    /// identical paths as different. Ordinal comparison is also the right one: these are machine
-    /// codes, not words, and a culture-aware comparison could decide that two different machines have
-    /// the same name.
+    /// Equality do record sinh ra sẽ compare segment theo reference và báo hai path giống hệt nhau là
+    /// khác. Ordinal comparison cũng là lựa chọn đúng: đây là code máy, không phải từ ngữ; comparison
+    /// theo culture có thể quyết định hai máy khác nhau cùng tên.
     /// </remarks>
     public bool Equals(EquipmentPath? other) =>
         other is not null && string.Equals(Value, other.Value, StringComparison.Ordinal);
@@ -179,8 +178,8 @@ public sealed record EquipmentPath
             return false;
         }
 
-        // Opens with an upper-case letter and closes with a letter or digit. Rejects an empty segment
-        // from a doubled separator, a leading or trailing hyphen, and any lower case at all.
+        // Bắt đầu bằng chữ hoa và kết thúc bằng chữ cái hoặc chữ số. Từ chối segment rỗng do separator
+        // lặp, dấu gạch ngang đầu/cuối, và mọi chữ thường.
         if (!char.IsAsciiLetterUpper(segment[0]) || segment[^1] == '-')
         {
             return false;
@@ -195,8 +194,8 @@ public sealed record EquipmentPath
                 continue;
             }
 
-            // A single hyphen inside a code is normal — FORM-01-CH-0142. A doubled one is a second
-            // spelling of the same machine waiting to happen.
+            // Một dấu gạch ngang trong code là bình thường — FORM-01-CH-0142. Dấu lặp là cách viết thứ
+            // hai của cùng một máy đang chờ xảy ra.
             if (character == '-' && segment[index - 1] != '-')
             {
                 continue;

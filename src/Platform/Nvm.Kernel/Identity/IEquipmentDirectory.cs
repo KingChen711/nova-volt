@@ -1,41 +1,42 @@
 namespace Nvm.Kernel.Identity;
 
-/// <summary>Answers whether a place in the plant exists, and where a machine code sits.</summary>
+/// <summary>Trả lời một chỗ trong plant có tồn tại hay không, và một machine code nằm ở đâu.</summary>
 /// <remarks>
 /// <para>
-/// Declared here rather than in the Functional Block that answers it, because the callers are not
-/// Functional Blocks. Ingestion and the edge gateway need to turn a code stencilled on a machine into
-/// an <see cref="EquipmentPath"/>, and K8 does not let them reach into <c>Nvm.FactoryModel</c> to do
-/// it. The block implements this; Platform code depends on the question, not on the answer.
+/// Khai báo ở đây thay vì trong Functional Block trả lời câu hỏi đó, vì các caller không phải là
+/// Functional Block. Ingestion và edge gateway cần biến một code khắc trên máy thành một
+/// <see cref="EquipmentPath"/>, và K8 không cho phép chúng vươn vào <c>Nvm.FactoryModel</c> để làm
+/// việc đó. Block hiện thực interface này; code Platform phụ thuộc vào câu hỏi, không phụ thuộc vào
+/// câu trả lời.
 /// </para>
 /// <para>
-/// It reports what is in force <b>now</b>, which is the right answer for a message that just arrived
-/// off the shop floor and the wrong one for reading history. A work cell scrapped last year is
-/// absent here and still named by every traceability record written while it existed — so callers
-/// interpreting old records must go to the revision that was in force then, not to this.
+/// Nó báo cáo cái đang có hiệu lực <b>ngay bây giờ</b>, đây là câu trả lời đúng cho một message vừa
+/// đến từ shop floor và là câu trả lời sai khi đọc lịch sử. Một work cell bị scrap năm ngoái vắng mặt
+/// ở đây và vẫn được nêu tên bởi mọi bản ghi traceability viết ra trong lúc nó còn tồn tại — nên caller
+/// diễn giải các bản ghi cũ phải đi tới revision đang có hiệu lực lúc đó, không phải đi tới đây.
 /// </para>
 /// </remarks>
 public interface IEquipmentDirectory
 {
-    /// <summary>Whether the plant currently has a node at this exact path.</summary>
-    /// <param name="path">The path to look for.</param>
+    /// <summary>Plant hiện có một node đúng tại path này hay không.</summary>
+    /// <param name="path">Path cần tìm.</param>
     bool Contains(EquipmentPath path);
 
-    /// <summary>Finds the machine known by <paramref name="deviceCode"/> on a given line.</summary>
-    /// <param name="line">The line the device reports under.</param>
-    /// <param name="deviceCode">The code the device calls itself, for example <c>FORM-01-CH-0142</c>.</param>
-    /// <returns>The full path, or null when the line has no such device.</returns>
+    /// <summary>Tìm máy được biết đến bằng <paramref name="deviceCode"/> trên một line cho trước.</summary>
+    /// <param name="line">Line mà device báo cáo dưới đó.</param>
+    /// <param name="deviceCode">Code mà device tự gọi mình, ví dụ <c>FORM-01-CH-0142</c>.</param>
+    /// <returns>Path đầy đủ, hoặc null khi line không có device như vậy.</returns>
     /// <remarks>
     /// <para>
-    /// Two levels are searched, and that is the whole reason this cannot be done with string
-    /// concatenation. A device on the wire is sometimes a work cell — <c>STACK-01</c> hangs straight
-    /// off line <c>L1</c> — and sometimes a piece of equipment inside one, as
-    /// <c>FORM-01-CH-0142</c> does inside <c>FORM-01</c>. The topic carries no hint of which, so the
-    /// model has to be asked.
+    /// Hai cấp được tìm kiếm, và đó là toàn bộ lý do việc này không thể làm bằng string concatenation.
+    /// Một device trên wire đôi khi là một work cell — <c>STACK-01</c> treo trực tiếp dưới line
+    /// <c>L1</c> — và đôi khi là một thiết bị bên trong một work cell, như <c>FORM-01-CH-0142</c> bên
+    /// trong <c>FORM-01</c>. Topic không mang gợi ý nào cho biết là trường hợp nào, nên phải hỏi model.
     /// </para>
     /// <para>
-    /// Scoped to a line rather than to a plant because codes repeat: NV1 and DE1 both have an
-    /// <c>MLOAD-01</c>, and a plant-wide code lookup would answer with whichever it indexed last.
+    /// Giới hạn phạm vi ở một line thay vì cả một plant vì code lặp lại: NV1 và DE1 đều có một
+    /// <c>MLOAD-01</c>, và một lookup theo code trên toàn plant sẽ trả lời bằng bất cứ cái nào nó
+    /// index sau cùng.
     /// </para>
     /// </remarks>
     EquipmentPath? FindDevice(EquipmentPath line, string deviceCode);

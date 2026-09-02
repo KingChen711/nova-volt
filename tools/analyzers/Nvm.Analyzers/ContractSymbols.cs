@@ -2,16 +2,17 @@ using Microsoft.CodeAnalysis;
 
 namespace Nvm.Analyzers;
 
-/// <summary>The few names from <c>Nvm.Contracts</c> that the analyzers have to recognise.</summary>
+/// <summary>Vài cái tên từ <c>Nvm.Contracts</c> mà các analyzer phải nhận ra.</summary>
 /// <remarks>
 /// <para>
-/// An analyzer cannot reference the assembly it analyses — it is loaded by the compiler, and the
-/// compiler is building that assembly. So the connection is by name, resolved per compilation.
+/// Một analyzer không thể reference assembly nó đang phân tích — nó được compiler nạp lên, và
+/// compiler đang build chính assembly đó. Nên mối liên kết này là theo tên, resolve theo từng
+/// compilation.
 /// </para>
 /// <para>
-/// That makes these strings a real coupling: renaming <c>IDomainEvent</c> or moving it to another
-/// namespace turns both rules off, and the symptom is a green build. The architecture test in C17 is
-/// what notices, because it asserts the type exists where these strings say it does.
+/// Điều đó khiến các chuỗi này trở thành một coupling thật sự: đổi tên <c>IDomainEvent</c> hoặc
+/// chuyển nó sang namespace khác sẽ tắt cả hai rule, và triệu chứng là một build xanh. Architecture
+/// test ở C17 là thứ nhận ra điều đó, vì nó assert rằng type tồn tại đúng nơi các chuỗi này nói.
 /// </para>
 /// </remarks>
 internal static class ContractSymbols
@@ -20,26 +21,27 @@ internal static class ContractSymbols
 
     internal const string EventVersionAttribute = "Nvm.Contracts.Events.EventVersionAttribute";
 
-    /// <summary>The assembly where every wire contract lives.</summary>
+    /// <summary>Assembly nơi mọi wire contract sinh sống.</summary>
     /// <remarks>
-    /// NVM002 applies to this whole assembly, not only to events. A record that is not an event today
-    /// becomes the payload of one tomorrow, and by then the <c>DateTime</c> inside it is already
-    /// serialized into the store.
+    /// NVM002 áp dụng cho toàn bộ assembly này, không chỉ cho event. Một record hôm nay chưa phải
+    /// event sẽ trở thành payload của một event vào ngày mai, và đến lúc đó <c>DateTime</c> bên trong
+    /// nó đã được serialize vào store rồi.
     /// </remarks>
     internal const string ContractsAssembly = "Nvm.Contracts";
 
-    /// <summary>Whether a type is a concrete event, as opposed to the marker or an abstract base.</summary>
+    /// <summary>Một type có phải một concrete event hay không, khác với marker hay một abstract base.</summary>
     internal static bool IsConcreteDomainEvent(INamedTypeSymbol type, INamedTypeSymbol? domainEvent) =>
         domainEvent is not null
         && type is { IsAbstract: false, TypeKind: TypeKind.Class or TypeKind.Struct }
         && type.AllInterfaces.Contains(domainEvent, SymbolEqualityComparer.Default);
 
-    /// <summary>Whether a type belongs to the wire contract surface.</summary>
+    /// <summary>Một type có thuộc về wire contract surface hay không.</summary>
     /// <remarks>
-    /// Three tests, ORed, because each catches what the others miss: a type in another assembly that
-    /// implements the marker; a type inside the contracts project put in some other namespace; and a
-    /// contract-shaped type that has not been made an event yet. The last is the common one — a
-    /// record that is not an event today becomes the payload of one next milestone.
+    /// Ba phép kiểm tra, OR với nhau, vì mỗi cái bắt được điều mà những cái khác bỏ lỡ: một type ở
+    /// assembly khác implement marker; một type bên trong project contracts nhưng đặt ở namespace
+    /// khác; và một type có hình dạng contract nhưng chưa được biến thành event. Cái cuối cùng là cái
+    /// phổ biến nhất — một record hôm nay chưa phải event sẽ trở thành payload của một event ở
+    /// milestone kế tiếp.
     /// </remarks>
     internal static bool IsWireContract(INamedTypeSymbol type, INamedTypeSymbol? domainEvent, bool assemblyIsContracts) =>
         IsConcreteDomainEvent(type, domainEvent)

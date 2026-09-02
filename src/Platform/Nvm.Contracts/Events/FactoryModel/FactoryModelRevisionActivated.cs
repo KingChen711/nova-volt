@@ -1,29 +1,30 @@
 namespace Nvm.Contracts.Events.FactoryModel;
 
 /// <summary>
-/// A new revision of a site's ISA-95 factory model became the one in force.
+/// Một revision mới của factory model ISA-95 của một site đã trở thành revision đang có hiệu lực.
 /// </summary>
-/// <param name="EventId">Identity of this occurrence. See <see cref="IDomainEvent.EventId"/>.</param>
-/// <param name="OccurredAt">When the revision took effect. See <see cref="IDomainEvent.OccurredAt"/>.</param>
-/// <param name="SiteId">The plant whose model changed, for example <c>NV1</c>.</param>
-/// <param name="Revision">The revision now in force. Strictly greater than the previous one.</param>
-/// <param name="NodeCount">How many nodes the tree holds at this revision.</param>
-/// <param name="EquipmentPathsAdded">Equipment paths that exist at this revision and did not before.</param>
+/// <param name="EventId">Định danh của lần xảy ra này. Xem <see cref="IDomainEvent.EventId"/>.</param>
+/// <param name="OccurredAt">Khi revision có hiệu lực. Xem <see cref="IDomainEvent.OccurredAt"/>.</param>
+/// <param name="SiteId">Plant có model thay đổi, ví dụ <c>NV1</c>.</param>
+/// <param name="Revision">Revision đang có hiệu lực. Luôn lớn hơn strictly so với revision trước.</param>
+/// <param name="NodeCount">Cây có bao nhiêu node tại revision này.</param>
+/// <param name="EquipmentPathsAdded">Các equipment path tồn tại ở revision này mà trước đó chưa có.</param>
 /// <param name="EquipmentPathsRemoved">
-/// Equipment paths that existed at the previous revision and no longer do.
+/// Các equipment path từng tồn tại ở revision trước và nay không còn nữa.
 /// </param>
 /// <remarks>
 /// <para>
-/// Plants change: a channel is added to a formation machine, a work cell goes out for a long
-/// overhaul, a line is renamed for a new product. Each of those is a revision, and none of them
-/// edits history — the model is versioned for the same reason the event store is append-only.
+/// Plant thì luôn thay đổi: một channel được thêm vào formation machine, một work cell được đưa đi
+/// overhaul dài hạn, một line được đổi tên cho một sản phẩm mới. Mỗi cái đó là một revision, và không
+/// cái nào chỉnh sửa lịch sử — model được đánh version vì cùng lý do event store là append-only.
 /// </para>
 /// <para>
-/// The removal list is the interesting half. A consumer holding a cached tree can apply additions
-/// blindly, but a removal is a decision: work in progress may still be standing on the cell that
-/// just left the model, and traceability records written last year still point at equipment paths
-/// that no longer resolve. Neither of those is a data fault, and code that treats a missing path as
-/// corruption will start rejecting valid history the first time a machine is decommissioned.
+/// Danh sách removal là nửa thú vị hơn. Một consumer đang giữ cây cached có thể áp dụng phần thêm vào
+/// một cách vô điều kiện, nhưng một phần xóa lại là một quyết định: work in progress có thể vẫn đang
+/// đứng trên cell vừa rời khỏi model, và các bản ghi traceability viết từ năm ngoái vẫn trỏ tới những
+/// equipment path không còn resolve được nữa. Không cái nào trong hai trường hợp đó là lỗi dữ liệu, và
+/// code coi một path bị thiếu là hỏng dữ liệu sẽ bắt đầu từ chối lịch sử hợp lệ ngay lần đầu tiên một
+/// máy bị decommission.
 /// </para>
 /// </remarks>
 [EventContract("factory-model", "revision-activated")]

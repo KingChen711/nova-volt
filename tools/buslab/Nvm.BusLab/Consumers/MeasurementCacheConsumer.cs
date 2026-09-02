@@ -4,19 +4,20 @@ using Nvm.Contracts.Events.Quality;
 
 namespace Nvm.BusLab.Consumers;
 
-/// <summary>Stands in for the service that keeps the latest evaluated value per channel.</summary>
-/// <param name="logger">Where the one line of evidence per message goes.</param>
+/// <summary>Đóng vai service giữ giá trị mới nhất đã evaluate cho mỗi channel.</summary>
+/// <param name="logger">Nơi một dòng bằng chứng cho mỗi message đi tới.</param>
 /// <remarks>
 /// <para>
-/// The real one arrives with Quality at M5: a grading decision reads the capacity a formation cycle
-/// finished at, and a service holding a stale copy answers confidently and wrongly. That is why this
-/// is the consumer worth imitating — the fan-out being demonstrated is not a demonstration.
+/// Service thật sẽ đến cùng Quality ở M5: một quyết định grading đọc capacity mà một formation cycle
+/// kết thúc ở đó, và một service giữ bản copy cũ sẽ trả lời một cách tự tin và sai. Đó là lý do
+/// consumer này đáng để mô phỏng — cái fan-out đang được minh họa ở đây không phải là một minh họa
+/// suông.
 /// </para>
 /// <para>
-/// Its own queue, not a share of one. Two consumers on one queue compete and each message reaches
-/// exactly one of them; two consumers on two queues both receive every message. The difference is
-/// invisible in code and decides whether the audit trail alongside it is complete or missing half
-/// its entries.
+/// Queue riêng của nó, không phải một phần chia sẻ của queue nào khác. Hai consumer trên một queue
+/// cạnh tranh nhau và mỗi message chỉ tới đúng một trong hai; hai consumer trên hai queue thì cả hai
+/// đều nhận mọi message. Sự khác biệt này vô hình trong code và quyết định việc audit trail đi kèm
+/// có đầy đủ hay thiếu mất một nửa entry.
 /// </para>
 /// </remarks>
 [BusEndpoint("quality", "measurement-cache")]
@@ -37,9 +38,9 @@ public sealed partial class MeasurementCacheConsumer(ILogger<MeasurementCacheCon
         return Task.CompletedTask;
     }
 
-    // Source-generated rather than a plain _logger.LogInformation(...). CA1873 refuses an
-    // Information-level call carrying more than one property: the arguments are boxed into an array
-    // before anything asks whether the level is switched on.
+    // Source-generated thay vì một lời gọi _logger.LogInformation(...) trần trụi. CA1873 từ chối một
+    // lời gọi cấp Information mang hơn một property: các argument bị box vào một array trước khi bất
+    // cứ thứ gì kiểm tra xem level có được bật hay không.
     [LoggerMessage(
         EventId = 1,
         Level = LogLevel.Information,

@@ -4,33 +4,33 @@ using System.Globalization;
 namespace Nvm.Contracts.CloudEvents;
 
 /// <summary>
-/// The AMQP routing key an event is published with: <c>nvm.{site}.{context}.{event}.v{n}</c>.
+/// Routing key AMQP mà một event được publish với nó: <c>nvm.{site}.{context}.{event}.v{n}</c>.
 /// </summary>
 /// <remarks>
 /// <para>
-/// Example: <c>nvm.NV1.traceability.unit-serialized.v1</c>, per docs/scope.md §7.4.
+/// Ví dụ: <c>nvm.NV1.traceability.unit-serialized.v1</c>, theo docs/scope.md §7.4.
 /// </para>
 /// <para>
-/// The shape exists so that a consumer can subscribe to exactly what it cares about — one plant, one
-/// context, one version — without receiving everything and filtering in code.
+/// Hình dạng này tồn tại để một consumer có thể subscribe đúng cái nó cần — một plant, một context,
+/// một version — mà không phải nhận mọi thứ rồi lọc bằng code.
 /// </para>
 /// <para>
-/// The site keeps its upper case here, while the source URN lower-cases it. The rule behind both is
-/// the same: fixed vocabulary is written in lower case, identifiers keep their canonical form. A site
-/// code is an identifier, and its canonical form is upper case everywhere else in the system — in a
-/// serial number, in an equipment path, in the <c>site_id</c> claim that arrives from Keycloak.
+/// Site giữ nguyên chữ hoa ở đây, trong khi source URN lại viết thường nó. Quy tắc đứng sau cả hai là
+/// như nhau: fixed vocabulary được viết thường, còn identifier giữ dạng canonical của nó. Site code là
+/// một identifier, và dạng canonical của nó là chữ hoa ở mọi nơi khác trong hệ thống — trong serial
+/// number, trong equipment path, trong claim <c>site_id</c> đến từ Keycloak.
 /// </para>
 /// <para>
-/// AMQP compares routing keys byte for byte. A publisher writing <c>nvm.NV1.…</c> and a consumer
-/// binding <c>nvm.nv1.#</c> do not match, and nothing anywhere reports it: the message reaches the
-/// exchange, matches no binding, and is gone. That failure is silent for as long as it takes someone
-/// to ask why a report looks short. This type is therefore the only way to build the string, and it
-/// rejects a lower-case site rather than quietly accepting it.
+/// AMQP so sánh routing key theo từng byte. Một publisher viết <c>nvm.NV1.…</c> và một consumer bind
+/// <c>nvm.nv1.#</c> sẽ không khớp nhau, và không có gì báo lại điều đó ở bất kỳ đâu: message tới được
+/// exchange, không khớp binding nào, rồi biến mất. Lỗi này im lặng cho đến khi ai đó thắc mắc vì sao
+/// một report trông ngắn bất thường. Vì vậy type này là cách duy nhất để dựng chuỗi đó, và nó từ chối
+/// một site viết thường thay vì âm thầm chấp nhận nó.
 /// </para>
 /// </remarks>
 public sealed record RoutingKey
 {
-    /// <summary>Prefix shared by every routing key in the system.</summary>
+    /// <summary>Prefix mà mọi routing key trong hệ thống dùng chung.</summary>
     public const string Prefix = "nvm";
 
     private const char Separator = '.';
@@ -48,26 +48,26 @@ public sealed record RoutingKey
         EventType = eventType;
     }
 
-    /// <summary>The full routing key, exactly as it is published.</summary>
+    /// <summary>Routing key đầy đủ, đúng như khi được publish.</summary>
     public string Value { get; }
 
-    /// <summary>Site code in canonical upper case, for example <c>NV1</c>.</summary>
+    /// <summary>Site code ở dạng canonical chữ hoa, ví dụ <c>NV1</c>.</summary>
     public string SiteId { get; }
 
     /// <summary>
-    /// The event type this key routes. Held whole rather than as loose strings, so that a routing key
-    /// and the CloudEvents <c>type</c> attribute on the same message cannot drift apart.
+    /// Event type mà key này route tới. Giữ nguyên khối thay vì rời rạc thành các string, để routing
+    /// key và attribute <c>type</c> của CloudEvents trên cùng một message không thể trôi lệch nhau.
     /// </summary>
     public EventTypeName EventType { get; }
 
-    /// <summary>Builds a routing key, throwing when the site is malformed.</summary>
-    /// <exception cref="FormatException">The site is not upper-case alphanumeric.</exception>
+    /// <summary>Dựng một routing key, ném lỗi khi site sai định dạng.</summary>
+    /// <exception cref="FormatException">Site không phải chữ hoa-số.</exception>
     public static RoutingKey Create(string? siteId, EventTypeName eventType) =>
         TryCreate(siteId, eventType, out var key)
             ? key
             : throw new FormatException($"Not a valid routing key site: '{siteId}'. Site codes are upper case.");
 
-    /// <summary>Builds a routing key, returning false when the site is malformed.</summary>
+    /// <summary>Dựng một routing key, trả về false khi site sai định dạng.</summary>
     public static bool TryCreate(
         [NotNullWhen(true)] string? siteId,
         EventTypeName eventType,
@@ -94,14 +94,14 @@ public sealed record RoutingKey
         return true;
     }
 
-    /// <summary>Reads a routing key back from the broker, throwing when the string is malformed.</summary>
-    /// <exception cref="FormatException">The string does not match the layout.</exception>
+    /// <summary>Đọc lại một routing key từ broker, ném lỗi khi chuỗi sai định dạng.</summary>
+    /// <exception cref="FormatException">Chuỗi không khớp layout.</exception>
     public static RoutingKey Parse(string? value) =>
         TryParse(value, out var key)
             ? key
             : throw new FormatException("Not a valid routing key: '" + value + "'.");
 
-    /// <summary>Reads a routing key back from the broker, returning false when the string is malformed.</summary>
+    /// <summary>Đọc lại một routing key từ broker, trả về false khi chuỗi sai định dạng.</summary>
     public static bool TryParse([NotNullWhen(true)] string? value, [NotNullWhen(true)] out RoutingKey? key)
     {
         key = null;
@@ -140,9 +140,9 @@ public sealed record RoutingKey
             return false;
         }
 
-        // Same reason as EventTypeName.TryParse: rebuild and compare, so a wrong prefix or a
-        // lower-case site is refused instead of being repaired into something that no longer matches
-        // what the publisher actually sent.
+        // Cùng lý do như EventTypeName.TryParse: dựng lại rồi so sánh, để một prefix sai hay một site
+        // viết thường bị từ chối thay vì được "sửa" thành thứ không còn khớp với những gì publisher
+        // thực sự đã gửi.
         if (!string.Equals(candidate.Value, value, StringComparison.Ordinal))
         {
             return false;
@@ -152,6 +152,6 @@ public sealed record RoutingKey
         return true;
     }
 
-    /// <summary>Returns the full routing key.</summary>
+    /// <summary>Trả về routing key đầy đủ.</summary>
     public override string ToString() => Value;
 }

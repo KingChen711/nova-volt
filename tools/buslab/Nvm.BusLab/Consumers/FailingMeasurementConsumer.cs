@@ -5,24 +5,23 @@ using Nvm.Contracts.Events.Quality;
 
 namespace Nvm.BusLab.Consumers;
 
-/// <summary>Fails on every message, on purpose, so that the error queue can be shown to work.</summary>
-/// <param name="logger">Where the numbered attempts are printed.</param>
+/// <summary>Fail ở mọi message, một cách cố ý, để error queue có thể được chứng minh là hoạt động.</summary>
+/// <param name="logger">Nơi các attempt được đánh số in ra.</param>
 /// <remarks>
 /// <para>
-/// A dead letter path that nobody has ever seen a message land in is a configuration, not a
-/// guarantee. This consumer exists to put one there and let it be read back out, and it is switched
-/// on by an environment variable so the ordinary lab run stays clean.
+/// Một dead letter path mà chưa ai từng thấy một message rơi vào là một cấu hình, không phải một
+/// đảm bảo. Consumer này tồn tại để đưa một message vào đó rồi đọc lại được, và nó được bật bằng một
+/// biến môi trường để lần chạy lab thông thường vẫn sạch.
 /// </para>
 /// <para>
-/// It prints the attempt <b>number</b> rather than the same sentence five times. Retries happen
-/// inside a single delivery, so the broker's counters show only the final state — the log is the
-/// only place the five attempts are visible, and five identical lines cannot be told apart from one
-/// line printed by five instances.
+/// Nó in ra <b>số thứ tự</b> của attempt thay vì cùng một câu năm lần. Retry xảy ra bên trong một
+/// delivery duy nhất, nên counter của broker chỉ cho thấy trạng thái cuối cùng — log là nơi duy nhất
+/// năm attempt hiện ra được, và năm dòng giống hệt nhau thì không thể phân biệt với một dòng được in
+/// bởi năm instance.
 /// </para>
 /// <para>
-/// This is also the clearest single reason the whole project lives in <c>tools/</c>. A consumer that
-/// throws deliberately is an instrument, and putting it beside EdgeGateway and Ingestion would claim
-/// otherwise.
+/// Đây cũng là lý do rõ ràng nhất khiến cả project sống trong <c>tools/</c>. Một consumer cố tình
+/// throw là một công cụ đo, và đặt nó cạnh EdgeGateway với Ingestion sẽ khẳng định điều ngược lại.
 /// </para>
 /// </remarks>
 [BusEndpoint("quality", "measurement-failing")]
@@ -32,14 +31,14 @@ public sealed class FailingMeasurementConsumer(ILogger<FailingMeasurementConsume
     private readonly ILogger<FailingMeasurementConsumer> _logger = logger;
 
     /// <inheritdoc />
-    /// <exception cref="InvalidOperationException">Always. That is the point of this consumer.</exception>
+    /// <exception cref="InvalidOperationException">Luôn luôn. Đó chính là mục đích của consumer này.</exception>
     public Task Consume(ConsumeContext<MeasurementRecorded> context)
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        // GetRetryAttempt() counts retries, so the first delivery reports 0. Printing that as
-        // "attempt 1 of 5" is the difference between evidence for D2 and an off-by-one argument
-        // about whether five means five runs or six.
+        // GetRetryAttempt() đếm số lần retry, nên delivery đầu tiên báo về 0. In ra nó thành
+        // "attempt 1 of 5" chính là ranh giới giữa bằng chứng cho D2 và một cuộc tranh cãi lệch một
+        // đơn vị về việc năm nghĩa là năm lần chạy hay sáu.
         var attempt = context.GetRetryAttempt() + 1;
 
         _logger.LogWarning(

@@ -2,20 +2,20 @@ using Nvm.Time;
 
 namespace Nvm.CalendarLab;
 
-/// <summary>One timestamp together with the date produced by the deliberately naive calculation.</summary>
+/// <summary>Một timestamp cùng với date được tạo ra bởi phép tính cố tình naive.</summary>
 public readonly record struct CalendarAssignment(DateTimeOffset Instant, DateOnly NaiveDate);
 
-/// <summary>The number and share of rows whose naive date disagrees with the production calendar.</summary>
+/// <summary>Số lượng và tỷ lệ các row có naive date không khớp với production calendar.</summary>
 public readonly record struct CalendarAssignmentAuditResult(long Rows, long MisassignedRows)
 {
-    /// <summary>The misassigned share on a 0–100 scale.</summary>
+    /// <summary>Tỷ lệ bị gán sai trên thang 0–100.</summary>
     public decimal MisassignedPercent => Rows == 0 ? 0 : 100m * MisassignedRows / Rows;
 }
 
-/// <summary>Compares an ordinary calendar-date assignment with the domain production calendar.</summary>
+/// <summary>So sánh một phép gán calendar-date thông thường với production calendar của domain.</summary>
 public static class CalendarAssignmentAudit
 {
-    /// <summary>Counts rows whose naive date differs from the production-day label.</summary>
+    /// <summary>Đếm các row có naive date khác với nhãn production-day.</summary>
     public static CalendarAssignmentAuditResult Compare(
         IEnumerable<CalendarAssignment> assignments,
         IProductionCalendar calendar,

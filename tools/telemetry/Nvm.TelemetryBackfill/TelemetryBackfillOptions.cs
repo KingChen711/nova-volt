@@ -4,7 +4,7 @@ using Nvm.Simulator.Formation;
 
 namespace Nvm.TelemetryBackfill;
 
-/// <summary>Validated command-line environment for a deterministic historical dataset.</summary>
+/// <summary>Command-line environment đã được validate cho một historical dataset xác định.</summary>
 public sealed record TelemetryBackfillOptions(
     string ConnectionString,
     string SeedDirectory,
@@ -20,7 +20,7 @@ public sealed record TelemetryBackfillOptions(
     private static readonly DateTimeOffset DefaultEndAt =
         new(2026, 8, 29, 0, 0, 0, TimeSpan.Zero);
 
-    /// <summary>Reads the variables set by <c>make telemetry-backfill</c>.</summary>
+    /// <summary>Đọc các biến được <c>make telemetry-backfill</c> thiết lập.</summary>
     public static TelemetryBackfillOptions FromEnvironment()
     {
         var connectionString = Required("NVM_BACKFILL_CONNECTION_STRING");

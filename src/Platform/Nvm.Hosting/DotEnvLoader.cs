@@ -3,31 +3,32 @@ using System.Globalization;
 namespace Nvm.Hosting;
 
 /// <summary>
-/// Loads the repository root <c>.env</c> into the process environment during development.
+/// Nạp file <c>.env</c> ở gốc repo vào process environment trong lúc phát triển.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The same <c>.env</c> already drives docker-compose, so reading it here keeps one source of
-/// truth for ports and credentials. The alternative — copying the six passwords into
-/// <c>appsettings.Development.json</c> — means two committed files that must be kept in sync by
-/// hand, and they will drift.
+/// Cùng một file <c>.env</c> đã điều khiển docker-compose, nên đọc nó ở đây giữ được một nguồn sự
+/// thật duy nhất cho port và credential. Phương án thay thế — copy sáu password vào
+/// <c>appsettings.Development.json</c> — nghĩa là hai file được commit phải được giữ đồng bộ bằng
+/// tay, và chúng sẽ trôi lệch nhau.
 /// </para>
 /// <para>
-/// Development only. In any other environment the process environment is authoritative and this
-/// loader does nothing, so a deployed app can never pick up a developer's file.
+/// Chỉ dùng cho development. Ở mọi environment khác, process environment là nguồn có thẩm quyền và
+/// loader này không làm gì cả, nên một app đã deploy không bao giờ có thể lấy nhầm file của một
+/// developer.
 /// </para>
 /// <para>
-/// It sits in Platform rather than inside one App because every deployable needs it: the moment a
-/// second process appeared — the bus probe worker — the alternative was a second copy of the same
-/// forty lines, and two copies of a file-format parser drift the first time one of them learns
-/// about quoted values.
+/// Nó nằm trong Platform thay vì trong một App vì mọi deployable đều cần nó: ngay khoảnh khắc một
+/// process thứ hai xuất hiện — bus probe worker — phương án còn lại là một bản sao thứ hai của cùng
+/// bốn mươi dòng này, và hai bản sao của một parser file-format sẽ trôi lệch nhau ngay lần đầu tiên
+/// một trong hai bản học được về quoted value.
 /// </para>
 /// </remarks>
 public static class DotEnvLoader
 {
-    /// <summary>Loads <c>.env</c> from the nearest ancestor directory that contains one.</summary>
-    /// <param name="contentRootPath">Directory to start searching upward from.</param>
-    /// <returns>The file that was loaded, or <see langword="null"/> when none was found.</returns>
+    /// <summary>Nạp <c>.env</c> từ thư mục tổ tiên gần nhất có chứa một file như vậy.</summary>
+    /// <param name="contentRootPath">Thư mục bắt đầu tìm ngược lên.</param>
+    /// <returns>File đã được nạp, hoặc <see langword="null"/> khi không tìm thấy.</returns>
     public static string? Load(string contentRootPath)
     {
         var directory = new DirectoryInfo(contentRootPath);
@@ -67,7 +68,7 @@ public static class DotEnvLoader
             var key = line[..separator].Trim();
             var value = line[(separator + 1)..].Trim();
 
-            // An existing variable always wins, so `NVM_X=... dotnet run` still overrides the file.
+            // Một biến đã tồn tại luôn thắng, nên `NVM_X=... dotnet run` vẫn override được file.
             if (Environment.GetEnvironmentVariable(key) is null)
             {
                 Environment.SetEnvironmentVariable(key, value);
@@ -75,7 +76,7 @@ public static class DotEnvLoader
         }
     }
 
-    /// <summary>Reads a required variable, failing loudly rather than producing a broken connection string.</summary>
+    /// <summary>Đọc một biến bắt buộc, fail ồn ào thay vì tạo ra một connection string hỏng.</summary>
     public static string Required(string key) =>
         Environment.GetEnvironmentVariable(key)
         ?? throw new InvalidOperationException(

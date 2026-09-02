@@ -3,19 +3,19 @@ using Nvm.Contracts.Events;
 
 namespace Nvm.ArchitectureTests;
 
-/// <summary>A4, A5 — the shape every event must have, checked against built metadata.</summary>
+/// <summary>A4, A5 — hình dạng mà mọi event phải có, kiểm tra dựa trên metadata đã build.</summary>
 /// <remarks>
 /// <para>
-/// A4 deliberately repeats what analyzer <c>NVM002</c> already refuses, and the repetition is the
-/// point. An analyzer runs inside the compiler and can be silenced from inside the file it is
-/// checking — one <c>#pragma warning disable NVM002</c> and it is gone. These tests read the
-/// <b>metadata of the assembly that was produced</b>, where a pragma leaves no trace: the property is
-/// either typed <c>DateTime</c> or it is not.
+/// A4 cố tình lặp lại điều mà analyzer <c>NVM002</c> đã từ chối, và sự lặp lại đó chính là điểm mấu
+/// chốt. Một analyzer chạy bên trong compiler và có thể bị im lặng hóa từ ngay trong file nó đang
+/// kiểm tra — một dòng <c>#pragma warning disable NVM002</c> là nó biến mất. Các test này đọc
+/// <b>metadata của assembly đã được sinh ra</b>, nơi một pragma không để lại dấu vết nào: property
+/// hoặc được khai kiểu <c>DateTime</c>, hoặc không.
 /// </para>
 /// <para>
-/// The control types below prove that rather than assert it. This project sets
-/// <c>UseNvmAnalyzers=false</c>, so <c>EventWithForbiddenClock</c> is exactly the file an analyzer
-/// never saw — and the same predicate that clears every real event flags it.
+/// Các control type dưới đây chứng minh điều đó thay vì chỉ khẳng định. Project này đặt
+/// <c>UseNvmAnalyzers=false</c>, nên <c>EventWithForbiddenClock</c> đúng là file mà một analyzer chưa
+/// bao giờ thấy — và cùng một predicate xóa sạch mọi event thật lại đánh dấu nó.
 /// </para>
 /// </remarks>
 public sealed class EventContractTests
@@ -26,17 +26,17 @@ public sealed class EventContractTests
     [Fact]
     public void ThereAreEventsToCheckAtAll()
     {
-        // The guard that makes every other test in this class mean something. A misspelled filter
-        // returns an empty sequence, and every "all of them are fine" assertion below passes.
+        // Cái chốt bảo vệ khiến mọi test khác trong class này có ý nghĩa. Một filter viết sai tên trả
+        // về một sequence rỗng, và mọi assertion "tất cả đều ổn" bên dưới đều pass.
         ProductionEvents.ShouldNotBeEmpty();
     }
 
     [Fact]
     public void A4_NoEventCarriesADateTimeAnywhereInItsShape()
     {
-        // Site DE1 observes daylight saving, so one hour every autumn happens twice. DateTime records
-        // the wall-clock reading with no offset, the event store is append-only, and the ambiguity can
-        // never be corrected afterwards (AGENTS.md K2).
+        // Site DE1 quan sát daylight saving, nên một giờ mỗi mùa thu xảy ra hai lần. DateTime ghi lại
+        // giá trị wall-clock mà không có offset, event store là append-only, và sự mập mờ đó không
+        // bao giờ có thể được sửa lại sau này (AGENTS.md K2).
         var offenders = ProductionEvents
             .SelectMany(MembersMentioningDateTime)
             .Order(StringComparer.Ordinal)
@@ -48,8 +48,8 @@ public sealed class EventContractTests
     [Fact]
     public void A4_Control_TheDateTimeWalkFindsOneBuriedInAGeneric()
     {
-        // The nesting case is where this kind of check is usually wrong: comparing only the outermost
-        // type clears IReadOnlyList<DateTime>, which serializes exactly as badly as a bare field.
+        // Trường hợp lồng nhau chính là nơi loại kiểm tra này thường sai: chỉ so sánh type ngoài cùng
+        // sẽ bỏ qua IReadOnlyList<DateTime>, thứ serialize hỏng y hệt như một field trần.
         MembersMentioningDateTime(typeof(EventWithForbiddenClock))
             .ShouldContain($"{nameof(EventWithForbiddenClock)}.{nameof(EventWithForbiddenClock.Samples)}");
     }
@@ -57,9 +57,9 @@ public sealed class EventContractTests
     [Fact]
     public void A5_EveryEventCarriesSiteId()
     {
-        // Structurally true today, because IDomainEvent declares SiteId and the compiler enforces the
-        // interface. Written down anyway: the day somebody publishes a payload that does not implement
-        // the marker, this is the assertion that was already here to be moved.
+        // Về mặt cấu trúc, đúng ngay từ hôm nay, vì IDomainEvent khai báo SiteId và compiler bắt buộc
+        // interface. Vẫn viết ra đây: ngày nào đó có người publish một payload không implement cái
+        // marker, đây là assertion đã sẵn sàng để chuyển hướng.
         foreach (var type in ProductionEvents)
         {
             type.GetProperty(nameof(IDomainEvent.SiteId))
@@ -70,9 +70,9 @@ public sealed class EventContractTests
     [Fact]
     public void A5_SiteIdIsNeverNullable()
     {
-        // The half the interface does not enforce. A nullable SiteId compiles, satisfies IDomainEvent,
-        // and produces a routing key with an empty first segment — which matches no binding, so the
-        // event reaches nobody and nothing anywhere raises an error.
+        // Nửa còn lại mà interface không bắt buộc. Một SiteId nullable vẫn compile, vẫn thỏa
+        // IDomainEvent, và tạo ra một routing key với đoạn đầu tiên rỗng — không khớp binding nào cả,
+        // nên event không đến được với ai và không đâu báo lỗi cả.
         var context = new NullabilityInfoContext();
 
         foreach (var type in ProductionEvents)
@@ -88,10 +88,10 @@ public sealed class EventContractTests
     [Fact]
     public void A5_EveryEventDeclaresItsWireNameAndVersion()
     {
-        // Both attributes, or the event is invisible to the bus. DeclaredEventTypes.All() selects on
-        // IDomainEvent *and* [EventContract]; an event missing the attribute gets no exchange, no
-        // routing key and no CloudEvents headers, and publishes into MassTransit's default topology
-        // where nothing is bound. It runs, it throws nothing, and nobody receives it.
+        // Cả hai attribute, nếu không event sẽ vô hình với bus. DeclaredEventTypes.All() chọn dựa trên
+        // IDomainEvent *và* [EventContract]; một event thiếu attribute sẽ không có exchange, không có
+        // routing key và không có CloudEvents header, và publish vào topology mặc định của MassTransit
+        // nơi không gì được bind. Nó chạy, nó không throw gì cả, và không ai nhận được nó.
         foreach (var type in ProductionEvents)
         {
             type.GetCustomAttribute<EventContractAttribute>()
@@ -106,7 +106,7 @@ public sealed class EventContractTests
     [Fact]
     public void A5_Control_TheAttributeCheckSeesAnEventThatIsMissingThem()
     {
-        // EventWithForbiddenClock carries neither attribute and was compiled with the analyzers off.
+        // EventWithForbiddenClock không mang attribute nào và được compile với analyzer đã tắt.
         typeof(EventWithForbiddenClock).GetCustomAttribute<EventContractAttribute>().ShouldBeNull();
         typeof(EventWithForbiddenClock).GetCustomAttribute<EventVersionAttribute>().ShouldBeNull();
     }
@@ -114,9 +114,9 @@ public sealed class EventContractTests
     [Fact]
     public void EventsLiveOnlyInContracts()
     {
-        // DeclaredEventTypes.All() scans exactly one assembly. An event declared inside a Functional
-        // Block is never discovered, so it never gets topology — the same silent nothing as a missing
-        // attribute, one level up.
+        // DeclaredEventTypes.All() chỉ quét đúng một assembly. Một event khai báo bên trong một
+        // Functional Block không bao giờ được phát hiện, nên nó không bao giờ có topology — cùng một
+        // sự im lặng như khi thiếu attribute, chỉ ở một tầng cao hơn.
         foreach (var assembly in new[] { NvmAssemblies.Kernel, NvmAssemblies.Bus, NvmAssemblies.FactoryModel })
         {
             assembly.GetTypes()
@@ -128,26 +128,26 @@ public sealed class EventContractTests
     private static bool IsConcreteEvent(Type type) =>
         type is { IsAbstract: false, IsInterface: false } && typeof(IDomainEvent).IsAssignableFrom(type);
 
-    /// <summary>Names the members of a type whose declared type mentions <c>DateTime</c>.</summary>
+    /// <summary>Nêu tên các member của một type mà declared type của nó nhắc tới <c>DateTime</c>.</summary>
     private static IEnumerable<string> MembersMentioningDateTime(Type type) =>
         type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
             .Where(property => Mentions(property.PropertyType))
             .Select(property => $"{type.Name}.{property.Name}");
 
-    /// <summary>Whether <c>DateTime</c> appears anywhere inside a type, however deeply nested.</summary>
+    /// <summary><c>DateTime</c> có xuất hiện ở đâu đó bên trong một type hay không, dù lồng sâu đến đâu.</summary>
     /// <remarks>
-    /// <c>DateTime?</c> is <c>Nullable&lt;DateTime&gt;</c> and <c>DateTime[]</c> is an array type, so
-    /// both fall out of the same two recursions rather than needing cases of their own.
+    /// <c>DateTime?</c> là <c>Nullable&lt;DateTime&gt;</c> và <c>DateTime[]</c> là một array type, nên
+    /// cả hai đều rơi ra từ đúng hai lần đệ quy đó thay vì cần case riêng của mình.
     /// </remarks>
     private static bool Mentions(Type type) =>
         type == typeof(DateTime)
         || (type.IsArray && Mentions(type.GetElementType()!))
         || (type.IsGenericType && type.GetGenericArguments().Any(Mentions));
 
-    /// <summary>A deliberately wrong event, so the rules above can be shown to be able to fail.</summary>
+    /// <summary>Một event cố tình sai, để chứng minh các rule ở trên có khả năng fail.</summary>
     /// <remarks>
-    /// It implements the marker, hides a <c>DateTime</c> inside a list, and declares neither contract
-    /// attribute — every fault A4 and A5 look for, in one type no analyzer ever inspected.
+    /// Nó implement cái marker, giấu một <c>DateTime</c> bên trong một list, và không khai báo attribute
+    /// contract nào cả — mọi lỗi mà A4 và A5 tìm kiếm, trong một type mà chưa analyzer nào từng kiểm tra.
     /// </remarks>
     public sealed record EventWithForbiddenClock(
         Guid EventId,

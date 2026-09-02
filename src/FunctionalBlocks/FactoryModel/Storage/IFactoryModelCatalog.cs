@@ -3,48 +3,47 @@ using Nvm.FactoryModel.Entities;
 
 namespace Nvm.FactoryModel.Storage;
 
-/// <summary>Every revision of the factory model that exists, whether in force or not.</summary>
+/// <summary>Mọi revision của factory model từng tồn tại, dù đang có hiệu lực hay không.</summary>
 /// <remarks>
 /// <para>
-/// <b>A revision is a document, and documents are not edited.</b> Adding a charging channel produces
-/// a new document at a higher revision; the previous one stays exactly as it was. That is the same
-/// rule K4 puts on the event store, applied to master data — and it is not bookkeeping neatness. A
-/// traceability record written last March names
-/// <c>NOVAVOLT/NV1/FORMATION/F1/FORM-02</c>, and an auditor asking which line that cycler belonged to
-/// can only be answered by the document that was in force in March. Overwrite it and the answer is
-/// gone for good.
+/// <b>Một revision là một document, và document thì không bị sửa.</b> Thêm một charging channel tạo
+/// ra một document mới ở revision cao hơn; document trước đó giữ nguyên như cũ. Đó chính là quy tắc
+/// K4 đặt ra cho event store, áp dụng cho master data — và đây không phải sự gọn gàng sổ sách. Một
+/// traceability record ghi hồi tháng Ba trước nêu tên
+/// <c>NOVAVOLT/NV1/FORMATION/F1/FORM-02</c>, và một auditor hỏi cycler đó thuộc line nào chỉ có thể
+/// được trả lời bằng document đang có hiệu lực hồi tháng Ba. Ghi đè nó lên và câu trả lời mất luôn.
 /// </para>
 /// <para>
-/// <b>Separate from what is in force.</b> This is the library; <see cref="IActiveFactoryModel"/> is
-/// which volume each plant currently has open. Keeping them apart is what makes a staged rollout
-/// expressible at all: NV1 running revision 3 while DE1 is still on 1 is two different answers drawn
-/// from one shelf, not two shelves.
+/// <b>Tách riêng khỏi cái đang có hiệu lực.</b> Đây là thư viện; <see cref="IActiveFactoryModel"/> là
+/// tập nào mỗi plant hiện đang mở. Giữ hai thứ tách biệt chính là điều khiến một staged rollout diễn
+/// đạt được: NV1 chạy revision 3 trong khi DE1 vẫn ở 1 là hai câu trả lời khác nhau rút ra từ một kệ
+/// sách, không phải hai kệ.
 /// </para>
 /// <para>
-/// The catalog is read-only here. Publishing a new revision is done by putting a new document in the
-/// seed directory, which is the M1 stand-in for the import path M11 will bring — and it is why the
-/// interface has no Add: nothing in the running system may invent a revision.
+/// Catalog ở đây chỉ đọc. Publish một revision mới được thực hiện bằng cách đặt một document mới vào
+/// seed directory, đó là vật thay thế tạm thời của M1 cho import path mà M11 sẽ mang tới — và đó là
+/// lý do interface không có Add: không gì trong hệ thống đang chạy được phép tự bịa ra một revision.
 /// </para>
 /// </remarks>
 public interface IFactoryModelCatalog
 {
-    /// <summary>Which revisions the catalog holds, ascending. Never empty.</summary>
+    /// <summary>Catalog đang giữ những revision nào, tăng dần. Không bao giờ rỗng.</summary>
     /// <remarks>
-    /// Gaps are legal. A catalog holding 1, 2 and 5 describes a plant whose revisions 3 and 4 were
-    /// drafted and never published, and refusing to load that would be inventing a rule the business
-    /// does not have.
+    /// Có khoảng trống là hợp lệ. Một catalog giữ 1, 2 và 5 mô tả một plant mà revision 3 và 4 đã được
+    /// soạn nhưng chưa từng được publish, và từ chối nạp nó sẽ là bịa ra một quy tắc mà nghiệp vụ
+    /// không hề có.
     /// </remarks>
     ImmutableArray<int> Revisions { get; }
 
-    /// <summary>The highest revision on the shelf. Not necessarily the one any plant is running.</summary>
+    /// <summary>Revision cao nhất trên kệ. Không nhất thiết là cái plant nào đó đang chạy.</summary>
     int LatestRevision { get; }
 
-    /// <summary>Returns the document for a revision, or null when the catalog does not hold it.</summary>
-    /// <param name="revision">The revision the caller says it read.</param>
+    /// <summary>Trả về document của một revision, hoặc null khi catalog không giữ nó.</summary>
+    /// <param name="revision">Revision mà caller nói rằng nó đã đọc được.</param>
     /// <remarks>
-    /// Null rather than an exception: asking for a revision that does not exist is a normal thing for
-    /// a caller working from stale information to do, and the handler turns it into a refusal that
-    /// names what is available.
+    /// Null thay vì một exception: hỏi về một revision không tồn tại là chuyện bình thường đối với
+    /// một caller đang làm việc với thông tin đã cũ, và handler biến nó thành một lời từ chối nêu rõ
+    /// những gì đang sẵn có.
     /// </remarks>
     FactoryModelSnapshot? Find(int revision);
 }

@@ -2,50 +2,50 @@ using System.Globalization;
 
 namespace Nvm.LoadHarness;
 
-/// <summary>How hard to push, for how long, and at what.</summary>
+/// <summary>Đẩy mạnh cỡ nào, trong bao lâu, và vào cái gì.</summary>
 public sealed class LoadHarnessOptions
 {
-    /// <summary>EMQX service name on <c>ot-net</c>.</summary>
+    /// <summary>Tên service EMQX trên <c>ot-net</c>.</summary>
     public string BrokerHost { get; set; } = "emqx";
 
-    /// <summary>MQTT listener port inside the Docker network.</summary>
+    /// <summary>Cổng MQTT listener bên trong Docker network.</summary>
     public int BrokerPort { get; set; } = 1883;
 
-    /// <summary>The line this harness pretends to be.</summary>
+    /// <summary>Line mà harness này giả vờ là.</summary>
     public string LinePath { get; set; } = "NOVAVOLT/NV1/FORMATION/F1";
 
-    /// <summary>Directory holding the factory-model documents, for the channel list.</summary>
+    /// <summary>Directory chứa các document factory-model, để lấy danh sách channel.</summary>
     public string SeedDirectory { get; set; } = "seed";
 
-    /// <summary>Target publish rate, in messages per second. N1 is 5.000.</summary>
+    /// <summary>Target publish rate, tính bằng message mỗi giây. N1 là 5.000.</summary>
     public int Rate { get; set; } = 5_000;
 
-    /// <summary>How long to sustain it. D2 asks for ten minutes.</summary>
+    /// <summary>Duy trì trong bao lâu. D2 yêu cầu mười phút.</summary>
     public TimeSpan Duration { get; set; } = TimeSpan.FromMinutes(10);
 
-    /// <summary>Maximum QoS 1 publishes awaiting acknowledgement on the node's MQTT session.</summary>
+    /// <summary>Số publish QoS 1 tối đa đang chờ acknowledgement trên MQTT session của node.</summary>
     /// <remarks>
     /// <para>
-    /// Concurrency is an in-flight window, not extra MQTT clients. Sparkplug assigns one ordered
-    /// session to an edge node, so opening one client per worker would create several incompatible
-    /// sequence streams under the same node topic.
+    /// Concurrency là một in-flight window, không phải thêm MQTT client. Sparkplug gán một session có
+    /// thứ tự cho một edge node, nên mở một client cho mỗi worker sẽ tạo ra nhiều sequence stream
+    /// không tương thích dưới cùng một node topic.
     /// </para>
     /// <para>
-    /// The window is also the publisher's own throughput ceiling while it is the binding constraint:
-    /// at QoS 1 no more than this many publishes are outstanding, so the rate cannot exceed window
-    /// divided by acknowledgement latency. A window of 32 held the source to 4.933 msg/s and was
-    /// failing D2 on the instrument rather than on the pipeline.
+    /// Window này còn là trần thông lượng của chính publisher trong lúc nó là ràng buộc quyết định:
+    /// ở QoS 1 không có nhiều hơn số này publish đang treo, nên rate không thể vượt quá window chia
+    /// cho độ trễ acknowledgement. Một window 32 đã giữ nguồn ở mức 4.933 msg/s và khiến D2 fail vì
+    /// công cụ đo chứ không phải vì pipeline.
     /// </para>
     /// <para>
-    /// It stops being the constraint here. Measured 2026-08-29: 32 gave 4.933 msg/s, 128 gave 5.119
-    /// and 256 gave 5.104 - flat, because a broker acknowledges a publisher as soon as it accepts
-    /// the message and never waits for subscribers, so widening the window past the receiver's own
-    /// rate buys nothing. 256 is kept for headroom against stalls, not for throughput.
+    /// Ở đây nó không còn là ràng buộc nữa. Đo ngày 2026-08-29: 32 cho ra 4.933 msg/s, 128 cho ra
+    /// 5.119 và 256 cho ra 5.104 - phẳng lì, vì một broker acknowledge một publisher ngay khi nó chấp
+    /// nhận message và không bao giờ chờ subscriber, nên mở rộng window quá rate của bên nhận chẳng
+    /// mua thêm được gì. 256 được giữ lại để có headroom chống stall, không phải để tăng throughput.
     /// </para>
     /// </remarks>
     public int MaxInFlightPublishes { get; set; } = 256;
 
-    /// <summary>Builds options from environment variables, so the container needs no arguments.</summary>
+    /// <summary>Xây options từ biến môi trường, để container không cần tham số nào.</summary>
     public static LoadHarnessOptions FromEnvironment()
     {
         var options = new LoadHarnessOptions();
@@ -62,8 +62,8 @@ public sealed class LoadHarnessOptions
         return options;
     }
 
-    /// <summary>Refuses settings that could not produce a measurement.</summary>
-    /// <exception cref="InvalidOperationException">A value is out of range.</exception>
+    /// <summary>Từ chối các setting không thể tạo ra một phép đo.</summary>
+    /// <exception cref="InvalidOperationException">Một giá trị nằm ngoài phạm vi.</exception>
     public void Validate()
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(BrokerHost);

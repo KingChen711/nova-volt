@@ -1,33 +1,33 @@
 namespace Nvm.Contracts.Events;
 
 /// <summary>
-/// Declares the schema version of a domain event type. Required from v1, on every event.
+/// Khai báo schema version của một domain event type. Bắt buộc từ v1, trên mọi event.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The version is part of the contract, not metadata about it: it ends the event type string
-/// (<c>com.novavolt.traceability.unit-serialized.v1</c>) and the routing key
-/// (<c>nvm.NV1.traceability.unit-serialized.v1</c>), and it is stored next to every row in the
-/// event store so a reader knows which shape it is holding.
+/// Version là một phần của contract, không phải metadata mô tả nó: nó kết thúc chuỗi event type
+/// (<c>com.novavolt.traceability.unit-serialized.v1</c>) và routing key
+/// (<c>nvm.NV1.traceability.unit-serialized.v1</c>), và được lưu cạnh mỗi dòng trong event store để
+/// người đọc biết mình đang cầm hình dạng nào.
 /// </para>
-/// <para>When to bump, per docs/scope.md §7.4:</para>
+/// <para>Khi nào bump version, theo docs/scope.md §7.4:</para>
 /// <list type="bullet">
-///   <item><description>Adding an optional field — do not bump. Old readers ignore it.</description></item>
+///   <item><description>Thêm một field tùy chọn — không bump. Reader cũ sẽ bỏ qua nó.</description></item>
 ///   <item><description>
-///     Changing a field's meaning, removing it, or changing its type — bump, and write an upcaster
-///     from the previous version. The golden file for the old version is never edited.
+///     Đổi ý nghĩa một field, xóa nó, hoặc đổi type của nó — bump, và viết một upcaster từ version
+///     trước. Golden file của version cũ không bao giờ bị sửa.
 ///   </description></item>
 /// </list>
 /// <para>
-/// Applying it from v1 rather than "when we need it" is the whole point (AGENTS.md K6). By the time
-/// a second version is needed, v1 events are already in the store and on the wire, and there is no
-/// longer anywhere to add the marker they should have carried.
+/// Áp dụng từ v1 thay vì "khi nào cần thì làm" chính là trọng tâm của quy tắc này (AGENTS.md K6). Đến
+/// lúc cần một version thứ hai thì các event v1 đã nằm trong store và trên wire rồi, và không còn chỗ
+/// nào để thêm cái marker lẽ ra chúng phải mang theo.
 /// </para>
 /// <para>
-/// The attribute is not inherited. A derived event type is a different type with a different wire
-/// name, so letting it pick up its base's number would produce two distinct payloads both claiming
-/// to be v1 — and an upcaster chain that cannot tell them apart. Every event type states its own
-/// version, even when it looks redundant.
+/// Attribute này không được kế thừa. Một event type dẫn xuất là một type khác với một wire name khác,
+/// nên để nó lấy luôn số của type cha sẽ tạo ra hai payload khác nhau mà cả hai đều tự nhận là v1 —
+/// và một chuỗi upcaster không thể phân biệt được chúng. Mỗi event type tự khai báo version của chính
+/// nó, kể cả khi trông có vẻ thừa.
 /// </para>
 /// </remarks>
 /// <example>
@@ -40,12 +40,12 @@ namespace Nvm.Contracts.Events;
 [AttributeUsage(AttributeTargets.Class, Inherited = false)]
 public sealed class EventVersionAttribute(int version) : Attribute
 {
-    /// <summary>The schema version, starting at 1.</summary>
+    /// <summary>Schema version, bắt đầu từ 1.</summary>
     /// <remarks>
-    /// Nothing is validated here on purpose. An attribute constructor that throws only fails when
-    /// something reflects over the type — at runtime, in whichever service happens to touch it
-    /// first, long after the mistake was committed. Analyzer NVM003 rejects a missing attribute and
-    /// a version below 1 at build time instead, which is where a typo in a constant belongs.
+    /// Cố tình không validate gì ở đây. Một constructor của attribute mà ném lỗi chỉ fail khi có cái
+    /// gì đó reflect qua type — tức là ở runtime, trong bất kỳ service nào chạm vào nó đầu tiên, rất
+    /// lâu sau khi sai sót đã được commit. Thay vào đó, analyzer NVM003 từ chối một attribute bị thiếu
+    /// và một version dưới 1 ngay lúc build, đúng là nơi một lỗi gõ nhầm trong hằng số nên bị bắt.
     /// </remarks>
     public int Version { get; } = version;
 }

@@ -6,34 +6,33 @@ using Nvm.Contracts.Events.Quality;
 namespace Nvm.Contracts;
 
 /// <summary>
-/// The single serializer configuration for everything that travels between services or lands in the
-/// event store.
+/// Cấu hình serializer duy nhất cho mọi thứ di chuyển giữa các service hoặc nằm lại trong event store.
 /// </summary>
 /// <remarks>
 /// <para>
-/// Source-generated rather than reflection-based. Two reasons that matter here, in order:
+/// Source-generated thay vì dựa trên reflection. Hai lý do quan trọng ở đây, theo thứ tự:
 /// </para>
 /// <list type="number">
 ///   <item><description>
-///     A type that cannot be serialized becomes a <b>build</b> error instead of an exception thrown
-///     at three in the morning on the one code path nobody exercised.
+///     Một type không thể serialize được sẽ trở thành lỗi <b>build</b> thay vì một exception ném ra
+///     lúc ba giờ sáng trên đúng một code path chưa ai từng chạy qua.
 ///   </description></item>
 ///   <item><description>
-///     Every envelope shape has to be declared below by hand. That is not friction to route around —
-///     it is a checkpoint. Adding a line here is the moment to ask whether the event needs a golden
-///     file, and the answer is always yes.
+///     Mọi hình dạng envelope đều phải được khai báo bằng tay ở dưới đây. Đó không phải là ma sát cần
+///     tránh — đó là một checkpoint. Thêm một dòng ở đây chính là lúc để hỏi xem event có cần một
+///     golden file hay không, và câu trả lời luôn luôn là có.
 ///   </description></item>
 /// </list>
 /// <para>
-/// <c>PropertyNamingPolicy</c> is camelCase, which is the convention for the fields inside
-/// <c>data</c>. The CloudEvents attributes around it are lower case with no separators and are named
-/// one by one on the envelope, because a naming policy would render <c>specversion</c> as
-/// <c>specVersion</c> and quietly emit something that is no longer CloudEvents.
+/// <c>PropertyNamingPolicy</c> là camelCase, đây là convention cho các field bên trong <c>data</c>.
+/// Các attribute CloudEvents bao quanh nó viết thường và không có separator, và được đặt tên từng cái
+/// một trên envelope, vì một naming policy sẽ render <c>specversion</c> thành <c>specVersion</c> và âm
+/// thầm phát ra thứ không còn là CloudEvents nữa.
 /// </para>
 /// <para>
-/// <c>WhenWritingNull</c> keeps unset optional attributes out of the document entirely, which is what
-/// the specification asks for: an absent attribute means absent, while <c>"subject": null</c> is a
-/// statement that the subject is known to be nothing.
+/// <c>WhenWritingNull</c> giữ cho các attribute tùy chọn chưa được set hoàn toàn không xuất hiện trong
+/// document, đúng như đặc tả yêu cầu: một attribute vắng mặt nghĩa là vắng mặt, còn
+/// <c>"subject": null</c> là một khẳng định rằng subject được biết là không có gì.
 /// </para>
 /// </remarks>
 [JsonSourceGenerationOptions(

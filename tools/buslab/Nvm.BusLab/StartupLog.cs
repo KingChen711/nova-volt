@@ -1,11 +1,11 @@
 namespace Nvm.BusLab;
 
-/// <summary>The lines this instrument prints before it starts listening.</summary>
+/// <summary>Các dòng công cụ đo này in ra trước khi bắt đầu lắng nghe.</summary>
 /// <remarks>
-/// Source-generated rather than plain <c>logger.LogInformation(...)</c> calls in <c>Program</c>.
-/// CA1873 refuses an Information-level call that carries an argument at all: the value is boxed into
-/// an array before anything asks whether the level is switched on. Top-level statements cannot hold
-/// a <c>[LoggerMessage]</c> partial method, so the lines live here.
+/// Source-generated thay vì các lời gọi <c>logger.LogInformation(...)</c> trần trụi trong
+/// <c>Program</c>. CA1873 từ chối một lời gọi cấp Information mang bất kỳ argument nào: giá trị bị
+/// box vào một array trước khi bất cứ thứ gì kiểm tra xem level có được bật hay không. Top-level
+/// statement không thể chứa một partial method <c>[LoggerMessage]</c>, nên các dòng này sống ở đây.
 /// </remarks>
 internal static partial class StartupLog
 {

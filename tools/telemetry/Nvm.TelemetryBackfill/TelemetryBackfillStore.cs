@@ -5,19 +5,20 @@ using NpgsqlTypes;
 
 namespace Nvm.TelemetryBackfill;
 
-/// <summary>Streams generated rows through binary COPY and atomically claims only new measurements.</summary>
+/// <summary>Stream các row đã generate qua binary COPY và atomically claim chỉ những measurement mới.</summary>
 public sealed class TelemetryBackfillStore
 {
     private const long Million = 1_000_000;
 
-    // Names its site, like every other read of a table that has one (K3). An earlier version of this
-    // file argued that ADR-030 exempted it, because the dedup key is global and unpartitioned. That
-    // confuses two different things: ADR-030 governs where UNIQUENESS is enforced, and K3 governs how
-    // a QUERY is written. The global PRIMARY KEY is still the authority and still does its job —
-    // which is exactly what makes the site filter safe to add. If a claim ever existed under another
-    // plant's label, this query now reports the row as new, the COPY below hits that primary key, and
-    // the batch fails loudly. Without the filter the same collision resolves silently into "already
-    // seen", and a measurement this run was asked to store is never stored.
+    // Nêu tên site của nó, giống mọi lần đọc khác của một table có site (K3). Một phiên bản trước của
+    // file này lập luận rằng ADR-030 miễn trừ điều này, vì dedup key là global và không partition.
+    // Điều đó nhầm lẫn hai thứ khác nhau: ADR-030 chi phối nơi UNIQUENESS được thực thi, còn K3 chi
+    // phối cách một QUERY được viết. PRIMARY KEY toàn cục vẫn là thẩm quyền và vẫn làm đúng việc của
+    // nó — đó chính xác là điều khiến việc thêm site filter trở nên an toàn. Nếu một claim từng tồn
+    // tại dưới nhãn của một plant khác, query này giờ báo row đó là mới, COPY bên dưới va vào primary
+    // key đó, và batch fail một cách rõ ràng. Không có filter thì cùng một collision đó âm thầm giải
+    // quyết thành "đã thấy rồi", và một measurement mà lần chạy này được yêu cầu lưu sẽ không bao giờ
+    // được lưu.
     private const string FindExistingSql = """
         SELECT claim.source_event_id
         FROM unnest(@site_ids::TEXT[], @source_event_ids::UUID[])
@@ -40,10 +41,11 @@ public sealed class TelemetryBackfillStore
         FROM STDIN (FORMAT BINARY)
         """;
 
-    // Every read of ts.telemetry_measurement names its site (K3). Here the site is not a permission
-    // check but an identity check, and it is the stronger of the two: this query is what decides that
-    // an already-claimed row is genuinely present, and a match found under a different site_id would
-    // report a row as verified while the row this run means is missing.
+    // Mọi lần đọc ts.telemetry_measurement đều nêu tên site của nó (K3). Ở đây site không phải một
+    // permission check mà là một identity check, và nó là cái mạnh hơn trong hai loại: query này
+    // chính là thứ quyết định một row đã claim có thực sự tồn tại hay không, và một match tìm thấy
+    // dưới một site_id khác sẽ báo cáo một row là đã verify trong khi row mà lần chạy này muốn nói
+    // đến lại đang thiếu.
     private const string VerifyExistingTelemetrySql = """
         WITH incoming AS (
             SELECT site_id, source_event_id, device_timestamp
@@ -65,14 +67,14 @@ public sealed class TelemetryBackfillStore
 
     private readonly string _connectionString;
 
-    /// <summary>Creates a store over the migrated TimescaleDB database.</summary>
+    /// <summary>Tạo một store trên database TimescaleDB đã migrate.</summary>
     public TelemetryBackfillStore(string connectionString)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
         _connectionString = connectionString;
     }
 
-    /// <summary>Copies a lazy row stream in bounded batches and verifies both final tables.</summary>
+    /// <summary>Copy một lazy row stream theo batch có giới hạn và verify cả hai table cuối cùng.</summary>
     public async Task<TelemetryBackfillResult> WriteAsync(
         IEnumerable<BackfillRow> rows,
         int batchSize,
@@ -399,7 +401,7 @@ public sealed class TelemetryBackfillStore
         TimeSpan TelemetryCopyElapsed);
 }
 
-/// <summary>One exact-million checkpoint, or the final partial interval.</summary>
+/// <summary>Một checkpoint đúng-một-triệu, hoặc khoảng cuối cùng còn dở dang.</summary>
 public sealed record TelemetryBackfillProgress(
     long AttemptedThrough,
     long IntervalRows,
@@ -409,20 +411,20 @@ public sealed record TelemetryBackfillProgress(
     TimeSpan Elapsed,
     bool IsWholeMillion)
 {
-    /// <summary>Generated rows processed per second during this interval.</summary>
+    /// <summary>Số row đã generate được xử lý mỗi giây trong khoảng này.</summary>
     public double RowsPerSecond => IntervalRows / Elapsed.TotalSeconds;
 
-    /// <summary>New global claims copied per second during this interval.</summary>
+    /// <summary>Số claim toàn cục mới được copy mỗi giây trong khoảng này.</summary>
     public double ClaimRowsPerSecond => Rate(IntervalInserted, ClaimCopyElapsed);
 
-    /// <summary>New telemetry rows copied per second during this interval.</summary>
+    /// <summary>Số telemetry row mới được copy mỗi giây trong khoảng này.</summary>
     public double TelemetryRowsPerSecond => Rate(IntervalInserted, TelemetryCopyElapsed);
 
     private static double Rate(long rows, TimeSpan elapsed) =>
         elapsed > TimeSpan.Zero ? rows / elapsed.TotalSeconds : 0;
 }
 
-/// <summary>Auditable totals for one invocation.</summary>
+/// <summary>Tổng số có thể audit cho một lần gọi.</summary>
 public sealed record TelemetryBackfillResult(
     long Attempted,
     long Inserted,
@@ -436,13 +438,13 @@ public sealed record TelemetryBackfillResult(
     TimeSpan TelemetryCopyElapsed,
     TimeSpan Elapsed)
 {
-    /// <summary>Generated rows processed per second over the full run.</summary>
+    /// <summary>Số row đã generate được xử lý mỗi giây trong suốt lần chạy.</summary>
     public double RowsPerSecond => Attempted / Elapsed.TotalSeconds;
 
-    /// <summary>New global claims copied per second over the full run.</summary>
+    /// <summary>Số claim toàn cục mới được copy mỗi giây trong suốt lần chạy.</summary>
     public double ClaimRowsPerSecond => Rate(Inserted, ClaimCopyElapsed);
 
-    /// <summary>New telemetry rows copied per second over the full run.</summary>
+    /// <summary>Số telemetry row mới được copy mỗi giây trong suốt lần chạy.</summary>
     public double TelemetryRowsPerSecond => Rate(Inserted, TelemetryCopyElapsed);
 
     private static double Rate(long rows, TimeSpan elapsed) =>

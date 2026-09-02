@@ -8,35 +8,35 @@ using Nvm.Kernel.Commands.Validation;
 
 namespace Nvm.Kernel;
 
-/// <summary>Registers the command pipeline and the handlers that plug into it.</summary>
+/// <summary>Đăng ký command pipeline và các handler cắm vào nó.</summary>
 public static class KernelServiceCollectionExtensions
 {
-    /// <summary>Adds the dispatcher, the standard behaviours, and every handler in the given assemblies.</summary>
-    /// <param name="services">The container being built.</param>
+    /// <summary>Thêm dispatcher, các behaviour chuẩn, và mọi handler trong các assembly đã cho.</summary>
+    /// <param name="services">Container đang được dựng.</param>
     /// <param name="handlerAssemblies">
-    /// Assemblies to scan. Each Functional Block passes its own; the kernel does not go looking
-    /// through everything loaded, because a Functional Block that never said it was there should not
-    /// be wired up by accident.
+    /// Các assembly cần scan. Mỗi Functional Block truyền vào assembly của riêng nó; kernel không đi
+    /// tìm khắp mọi thứ đã load, vì một Functional Block chưa từng khai báo sự hiện diện của mình thì
+    /// không nên bị wire up một cách tình cờ.
     /// </param>
     public static IServiceCollection AddNvmKernel(this IServiceCollection services, params Assembly[] handlerAssemblies)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(handlerAssemblies);
 
-        // Scoped, not singleton. The dispatcher resolves handlers and behaviours out of the
-        // IServiceProvider it was given, and those are scoped — a singleton dispatcher holds the root
-        // provider, which refuses to hand out a scoped service and says so only at the first real
-        // dispatch. A caller that has no scope of its own (a background service, a saga in M7) creates
-        // one, which is the same thing every request already does.
+        // Scoped, không phải singleton. Dispatcher resolve handler và behaviour từ IServiceProvider nó
+        // được cấp, và những cái đó là scoped — một dispatcher singleton giữ root provider, provider
+        // này từ chối cấp phát một scoped service và chỉ báo điều đó ở lần dispatch thật đầu tiên. Một
+        // caller không có scope riêng của mình (một background service, một saga ở M7) sẽ tạo ra một
+        // scope, cũng là điều mà mọi request khác đã làm.
         services.TryAddScoped<ICommandDispatcher, CommandDispatcher>();
 
-        // TryAdd: a host that already registered the clock keeps its own. Registering it here anyway
-        // means the kernel works on its own, and that no code is ever tempted to reach for
-        // DateTimeOffset.UtcNow because "there was no TimeProvider" (AGENTS.md K1).
+        // TryAdd: một host đã đăng ký clock của riêng nó sẽ giữ nguyên nó. Đăng ký ở đây dù vậy vẫn
+        // giúp kernel tự hoạt động độc lập, và không có code nào bị cám dỗ dùng
+        // DateTimeOffset.UtcNow vì "không có TimeProvider nào cả" (AGENTS.md K1).
         services.TryAddSingleton(TimeProvider.System);
 
-        // Stand-ins, both replaced when there is a database. TryAdd so a host can substitute the real
-        // thing simply by registering it first.
+        // Hàng tạm thời, cả hai sẽ được thay thế khi có database. TryAdd để một host có thể thay bằng
+        // thứ thật đơn giản chỉ bằng cách đăng ký nó trước.
         services.TryAddSingleton<IIdempotencyStore, InMemoryIdempotencyStore>();
         services.TryAddSingleton<ICommandAuditSink, InMemoryCommandAuditSink>();
 
@@ -52,57 +52,58 @@ public static class KernelServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Registers the three behaviours, in the order they must run.
+    /// Đăng ký ba behaviour, theo đúng thứ tự chúng phải chạy.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// The container hands back <c>IEnumerable&lt;T&gt;</c> in registration order, and the dispatcher
-    /// wraps the first one outermost. So this order <b>is</b> the pipeline, and it is a correctness
-    /// property rather than a preference:
+    /// Container trả về <c>IEnumerable&lt;T&gt;</c> theo thứ tự đăng ký, và dispatcher bọc cái đầu
+    /// tiên ở ngoài cùng. Vì vậy thứ tự này <b>chính là</b> pipeline, và đó là một thuộc tính đúng đắn
+    /// chứ không phải một sở thích:
     /// </para>
     /// <list type="number">
     ///   <item><description>
-    ///     <b>Validation</b> outermost, because it is the cheapest check and the only one that needs
-    ///     nothing but the command itself. A malformed command is refused without a single round trip
-    ///     to the deduplication store — which matters once that store is a database and a misconfigured
-    ///     device is resending rubbish at line rate.
+    ///     <b>Validation</b> ở ngoài cùng, vì đó là check rẻ nhất và là check duy nhất không cần gì
+    ///     ngoài bản thân command. Một command sai định dạng bị từ chối mà không cần một round trip
+    ///     nào tới deduplication store — điều này quan trọng một khi store đó là một database và một
+    ///     device cấu hình sai đang gửi lại rác với tốc độ của line.
     ///   </description></item>
     ///   <item><description>
-    ///     <b>Idempotency</b> next, so a repeat performs nothing below it and replays the first
-    ///     result.
+    ///     <b>Idempotency</b> tiếp theo, để một lần lặp lại không thực thi gì bên dưới nó và chỉ replay
+    ///     kết quả lần đầu.
     ///   </description></item>
     ///   <item><description>
-    ///     <b>Audit</b> innermost, wrapping the handler alone, so the trail records what the plant did
-    ///     rather than every request that arrived.
+    ///     <b>Audit</b> trong cùng, chỉ bọc riêng handler, để trail ghi lại những gì plant đã làm thay
+    ///     vì mọi request đã đến.
     ///   </description></item>
     /// </list>
     /// <para>
-    /// <b>This order is now correctness, and it was not always.</b> While the store recorded a key
-    /// only after the handler returned, swapping the first two stages changed nothing observable — a
-    /// rejected command left no trace either way, and only a test on the order itself caught the swap.
+    /// <b>Thứ tự này giờ là một yêu cầu đúng đắn, và trước đây thì không phải vậy.</b> Trong lúc store
+    /// chỉ ghi nhận một key sau khi handler trả về, hoán đổi hai stage đầu tiên không làm thay đổi gì
+    /// quan sát được — một command bị từ chối không để lại dấu vết dù theo cách nào, và chỉ một test
+    /// nhắm thẳng vào thứ tự mới bắt được sự hoán đổi đó.
     /// </para>
     /// <para>
-    /// The claim protocol ended that. <see cref="IdempotencyBehavior{TCommand, TResult}"/>
-    /// reserves the key <i>before</i> calling the handler, because recording on success cannot stop two
-    /// identical commands arriving at once from both running. So a malformed command that reached this
-    /// stage would mark its key as taken, and the corrected resend — which carries the same natural
-    /// key — would be swallowed as a duplicate. The operator fixes the form, presses submit, sees
-    /// success, and nothing happens. Validation stays outermost or that is what the plant gets.
+    /// Claim protocol đã chấm dứt điều đó. <see cref="IdempotencyBehavior{TCommand, TResult}"/>
+    /// giữ trước key <i>trước khi</i> gọi handler, vì ghi nhận lúc thành công không thể ngăn hai command
+    /// giống hệt nhau đến cùng lúc và cả hai đều chạy. Vì vậy một command sai định dạng đi đến được
+    /// stage này sẽ đánh dấu key của nó là đã bị chiếm, và lần gửi lại đã sửa đúng — mang cùng natural
+    /// key — sẽ bị nuốt như một bản trùng lặp. Operator sửa form, nhấn submit, thấy thành công, và
+    /// không có gì xảy ra. Validation phải luôn ở ngoài cùng, nếu không đó là cái plant sẽ nhận.
     /// </para>
     /// <para>
-    /// A fourth stage belongs between idempotency and audit once there is a database: the transaction
-    /// that lets the idempotency record commit together with the event it guards. It is missing
-    /// because writing an empty one now would be dead code, not because the order has room to spare.
+    /// Một stage thứ tư thuộc về giữa idempotency và audit một khi có database: transaction cho phép
+    /// bản ghi idempotency commit cùng với event mà nó bảo vệ. Nó còn thiếu vì viết một cái rỗng ngay
+    /// bây giờ sẽ là dead code, không phải vì thứ tự còn dư chỗ.
     /// </para>
     /// <para>
-    /// Registered as open generics — <c>typeof(ValidationBehavior&lt;,&gt;)</c> — so one registration
-    /// covers every command type there will ever be.
+    /// Đăng ký dưới dạng open generic — <c>typeof(ValidationBehavior&lt;,&gt;)</c> — để một lần đăng ký
+    /// bao phủ mọi command type sẽ từng tồn tại.
     /// </para>
     /// </remarks>
     private static void AddStandardBehaviors(IServiceCollection services)
     {
-        // Add, not TryAdd. TryAdd on an open generic would see the first ICommandBehavior<,>
-        // registration and skip the other two, leaving a pipeline with one stage and no complaint.
+        // Add, không phải TryAdd. TryAdd trên một open generic sẽ thấy đăng ký ICommandBehavior<,>
+        // đầu tiên rồi bỏ qua hai cái còn lại, để lại một pipeline chỉ có một stage mà không than phiền gì.
         services.Add(ServiceDescriptor.Scoped(typeof(ICommandBehavior<,>), typeof(ValidationBehavior<,>)));
         services.Add(ServiceDescriptor.Scoped(typeof(ICommandBehavior<,>), typeof(IdempotencyBehavior<,>)));
         services.Add(ServiceDescriptor.Scoped(typeof(ICommandBehavior<,>), typeof(AuditBehavior<,>)));
@@ -114,9 +115,9 @@ public static class KernelServiceCollectionExtensions
         {
             foreach (var contract in ClosedInterfacesOf(implementation, typeof(ICommandHandler<,>)))
             {
-                // TryAdd, not Add: registering the same handler twice would make the container return
-                // the last one and silently ignore the first, which is how two Functional Blocks end
-                // up quietly fighting over one command.
+                // TryAdd, không phải Add: đăng ký cùng một handler hai lần sẽ khiến container trả về
+                // cái cuối cùng và âm thầm bỏ qua cái đầu tiên, đây là cách hai Functional Block cuối
+                // cùng lặng lẽ tranh giành một command.
                 services.TryAddScoped(contract, implementation);
             }
         }
@@ -128,8 +129,8 @@ public static class KernelServiceCollectionExtensions
         {
             foreach (var contract in ClosedInterfacesOf(implementation, typeof(ICommandValidator<>)))
             {
-                // Add, not TryAdd: several validators for one command is legitimate, so another
-                // Functional Block can add a rule to a command it does not own.
+                // Add, không phải TryAdd: nhiều validator cho một command là chính đáng, để một
+                // Functional Block khác có thể thêm một rule vào một command mà nó không sở hữu.
                 services.Add(ServiceDescriptor.Scoped(contract, implementation));
             }
         }

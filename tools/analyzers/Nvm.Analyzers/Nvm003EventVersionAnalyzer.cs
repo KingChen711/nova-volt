@@ -4,24 +4,24 @@ using Microsoft.CodeAnalysis.Diagnostics;
 
 namespace Nvm.Analyzers;
 
-/// <summary>Requires <c>[EventVersion(n)]</c>, n at least 1, on every event. AGENTS.md K6.</summary>
+/// <summary>Yêu cầu <c>[EventVersion(n)]</c>, n ít nhất là 1, trên mọi event. AGENTS.md K6.</summary>
 /// <remarks>
 /// <para>
-/// <b>Why it has to be there from v1, when there is only one version.</b> The marker looks redundant
-/// on the day it is written and is impossible to add on the day it is needed. By the time a second
-/// shape exists, v1 payloads are already in an append-only store and already on the wire — and none
-/// of them says which shape they are. An upcaster chain has nothing to branch on, so the only
-/// remaining option is guessing from the fields present.
+/// <b>Vì sao nó phải có mặt từ v1, khi chỉ có một version.</b> Cái marker trông thừa thãi vào ngày nó
+/// được viết ra và không thể thêm vào được vào ngày nó thực sự cần. Đến lúc một hình dạng thứ hai xuất
+/// hiện, payload v1 đã nằm trong append-only store và đã ở trên wire rồi — và không cái nào trong số
+/// đó nói nó là hình dạng nào. Một chuỗi upcaster không có gì để rẽ nhánh, nên lựa chọn duy nhất còn
+/// lại là đoán dựa trên các field đang có mặt.
 /// </para>
 /// <para>
-/// Version 0 is refused as well. It is what a default <c>int</c> looks like, so accepting it means
-/// accepting the one value that indicates nobody chose.
+/// Version 0 cũng bị từ chối. Đó là hình dạng của một <c>int</c> mặc định, nên chấp nhận nó có nghĩa
+/// là chấp nhận giá trị duy nhất cho biết không ai đã chọn cả.
 /// </para>
 /// </remarks>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class Nvm003EventVersionAnalyzer : DiagnosticAnalyzer
 {
-    /// <summary>The diagnostic id, as it appears in build output and in .editorconfig.</summary>
+    /// <summary>Id của diagnostic, đúng như nó xuất hiện trong build output và trong .editorconfig.</summary>
     public const string DiagnosticId = "NVM003";
 
     private const string Category = "Nvm.Contracts";
@@ -60,7 +60,7 @@ public sealed class Nvm003EventVersionAnalyzer : DiagnosticAnalyzer
             var domainEvent = start.Compilation.GetTypeByMetadataName(ContractSymbols.DomainEventInterface);
             var versionAttribute = start.Compilation.GetTypeByMetadataName(ContractSymbols.EventVersionAttribute);
 
-            // Nothing to enforce in a compilation that has never heard of either type.
+            // Không có gì để enforce trong một compilation chưa từng nghe đến type nào trong hai type đó.
             if (domainEvent is null || versionAttribute is null)
             {
                 return;
@@ -83,8 +83,8 @@ public sealed class Nvm003EventVersionAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        // Not inherited, deliberately: EventVersionAttribute is declared Inherited = false, because a
-        // derived event is a different type with a different wire name and must state its own number.
+        // Không kế thừa, có chủ đích: EventVersionAttribute được khai báo Inherited = false, vì một
+        // event dẫn xuất là một type khác với một wire name khác và phải tự nêu ra con số của riêng nó.
         var declared = type.GetAttributes().FirstOrDefault(attribute =>
             SymbolEqualityComparer.Default.Equals(attribute.AttributeClass, versionAttribute));
 
@@ -103,7 +103,7 @@ public sealed class Nvm003EventVersionAnalyzer : DiagnosticAnalyzer
 
         context.ReportDiagnostic(Diagnostic.Create(
             Rule,
-            // The attribute's own location when there is one, so the fix is where the cursor lands.
+            // Vị trí của chính attribute khi nó tồn tại, để chỗ sửa cũng là nơi con trỏ dừng lại.
             declared?.ApplicationSyntaxReference is { } reference
                 ? Location.Create(reference.SyntaxTree, reference.Span)
                 : type.Locations[0],

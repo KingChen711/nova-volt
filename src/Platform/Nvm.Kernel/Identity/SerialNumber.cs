@@ -4,35 +4,35 @@ using System.Globalization;
 namespace Nvm.Kernel.Identity;
 
 /// <summary>
-/// The 16-character identifier laser-engraved on a production unit and read back by vision.
+/// Định danh 16 ký tự được khắc laser lên một production unit và được vision đọc lại.
 /// </summary>
 /// <remarks>
-/// <para>Layout, per docs/scope.md §6.1:</para>
+/// <para>Layout, theo docs/scope.md §6.1:</para>
 /// <code>
 /// NV1 C L1 6 238 A 00123
-/// │   │ │  │ │   │ └──── sequence within the shift, 00001-99999
+/// │   │ │  │ │   │ └──── số thứ tự trong ca, 00001-99999
 /// │   │ │  │ │   └────── shift code, A / B / C
-/// │   │ │  │ └────────── day of year, 001-366
-/// │   │ │  └───────────── last digit of the year, 6 means 2026
-/// │   │ └──────────────── line code, for example L1 L2 M1 P1
-/// │   └────────────────── unit kind, C cell / M module / P pack
-/// └────────────────────── site code, for example NV1 DE1
+/// │   │ │  │ └────────── ngày thứ mấy trong năm, 001-366
+/// │   │ │  └───────────── chữ số cuối của năm, 6 nghĩa là 2026
+/// │   │ └──────────────── line code, ví dụ L1 L2 M1 P1
+/// │   └────────────────── loại unit, C cell / M module / P pack
+/// └────────────────────── site code, ví dụ NV1 DE1
 /// </code>
 /// <para>
-/// Parsing is deliberately strict: lower case is rejected rather than normalized. The code is
-/// engraved in upper case, so a lower-case read means the scanner is misconfigured. Silently
-/// upper-casing it would turn a traceable equipment fault into invisible data drift, and this
-/// identifier is a legal record (AGENTS.md K4).
+/// Việc parse cố tình nghiêm ngặt: chữ thường bị từ chối thay vì được chuẩn hóa. Code được khắc bằng
+/// chữ hoa, nên đọc được chữ thường nghĩa là scanner đang cấu hình sai. Âm thầm chuyển nó thành chữ
+/// hoa sẽ biến một lỗi thiết bị có thể truy vết thành một sai lệch dữ liệu vô hình, và định danh này
+/// là một bản ghi mang tính pháp lý (AGENTS.md K4).
 /// </para>
 /// <para>
-/// The year is a single digit, so a serial alone cannot name a calendar date. Resolving
-/// <see cref="YearDigit"/> and <see cref="DayOfYear"/> into a real date needs a reference year and
-/// belongs to the production calendar, not here. Do not add a DateOnly property that guesses.
+/// Năm chỉ là một chữ số, nên riêng một serial không thể nêu tên một ngày trên lịch. Việc phân giải
+/// <see cref="YearDigit"/> và <see cref="DayOfYear"/> thành một ngày thực cần một năm tham chiếu và
+/// thuộc về production calendar, không thuộc về đây. Không thêm một property DateOnly đi đoán bừa.
 /// </para>
 /// </remarks>
 public sealed record SerialNumber
 {
-    /// <summary>Number of characters in every serial number.</summary>
+    /// <summary>Số ký tự trong mỗi serial number.</summary>
     public const int Length = 16;
 
     private const int SiteStart = 0;
@@ -67,38 +67,38 @@ public sealed record SerialNumber
         Sequence = sequence;
     }
 
-    /// <summary>The raw 16-character code, exactly as engraved.</summary>
+    /// <summary>Code thô 16 ký tự, đúng như khi được khắc.</summary>
     public string Value { get; }
 
-    /// <summary>Three-character site code, for example NV1.</summary>
+    /// <summary>Site code ba ký tự, ví dụ NV1.</summary>
     public string SiteCode { get; }
 
-    /// <summary>Which tier of unit this serial identifies.</summary>
+    /// <summary>Serial này định danh tier unit nào.</summary>
     public ProductionUnitKind Kind { get; }
 
-    /// <summary>Two-character line code, for example L1.</summary>
+    /// <summary>Line code hai ký tự, ví dụ L1.</summary>
     public string LineCode { get; }
 
-    /// <summary>Last digit of the production year. Needs a reference year to become a date.</summary>
+    /// <summary>Chữ số cuối của năm sản xuất. Cần một năm tham chiếu để trở thành một ngày.</summary>
     public int YearDigit { get; }
 
-    /// <summary>Day of year, 1 to 366.</summary>
+    /// <summary>Ngày thứ mấy trong năm, 1 đến 366.</summary>
     public int DayOfYear { get; }
 
-    /// <summary>Shift code, A, B or C.</summary>
+    /// <summary>Shift code, A, B hoặc C.</summary>
     public char ShiftCode { get; }
 
-    /// <summary>Sequence within the shift, 1 to 99999.</summary>
+    /// <summary>Số thứ tự trong ca, 1 đến 99999.</summary>
     public int Sequence { get; }
 
-    /// <summary>Parses a serial number, throwing when the code is malformed.</summary>
-    /// <exception cref="FormatException">The code does not match the engraved layout.</exception>
+    /// <summary>Parse một serial number, ném lỗi khi code sai định dạng.</summary>
+    /// <exception cref="FormatException">Code không khớp layout đã khắc.</exception>
     public static SerialNumber Parse(string? value) =>
         TryParse(value, out var serial)
             ? serial
             : throw new FormatException("Not a valid 16-character serial number: '" + value + "'.");
 
-    /// <summary>Parses a serial number, returning false when the code is malformed.</summary>
+    /// <summary>Parse một serial number, trả về false khi code sai định dạng.</summary>
     public static bool TryParse(
         [NotNullWhen(true)] string? value,
         [NotNullWhen(true)] out SerialNumber? serial)
@@ -122,7 +122,7 @@ public sealed record SerialNumber
             return false;
         }
 
-        // Line is a letter followed by a digit, which keeps L1 valid and 11 invalid.
+        // Line là một chữ cái theo sau bởi một chữ số, điều này giữ L1 hợp lệ và 11 không hợp lệ.
         if (!char.IsAsciiLetterUpper(span[LineStart]) || !char.IsAsciiDigit(span[LineStart + 1]))
         {
             return false;
@@ -162,7 +162,7 @@ public sealed record SerialNumber
         return true;
     }
 
-    /// <summary>Returns the raw engraved code.</summary>
+    /// <summary>Trả về code thô đã khắc.</summary>
     public override string ToString() => Value;
 
     private static bool IsUpperAlphanumeric(ReadOnlySpan<char> span)
@@ -199,7 +199,7 @@ public sealed record SerialNumber
 
     private static bool TryReadNumber(ReadOnlySpan<char> span, int minimum, int maximum, out int number)
     {
-        // NumberStyles.None rejects signs, decimal points and whitespace, so only digits parse.
+        // NumberStyles.None từ chối dấu, dấu chấm thập phân và khoảng trắng, nên chỉ chữ số mới parse được.
         return int.TryParse(span, NumberStyles.None, CultureInfo.InvariantCulture, out number)
                && number >= minimum
                && number <= maximum;

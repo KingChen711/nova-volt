@@ -10,8 +10,8 @@ CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
 var options = LoadHarnessOptions.FromEnvironment();
 var linePath = EquipmentPath.Parse(options.LinePath);
 
-// The plant says which channels exist. Inventing the list would produce topics the gateway refuses
-// (K3), and a harness whose every message is refused measures the rejection path at 5.000 msg/s.
+// Plant nói ra channel nào tồn tại. Bịa ra danh sách này sẽ tạo ra các topic mà gateway từ chối
+// (K3), và một harness mà mọi message đều bị từ chối chỉ đo được con đường từ chối ở 5.000 msg/s.
 var catalog = FactoryModelSeed.LoadCatalog(Path.Combine(AppContext.BaseDirectory, options.SeedDirectory));
 var model = catalog.Find(catalog.LatestRevision)
     ?? throw new InvalidOperationException(
@@ -66,29 +66,29 @@ Console.WriteLine();
 Console.WriteLine("  Ve NHAN (lag p50/p95/p99) doc o ingestion:");
 Console.WriteLine("    curl -s http://ingestion:8080/api/ingestion/v1/stats");
 
-// The harness reports; the gate decides.
+// Harness báo cáo; gate quyết định.
 //
-// This used to also require AchievedRate >= options.Rate, which made the OFFERED rate a pass mark
-// one level below where load-gate.sh had the same bug. A run that came out 4% under the offer
-// exited 1 even when every message it did send arrived exactly once - so the gate above could never
-// see a clean run, and "D2/M2 PASS" was a verdict nothing could reach. Whether a rate is good
-// enough is N1's question and it is asked in one place, with the threshold that comes from
-// scope.md rather than from whatever this process was asked to try (ADR-031).
+// Trước đây cái này còn yêu cầu thêm AchievedRate >= options.Rate, biến rate ĐƯỢC ĐỀ NGHỊ thành một
+// mốc pass, một tầng dưới nơi load-gate.sh có cùng một lỗi. Một run ra kết quả thấp hơn đề nghị 4%
+// sẽ exit 1 dù mọi message nó gửi đều đến đúng một lần - nên gate ở trên không bao giờ thấy được một
+// run sạch, và "D2/M2 PASS" là một phán quyết không gì có thể chạm tới. Một rate có đủ tốt hay không
+// là câu hỏi của N1 và nó được hỏi ở đúng một nơi, với ngưỡng đến từ scope.md thay vì từ bất kỳ điều
+// gì process này được yêu cầu thử (ADR-031).
 //
-// What still fails here is what only the harness can see: a publish that errored, and a rebirth
-// request, which says the broker or the gateway lost the thread of our session.
+// Cái vẫn còn fail ở đây là cái chỉ harness mới thấy được: một publish bị lỗi, và một rebirth
+// request, thứ nói rằng broker hoặc gateway đã lạc mất mạch của session chúng ta.
 return result.Failed == 0 && result.RebirthRequests == 0 ? 0 : 1;
 
 static List<EquipmentPath> ChannelsOf(FactoryModelSnapshot model, EquipmentPath linePath)
 {
-    // Everything the model has under this line, read the way the simulator reads it. The previous
-    // version guessed instead: it asked for FORM-01-CH-0001 through FORM-01-CH-2000 and kept what
-    // answered, which works on a seed with one cycler and silently finds a tenth of the plant on a
-    // seed with ten. deploy/seed-load/ is exactly that shape, so the 1.000-channel load topology
-    // would have run as 100 channels and reported a number for the wrong plant.
+    // Mọi thứ model có dưới line này, đọc đúng theo cách simulator đọc nó. Phiên bản trước đó thay vào
+    // đó đã đoán: nó hỏi xin từ FORM-01-CH-0001 đến FORM-01-CH-2000 và giữ lại cái nào trả lời, thứ
+    // hoạt động trên một seed có một cycler và âm thầm chỉ tìm ra một phần mười của plant trên một
+    // seed có mười cycler. deploy/seed-load/ đúng là hình dạng đó, nên load topology 1.000 channel lẽ
+    // ra sẽ chạy như 100 channel và báo cáo một con số cho sai plant.
     //
-    // A harness that hard-codes a naming convention is a harness that has an opinion about the
-    // factory. It is not allowed one - the factory model is the source of that list (K3).
+    // Một harness hard-code một naming convention là một harness có quan điểm riêng về nhà máy. Nó
+    // không được phép có quan điểm đó - factory model là nguồn của danh sách đó (K3).
     var prefix = linePath.Value + EquipmentPath.Separator;
 
     var channels = model.Paths

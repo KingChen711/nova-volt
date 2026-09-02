@@ -2,70 +2,70 @@ using System.Globalization;
 
 namespace Nvm.Time;
 
-/// <summary>The production cycle a measurement belongs to, named by a calendar date.</summary>
+/// <summary>Chu kỳ sản xuất mà một measurement thuộc về, được nêu tên bằng một ngày trên lịch.</summary>
 /// <remarks>
 /// <para>
-/// A production day is <b>not</b> a calendar day. It is the cycle that begins when shift A starts —
-/// 06:00 local — and runs until shift A starts again. Shift C from 22:00 on the 25th to 06:00 on the
-/// 26th belongs to production day <c>2026-08-25</c>, so six of its hours fall on a different calendar
-/// date than the day it is filed under (docs/scope.md §2.3).
+/// Một production day <b>không phải</b> một calendar day. Đó là chu kỳ bắt đầu khi shift A bắt đầu —
+/// 06:00 local — và chạy cho tới khi shift A bắt đầu lần nữa. Shift C từ 22:00 ngày 25 tới 06:00 ngày
+/// 26 thuộc về production day <c>2026-08-25</c>, nên sáu giờ trong đó rơi vào một ngày lịch khác với
+/// ngày mà nó được filing dưới đó (docs/scope.md §2.3).
 /// </para>
 /// <para>
-/// <b>Why a type rather than a <see cref="DateOnly"/>.</b> The two are structurally identical, and
-/// that is precisely the danger: if a production day were a <see cref="DateOnly"/>, nothing would stop
-/// someone assigning it the result of <c>CAST(device_timestamp AS date)</c> or of the local calendar
-/// date, and the compiler would agree. Both are wrong for six hours out of every twenty-four, and the
-/// error surfaces months later as "shift C looks short" in a monthly report. There is no implicit
-/// conversion in either direction for exactly that reason — leaving the type is a deliberate call to
-/// <see cref="Date"/>.
+/// <b>Vì sao dùng một type riêng thay vì <see cref="DateOnly"/>.</b> Hai thứ này giống hệt nhau về cấu
+/// trúc, và chính điều đó là mối nguy hiểm: nếu một production day là một <see cref="DateOnly"/>,
+/// không gì ngăn được ai đó gán cho nó kết quả của <c>CAST(device_timestamp AS date)</c> hoặc của
+/// calendar date theo local, và compiler sẽ đồng ý. Cả hai đều sai trong sáu giờ trên mỗi hai mươi bốn
+/// giờ, và lỗi nổi lên nhiều tháng sau dưới dạng "shift C trông ngắn" trong một báo cáo hàng tháng.
+/// Không có conversion ngầm theo chiều nào chính vì lý do đó — để nguyên type là một quyết định có chủ
+/// đích, buộc gọi tới <see cref="Date"/>.
 /// </para>
 /// </remarks>
 public readonly record struct ProductionDay : IComparable<ProductionDay>
 {
     private ProductionDay(DateOnly date) => Date = date;
 
-    /// <summary>The calendar date the cycle started on, in the site's local time.</summary>
+    /// <summary>Ngày lịch mà chu kỳ bắt đầu trên đó, theo local time của site.</summary>
     /// <remarks>
-    /// Deliberately a property and not an implicit conversion. Reading it is a statement that the
-    /// caller means the label of the cycle, not "the date this instant fell on".
+    /// Cố tình là một property chứ không phải một conversion ngầm. Đọc nó là một khẳng định rằng caller
+    /// muốn nói tới nhãn của chu kỳ, không phải "ngày mà instant này rơi vào".
     /// </remarks>
     public DateOnly Date { get; }
 
-    /// <summary>Names a production day by the calendar date its shift A began on.</summary>
+    /// <summary>Nêu tên một production day bằng ngày lịch mà shift A của nó bắt đầu trên đó.</summary>
     public static ProductionDay On(DateOnly date) => new(date);
 
-    /// <summary>Names a production day by year, month and day.</summary>
+    /// <summary>Nêu tên một production day bằng năm, tháng và ngày.</summary>
     public static ProductionDay On(int year, int month, int day) => new(new DateOnly(year, month, day));
 
-    /// <summary>The production day that follows this one.</summary>
+    /// <summary>Production day tiếp theo sau ngày này.</summary>
     public ProductionDay Next() => new(Date.AddDays(1));
 
-    /// <summary>The production day before this one.</summary>
+    /// <summary>Production day trước ngày này.</summary>
     public ProductionDay Previous() => new(Date.AddDays(-1));
 
-    /// <summary>How many production days lie between this one and another.</summary>
+    /// <summary>Có bao nhiêu production day nằm giữa ngày này và một ngày khác.</summary>
     public int DaysUntil(ProductionDay other) => other.Date.DayNumber - Date.DayNumber;
 
     /// <inheritdoc />
     public int CompareTo(ProductionDay other) => Date.CompareTo(other.Date);
 
-    /// <summary>Whether one production day is before another.</summary>
+    /// <summary>Một production day có đứng trước một production day khác hay không.</summary>
     public static bool operator <(ProductionDay left, ProductionDay right) => left.CompareTo(right) < 0;
 
-    /// <summary>Whether one production day is after another.</summary>
+    /// <summary>Một production day có đứng sau một production day khác hay không.</summary>
     public static bool operator >(ProductionDay left, ProductionDay right) => left.CompareTo(right) > 0;
 
-    /// <summary>Whether one production day is before another or the same.</summary>
+    /// <summary>Một production day có đứng trước hoặc trùng một production day khác hay không.</summary>
     public static bool operator <=(ProductionDay left, ProductionDay right) => left.CompareTo(right) <= 0;
 
-    /// <summary>Whether one production day is after another or the same.</summary>
+    /// <summary>Một production day có đứng sau hoặc trùng một production day khác hay không.</summary>
     public static bool operator >=(ProductionDay left, ProductionDay right) => left.CompareTo(right) >= 0;
 
-    /// <summary>The date, as <c>2026-08-25</c>.</summary>
+    /// <summary>Ngày, dưới dạng <c>2026-08-25</c>.</summary>
     /// <remarks>
-    /// Invariant and ISO, never the current culture: this string ends up in reports, log lines and
-    /// SQL, and a machine in a <c>de-DE</c> locale writing <c>25.08.2026</c> would produce a second
-    /// spelling of the same day.
+    /// Invariant và ISO, không bao giờ theo culture hiện tại: chuỗi này đi vào report, log line và
+    /// SQL, và một máy ở locale <c>de-DE</c> viết ra <c>25.08.2026</c> sẽ tạo ra một cách viết thứ hai
+    /// cho cùng một ngày.
     /// </remarks>
     public override string ToString() => Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 }

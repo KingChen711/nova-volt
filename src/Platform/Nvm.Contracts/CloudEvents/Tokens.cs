@@ -3,22 +3,22 @@ using System.Diagnostics.CodeAnalysis;
 namespace Nvm.Contracts.CloudEvents;
 
 /// <summary>
-/// Shape rules for the individual segments that make up an event type, a source URN and a routing key.
+/// Quy tắc hình dạng cho từng segment tạo nên một event type, một source URN và một routing key.
 /// </summary>
 /// <remarks>
-/// Kept in one place because the same two shapes appear in three different strings, and three copies
-/// of "is this a valid segment" is how they start disagreeing with each other.
+/// Gom về một chỗ vì cùng hai hình dạng này xuất hiện trong ba chuỗi khác nhau, và ba bản sao của
+/// "segment này có hợp lệ không" là cách chúng bắt đầu mâu thuẫn với nhau.
 /// </remarks>
 internal static class Tokens
 {
     /// <summary>
-    /// Fixed vocabulary: lower-case ASCII, words joined by single hyphens. For example
+    /// Fixed vocabulary: ASCII chữ thường, các từ nối nhau bằng một dấu gạch ngang. Ví dụ
     /// <c>traceability</c>, <c>unit-serialized</c>, <c>app-execution</c>.
     /// </summary>
     /// <remarks>
-    /// Lower case is not a style preference. These segments are written by us, read by machines, and
-    /// compared byte for byte by an AMQP broker; allowing two spellings of the same word is allowing
-    /// two routing keys that look identical to a human and never match each other.
+    /// Chữ thường không phải là sở thích về style. Các segment này do ta viết, do máy đọc, và được một
+    /// AMQP broker so sánh theo từng byte; cho phép hai cách viết của cùng một từ nghĩa là cho phép hai
+    /// routing key trông giống hệt nhau trong mắt người nhưng không bao giờ khớp nhau.
     /// </remarks>
     internal static bool IsFixedVocabulary([NotNullWhen(true)] string? token)
     {
@@ -27,8 +27,8 @@ internal static class Tokens
             return false;
         }
 
-        // Must open with a letter and close with a letter or digit, so '-lot', 'lot-' and '2fast'
-        // are all rejected. A leading digit would also make the segment ambiguous with a version.
+        // Phải mở đầu bằng một chữ cái và kết thúc bằng chữ cái hoặc chữ số, nên '-lot', 'lot-' và
+        // '2fast' đều bị từ chối. Một chữ số ở đầu cũng sẽ khiến segment dễ nhầm lẫn với một version.
         if (!char.IsAsciiLetterLower(token[0]) || token[^1] == '-')
         {
             return false;
@@ -43,8 +43,9 @@ internal static class Tokens
                 continue;
             }
 
-            // A single hyphen between words is allowed; a double hyphen is not, because it survives
-            // a careless copy-paste and produces a second, silently different, spelling.
+            // Một dấu gạch ngang đơn giữa hai từ thì được phép; hai dấu gạch ngang liền nhau thì
+            // không, vì nó sống sót qua một lần copy-paste bất cẩn và tạo ra một cách viết thứ hai
+            // khác biệt trong âm thầm.
             if (character == '-' && token[index - 1] != '-')
             {
                 continue;
@@ -57,12 +58,12 @@ internal static class Tokens
     }
 
     /// <summary>
-    /// A site code in its canonical form: upper-case ASCII letters and digits, for example <c>NV1</c>.
+    /// Một site code ở dạng canonical: chữ cái và chữ số ASCII viết hoa, ví dụ <c>NV1</c>.
     /// </summary>
     /// <remarks>
-    /// Deliberately looser than the three characters a serial number allows. The authoritative list of
-    /// sites belongs to the factory model, not to a string parser; this only enforces what the wire
-    /// format itself needs, which is that a site code carries no separator and no lower case.
+    /// Cố tình lỏng hơn ba ký tự mà một serial number cho phép. Danh sách site chính thức thuộc về
+    /// factory model, không thuộc về một string parser; đây chỉ ép buộc những gì bản thân wire format
+    /// cần, tức là một site code không mang separator và không viết thường.
     /// </remarks>
     internal static bool IsSiteCode([NotNullWhen(true)] string? token)
     {

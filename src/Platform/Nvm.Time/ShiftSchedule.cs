@@ -3,23 +3,23 @@ using System.Globalization;
 
 namespace Nvm.Time;
 
-/// <summary>A plant's shift table, checked to cover the clock exactly once.</summary>
+/// <summary>Shift table của một plant, đã được kiểm tra để phủ đồng hồ đúng một lần.</summary>
 /// <remarks>
 /// <para>
-/// <b>Data, not a switch-case.</b> docs/scope.md §2.3 gives NovaVolt one table, and M10 brings a site
-/// that has a different one. A table can be replaced per site; a <c>switch</c> on
-/// <see cref="Shift"/> spread through the codebase cannot, and the day someone tries they find the
-/// hours written down in four places that have quietly drifted apart.
+/// <b>Dữ liệu, không phải switch-case.</b> docs/scope.md §2.3 cho NovaVolt một bảng, và M10 mang đến
+/// một site có bảng khác. Một bảng có thể được thay thế theo từng site; một <c>switch</c> trên
+/// <see cref="Shift"/> rải rác khắp codebase thì không, và ngày ai đó thử làm vậy họ sẽ thấy các giờ
+/// được viết ra ở bốn chỗ mà đã âm thầm trôi lệch nhau.
 /// </para>
 /// <para>
-/// The construction check is the whole value of the type: a table that leaves 05:00 uncovered would
-/// give a measurement taken at 05:00 no shift at all, and one that covers 05:00 twice would give it
-/// two. Both are found here rather than in a report six months later.
+/// Check lúc dựng đối tượng là toàn bộ giá trị của type này: một bảng để trống 05:00 sẽ khiến một
+/// measurement lấy lúc 05:00 hoàn toàn không có shift nào, và một bảng phủ 05:00 hai lần sẽ cho nó
+/// hai shift. Cả hai đều bị phát hiện ở đây thay vì trong một báo cáo sáu tháng sau.
 /// </para>
 /// <para>
-/// <b>Order carries meaning.</b> The rows are kept as they were given, because the first one opens the
-/// production day — that is what makes 06:00 the boundary rather than midnight. Sorting them would
-/// throw that away for a table whose day starts at 22:00.
+/// <b>Thứ tự mang ý nghĩa.</b> Các dòng được giữ nguyên như khi được truyền vào, vì dòng đầu tiên mở
+/// ra production day — đó là điều khiến 06:00 trở thành boundary thay vì nửa đêm. Sắp xếp lại chúng
+/// sẽ vứt bỏ điều đó với một bảng có ngày bắt đầu lúc 22:00.
 /// </para>
 /// </remarks>
 public sealed class ShiftSchedule
@@ -34,7 +34,7 @@ public sealed class ShiftSchedule
         DayStart = definitions[0].LocalStart;
     }
 
-    /// <summary>The NovaVolt table: A 06–14, B 14–22, C 22–06 local (docs/scope.md §2.3).</summary>
+    /// <summary>Bảng của NovaVolt: A 06–14, B 14–22, C 22–06 local (docs/scope.md §2.3).</summary>
     public static ShiftSchedule Default { get; } = Create(
     [
         new ShiftDefinition(Shift.A, new TimeOnly(6, 0), TimeSpan.FromHours(8)),
@@ -42,29 +42,28 @@ public sealed class ShiftSchedule
         new ShiftDefinition(Shift.C, new TimeOnly(22, 0), TimeSpan.FromHours(8)),
     ]);
 
-    /// <summary>The rows, in running order, starting with the one that opens the production day.</summary>
+    /// <summary>Các dòng, theo thứ tự chạy, bắt đầu bằng dòng mở ra production day.</summary>
     /// <remarks>
-    /// <see cref="ImmutableArray{T}"/> rather than <c>IReadOnlyList</c> — <c>ADR-025</c>. A caller that
-    /// could cast this back to an array could reorder a table whose invariants were checked once, at
-    /// construction, and never again.
+    /// <see cref="ImmutableArray{T}"/> thay vì <c>IReadOnlyList</c> — <c>ADR-025</c>. Một caller có thể
+    /// cast ngược lại thành array sẽ có thể sắp xếp lại một bảng mà các bất biến của nó chỉ được kiểm
+    /// tra một lần, lúc dựng đối tượng, và không bao giờ kiểm tra lại.
     /// </remarks>
     public ImmutableArray<ShiftDefinition> Definitions => _definitions;
 
-    /// <summary>The wall clock reading a production day begins at. 06:00 for NovaVolt.</summary>
+    /// <summary>Wall clock reading mà một production day bắt đầu tại đó. 06:00 với NovaVolt.</summary>
     /// <remarks>
-    /// Read off the first row rather than written down a second time: a site whose opening shift
-    /// starts at 07:00 has a production day starting at 07:00, and nobody should have to remember to
-    /// change a constant to say so.
+    /// Đọc từ dòng đầu tiên thay vì viết ra lần thứ hai: một site có shift mở màn bắt đầu lúc 07:00 sẽ
+    /// có production day bắt đầu lúc 07:00, và không ai phải nhớ đi đổi một hằng số để nói điều đó.
     /// </remarks>
     public TimeOnly DayStart { get; }
 
-    /// <summary>Builds a shift table, refusing one that does not cover the clock exactly once.</summary>
+    /// <summary>Dựng một shift table, từ chối một bảng không phủ đồng hồ đúng một lần.</summary>
     /// <param name="definitions">
-    /// The rows in running order, opening shift first. Any starting point is accepted as long as the
-    /// table is contiguous when walked from the first row.
+    /// Các dòng theo thứ tự chạy, shift mở màn trước tiên. Bất kỳ điểm bắt đầu nào cũng được chấp
+    /// nhận miễn là bảng liên tục khi đi từ dòng đầu tiên.
     /// </param>
     /// <exception cref="ArgumentException">
-    /// The table is empty, names a shift twice, is not contiguous, or does not add up to 24 hours.
+    /// Bảng rỗng, nêu tên một shift hai lần, không liên tục, hoặc không cộng đủ 24 giờ.
     /// </exception>
     public static ShiftSchedule Create(IEnumerable<ShiftDefinition> definitions)
     {
@@ -105,9 +104,9 @@ public sealed class ShiftSchedule
                 nameof(definitions));
         }
 
-        // Walked with a wrap, so the shift that crosses midnight is not a special case here — it is
-        // simply the row whose successor is the first row again. Together with the 24-hour total,
-        // contiguity is what rules out both a gap and an overlap.
+        // Đi qua có wrap, nên shift vượt qua nửa đêm không phải một trường hợp đặc biệt ở đây — nó đơn
+        // giản là dòng có dòng kế tiếp lại chính là dòng đầu tiên. Cùng với tổng 24 giờ, tính liên tục
+        // là cái loại trừ cả khoảng trống lẫn chồng lấn.
         for (var index = 0; index < rows.Length; index++)
         {
             var current = rows[index];
@@ -126,16 +125,16 @@ public sealed class ShiftSchedule
         return new ShiftSchedule(rows);
     }
 
-    /// <summary>The shift covering a wall clock reading.</summary>
-    /// <param name="localTimeOfDay">A reading of the site's clock, with no date and no offset.</param>
+    /// <summary>Shift phủ một wall clock reading.</summary>
+    /// <param name="localTimeOfDay">Một reading của đồng hồ site, không ngày, không offset.</param>
     /// <remarks>
-    /// Total by construction: the table was checked to cover the clock exactly once, so there is
-    /// always an answer and never two.
+    /// Toàn phần nhờ cấu trúc: bảng đã được kiểm tra để phủ đồng hồ đúng một lần, nên luôn có một câu
+    /// trả lời và không bao giờ có hai.
     /// </remarks>
     public ShiftDefinition ShiftAt(TimeOnly localTimeOfDay)
     {
-        // TimeOnly subtraction wraps at midnight and never comes back negative, which is what lets the
-        // shift crossing midnight fall out of the same arithmetic as the other two.
+        // Phép trừ TimeOnly wrap ở nửa đêm và không bao giờ trả về số âm, đây chính là điều cho phép
+        // shift vượt qua nửa đêm rơi vào cùng phép toán như hai shift còn lại.
         var sinceDayStart = localTimeOfDay - DayStart;
         var elapsed = TimeSpan.Zero;
 
@@ -149,15 +148,15 @@ public sealed class ShiftSchedule
             }
         }
 
-        // Unreachable while the construction check holds. Throwing rather than returning the last row
-        // means a future change that breaks the invariant is found here, instead of quietly filing the
-        // small hours under the wrong shift.
+        // Không thể đạt tới trong khi check lúc dựng đối tượng còn giữ đúng. Ném lỗi thay vì trả về
+        // dòng cuối cùng nghĩa là một thay đổi tương lai làm hỏng bất biến sẽ bị phát hiện ở đây, thay
+        // vì âm thầm filing những giờ khuya dưới sai shift.
         throw new InvalidOperationException(
             $"No shift covers {Format(localTimeOfDay)}, which a validated table cannot happen to.");
     }
 
-    /// <summary>The row for one shift.</summary>
-    /// <exception cref="ArgumentOutOfRangeException">The table does not run that shift.</exception>
+    /// <summary>Dòng cho một shift.</summary>
+    /// <exception cref="ArgumentOutOfRangeException">Bảng không chạy shift đó.</exception>
     public ShiftDefinition Definition(Shift shift)
     {
         foreach (var definition in _definitions)
@@ -171,14 +170,14 @@ public sealed class ShiftSchedule
         throw new ArgumentOutOfRangeException(nameof(shift), shift, "This plant does not run that shift.");
     }
 
-    /// <summary>How far into the production day a shift starts.</summary>
-    /// <param name="shift">The shift.</param>
+    /// <summary>Một shift bắt đầu sâu bao xa vào trong production day.</summary>
+    /// <param name="shift">Shift.</param>
     /// <remarks>
-    /// Zero for the opening shift, sixteen hours for shift C. This is the number that turns "shift C of
-    /// production day 25" into a wall clock reading on a calendar date, and it is derived from the
-    /// table rather than assumed to be a multiple of eight hours.
+    /// Bằng không với shift mở màn, mười sáu giờ với shift C. Đây là con số biến "shift C của
+    /// production day 25" thành một wall clock reading trên một ngày lịch, và nó được suy ra từ bảng
+    /// thay vì giả định là bội số của tám giờ.
     /// </remarks>
-    /// <exception cref="ArgumentOutOfRangeException">The table does not run that shift.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Bảng không chạy shift đó.</exception>
     public TimeSpan OffsetIntoDay(Shift shift)
     {
         var elapsed = TimeSpan.Zero;

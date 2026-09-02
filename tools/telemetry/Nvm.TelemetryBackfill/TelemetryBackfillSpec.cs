@@ -3,10 +3,10 @@ using Nvm.Kernel.Identity;
 
 namespace Nvm.TelemetryBackfill;
 
-/// <summary>The physical process interval from which the generator emits readings.</summary>
+/// <summary>Khoảng process vật lý mà generator emit reading từ đó.</summary>
 public sealed record TelemetryBackfillSpec
 {
-    /// <summary>Creates one half-open historical interval.</summary>
+    /// <summary>Tạo một khoảng thời gian lịch sử half-open.</summary>
     public TelemetryBackfillSpec(
         EquipmentPath linePath,
         ImmutableArray<EquipmentPath> channels,
@@ -48,27 +48,27 @@ public sealed record TelemetryBackfillSpec
         RecordedAt = recordedAt.ToUniversalTime();
     }
 
-    /// <summary>The line whose formation model is reused.</summary>
+    /// <summary>Line có formation model được tái sử dụng.</summary>
     public EquipmentPath LinePath { get; }
 
-    /// <summary>Channels in stable factory-model order.</summary>
+    /// <summary>Channel theo thứ tự factory-model ổn định.</summary>
     public ImmutableArray<EquipmentPath> Channels { get; }
 
-    /// <summary>Inclusive process-time boundary.</summary>
+    /// <summary>Ranh giới process-time bao gồm cả điểm đầu.</summary>
     public DateTimeOffset StartAt { get; }
 
-    /// <summary>Exclusive process-time boundary.</summary>
+    /// <summary>Ranh giới process-time không bao gồm điểm cuối.</summary>
     public DateTimeOffset EndAt { get; }
 
-    /// <summary>How far process time advances per sample.</summary>
+    /// <summary>Process time tiến lên bao xa cho mỗi sample.</summary>
     public TimeSpan SamplePeriod { get; }
 
-    /// <summary>Share of channels whose front-panel clock is wrong.</summary>
+    /// <summary>Tỷ lệ channel có đồng hồ front-panel bị sai.</summary>
     public double DriftedDeviceRate { get; }
 
-    /// <summary>Absolute clock error applied to those channels.</summary>
+    /// <summary>Sai số đồng hồ tuyệt đối áp dụng cho các channel đó.</summary>
     public TimeSpan ClockDrift { get; }
 
-    /// <summary>When this backfill run is recorded.</summary>
+    /// <summary>Thời điểm lần chạy backfill này được ghi nhận.</summary>
     public DateTimeOffset RecordedAt { get; }
 }

@@ -4,7 +4,7 @@ using Nvm.Sparkplug;
 
 namespace Nvm.TelemetryBackfill;
 
-/// <summary>One simulator reading shaped exactly like the two ingestion tables expect.</summary>
+/// <summary>Một reading của simulator có hình dạng khớp chính xác với hai ingestion table mong đợi.</summary>
 public sealed record BackfillRow(
     Guid SourceEventId,
     string SiteId,
@@ -23,7 +23,7 @@ public sealed record BackfillRow(
     bool? BooleanValue,
     string? TextValue)
 {
-    /// <summary>Maps a decoded reading without deriving a second identity.</summary>
+    /// <summary>Map một reading đã decode mà không suy ra một identity thứ hai.</summary>
     public static BackfillRow From(
         EquipmentPath equipmentPath,
         DeviceReading reading,

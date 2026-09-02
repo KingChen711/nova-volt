@@ -1,25 +1,25 @@
 namespace Nvm.Time;
 
-/// <summary>The three shifts a production day is made of.</summary>
+/// <summary>Ba shift tạo nên một production day.</summary>
 /// <remarks>
 /// <para>
-/// The letters are the plant's own (docs/scope.md §2.3), not an invention: a supervisor says "ca C"
-/// and an ERP report says <c>C</c>, so the enum spells it the way the shop floor does.
+/// Các chữ cái là của chính plant (docs/scope.md §2.3), không phải một sự bịa đặt: một supervisor nói
+/// "ca C" và một báo cáo ERP viết <c>C</c>, nên enum này viết đúng theo cách shop floor viết.
 /// </para>
 /// <para>
-/// <see cref="C"/> is the only one that crosses midnight, and every awkward case in this assembly
-/// comes from that single fact — a night shift belongs to the day it <b>started</b> on, which is the
-/// day before the calendar date most of its hours fall in.
+/// <see cref="C"/> là shift duy nhất vượt qua nửa đêm, và mọi trường hợp trớ trêu trong assembly này
+/// đều đến từ đúng một sự thật đó — một night shift thuộc về ngày nó <b>bắt đầu</b>, là ngày trước
+/// ngày lịch mà phần lớn số giờ của nó rơi vào.
 /// </para>
 /// </remarks>
 public enum Shift
 {
-    /// <summary>Morning shift, 06:00 to 14:00 local.</summary>
+    /// <summary>Ca sáng, 06:00 đến 14:00 local.</summary>
     A = 1,
 
-    /// <summary>Afternoon shift, 14:00 to 22:00 local.</summary>
+    /// <summary>Ca chiều, 14:00 đến 22:00 local.</summary>
     B = 2,
 
-    /// <summary>Night shift, 22:00 to 06:00 local the next calendar day.</summary>
+    /// <summary>Ca đêm, 22:00 đến 06:00 local ngày lịch kế tiếp.</summary>
     C = 3,
 }

@@ -4,31 +4,32 @@ using Microsoft.CodeAnalysis.Diagnostics;
 
 namespace Nvm.Analyzers;
 
-/// <summary>Refuses <c>DateTime</c> anywhere in a wire contract. AGENTS.md K2.</summary>
+/// <summary>Từ chối <c>DateTime</c> ở bất kỳ đâu trong một wire contract. AGENTS.md K2.</summary>
 /// <remarks>
 /// <para>
-/// <b>What goes wrong, and where.</b> <c>DateTime</c> carries a <c>Kind</c> flag, not an offset, and
-/// the flag does not survive JSON: serialize a local <c>DateTime</c> and read it back and you get the
-/// same wall-clock reading with no way to know what it meant. Site DE1 is Leipzig and observes
-/// daylight saving, so one hour every autumn happens twice. A traceability record written in that
-/// hour is ambiguous forever, and the event store is append-only — there is no correcting it later.
+/// <b>Cái gì sai, và sai ở đâu.</b> <c>DateTime</c> mang theo một cờ <c>Kind</c>, không phải một
+/// offset, và cờ đó không sống sót qua JSON: serialize một <c>DateTime</c> kiểu local rồi đọc lại và
+/// bạn nhận được đúng giá trị wall-clock đó mà không có cách nào biết nó từng có nghĩa gì. Site DE1 là
+/// Leipzig và quan sát daylight saving, nên một giờ mỗi mùa thu xảy ra hai lần. Một traceability
+/// record ghi trong giờ đó sẽ mập mờ mãi mãi, và event store là append-only — không có cách nào sửa
+/// nó sau này.
 /// </para>
 /// <para>
-/// The failure is seasonal, which is why it needs a compiler and not a review. Everything works for
-/// months, on every machine, in every test, and then one Sunday morning in October the ordering of
-/// two events flips.
+/// Lỗi này mang tính mùa vụ, đó là lý do nó cần một compiler chứ không phải một review. Mọi thứ hoạt
+/// động tốt hàng tháng trời, trên mọi máy, trong mọi test, rồi một sáng Chủ Nhật tháng Mười thứ tự
+/// của hai event bỗng đảo ngược.
 /// </para>
 /// <para>
-/// <b>Why the whole contract surface, not just events.</b> A record in <c>Nvm.Contracts</c> that is
-/// not an event today becomes the payload of one tomorrow, and by then its <c>DateTime</c> is already
-/// serialized into rows nobody may rewrite. See <see cref="ContractSymbols.IsWireContract"/> for the
-/// three ways a type qualifies.
+/// <b>Vì sao là toàn bộ contract surface, không chỉ event.</b> Một record trong <c>Nvm.Contracts</c>
+/// hôm nay chưa phải event sẽ trở thành payload của một event vào ngày mai, và đến lúc đó
+/// <c>DateTime</c> của nó đã được serialize vào các row mà không ai được phép ghi lại. Xem
+/// <see cref="ContractSymbols.IsWireContract"/> để biết ba cách một type đủ điều kiện.
 /// </para>
 /// </remarks>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class Nvm002DateTimeInContractAnalyzer : DiagnosticAnalyzer
 {
-    /// <summary>The diagnostic id, as it appears in build output and in .editorconfig.</summary>
+    /// <summary>Id của diagnostic, đúng như nó xuất hiện trong build output và trong .editorconfig.</summary>
     public const string DiagnosticId = "NVM002";
 
     private const string Category = "Nvm.Contracts";
@@ -93,11 +94,11 @@ public sealed class Nvm002DateTimeInContractAnalyzer : DiagnosticAnalyzer
         {
             var memberType = member switch
             {
-                // Positional record parameters arrive here as properties, which is why constructor
-                // parameters are not inspected separately — doing both reports the same field twice.
+                // Positional record parameter đến đây dưới dạng property, đó là lý do constructor
+                // parameter không được kiểm tra riêng — làm cả hai sẽ báo cáo cùng một field hai lần.
                 IPropertySymbol property => property.Type,
 
-                // Backing fields are implicitly declared and would double every property above.
+                // Backing field được khai báo ngầm định và sẽ nhân đôi mọi property ở trên.
                 IFieldSymbol { IsImplicitlyDeclared: false } field => field.Type,
                 _ => null,
             };
@@ -116,13 +117,13 @@ public sealed class Nvm002DateTimeInContractAnalyzer : DiagnosticAnalyzer
         }
     }
 
-    /// <summary>Whether <c>DateTime</c> appears anywhere inside a type, however deeply nested.</summary>
+    /// <summary><c>DateTime</c> có xuất hiện ở đâu đó bên trong một type hay không, dù lồng sâu đến đâu.</summary>
     /// <remarks>
-    /// The recursion is the point. <c>List&lt;DateTime&gt;</c>, <c>DateTime?</c> (which is
-    /// <c>Nullable&lt;DateTime&gt;</c>), <c>DateTime[]</c> and
-    /// <c>Dictionary&lt;string, List&lt;DateTime&gt;&gt;</c> all serialize the same broken value as a
-    /// bare field does. A rule that only compares the outermost type is the version of this analyzer
-    /// that everybody writes first, and it passes every test written against a plain property.
+    /// Phép đệ quy chính là điểm mấu chốt. <c>List&lt;DateTime&gt;</c>, <c>DateTime?</c> (tức là
+    /// <c>Nullable&lt;DateTime&gt;</c>), <c>DateTime[]</c> và
+    /// <c>Dictionary&lt;string, List&lt;DateTime&gt;&gt;</c> đều serialize ra cùng một giá trị hỏng y
+    /// hệt như một field trần. Một rule chỉ so sánh type ngoài cùng chính là phiên bản analyzer này mà
+    /// ai cũng viết ra đầu tiên, và nó pass mọi test viết cho một property đơn giản.
     /// </remarks>
     private static bool Mentions(ITypeSymbol type, INamedTypeSymbol dateTime)
     {

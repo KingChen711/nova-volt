@@ -2,7 +2,7 @@ using System.Text.Json.Nodes;
 
 namespace Nvm.ContractTests;
 
-/// <summary>Reads the golden files that were copied next to the test assembly.</summary>
+/// <summary>Đọc các golden file đã được copy ra cạnh test assembly.</summary>
 internal static class GoldenFile
 {
     private const string Directory = "golden";
@@ -11,9 +11,9 @@ internal static class GoldenFile
     {
         var fullPath = Path.Combine(AppContext.BaseDirectory, Directory, relativePath);
 
-        // A missing golden file must not look like a passing test. Without this the read would throw
-        // a FileNotFoundException whose message names a path under artifacts/, and the first guess is
-        // always "the copy step is broken" rather than "someone deleted the contract".
+        // Một golden file bị thiếu không được phép trông giống một test đang pass. Không có cái này,
+        // việc đọc sẽ ném ra một FileNotFoundException với message nêu tên một đường dẫn dưới
+        // artifacts/, và phỏng đoán đầu tiên luôn là "bước copy bị hỏng" thay vì "ai đó đã xóa contract".
         if (!File.Exists(fullPath))
         {
             throw new FileNotFoundException(
@@ -24,11 +24,11 @@ internal static class GoldenFile
         return File.ReadAllText(fullPath);
     }
 
-    /// <summary>Reads a golden file as a JSON tree, for comparisons that ignore member order.</summary>
+    /// <summary>Đọc một golden file dưới dạng JSON tree, cho các so sánh bỏ qua thứ tự member.</summary>
     /// <remarks>
-    /// JSON object members are unordered by definition, so comparing raw text would turn a harmless
-    /// reordering into a failing test and train everyone to re-record the file. Comparing trees fails
-    /// only when the shape or a value actually changed.
+    /// Các member của JSON object vốn không có thứ tự theo định nghĩa, nên so sánh raw text sẽ biến
+    /// một lần sắp xếp lại vô hại thành một test fail và dạy mọi người ghi lại file. So sánh tree chỉ
+    /// fail khi hình dạng hoặc một giá trị thực sự thay đổi.
     /// </remarks>
     internal static JsonNode ReadNode(string relativePath) =>
         JsonNode.Parse(ReadText(relativePath))

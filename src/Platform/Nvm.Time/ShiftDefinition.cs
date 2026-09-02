@@ -1,24 +1,24 @@
 namespace Nvm.Time;
 
-/// <summary>One row of a plant's shift table: when a shift starts and how long it nominally runs.</summary>
-/// <param name="Shift">Which shift this row describes.</param>
-/// <param name="LocalStart">The wall clock reading the shift starts at, in the site's own time.</param>
+/// <summary>Một dòng trong shift table của một plant: một shift bắt đầu khi nào và kéo dài bao lâu theo nominal.</summary>
+/// <param name="Shift">Dòng này mô tả shift nào.</param>
+/// <param name="LocalStart">Wall clock reading mà shift bắt đầu, theo giờ riêng của site.</param>
 /// <param name="NominalLength">
-/// How long the shift lasts <b>on the clock</b> — eight hours for every shift here.
+/// Shift kéo dài bao lâu <b>trên đồng hồ</b> — tám giờ cho mỗi shift ở đây.
 /// </param>
 /// <remarks>
 /// <para>
-/// <b>The word "nominal" is load-bearing.</b> This is a wall-clock length, not an elapsed one. On the
-/// two days a year DE1 changes its clocks, shift C runs for a nominal eight hours and an actual seven
-/// or nine, and the difference is not an error in either number: the shift really does start at 22:00
-/// and really does end at 06:00, and the clock really did skip an hour in between. Anything that
-/// needs the elapsed length must ask the production calendar for the shift's boundaries and
-/// subtract them, never multiply this by anything.
+/// <b>Từ "nominal" mang ý nghĩa cốt lõi.</b> Đây là độ dài theo wall-clock, không phải độ dài trôi
+/// qua thực tế. Vào hai ngày mỗi năm DE1 đổi giờ, shift C chạy nominal tám giờ và thực tế bảy hoặc
+/// chín giờ, và sự khác biệt đó không phải một lỗi ở con số nào cả: shift thật sự bắt đầu lúc 22:00
+/// và thật sự kết thúc lúc 06:00, và đồng hồ thật sự đã bỏ qua một giờ ở giữa. Bất cứ cái gì cần độ
+/// dài trôi qua thực tế phải hỏi production calendar về boundary của shift rồi trừ đi, không bao giờ
+/// nhân giá trị này với bất kỳ cái gì.
 /// </para>
 /// <para>
-/// <see cref="TimeOnly"/> rather than <see cref="DateTimeOffset"/> on purpose: a shift table is a
-/// statement about clock readings that repeats every day, and it has no offset because the offset is
-/// a property of the site and the date, not of the table.
+/// <see cref="TimeOnly"/> thay vì <see cref="DateTimeOffset"/> là có chủ đích: một shift table là một
+/// phát biểu về các clock reading lặp lại mỗi ngày, và nó không có offset vì offset là một thuộc tính
+/// của site và của ngày, không phải của bảng.
 /// </para>
 /// </remarks>
 public readonly record struct ShiftDefinition(Shift Shift, TimeOnly LocalStart, TimeSpan NominalLength);

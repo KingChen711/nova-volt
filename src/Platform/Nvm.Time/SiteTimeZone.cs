@@ -1,25 +1,26 @@
 namespace Nvm.Time;
 
-/// <summary>Resolves the IANA zone ids the factory model carries.</summary>
+/// <summary>Resolve các IANA zone id mà factory model mang theo.</summary>
 /// <remarks>
 /// <para>
-/// A wrapper over one framework call, and it exists for the message. <c>Asia/Ho_Chi_Minh</c> and
-/// <c>Europe/Berlin</c> only resolve because <c>ADR-020</c> refused
-/// <c>InvariantGlobalization</c>: with that flag on, .NET carries no zone database at all and
-/// <see cref="TimeZoneInfo.FindSystemTimeZoneById"/> throws for every IANA id there is.
+/// Một wrapper trên một lời gọi framework, và nó tồn tại vì thông điệp báo lỗi. <c>Asia/Ho_Chi_Minh</c>
+/// và <c>Europe/Berlin</c> chỉ resolve được vì <c>ADR-020</c> đã từ chối <c>InvariantGlobalization</c>:
+/// bật cờ đó lên, .NET hoàn toàn không mang zone database nào cả và
+/// <see cref="TimeZoneInfo.FindSystemTimeZoneById"/> ném lỗi cho mọi IANA id có tồn tại.
 /// </para>
 /// <para>
-/// The flag is exactly the kind of thing someone turns on later to shave a container image, and the
-/// failure it causes is a <c>TimeZoneNotFoundException</c> deep in a shift calculation with nothing in
-/// it to suggest a build setting. So the message says it here, once, where it will actually be read.
+/// Cờ này đúng là kiểu thứ ai đó sẽ bật lên sau này để giảm kích thước container image, và lỗi nó gây
+/// ra là một <c>TimeZoneNotFoundException</c> sâu bên trong một phép tính shift mà không có gì trong
+/// đó gợi ý tới một build setting. Nên thông điệp nói rõ điều này ở đây, một lần, nơi nó thực sự sẽ
+/// được đọc.
 /// </para>
 /// </remarks>
 public static class SiteTimeZone
 {
-    /// <summary>Resolves a zone by its IANA id.</summary>
-    /// <param name="ianaId">For example <c>Europe/Berlin</c>.</param>
+    /// <summary>Resolve một zone theo IANA id của nó.</summary>
+    /// <param name="ianaId">Ví dụ <c>Europe/Berlin</c>.</param>
     /// <exception cref="TimeZoneNotFoundException">
-    /// The runtime has no such zone — most often because globalization data was left out of the build.
+    /// Runtime không có zone như vậy — thường vì globalization data đã bị bỏ ra khỏi build.
     /// </exception>
     public static TimeZoneInfo Of(string ianaId)
     {

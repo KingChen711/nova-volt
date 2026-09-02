@@ -1,77 +1,77 @@
 namespace Nvm.Contracts.Events;
 
 /// <summary>
-/// A fact that already happened on the shop floor and that the system has accepted as true.
+/// Một sự thật đã xảy ra trên shop floor và đã được hệ thống chấp nhận là đúng.
 /// </summary>
 /// <remarks>
 /// <para>
-/// Domain events are named in the past tense and in the language of the plant, not of the code:
-/// <c>ProductionUnitSerialized</c>, <c>UnitQuarantined</c>, <c>FormationRunCompleted</c>. The full
-/// catalogue lives in docs/scope.md §6.5.
+/// Domain event được đặt tên ở thì quá khứ và bằng ngôn ngữ của plant, không phải ngôn ngữ của code:
+/// <c>ProductionUnitSerialized</c>, <c>UnitQuarantined</c>, <c>FormationRunCompleted</c>. Danh mục
+/// đầy đủ nằm ở docs/scope.md §6.5.
 /// </para>
 /// <para>
-/// A domain event is not the same thing as telemetry. If it changes the business state of a
-/// production unit it is an event and belongs in the event store; if it is continuous observation
-/// — a dryer temperature every 100 ms — it is telemetry and belongs in TimescaleDB. The boundary
-/// is docs/scope.md §5.5, and getting it wrong is how event stores turn into time-series databases
-/// that nobody can replay.
+/// Domain event không phải cùng một thứ với telemetry. Nếu nó thay đổi trạng thái nghiệp vụ của một
+/// production unit thì đó là một event và thuộc về event store; nếu nó là quan sát liên tục — nhiệt
+/// độ dryer mỗi 100 ms — thì đó là telemetry và thuộc về TimescaleDB. Ranh giới nằm ở
+/// docs/scope.md §5.5, và làm sai ranh giới đó là cách event store biến thành một time-series
+/// database mà không ai replay lại được.
 /// </para>
 /// <para>
-/// Implementations are records. They carry no behaviour, no references to entities, and nothing
-/// that cannot survive a round trip through JSON: an event read back in 2036 has only its own
-/// fields to work with.
+/// Các implementation là record. Chúng không mang behaviour, không tham chiếu tới entity, và không
+/// mang gì mà không sống sót được qua một vòng JSON: một event đọc lại vào năm 2036 chỉ có các field
+/// của chính nó để làm việc.
 /// </para>
 /// <para>
-/// There is deliberately no AggregateId here. Aggregates arrive in M5, and a field that nobody can
-/// fill correctly yet is a field that gets filled carelessly. It will be added by the layer that
-/// owns aggregates, not by this marker.
+/// Ở đây cố tình không có AggregateId. Aggregate sẽ đến ở M5, và một field mà chưa ai điền đúng được
+/// là một field sẽ bị điền một cách cẩu thả. Nó sẽ được thêm bởi tầng sở hữu aggregate, không phải bởi
+/// marker này.
 /// </para>
 /// </remarks>
 public interface IDomainEvent
 {
     /// <summary>
-    /// Identity of this one occurrence, used to recognise it when it arrives twice.
+    /// Định danh của đúng một lần xảy ra này, dùng để nhận ra nó khi nó đến hai lần.
     /// </summary>
     /// <remarks>
-    /// The bus is at-least-once, so the same event will be delivered more than once and every
-    /// handler has to cope (AGENTS.md K7). This value becomes the CloudEvents <c>id</c> attribute
-    /// on the wire, and for an event produced by a command it must equal that command's
-    /// idempotency key — the deterministic UUIDv5 built from the natural key in
-    /// docs/scope.md §7.2. When the two drift apart, deduplication at ingestion and deduplication
-    /// at the command handler start keying on different values and neither one works.
+    /// Bus là at-least-once, nên cùng một event sẽ được giao nhiều hơn một lần và mọi handler phải xử
+    /// lý được điều đó (AGENTS.md K7). Giá trị này trở thành attribute <c>id</c> của CloudEvents trên
+    /// wire, và với một event do một command sinh ra, nó phải bằng idempotency key của command đó —
+    /// UUIDv5 tất định được dựng từ natural key trong docs/scope.md §7.2. Khi hai giá trị này trôi
+    /// lệch nhau, việc khử trùng lặp ở ingestion và việc khử trùng lặp ở command handler bắt đầu key
+    /// theo hai giá trị khác nhau và không cái nào còn hoạt động đúng.
     /// </remarks>
     Guid EventId { get; }
 
     /// <summary>
-    /// When the system recorded this fact, always with an explicit UTC offset.
+    /// Khi hệ thống ghi nhận sự thật này, luôn kèm UTC offset tường minh.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// This is <c>recorded_at</c> in the vocabulary of docs/scope.md §7.3 — the most trustworthy of
-    /// the three clocks, and the one audit and retention are measured against.
+    /// Đây là <c>recorded_at</c> trong từ vựng của docs/scope.md §7.3 — đáng tin cậy nhất trong ba
+    /// đồng hồ, và là cái mà audit và retention được đo theo.
     /// </para>
     /// <para>
-    /// Equipment clocks do not belong here. A PLC can be hours out and a gateway timestamp is only
-    /// as good as its NTP; both are carried as ordinary fields inside the events that have them, so
-    /// that they can disagree in the open instead of quietly overwriting each other.
+    /// Đồng hồ của thiết bị không thuộc về đây. Một PLC có thể lệch hàng giờ và một gateway timestamp
+    /// chỉ tốt bằng NTP của nó; cả hai được mang như các field bình thường bên trong những event có
+    /// chúng, để chúng có thể bất đồng một cách công khai thay vì âm thầm ghi đè lên nhau.
     /// </para>
     /// <para>
-    /// The type is <see cref="DateTimeOffset"/> and never <see cref="DateTime"/> (AGENTS.md K2):
-    /// site DE1 observes daylight saving time, so a wall-clock reading without an offset is
-    /// ambiguous for one hour every autumn. Analyzer NVM002 enforces this at build time.
+    /// Type là <see cref="DateTimeOffset"/> chứ không bao giờ là <see cref="DateTime"/> (AGENTS.md
+    /// K2): site DE1 áp dụng daylight saving time, nên một wall-clock reading không có offset sẽ mập
+    /// mờ trong một giờ mỗi mùa thu. Analyzer NVM002 ép buộc điều này ngay lúc build.
     /// </para>
     /// </remarks>
     DateTimeOffset OccurredAt { get; }
 
     /// <summary>
-    /// The plant this fact belongs to, for example <c>NV1</c> or <c>DE1</c>.
+    /// Plant mà sự thật này thuộc về, ví dụ <c>NV1</c> hoặc <c>DE1</c>.
     /// </summary>
     /// <remarks>
-    /// Present on every event without exception (AGENTS.md K3). It is also the first segment of the
-    /// routing key, <c>nvm.{site}.{context}.{event}.v{n}</c>, which is what lets one service
-    /// subscribe to a single plant. Authorization filters on it server-side; a client asking nicely
-    /// for its own site is not a control, and a cross-site leak is a security defect rather than a
-    /// display bug (docs/scope.md §5.6).
+    /// Có mặt trên mọi event không ngoại lệ (AGENTS.md K3). Đây cũng là segment đầu tiên của routing
+    /// key, <c>nvm.{site}.{context}.{event}.v{n}</c>, chính là cái cho phép một service subscribe vào
+    /// đúng một plant. Authorization lọc theo nó ở phía server; một client tự khai báo site của mình
+    /// không phải là một control, và một rò rỉ chéo site là một lỗi bảo mật chứ không phải một lỗi
+    /// hiển thị (docs/scope.md §5.6).
     /// </remarks>
     string SiteId { get; }
 }

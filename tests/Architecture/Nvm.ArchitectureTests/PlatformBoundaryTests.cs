@@ -3,16 +3,16 @@ using NetArchTest.Rules;
 
 namespace Nvm.ArchitectureTests;
 
-/// <summary>A1, A2 — what the Platform layer is allowed to know about.</summary>
+/// <summary>A1, A2 — những gì tầng Platform được phép biết đến.</summary>
 /// <remarks>
-/// Every rule here comes with a <b>positive control</b>: the same check applied to an assembly that
-/// is supposed to fail it. Without one, a rule that examines the wrong thing — an empty type list, a
-/// misspelled namespace prefix — reports "no violations found" and stays green forever. That is the
-/// architecture-test version of the silent analyzer in C15.1.
+/// Mọi rule ở đây đều đi kèm một <b>positive control</b>: cùng một kiểm tra áp dụng lên một assembly
+/// lẽ ra phải fail nó. Không có control, một rule kiểm tra sai thứ — một danh sách type rỗng, một
+/// namespace prefix viết sai — sẽ báo "không tìm thấy vi phạm" và mãi mãi xanh. Đó chính là phiên bản
+/// architecture-test của cái analyzer im lặng ở C15.1.
 /// </remarks>
 public sealed class PlatformBoundaryTests
 {
-    /// <summary>Infrastructure that domain code may not touch. AGENTS.md K9.</summary>
+    /// <summary>Infrastructure mà domain code không được phép chạm tới. AGENTS.md K9.</summary>
     private static readonly string[] Infrastructure =
     [
         "MassTransit",
@@ -24,9 +24,9 @@ public sealed class PlatformBoundaryTests
     [Fact]
     public void A1_Contracts_ReferencesNothingButTheBcl()
     {
-        // Nvm.Contracts is the bottom of the dependency tree, and it is the assembly a Mendix
-        // developer or an external consumer would be handed. One package reference here becomes a
-        // package reference for everybody downstream, forever.
+        // Nvm.Contracts là đáy của cây dependency, và nó là assembly mà một Mendix developer hay một
+        // consumer bên ngoài sẽ được trao. Một package reference ở đây trở thành package reference
+        // cho tất cả mọi thứ downstream, mãi mãi.
         var outsiders = NvmAssemblies.Contracts
             .GetReferencedAssemblies()
             .Select(reference => reference.Name ?? string.Empty)
@@ -41,8 +41,8 @@ public sealed class PlatformBoundaryTests
     [Fact]
     public void A1_Control_TheBclFilterCanActuallySeeANonBclReference()
     {
-        // If IsBcl said "yes" to everything, or GetReferencedAssemblies came back empty, A1 above
-        // would pass while checking nothing at all.
+        // Nếu IsBcl trả lời "có" cho mọi thứ, hoặc GetReferencedAssemblies trả về rỗng, A1 ở trên sẽ
+        // pass trong khi không kiểm tra gì cả.
         NvmAssemblies.Bus
             .GetReferencedAssemblies()
             .Select(reference => reference.Name ?? string.Empty)
@@ -53,9 +53,9 @@ public sealed class PlatformBoundaryTests
     [Fact]
     public void A2_Kernel_DoesNotKnowAboutTransportOrDatabases()
     {
-        // The command pipeline has to be testable without a broker or a database. It does reference
-        // Microsoft.Extensions.DependencyInjection.Abstractions, and that is not a violation: K9
-        // forbids infrastructure, not the ability to register a handler.
+        // Command pipeline phải test được mà không cần broker hay database. Nó có reference
+        // Microsoft.Extensions.DependencyInjection.Abstractions, và đó không phải một vi phạm: K9
+        // cấm infrastructure, không cấm khả năng đăng ký một handler.
         var result = Types.InAssembly(NvmAssemblies.Kernel)
             .ShouldNot()
             .HaveDependencyOnAny(Infrastructure)
@@ -68,8 +68,8 @@ public sealed class PlatformBoundaryTests
     [Fact]
     public void A2_Control_TheDependencyCheckCanActuallyFindMassTransit()
     {
-        // Nvm.Bus depends on MassTransit by design. If this passes, HaveDependencyOnAny is not
-        // looking where it claims to look, and A2 above proves nothing.
+        // Nvm.Bus phụ thuộc vào MassTransit theo thiết kế. Nếu cái này pass, HaveDependencyOnAny
+        // không nhìn vào nơi nó tuyên bố đang nhìn, và A2 ở trên chẳng chứng minh được gì.
         Types.InAssembly(NvmAssemblies.Bus)
             .ShouldNot()
             .HaveDependencyOnAny("MassTransit")
@@ -80,9 +80,9 @@ public sealed class PlatformBoundaryTests
     [Fact]
     public void A8_Time_ReferencesNothingButTheBcl()
     {
-        // The production calendar is a domain function, not a query. One package reference here — an
-        // ORM, a client, a serializer — and a DST test would need infrastructure to run, which is
-        // exactly how the two days a year that matter stop being tested.
+        // Production calendar là một hàm domain, không phải một query. Một package reference ở đây —
+        // một ORM, một client, một serializer — và một DST test sẽ cần infrastructure để chạy, đó
+        // chính xác là cách hai ngày trong năm thực sự quan trọng ngừng được kiểm thử.
         var outsiders = NvmAssemblies.Time
             .GetReferencedAssemblies()
             .Select(reference => reference.Name ?? string.Empty)
@@ -97,28 +97,28 @@ public sealed class PlatformBoundaryTests
     [Fact]
     public void A8_Time_DoesNotReachBackIntoAFunctionalBlock()
     {
-        // The dependency runs one way: Nvm.FactoryModel implements ISiteCalendarDirectory because it
-        // owns the plant tree. Reversing it would put a bounded context underneath a Platform layer
-        // and make the calendar untestable without a seed file.
+        // Dependency chỉ chạy theo một chiều: Nvm.FactoryModel implement ISiteCalendarDirectory vì nó
+        // sở hữu cây plant. Đảo ngược chiều này sẽ đặt một bounded context xuống dưới một tầng
+        // Platform và khiến calendar không thể test được nếu thiếu seed file.
         NvmAssemblies.NvmReferencesOf(NvmAssemblies.Time).ShouldBeEmpty();
     }
 
     [Fact]
     public void A8_Control_TheFactoryModelReallyDoesAnswerTheCalendarQuestion()
     {
-        // Guards the case where A8 passes because the edge does not exist at all: if nothing
-        // implemented ISiteCalendarDirectory, "Nvm.Time references no block" would be true and
-        // meaningless. The adapter has to be there, in the block, pointing this way.
+        // Bảo vệ trường hợp A8 pass vì cạnh nối đó không hề tồn tại: nếu không gì implement
+        // ISiteCalendarDirectory, "Nvm.Time không reference block nào" sẽ đúng nhưng vô nghĩa. Adapter
+        // phải ở đó, trong block, trỏ theo chiều này.
         NvmAssemblies.NvmReferencesOf(NvmAssemblies.FactoryModel).ShouldContain("Nvm.Time");
     }
 
     [Fact]
     public void A7_TheGeneratedSparkplugTypesDoNotLeaveNvmSparkplug()
     {
-        // ADR-026 vendors sparkplug_b.proto and generates C# from it, which means Org.Eclipse.Tahu.*
-        // is a shape this repository does not control. One of those types in a public signature makes
-        // every caller depend on a file we are not allowed to edit, and the day the specification
-        // moves the change arrives everywhere at once.
+        // ADR-026 vendor hóa sparkplug_b.proto và sinh C# từ đó, nghĩa là Org.Eclipse.Tahu.* là một
+        // hình dạng mà repository này không kiểm soát. Một trong các type đó xuất hiện trong một
+        // public signature khiến mọi caller phụ thuộc vào một file mà chúng ta không được phép sửa,
+        // và ngày spec thay đổi thì thay đổi đó ập đến khắp nơi cùng một lúc.
         var leaks = NvmAssemblies.Sparkplug
             .GetExportedTypes()
             .Where(type => string.Equals(type.Namespace, "Nvm.Sparkplug", StringComparison.Ordinal))
@@ -133,8 +133,8 @@ public sealed class PlatformBoundaryTests
     [Fact]
     public void A7_Control_TheGeneratedTypeWalkCanActuallyFindOne()
     {
-        // Applied to a generated type, the same walk must come back full. Without this, a misspelled
-        // namespace in either the filter or the predicate reports "no leaks" and stays green.
+        // Áp dụng lên một generated type, cùng một lượt duyệt phải trả về đầy đủ. Không có cái này,
+        // một namespace viết sai trong filter hoặc predicate sẽ báo "không rò rỉ" và mãi mãi xanh.
         var generated = NvmAssemblies.Sparkplug.GetType("Org.Eclipse.Tahu.Protobuf.Payload", throwOnError: true)!;
 
         MembersExposingGeneratedTypes(generated).ShouldNotBeEmpty();
@@ -143,8 +143,9 @@ public sealed class PlatformBoundaryTests
     [Fact]
     public void A7_OnlyNvmSparkplugKnowsThereIsProtobufAtAll()
     {
-        // The reference-level half. A6 stops a Functional Block choosing its own transport; this stops
-        // one choosing its own device codec — C08 and C12 consume readings, not payloads.
+        // Nửa còn lại ở mức reference. A6 ngăn một Functional Block tự chọn transport của riêng nó;
+        // cái này ngăn nó tự chọn device codec của riêng nó — C08 và C12 tiêu thụ reading, không phải
+        // payload.
         foreach (var assembly in new[]
         {
             NvmAssemblies.Contracts,
@@ -158,11 +159,11 @@ public sealed class PlatformBoundaryTests
                 $"{assembly.GetName().Name} references Google.Protobuf; decoding belongs to Nvm.Sparkplug");
         }
 
-        // Doubles as the control: the one assembly that is supposed to reference it, does.
+        // Kiêm luôn vai trò control: assembly duy nhất lẽ ra phải reference nó, thì có reference thật.
         NvmAssemblies.NamesReferencedBy(NvmAssemblies.Sparkplug).ShouldContain("Google.Protobuf");
     }
 
-    /// <summary>Names the public members of a type whose signature mentions a generated type.</summary>
+    /// <summary>Nêu tên các public member của một type mà signature của nó nhắc tới một generated type.</summary>
     private static IEnumerable<string> MembersExposingGeneratedTypes(Type type)
     {
         const BindingFlags Public = BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static;
@@ -191,11 +192,11 @@ public sealed class PlatformBoundaryTests
         }
     }
 
-    /// <summary>Whether a type comes from the vendored schema, however deeply nested.</summary>
+    /// <summary>Một type có đến từ vendored schema hay không, dù lồng sâu đến đâu.</summary>
     /// <remarks>
-    /// The recursion matters more than the direct case: <c>MessageParser&lt;Payload&gt;</c> lives in
-    /// <c>Google.Protobuf</c> and would pass a check that only looked at the outermost namespace,
-    /// while handing the caller a <c>Payload</c> all the same.
+    /// Phép đệ quy quan trọng hơn trường hợp trực tiếp: <c>MessageParser&lt;Payload&gt;</c> sống trong
+    /// <c>Google.Protobuf</c> và sẽ pass một kiểm tra chỉ nhìn vào namespace ngoài cùng, trong khi vẫn
+    /// trao cho caller một <c>Payload</c> y như vậy.
     /// </remarks>
     private static bool IsGenerated(Type type) =>
         (type.Namespace?.StartsWith("Org.Eclipse.Tahu", StringComparison.Ordinal) ?? false)

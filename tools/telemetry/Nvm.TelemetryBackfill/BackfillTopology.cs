@@ -5,10 +5,10 @@ using Nvm.Simulator;
 
 namespace Nvm.TelemetryBackfill;
 
-/// <summary>Selects channels from the same factory-model catalogue the online simulator uses.</summary>
+/// <summary>Chọn channel từ cùng factory-model catalogue mà online simulator sử dụng.</summary>
 public static class BackfillTopology
 {
-    /// <summary>Loads the latest revision and takes the requested channels in stable path order.</summary>
+    /// <summary>Load revision mới nhất và lấy các channel được yêu cầu theo thứ tự path ổn định.</summary>
     public static ImmutableArray<EquipmentPath> Load(
         string seedDirectory,
         EquipmentPath linePath,

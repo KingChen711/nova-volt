@@ -8,11 +8,11 @@ using Nvm.Time;
 
 namespace Nvm.ArchitectureTests;
 
-/// <summary>The assemblies these rules are about, reached through a type rather than by name.</summary>
+/// <summary>Các assembly mà những rule này nói đến, tiếp cận qua một type thay vì bằng tên.</summary>
 /// <remarks>
-/// <c>typeof(X).Assembly</c> rather than <c>Assembly.Load("Nvm.Kernel")</c>: a typo in a string
-/// produces a rule that throws or, worse, silently examines nothing. A typo in a type name does not
-/// compile.
+/// <c>typeof(X).Assembly</c> thay vì <c>Assembly.Load("Nvm.Kernel")</c>: một lỗi đánh máy trong một
+/// chuỗi tạo ra một rule ném exception hoặc, tệ hơn, âm thầm không kiểm tra gì cả. Một lỗi đánh máy
+/// trong tên type thì không compile được.
 /// </remarks>
 internal static class NvmAssemblies
 {
@@ -28,34 +28,34 @@ internal static class NvmAssemblies
 
     internal static Assembly Time => typeof(IProductionCalendar).Assembly;
 
-    /// <summary>Names an assembly is allowed to reference while still counting as "BCL only".</summary>
+    /// <summary>Những tên một assembly được phép reference mà vẫn tính là "chỉ BCL".</summary>
     internal static bool IsBcl(string name) =>
         name is "netstandard" or "mscorlib" or "System"
         || name.StartsWith("System.", StringComparison.Ordinal);
 
-    /// <summary>Every assembly name a given assembly references, in order.</summary>
+    /// <summary>Mọi tên assembly mà một assembly cho trước reference, theo thứ tự.</summary>
     /// <remarks>
-    /// The same caveat as <see cref="NvmReferencesOf"/>: this is what the runtime needs, not what the
-    /// csproj lists. A package used for one <c>const</c> is compiled away and does not appear.
+    /// Cùng một lưu ý như <see cref="NvmReferencesOf"/>: đây là cái runtime cần, không phải cái csproj
+    /// liệt kê. Một package chỉ dùng cho một <c>const</c> bị compile bỏ đi và không xuất hiện.
     /// </remarks>
     internal static IReadOnlyList<string> NamesReferencedBy(Assembly assembly) =>
         [.. assembly.GetReferencedAssemblies()
             .Select(reference => reference.Name ?? string.Empty)
             .Order(StringComparer.Ordinal)];
 
-    /// <summary>The <c>Nvm.*</c> assemblies a given assembly references.</summary>
+    /// <summary>Các assembly <c>Nvm.*</c> mà một assembly cho trước reference.</summary>
     /// <remarks>
     /// <para>
-    /// This is the list the runtime needs, which is <b>not</b> the list of <c>ProjectReference</c>
-    /// entries. A reference whose only use was a <c>const</c> is compiled away entirely: the value is
-    /// inlined and the assembly never appears in metadata. Measured on <c>Nvm.Bus</c>, which
-    /// references <c>Nvm.Hosting</c> in its csproj purely for <c>HealthTags.Ready</c> and lists only
-    /// <c>Nvm.Contracts</c> here.
+    /// Đây là danh sách mà runtime cần, <b>không phải</b> danh sách các mục <c>ProjectReference</c>.
+    /// Một reference mà công dụng duy nhất là một <c>const</c> bị compile bỏ hoàn toàn: giá trị được
+    /// inline và assembly đó không bao giờ xuất hiện trong metadata. Đo trên <c>Nvm.Bus</c>, thứ
+    /// reference <c>Nvm.Hosting</c> trong csproj của nó chỉ vì <c>HealthTags.Ready</c> và ở đây chỉ
+    /// liệt kê <c>Nvm.Contracts</c>.
     /// </para>
     /// <para>
-    /// That is the right list for these rules anyway. What K8 and K9 forbid is one component being
-    /// able to <i>call</i> another, and a dependency the compiler erased cannot be called. A rule that
-    /// read the csproj instead would fail a block for borrowing one constant.
+    /// Dù sao đó cũng là danh sách đúng cho các rule này. Điều K8 và K9 cấm là một component có khả
+    /// năng <i>gọi</i> một component khác, và một dependency mà compiler đã xóa thì không thể gọi
+    /// được. Một rule đọc csproj thay vào đó sẽ làm fail một block chỉ vì mượn một hằng số.
     /// </para>
     /// </remarks>
     internal static IReadOnlyList<string> NvmReferencesOf(Assembly assembly) =>

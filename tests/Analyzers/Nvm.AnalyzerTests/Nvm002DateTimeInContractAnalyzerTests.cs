@@ -8,9 +8,9 @@ public sealed class Nvm002DateTimeInContractAnalyzerTests
     private static Task VerifyAsync(string source, params DiagnosticResult[] expected) =>
         AnalyzerSnippet.VerifyAsync<Nvm002DateTimeInContractAnalyzer>(source, expected);
 
-    // The span is over the MEMBER NAME, not over the type. For a positional record parameter the
-    // generated property's location is the parameter identifier, which is also where a reader's
-    // cursor wants to land.
+    // Span nằm trên TÊN MEMBER, không phải trên type. Với một positional record parameter, vị trí
+    // của property được sinh ra chính là identifier của parameter, cũng đúng là nơi con trỏ của
+    // người đọc muốn dừng lại.
     private static DiagnosticResult Violation(string source, string type, string member, string memberType) =>
         AnalyzerSnippet.Violation(
             source,
@@ -45,9 +45,9 @@ public sealed class Nvm002DateTimeInContractAnalyzerTests
     [InlineData("System.Collections.Generic.Dictionary<string, System.DateTime[]> When", "Dictionary<string, DateTime[]>")]
     public async Task DateTimeIsRefusedHoweverDeeplyItIsBuried(string member, string displayed)
     {
-        // The nesting cases are the point. A rule that compares only the outermost type passes the
-        // first row here and fails silently on every other one — and a DateTime inside a List is
-        // serialized exactly as broken as a bare one.
+        // Các trường hợp lồng nhau chính là điểm mấu chốt. Một rule chỉ so sánh type ngoài cùng sẽ
+        // pass dòng đầu tiên ở đây và fail âm thầm ở mọi dòng còn lại — và một DateTime bên trong
+        // List bị serialize hỏng y hệt như một DateTime trần.
         var source = Event(member);
 
         await VerifyAsync(source, Violation(source, "ProbeEvent", "When", displayed));
@@ -56,16 +56,16 @@ public sealed class Nvm002DateTimeInContractAnalyzerTests
     [Fact]
     public async Task DateTimeOffsetIsTheSanctionedTypeAndStaysSilent()
     {
-        // The control. Without it, an analyzer that flagged every member of every contract would pass
-        // every test above.
+        // Ca kiểm chứng đối chứng. Không có nó, một analyzer đánh dấu mọi member của mọi contract vẫn
+        // sẽ pass mọi test ở trên.
         await VerifyAsync(Event("System.DateTimeOffset Recorded"));
     }
 
     [Fact]
     public async Task ATypeInTheContractsNamespaceIsCheckedEvenWhenItIsNotAnEvent()
     {
-        // A record that is not an event today becomes the payload of one next milestone, and by then
-        // its DateTime is already in rows nobody may rewrite.
+        // Một record hôm nay chưa phải event sẽ trở thành payload của một event ở milestone kế tiếp,
+        // và đến lúc đó DateTime của nó đã nằm trong các row mà không ai được phép ghi lại.
         const string source = """
             namespace Nvm.Contracts.Something
             {
@@ -79,9 +79,9 @@ public sealed class Nvm002DateTimeInContractAnalyzerTests
     [Fact]
     public async Task ATypeOutsideTheContractSurfaceIsLeftAlone()
     {
-        // NVM002 is about what goes on the wire and into the append-only store. An in-memory helper in
-        // some Functional Block is free to use DateTime — refusing it there would make the rule feel
-        // arbitrary, which is how rules get suppressed instead of followed.
+        // NVM002 là về những gì lên wire và vào append-only store. Một helper in-memory trong một
+        // Functional Block nào đó được tự do dùng DateTime — từ chối nó ở đó sẽ khiến rule cảm giác
+        // tùy tiện, và đó chính là cách rule bị suppress thay vì được tuân theo.
         await VerifyAsync(
             """
             namespace Nvm.FactoryModel.Internals
@@ -94,9 +94,9 @@ public sealed class Nvm002DateTimeInContractAnalyzerTests
     [Fact]
     public async Task APlainFieldIsCheckedAndItsBackingStoreIsNotReportedTwice()
     {
-        // Properties and fields are both read, so a naive implementation reports an auto-property once
-        // for the property and once for its compiler-generated backing field. Two errors on one line
-        // is how people conclude the analyzer is broken.
+        // Cả property lẫn field đều được đọc, nên một implementation ngây thơ sẽ báo cáo một
+        // auto-property hai lần: một lần cho property và một lần cho backing field do compiler sinh
+        // ra. Hai lỗi trên một dòng là cách người ta kết luận analyzer bị hỏng.
         const string source = """
             namespace Nvm.Contracts.Something
             {
@@ -109,8 +109,8 @@ public sealed class Nvm002DateTimeInContractAnalyzerTests
             }
             """;
 
-        // Exactly two diagnostics. The test framework fails on an unexpected third, which is what
-        // makes this a real check on the backing field rather than a restatement of the rule.
+        // Đúng hai diagnostic. Test framework fail nếu có một cái thứ ba bất ngờ, đó chính là điều
+        // khiến đây là một kiểm tra thật sự trên backing field thay vì chỉ lặp lại rule.
         await VerifyAsync(
             source,
             Violation(source, "Holder", "Field", "DateTime"),

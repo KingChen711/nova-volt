@@ -3,34 +3,35 @@ using Nvm.Kernel.Commands;
 
 namespace Nvm.Kernel.Identity;
 
-/// <summary>What makes one measurement one measurement, and the identity derived from it.</summary>
+/// <summary>Điều gì khiến một measurement là chính nó, và identity được suy ra từ đó.</summary>
 /// <remarks>
 /// <para>
-/// The six fields of docs/scope.md §7.2:
-/// <c>(site_id, equipment_id, unit_id, step_code, device_timestamp, signal_code)</c>. They are the
-/// fields the fact already has — nothing is generated, so the same reading arriving twice, from a
-/// device that got no acknowledgement and from a gateway flushing its backlog three hours later,
-/// produces the same <see cref="SourceEventId"/> on any machine in any process.
+/// Sáu field của docs/scope.md §7.2:
+/// <c>(site_id, equipment_id, unit_id, step_code, device_timestamp, signal_code)</c>. Đó là các field
+/// mà sự thật này vốn đã có — không gì được sinh ra thêm, nên cùng một reading đến hai lần, từ một
+/// device không nhận được acknowledgement và từ một gateway flush backlog ba giờ sau đó, sẽ tạo ra
+/// cùng một <see cref="SourceEventId"/> trên bất kỳ máy nào ở bất kỳ process nào.
 /// </para>
 /// <para>
-/// Shared rather than Sparkplug-specific. The CSV file drop in C15 has to land on the same key for
-/// the same reading, or a plant sending its morning batch twice — once over MQTT and once as a file
-/// somebody re-uploaded — would store it twice.
+/// Dùng chung thay vì chỉ dành riêng cho Sparkplug. File CSV thả vào ở C15 phải đáp xuống cùng một key
+/// cho cùng một reading, nếu không một plant gửi batch buổi sáng hai lần — một lần qua MQTT và một lần
+/// dưới dạng file ai đó re-upload — sẽ lưu nó hai lần.
 /// </para>
 /// </remarks>
 public sealed record MeasurementNaturalKey
 {
     /// <summary>
-    /// How the instant is written before it is hashed: round-trip, always UTC, always seven
-    /// fractional digits.
+    /// Cách một instant được viết ra trước khi hash: round-trip, luôn UTC, luôn bảy chữ số phần thập
+    /// phân của giây.
     /// </summary>
     /// <remarks>
-    /// The most dangerous field of the six. <c>07:15:30.5+00:00</c> and <c>14:15:30.5+07:00</c> are
-    /// the same moment in time and different strings, so hashing them as they arrive gives one
-    /// measurement two identities — and the deduplication step then reports success on a row it has
-    /// just stored for the second time. Nothing raises an error; the count is simply too high.
+    /// Field nguy hiểm nhất trong sáu field. <c>07:15:30.5+00:00</c> và <c>14:15:30.5+07:00</c> là
+    /// cùng một thời điểm nhưng là hai chuỗi khác nhau, nên hash chúng đúng như lúc chúng đến sẽ cho
+    /// một measurement hai identity — và bước khử trùng lặp sau đó báo cáo thành công trên một dòng nó
+    /// vừa lưu lần thứ hai. Không có gì báo lỗi; count chỉ đơn giản là cao hơn thực tế.
     /// <para>
-    /// NV1 is UTC+7 with no daylight saving and DE1 observes it, so both spellings genuinely occur.
+    /// NV1 là UTC+7 không có daylight saving còn DE1 thì có áp dụng, nên cả hai cách viết đều thực sự
+    /// xảy ra.
     /// </para>
     /// </remarks>
     private const string TimestampFormat = "O";
@@ -53,39 +54,40 @@ public sealed record MeasurementNaturalKey
         SourceEventId = sourceEventId;
     }
 
-    /// <summary>The plant. Never null — a measurement belongs to exactly one (K3).</summary>
+    /// <summary>Plant. Không bao giờ null — một measurement thuộc về đúng một plant (K3).</summary>
     public string SiteId { get; }
 
-    /// <summary>The machine that produced the reading.</summary>
+    /// <summary>Máy đã tạo ra reading.</summary>
     public EquipmentPath EquipmentPath { get; }
 
-    /// <summary>The cell, module or pack the reading is about, when one is known.</summary>
+    /// <summary>Cell, module hay pack mà reading nói về, khi đã biết.</summary>
     /// <remarks>
-    /// Null is normal and not a gap: a coater reports line speed with no unit under it at all, and a
-    /// formation channel only knows which cell it holds once one has been loaded.
+    /// Null là bình thường chứ không phải một khoảng trống: một coater báo cáo line speed mà hoàn toàn
+    /// không có unit bên dưới, và một formation channel chỉ biết nó đang giữ cell nào sau khi cell đó
+    /// đã được nạp vào.
     /// </remarks>
     public string? UnitId { get; }
 
-    /// <summary>The process step, for example <c>FORM</c>.</summary>
+    /// <summary>Process step, ví dụ <c>FORM</c>.</summary>
     public string StepCode { get; }
 
-    /// <summary>When the device says it took the reading.</summary>
+    /// <summary>Khi device báo rằng nó đã lấy reading.</summary>
     public DateTimeOffset DeviceTimestamp { get; }
 
-    /// <summary>What was measured, for example <c>Formation/Voltage</c>.</summary>
+    /// <summary>Cái gì đã được đo, ví dụ <c>Formation/Voltage</c>.</summary>
     public string SignalCode { get; }
 
-    /// <summary>The identity derived from the six fields. This is <c>source_event_id</c>.</summary>
+    /// <summary>Identity suy ra từ sáu field. Đây là <c>source_event_id</c>.</summary>
     public IdempotencyKey SourceEventId { get; }
 
-    /// <summary>Builds the key and derives the identity.</summary>
-    /// <param name="equipmentPath">The machine. Must name a plant, so at least site level.</param>
-    /// <param name="stepCode">The process step.</param>
-    /// <param name="signalCode">What was measured.</param>
-    /// <param name="deviceTimestamp">When the device says it measured it.</param>
-    /// <param name="unitId">The unit under the machine, when one is known.</param>
+    /// <summary>Dựng key và suy ra identity.</summary>
+    /// <param name="equipmentPath">Máy. Phải nêu tên một plant, tức tối thiểu ở cấp site.</param>
+    /// <param name="stepCode">Process step.</param>
+    /// <param name="signalCode">Cái gì đã được đo.</param>
+    /// <param name="deviceTimestamp">Khi device báo rằng nó đã đo.</param>
+    /// <param name="unitId">Unit dưới máy, khi đã biết.</param>
     /// <exception cref="ArgumentException">
-    /// The path names no plant, or the step or signal code is blank.
+    /// Path không nêu tên plant nào, hoặc step code hay signal code bị rỗng.
     /// </exception>
     public static MeasurementNaturalKey For(
         EquipmentPath equipmentPath,
@@ -96,9 +98,9 @@ public sealed record MeasurementNaturalKey
     {
         ArgumentNullException.ThrowIfNull(equipmentPath);
 
-        // An enterprise-level path has no plant, and K3 has no room for a measurement that belongs to
-        // none. It would also make the first field of every such key identical, which is the one
-        // property the derivation must not have.
+        // Một path ở cấp enterprise không có plant, và K3 không có chỗ cho một measurement không
+        // thuộc về plant nào. Nó cũng sẽ khiến field đầu tiên của mọi key như vậy giống hệt nhau, đây
+        // chính là thuộc tính mà phép suy ra không được phép có.
         var siteId = equipmentPath.SiteId
             ?? throw new ArgumentException(
                 $"'{equipmentPath.Value}' names no plant, so it cannot have produced a measurement.",
@@ -114,13 +116,13 @@ public sealed record MeasurementNaturalKey
             throw new ArgumentException("A measurement needs a signal code.", nameof(signalCode));
         }
 
-        // Order fixed by docs/scope.md §7.2 and never to be rearranged: the parts are
-        // length-prefixed, so a different order is a different key, and every row already in the
-        // store was keyed with this one.
+        // Thứ tự cố định bởi docs/scope.md §7.2 và không bao giờ được sắp xếp lại: các phần được
+        // length-prefixed, nên một thứ tự khác là một key khác, và mọi dòng đã có trong store đều
+        // được key hóa theo thứ tự này.
         //
-        // Absent unit id goes in as an empty string rather than being left out. Dropping the part
-        // would shorten the tuple, and a five-part key and a six-part key for the same reading are
-        // two identities for one fact.
+        // Unit id vắng mặt được đưa vào như một chuỗi rỗng thay vì bị bỏ qua. Bỏ phần đó đi sẽ làm
+        // ngắn tuple lại, và một key năm phần với một key sáu phần cho cùng một reading là hai
+        // identity cho một sự thật.
         var sourceEventId = IdempotencyKey.FromNaturalKey(
             siteId,
             equipmentPath.Value,
@@ -139,10 +141,11 @@ public sealed record MeasurementNaturalKey
             sourceEventId);
     }
 
-    /// <summary>The six fields as a line, for a log or a rejection message.</summary>
+    /// <summary>Sáu field dưới dạng một dòng, dùng cho log hoặc một thông điệp từ chối.</summary>
     /// <remarks>
-    /// Not the string that is hashed. That one is length-prefixed so it cannot be ambiguous
-    /// (<see cref="IdempotencyKey"/>); this one is for a person reading why a message was refused.
+    /// Không phải chuỗi được hash. Chuỗi đó được length-prefixed nên không thể mập mờ
+    /// (<see cref="IdempotencyKey"/>); còn chuỗi này dành cho một người đọc lý do một message bị từ
+    /// chối.
     /// </remarks>
     public override string ToString() =>
         string.Join(

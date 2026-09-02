@@ -2,17 +2,17 @@ using System.Collections.Concurrent;
 
 namespace Nvm.FactoryModel.Storage;
 
-/// <summary>Keeps the active revision per plant in process memory.</summary>
+/// <summary>Giữ revision đang active của mỗi plant trong bộ nhớ tiến trình.</summary>
 /// <remarks>
 /// <para>
-/// Loses everything on restart, and two instances behind a load balancer would disagree about which
-/// revision is in force. Both are unacceptable for a plant and both need a database — this exists so
-/// the command pipeline has something real to act on before there is one.
+/// Mất sạch khi restart, và hai instance sau một load balancer sẽ bất đồng về revision nào đang có
+/// hiệu lực. Cả hai điều này đều không chấp nhận được đối với một plant và cả hai đều cần một
+/// database — cái này tồn tại để command pipeline có thứ thật để thao tác trước khi có database.
 /// </para>
 /// <para>
-/// Within one process the compare-and-swap is real, so two activations racing for the same plant end
-/// with exactly one in force and the loser told it lost. That much survives the move to a database;
-/// only the durability has to be rebuilt there.
+/// Trong một process, compare-and-swap là thật, nên hai activation đua nhau cho cùng một plant sẽ kết
+/// thúc với đúng một cái có hiệu lực và bên thua được báo là đã thua. Chừng đó vẫn giữ nguyên khi
+/// chuyển sang database; chỉ có tính durable là cần được xây lại ở đó.
 /// </para>
 /// </remarks>
 public sealed class InMemoryActiveFactoryModel : IActiveFactoryModel
@@ -20,9 +20,8 @@ public sealed class InMemoryActiveFactoryModel : IActiveFactoryModel
     private readonly ConcurrentDictionary<string, ActiveFactoryModelRevision> _active =
         new(StringComparer.Ordinal);
 
-    // Guards the read-compare-write in TryActivate only. Reads stay outside it, which is what the
-    // concurrent dictionary is for: an operator opening the model viewer must not queue behind a
-    // rollout.
+    // Chỉ bảo vệ read-compare-write trong TryActivate. Read nằm ngoài nó, đó chính là mục đích của
+    // concurrent dictionary: một operator mở model viewer không được phép xếp hàng chờ sau một rollout.
     private readonly Lock _gate = new();
 
     /// <inheritdoc />
@@ -40,8 +39,8 @@ public sealed class InMemoryActiveFactoryModel : IActiveFactoryModel
 
         lock (_gate)
         {
-            // Null compares equal to null, which is exactly the first-activation case: the caller saw
-            // no revision in force and is asking that there still be none.
+            // Null so sánh bằng null, đó chính xác là trường hợp activation đầu tiên: caller thấy
+            // không có revision nào đang có hiệu lực và đang yêu cầu vẫn phải không có gì cả.
             if (_active.GetValueOrDefault(revision.SiteId)?.Revision != expectedCurrentRevision)
             {
                 return false;

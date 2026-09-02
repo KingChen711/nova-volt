@@ -45,9 +45,9 @@ public sealed class MeasurementRecordedV1Tests
     [Fact]
     public void EnvelopeId_IsTheSourceEventIdInsideData()
     {
-        // The join R-M1-6 warned about. ce_id is what a command handler deduplicates on and
-        // source_event_id is what ingestion deduplicates on; if this file ever shows two different
-        // values, both mechanisms keep working and neither one protects the other.
+        // Phép join mà R-M1-6 đã cảnh báo. ce_id là cái mà một command handler dùng để dedupe, còn
+        // source_event_id là cái mà ingestion dùng để dedupe; nếu file này từng cho thấy hai giá trị
+        // khác nhau, cả hai cơ chế vẫn hoạt động nhưng không cái nào bảo vệ cái còn lại.
         var golden = GoldenFile.ReadNode(Golden).AsObject();
 
         golden["id"]!.GetValue<string>()
@@ -57,9 +57,9 @@ public sealed class MeasurementRecordedV1Tests
     [Fact]
     public void GoldenV1_KeepsAllThreeTimestampsApart()
     {
-        // scope.md §7.3. device_timestamp answers "when was it measured", gateway_timestamp "when did
-        // we first see it", occurredAt "when did we accept it". A golden file that let two of them
-        // coincide would stop being able to catch a version that collapsed the columns.
+        // scope.md §7.3. device_timestamp trả lời "nó được đo lúc nào", gateway_timestamp "chúng ta
+        // thấy nó lần đầu lúc nào", occurredAt "chúng ta chấp nhận nó lúc nào". Một golden file để hai
+        // trong số chúng trùng nhau sẽ mất khả năng bắt được một phiên bản đã gộp các cột lại với nhau.
         var data = GoldenFile.ReadNode(Golden).AsObject()["data"]!.AsObject();
 
         var instants = new[] { "deviceTimestamp", "gatewayTimestamp", "occurredAt" }
@@ -72,8 +72,8 @@ public sealed class MeasurementRecordedV1Tests
     [Fact]
     public void GoldenV1_OmitsTheValueFieldsThatDoNotApply()
     {
-        // WhenWritingNull keeps unset optionals out of the document. A reading of kind "real" that
-        // also carried "integerValue": null would be claiming the integer is known to be nothing.
+        // WhenWritingNull giữ các optional chưa set ra khỏi document. Một reading kiểu "real" mà còn
+        // mang theo "integerValue": null sẽ là đang tuyên bố rằng integer được biết là không có gì.
         var data = GoldenFile.ReadNode(Golden).AsObject()["data"]!.AsObject();
 
         data.ContainsKey("realValue").ShouldBeTrue();

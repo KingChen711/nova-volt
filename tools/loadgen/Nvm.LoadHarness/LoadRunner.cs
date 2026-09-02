@@ -8,20 +8,20 @@ using Nvm.Sparkplug.Topics;
 
 namespace Nvm.LoadHarness;
 
-/// <summary>Publishes Sparkplug traffic at a target rate and reports what it actually achieved.</summary>
+/// <summary>Publish traffic Sparkplug ở một target rate và báo cáo những gì nó thực sự đạt được.</summary>
 /// <remarks>
 /// <para>
-/// <b>Every clock here is right.</b> D2's lag is <c>recorded_at − device_timestamp</c>, a subtraction
-/// of two clocks, so a drifted device would contribute a lag measured in hours and a fast one a
-/// negative lag. The harness therefore injects no clock fault at all, and that has to be written
-/// next to the number in <c>benchmarks.md</c> — otherwise somebody reading the table at M8 concludes
-/// the pipeline was once faster than causality.
+/// <b>Mọi đồng hồ ở đây đều đúng.</b> Lag của D2 là <c>recorded_at − device_timestamp</c>, một phép
+/// trừ giữa hai đồng hồ, nên một device bị trôi sẽ đóng góp một lag đo bằng giờ và một device nhanh
+/// sẽ cho một lag âm. Vì vậy harness không tiêm bất kỳ lỗi đồng hồ nào cả, và điều đó phải được viết
+/// ra bên cạnh con số trong <c>benchmarks.md</c> — nếu không ai đó đọc bảng đó ở M8 sẽ kết luận rằng
+/// pipeline từng nhanh hơn cả quan hệ nhân quả.
 /// </para>
 /// <para>
-/// The rate is enforced against a deadline that does not drift: the Nth message is due at
-/// <c>start + N × interval</c>, computed from the start rather than by adding a delay after each send.
-/// Re-arming after the work is done makes the real period "interval plus however long publishing
-/// took", and the harness would quietly measure a slower plant than the one on paper.
+/// Rate được thực thi dựa trên một deadline không bị trôi: message thứ N đến hạn ở
+/// <c>start + N × interval</c>, tính từ điểm bắt đầu thay vì bằng cách cộng thêm delay sau mỗi lần
+/// gửi. Nạp lại sau khi công việc xong sẽ khiến chu kỳ thực tế trở thành "interval cộng với thời gian
+/// publish mất bao lâu", và harness sẽ âm thầm đo một plant chậm hơn cái ghi trên giấy.
 /// </para>
 /// </remarks>
 public sealed class LoadRunner
@@ -34,11 +34,11 @@ public sealed class LoadRunner
     private readonly string[] _dataTopics;
     private readonly TimeProvider _clock;
 
-    /// <summary>Creates a runner over the channels the plant actually has.</summary>
-    /// <param name="options">Rate, duration and broker.</param>
-    /// <param name="channels">Channel paths from the factory model.</param>
-    /// <param name="clock">Clock stamping device timestamps and pacing the run (K1).</param>
-    /// <exception cref="ArgumentException">The plant has no channels to publish for.</exception>
+    /// <summary>Tạo một runner dựa trên các channel mà plant thực sự có.</summary>
+    /// <param name="options">Rate, duration và broker.</param>
+    /// <param name="channels">Các channel path từ factory model.</param>
+    /// <param name="clock">Đồng hồ đóng dấu device timestamp và điều tiết nhịp độ của run (K1).</param>
+    /// <exception cref="ArgumentException">Plant không có channel nào để publish.</exception>
     public LoadRunner(LoadHarnessOptions options, IReadOnlyList<EquipmentPath> channels, TimeProvider clock)
     {
         ArgumentNullException.ThrowIfNull(options);
@@ -56,8 +56,8 @@ public sealed class LoadRunner
         _clock = clock;
     }
 
-    /// <summary>Runs the whole load and returns what it achieved.</summary>
-    /// <param name="cancellationToken">Stops the run early.</param>
+    /// <summary>Chạy toàn bộ load và trả về những gì nó đạt được.</summary>
+    /// <param name="cancellationToken">Dừng run sớm.</param>
     public async Task<LoadResult> RunAsync(CancellationToken cancellationToken)
     {
         var client = new MqttClientFactory().CreateMqttClient();
@@ -94,8 +94,8 @@ public sealed class LoadRunner
                 cancellationToken);
 
             var sequence = new SparkplugSessionSequence();
-            // One mark per channel, carried from the births into the data run: a DBIRTH reading and
-            // the first DDATA of that channel can land in the same millisecond too.
+            // Một dấu mốc cho mỗi channel, mang theo từ các birth vào data run: một DBIRTH reading và
+            // DDATA đầu tiên của channel đó cũng có thể rơi vào cùng một mili-giây.
             var lastMillisecond = new long[_channels.Count];
             Array.Fill(lastMillisecond, long.MinValue);
 
@@ -112,9 +112,9 @@ public sealed class LoadRunner
                 declared + counts.Distinct,
                 _channels.Count,
                 elapsed,
-                // Actual elapsed, never the requested duration. A run that took 604 seconds to send
-                // ten minutes of traffic did 4.967 msg/s, and dividing by the 600 it was ASKED for
-                // reports 5.000 - the harness grading itself on its intention. D2 is a measurement.
+                // Elapsed thực tế, không bao giờ là duration được yêu cầu. Một run tốn 604 giây để gửi
+                // mười phút traffic đã đạt 4.967 msg/s, và chia cho 600 giây mà nó ĐƯỢC YÊU CẦU sẽ báo
+                // cáo 5.000 - harness tự chấm điểm mình dựa trên ý định của nó. D2 là một phép đo.
                 counts.Sent / elapsed.TotalSeconds,
                 Interlocked.Read(ref rebirthRequests));
         }
@@ -129,8 +129,8 @@ public sealed class LoadRunner
         }
     }
 
-    // One NBIRTH and one DBIRTH per channel, before any data. Without them the gateway refuses every
-    // alias-only message that follows (C02) and the run would measure the rejection path.
+    // Một NBIRTH và một DBIRTH cho mỗi channel, trước bất kỳ data nào. Không có chúng, gateway sẽ từ
+    // chối mọi message chỉ-mang-alias theo sau (C02) và run sẽ đo phải con đường bị từ chối.
     private async Task<long> DeclareAsync(
         IMqttClient client,
         EquipmentPath linePath,
@@ -139,9 +139,9 @@ public sealed class LoadRunner
         CancellationToken cancellationToken)
     {
         var now = _clock.GetUtcNow();
-        // A repeated harness invocation is a new node session even when the gateway process stays
-        // alive. Reusing bdSeq=1 made its NBIRTH look like a duplicate of the previous run, so the
-        // tracker correctly kept the old LastSequence and diagnosed the new seq=0 as a gap.
+        // Một lần gọi lặp lại harness là một node session mới ngay cả khi gateway process vẫn sống.
+        // Dùng lại bdSeq=1 khiến NBIRTH của nó trông giống một bản trùng của run trước, nên tracker đã
+        // đúng đắn giữ nguyên LastSequence cũ và chẩn đoán seq=0 mới là một khoảng hở.
         var birthDeathSequence = now.ToUnixTimeMilliseconds();
 
         await PublishAsync(
@@ -176,13 +176,12 @@ public sealed class LoadRunner
         return distinct;
     }
 
-    // Sparkplug B carries a device timestamp as uint64 MILLISECONDS, and a measurement's identity is
-    // (site, equipment, unit, step, device_timestamp, signal). Two readings of one signal on one
-    // device inside the same millisecond are therefore ONE measurement by definition, and ingestion
-    // is right to store a single row. Counting published messages and calling the difference "loss"
-    // sends somebody hunting a bug in deduplication that is not there: measured 12.833 of 542.427
-    // readings (2,37%) at eight channels, because 4.794 msg/s over eight channels puts a reading on
-    // each one every 1,67 ms.
+    // Sparkplug B mang device timestamp dưới dạng uint64 MILI-GIÂY, và identity của một phép đo là
+    // (site, equipment, unit, step, device_timestamp, signal). Vì vậy hai reading của một signal trên
+    // một device trong cùng một mili-giây là MỘT phép đo theo định nghĩa, và ingestion lưu một row
+    // duy nhất là đúng. Đếm message đã publish rồi gọi phần chênh lệch là "mất mát" sẽ khiến ai đó đi
+    // săn một bug deduplication không hề tồn tại: đo được 12.833 trên 542.427 reading (2,37%) ở tám
+    // channel, vì 4.794 msg/s trên tám channel đặt một reading lên mỗi channel mỗi 1,67 ms.
     private static bool IsNewMeasurement(long[] lastMillisecond, int channel, DateTimeOffset at)
     {
         var milliseconds = at.ToUnixTimeMilliseconds();
@@ -213,8 +212,8 @@ public sealed class LoadRunner
 
         while (!cancellationToken.IsCancellationRequested)
         {
-            // Computed from the start, never accumulated. Adding a delay after each send makes the
-            // real period "interval plus however long publishing took".
+            // Tính từ điểm bắt đầu, không bao giờ cộng dồn. Thêm delay sau mỗi lần gửi sẽ khiến chu kỳ
+            // thực tế trở thành "interval cộng với thời gian publish mất bao lâu".
             var deadline = interval * due;
             var behind = _clock.GetElapsedTime(started);
 
@@ -223,9 +222,9 @@ public sealed class LoadRunner
                 break;
             }
 
-            // The window is [start, start + duration). Without this boundary check, the iteration
-            // that observes 59.999 s may schedule one extra message exactly at 60.000 s. Waiting out
-            // the final fraction also makes "ran for N seconds" true without counting that extra.
+            // Window là [start, start + duration). Không có kiểm tra biên này, lần lặp quan sát thấy
+            // 59.999 s có thể lên lịch thêm một message ngay đúng 60.000 s. Chờ hết phần lẻ cuối cùng
+            // cũng khiến "chạy trong N giây" đúng là sự thật mà không tính thêm message dư đó.
             if (deadline >= _options.Duration)
             {
                 var remaining = _options.Duration - behind;
@@ -243,9 +242,9 @@ public sealed class LoadRunner
             }
 
             var index = (int)(due % _channels.Count);
-            // Tie the device clock to the same non-drifting schedule as the rate deadline. If the
-            // publisher falls behind, this timestamp stays at the intended sample instant, so D2
-            // includes that source-side delay instead of hiding it behind a fresh wall-clock read.
+            // Gắn device clock vào đúng lịch không trôi giống như deadline của rate. Nếu publisher bị
+            // tụt lại phía sau, timestamp này vẫn giữ nguyên ở thời điểm sample dự kiến, nên D2 tính
+            // cả độ trễ phía nguồn đó thay vì che giấu nó sau một lần đọc wall-clock mới.
             var now = deviceStartedAt + deadline;
 
             if (IsNewMeasurement(lastMillisecond, index, now))
@@ -342,24 +341,24 @@ public sealed class LoadRunner
             && reading.Value is MetricValue.Flag { Value: true });
     }
 
-    // The device clock is the harness's own clock, exactly. That is the point: D2's lag has to be
-    // the pipeline's, and any drift here would be measured as pipeline latency.
+    // Đồng hồ device chính là đồng hồ của bản thân harness, y hệt. Đó chính là điểm mấu chốt: lag của
+    // D2 phải là của pipeline, và bất kỳ độ trôi nào ở đây sẽ bị đo nhầm thành pipeline latency.
     private static DeviceReading Reading(DateTimeOffset now) =>
         new("Formation/Voltage", Alias: 1, FormationVoltage, now);
 }
 
-/// <summary>What a load run achieved.</summary>
-/// <param name="Sent">Messages the broker accepted.</param>
-/// <param name="Failed">Publishes that threw. Must be zero for D2 to mean anything.</param>
+/// <summary>Những gì một load run đã đạt được.</summary>
+/// <param name="Sent">Message mà broker đã chấp nhận.</param>
+/// <param name="Failed">Các publish đã throw. Phải bằng 0 thì D2 mới có ý nghĩa.</param>
 /// <param name="Measurements">
-/// Distinct measurements published, births included — the number that must equal the row delta.
-/// It is smaller than <paramref name="Sent"/> whenever two readings of one channel share a
-/// millisecond, which is a property of Sparkplug's timestamp and not a loss.
+/// Số phép đo riêng biệt đã publish, tính cả birth — con số phải bằng đúng row delta.
+/// Nó nhỏ hơn <paramref name="Sent"/> bất cứ khi nào hai reading của một channel chia sẻ chung một
+/// mili-giây, đó là một tính chất của timestamp Sparkplug chứ không phải mất mát.
 /// </param>
-/// <param name="DeclaredMessages">Birth messages sent before the data run.</param>
-/// <param name="Elapsed">Wall time the run took.</param>
-/// <param name="AchievedRate">Successful publishes per second in the requested measurement window.</param>
-/// <param name="RebirthRequests">Node commands caused by gaps or an unreadable alias.</param>
+/// <param name="DeclaredMessages">Các birth message đã gửi trước khi data run bắt đầu.</param>
+/// <param name="Elapsed">Wall time mà run tốn.</param>
+/// <param name="AchievedRate">Số publish thành công mỗi giây trong measurement window được yêu cầu.</param>
+/// <param name="RebirthRequests">Node command gây ra bởi các khoảng hở hoặc một alias không đọc được.</param>
 public sealed record LoadResult(
     long Sent,
     long Failed,

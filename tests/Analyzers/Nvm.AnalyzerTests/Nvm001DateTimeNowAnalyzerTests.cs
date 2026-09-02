@@ -19,9 +19,9 @@ public sealed class Nvm001DateTimeNowAnalyzerTests
     [InlineData("DateTimeOffset", "Now")]
     public async Task EveryAmbientClockMemberIsRefused(string type, string member)
     {
-        // All five, not only the one everybody writes. An analyzer that catches DateTime.UtcNow and
-        // nothing else moves the problem to DateTimeOffset.Now, where it is harder to spot because it
-        // looks like it was chosen deliberately.
+        // Cả năm cái, không chỉ mỗi cái mà ai cũng viết. Một analyzer chỉ bắt DateTime.UtcNow và
+        // không gì khác sẽ đẩy vấn đề sang DateTimeOffset.Now, nơi nó khó phát hiện hơn vì trông như
+        // được chọn có chủ đích.
         var expression = $"System.{type}.{member}";
         var source = $$"""
             class Probe
@@ -36,11 +36,10 @@ public sealed class Nvm001DateTimeNowAnalyzerTests
     [Fact]
     public async Task AnAliasDoesNotHideTheClock()
     {
-        // The reason this analyzer matches symbols rather than text. A rule that greps for
-        // "DateTime.UtcNow" is beaten by one using directive, and a rule that is trivially avoidable
-        // teaches people to avoid it rather than to fix the code. Note the message still names the
-        // real type, not the alias — otherwise the person reading it goes looking for a type called
-        // Clock.
+        // Lý do analyzer này khớp theo symbol thay vì theo text. Một rule grep chuỗi
+        // "DateTime.UtcNow" bị đánh bại bởi một using directive, và một rule dễ dàng né tránh dạy
+        // người ta né nó thay vì sửa code. Lưu ý message vẫn nêu tên type thật, không phải alias —
+        // nếu không người đọc sẽ đi tìm một type tên là Clock.
         const string source = """
             using Clock = System.DateTime;
 
@@ -56,8 +55,8 @@ public sealed class Nvm001DateTimeNowAnalyzerTests
     [Fact]
     public async Task TimeProviderIsTheSanctionedWayAndStaysSilent()
     {
-        // The control. Without it, an analyzer that flagged every property reference in the codebase
-        // would still pass every test above.
+        // Ca kiểm chứng đối chứng. Không có nó, một analyzer đánh dấu mọi property reference trong
+        // codebase vẫn sẽ pass mọi test ở trên.
         await VerifyAsync(
             """
             class Probe
@@ -70,8 +69,8 @@ public sealed class Nvm001DateTimeNowAnalyzerTests
     [Fact]
     public async Task AnUnrelatedNowPropertyIsNotTheMachineClock()
     {
-        // Same name, different meaning. Matching on the member name alone would refuse a perfectly
-        // good domain property and turn the rule into noise that people switch off.
+        // Cùng tên, khác nghĩa. Khớp chỉ dựa trên tên member sẽ từ chối một domain property hoàn toàn
+        // hợp lệ và biến rule thành nhiễu mà người ta sẽ tắt đi.
         await VerifyAsync(
             """
             class Shift

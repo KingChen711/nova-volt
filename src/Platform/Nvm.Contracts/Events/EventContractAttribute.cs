@@ -1,28 +1,28 @@
 namespace Nvm.Contracts.Events;
 
-/// <summary>Declares the wire name of a domain event: its bounded context and its event name.</summary>
-/// <param name="context">The bounded context that owns the event, for example <c>factory-model</c>.</param>
-/// <param name="name">The event in kebab-case, for example <c>revision-activated</c>.</param>
+/// <summary>Khai báo wire name của một domain event: bounded context và tên event của nó.</summary>
+/// <param name="context">Bounded context sở hữu event, ví dụ <c>factory-model</c>.</param>
+/// <param name="name">Tên event ở dạng kebab-case, ví dụ <c>revision-activated</c>.</param>
 /// <remarks>
 /// <para>
-/// Stated rather than derived. The obvious alternative is to build the wire name out of the C# type
-/// and namespace — <c>Nvm.Contracts.Events.FactoryModel.FactoryModelRevisionActivated</c> could be
-/// folded into the same string automatically. That would make a rename in the IDE into a change of
-/// contract: the exchange moves, existing bindings stop matching, and nothing warns anybody. The
-/// wire name is an operational fact and belongs in the source as one.
+/// Khai báo tường minh thay vì suy ra. Phương án hiển nhiên hơn là dựng wire name từ type và
+/// namespace C# — <c>Nvm.Contracts.Events.FactoryModel.FactoryModelRevisionActivated</c> có thể được
+/// gộp thành cùng một chuỗi một cách tự động. Điều đó sẽ biến một lần rename trong IDE thành một thay
+/// đổi contract: exchange dịch chuyển, các binding hiện có không còn khớp, và không ai được cảnh báo.
+/// Wire name là một sự thật vận hành, và nó thuộc về source code đúng như bản chất đó.
 /// </para>
 /// <para>
-/// Together with <see cref="EventVersionAttribute"/> this is everything an
-/// <see cref="CloudEvents.EventTypeName"/> needs. The two are separate attributes because they change
-/// for different reasons: the version moves when the schema does, the name never moves at all.
+/// Cùng với <see cref="EventVersionAttribute"/>, đây là tất cả những gì một
+/// <see cref="CloudEvents.EventTypeName"/> cần. Hai attribute tách riêng vì chúng thay đổi vì những lý
+/// do khác nhau: version dịch chuyển khi schema thay đổi, còn name thì không bao giờ dịch chuyển.
 /// </para>
 /// </remarks>
 [AttributeUsage(AttributeTargets.Class, Inherited = false)]
 public sealed class EventContractAttribute(string context, string name) : Attribute
 {
-    /// <summary>The bounded context that owns the event.</summary>
+    /// <summary>Bounded context sở hữu event.</summary>
     public string Context { get; } = context;
 
-    /// <summary>The event name, in kebab-case.</summary>
+    /// <summary>Tên event, ở dạng kebab-case.</summary>
     public string Name { get; } = name;
 }

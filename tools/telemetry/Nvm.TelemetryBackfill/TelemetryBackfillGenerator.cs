@@ -6,10 +6,10 @@ using Nvm.Sparkplug.Topics;
 
 namespace Nvm.TelemetryBackfill;
 
-/// <summary>Runs the online formation line over historical process time and decodes its wire output.</summary>
+/// <summary>Chạy online formation line qua process time trong quá khứ và decode wire output của nó.</summary>
 public sealed class TelemetryBackfillGenerator
 {
-    /// <summary>Emits exactly the readings the simulator's report-by-exception path would publish.</summary>
+    /// <summary>Emit chính xác các reading mà report-by-exception path của simulator sẽ publish.</summary>
     public static IEnumerable<BackfillRow> Generate(TelemetryBackfillSpec spec)
     {
         ArgumentNullException.ThrowIfNull(spec);

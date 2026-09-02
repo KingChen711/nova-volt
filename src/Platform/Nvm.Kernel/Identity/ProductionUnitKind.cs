@@ -1,20 +1,20 @@
 namespace Nvm.Kernel.Identity;
 
 /// <summary>
-/// The kind of serialized production unit, encoded as one character in a <see cref="SerialNumber"/>.
+/// Loại production unit được serialize, mã hóa thành một ký tự trong một <see cref="SerialNumber"/>.
 /// </summary>
 /// <remarks>
-/// Product NV-C100-LFP-CTP has no module tier, so a plant may never produce a
-/// <see cref="Module"/>. The genealogy graph decides which tiers exist, not this enum.
+/// Sản phẩm NV-C100-LFP-CTP không có tier module, nên một plant có thể không bao giờ sản xuất một
+/// <see cref="Module"/>. Genealogy graph quyết định tier nào tồn tại, không phải enum này.
 /// </remarks>
 public enum ProductionUnitKind
 {
-    /// <summary>Smallest serialized unit. Engraved code carries 'C'.</summary>
+    /// <summary>Unit serialize nhỏ nhất. Code khắc mang ký tự 'C'.</summary>
     Cell,
 
-    /// <summary>Group of cells with a frame and busbars. Engraved code carries 'M'.</summary>
+    /// <summary>Nhóm cell với một frame và busbar. Code khắc mang ký tự 'M'.</summary>
     Module,
 
-    /// <summary>Deliverable assembly containing modules or, for cell-to-pack, cells. Engraved code carries 'P'.</summary>
+    /// <summary>Cụm lắp ráp giao hàng chứa module hoặc, với cell-to-pack, chứa cell. Code khắc mang ký tự 'P'.</summary>
     Pack,
 }

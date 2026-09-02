@@ -1,15 +1,15 @@
 namespace Nvm.LoadHarness;
 
-/// <summary>Allocates the one ordered Sparkplug sequence owned by an edge-node session.</summary>
+/// <summary>Cấp phát chuỗi Sparkplug có thứ tự duy nhất mà một edge-node session sở hữu.</summary>
 /// <remarks>
-/// The owner calls this from one scheduler. Concurrency belongs in the MQTT in-flight window, after
-/// the message has received its sequence; it must not create a second sequence stream.
+/// Owner gọi cái này từ một scheduler duy nhất. Concurrency thuộc về MQTT in-flight window, sau khi
+/// message đã nhận được sequence của nó; nó không được phép tạo ra một sequence stream thứ hai.
 /// </remarks>
 public sealed class SparkplugSessionSequence
 {
     private ulong _next;
 
-    /// <summary>Returns the next value and advances modulo the Sparkplug 8-bit sequence range.</summary>
+    /// <summary>Trả về giá trị kế tiếp và tiến lên theo modulo phạm vi sequence 8-bit của Sparkplug.</summary>
     public ulong TakeNext()
     {
         var current = _next;

@@ -5,26 +5,26 @@ using Microsoft.CodeAnalysis.Testing;
 
 namespace Nvm.AnalyzerTests;
 
-/// <summary>Compiles a snippet with one analyzer and checks exactly which diagnostics come out.</summary>
+/// <summary>Compile một snippet với một analyzer và kiểm tra chính xác diagnostic nào xuất ra.</summary>
 /// <remarks>
 /// <para>
-/// <c>DefaultVerifier</c>, not <c>XUnitVerifier</c>: the <c>.XUnit</c> flavour of the testing package
-/// is built on xunit v2 and this repo is v3 only. A failed assertion still throws and still fails the
-/// test — what is lost is xunit-shaped failure formatting, which is not worth a second test framework.
+/// <c>DefaultVerifier</c>, không phải <c>XUnitVerifier</c>: flavour <c>.XUnit</c> của testing package
+/// được xây trên xunit v2 và repo này chỉ dùng v3. Một assertion thất bại vẫn throw và vẫn khiến test
+/// fail — cái mất đi là định dạng failure kiểu xunit, không đáng để đổi lấy một test framework thứ hai.
 /// </para>
 /// <para>
-/// The expected spans are <b>found in the source</b> rather than written by hand. Hand-counted line
-/// and column numbers are wrong the first time and wrong again after any edit above them, and the
-/// failure they produce reads exactly like the analyzer being broken.
+/// Các span mong đợi được <b>tìm ra trong source</b> thay vì viết tay. Số dòng và số cột đếm bằng tay
+/// sai ngay từ lần đầu và lại sai sau bất kỳ chỉnh sửa nào phía trên chúng, và failure chúng tạo ra
+/// đọc y hệt như analyzer bị hỏng.
 /// </para>
 /// </remarks>
 internal static class AnalyzerSnippet
 {
-    /// <summary>The contract types an event snippet needs, since a snippet references no project.</summary>
+    /// <summary>Các contract type mà một event snippet cần, vì snippet không reference project nào.</summary>
     /// <remarks>
-    /// Declared here rather than referenced, and that is deliberate: it exercises the fact that both
-    /// analyzers resolve these types <b>by name</b>. Rename one of them for real and the rules go
-    /// silent — a snippet that got them from a project reference would never notice.
+    /// Khai báo ở đây thay vì reference, và đó là có chủ đích: nó thực thi đúng cái sự thật rằng cả
+    /// hai analyzer resolve các type này <b>theo tên</b>. Đổi tên một trong số chúng thật sự và các
+    /// rule sẽ im lặng — một snippet lấy chúng từ project reference sẽ không bao giờ nhận ra.
     /// </remarks>
     public const string ContractTypes = """
         namespace Nvm.Contracts.Events
@@ -53,8 +53,8 @@ internal static class AnalyzerSnippet
         {
             TestCode = source,
 
-            // The snippets mention System.TimeProvider and System.Collections.Generic, which the
-            // package's default reference set does not carry.
+            // Các snippet nhắc tới System.TimeProvider và System.Collections.Generic, mà bộ reference
+            // mặc định của package không mang theo.
             ReferenceAssemblies = ReferenceAssemblies.Net.Net80,
         };
 
@@ -63,7 +63,7 @@ internal static class AnalyzerSnippet
         await test.RunAsync(TestContext.Current.CancellationToken);
     }
 
-    /// <summary>Expects <paramref name="id"/> over the first occurrence of <paramref name="expression"/>.</summary>
+    /// <summary>Mong đợi <paramref name="id"/> trên lần xuất hiện đầu tiên của <paramref name="expression"/>.</summary>
     public static DiagnosticResult Violation(string source, string expression, string id, params object[] arguments)
     {
         var lines = source.ReplaceLineEndings("\n").Split('\n');

@@ -1,12 +1,12 @@
 namespace Nvm.Time;
 
-/// <summary>How one plant tells the time: its zone and its shift table.</summary>
-/// <param name="SiteId">The plant, for example <c>NV1</c>.</param>
-/// <param name="TimeZone">The plant's zone, resolved from an IANA id such as <c>Europe/Berlin</c>.</param>
-/// <param name="Schedule">The shift table the plant runs.</param>
+/// <summary>Một plant tính giờ như thế nào: zone và shift table của nó.</summary>
+/// <param name="SiteId">Plant, ví dụ <c>NV1</c>.</param>
+/// <param name="TimeZone">Zone của plant, resolve từ một IANA id như <c>Europe/Berlin</c>.</param>
+/// <param name="Schedule">Shift table mà plant chạy.</param>
 /// <remarks>
-/// The two travel together because neither answers a question on its own. "Which shift was 23:47?"
-/// needs the zone to know what the clock on the wall read and the table to know what that reading
-/// means, and a plant that changed one without the other would be a plant nobody could reason about.
+/// Hai thứ này đi cùng nhau vì không cái nào tự trả lời được một câu hỏi. "23:47 là shift nào?" cần
+/// zone để biết đồng hồ trên tường đọc ra gì và cần bảng để biết reading đó nghĩa là gì, và một plant
+/// đổi một trong hai mà không đổi cái còn lại sẽ là một plant không ai có thể suy luận về được.
 /// </remarks>
 public sealed record SiteCalendar(string SiteId, TimeZoneInfo TimeZone, ShiftSchedule Schedule);

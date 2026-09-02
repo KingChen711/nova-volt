@@ -1,9 +1,9 @@
 namespace Nvm.CalendarLab;
 
-/// <summary>Validated environment for the reproducible C14 calendar lab.</summary>
+/// <summary>Environment đã được validate cho calendar lab C14 có thể tái lập.</summary>
 public sealed record CalendarLabOptions(string ConnectionString, string SeedDirectory)
 {
-    /// <summary>Reads the variables set by <c>make calendar-lab</c>.</summary>
+    /// <summary>Đọc các biến được <c>make calendar-lab</c> thiết lập.</summary>
     public static CalendarLabOptions FromEnvironment()
     {
         var connectionString = Environment.GetEnvironmentVariable("NVM_CALENDAR_LAB_CONNECTION_STRING");

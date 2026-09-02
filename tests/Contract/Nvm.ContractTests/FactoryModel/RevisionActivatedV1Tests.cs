@@ -49,9 +49,9 @@ public sealed class RevisionActivatedV1Tests
     [Fact]
     public void GoldenV1_CarriesTheCloudEventsAttributeNamesVerbatim()
     {
-        // The specification spells these lower case with no separators. A camelCase naming policy
-        // would emit "specVersion" and "dataContentType" — still valid JSON, no longer CloudEvents,
-        // and nothing in a .NET-to-.NET test would ever notice.
+        // Đặc tả viết những cái này bằng chữ thường và không có dấu phân cách. Một naming policy
+        // camelCase sẽ phát ra "specVersion" và "dataContentType" — vẫn là JSON hợp lệ, nhưng không
+        // còn là CloudEvents, và không gì trong một test .NET-to-.NET sẽ nhận ra điều đó.
         var golden = GoldenFile.ReadNode(Golden).AsObject();
 
         foreach (var attribute in new[] { "specversion", "id", "type", "source", "time", "datacontenttype" })
@@ -63,9 +63,9 @@ public sealed class RevisionActivatedV1Tests
     [Fact]
     public void EnvelopeId_AgreesWithTheEventIdInsideData()
     {
-        // The envelope derives id from the payload, so these can only disagree if the golden file
-        // itself is inconsistent — which is exactly what this checks, since the file is written by
-        // hand rather than generated.
+        // Envelope suy ra id từ payload, nên hai giá trị này chỉ có thể bất đồng nếu bản thân golden
+        // file không nhất quán — đó chính xác là điều cái này kiểm tra, vì file được viết tay thay vì
+        // sinh ra tự động.
         var golden = GoldenFile.ReadNode(Golden).AsObject();
 
         var envelopeId = golden["id"]!.GetValue<string>();
@@ -77,9 +77,9 @@ public sealed class RevisionActivatedV1Tests
     [Fact]
     public void OmittedOptionalAttribute_StaysOmittedAfterARoundTrip()
     {
-        // causationid is absent from the golden file. CloudEvents treats an absent attribute and an
-        // attribute set to null as different statements, so writing "causationid": null back would
-        // change the meaning of the document.
+        // causationid vắng mặt trong golden file. CloudEvents coi một attribute vắng mặt và một
+        // attribute được đặt thành null là hai phát biểu khác nhau, nên ghi lại "causationid": null
+        // sẽ làm thay đổi ý nghĩa của document.
         var envelope = JsonSerializer.Deserialize(GoldenFile.ReadText(Golden), EnvelopeInfo);
 
         envelope!.CausationId.ShouldBeNull();
@@ -90,9 +90,9 @@ public sealed class RevisionActivatedV1Tests
     [Fact]
     public void Time_KeepsItsOffsetThroughARoundTrip()
     {
-        // The single most valuable thing DateTimeOffset buys here. Site DE1 observes daylight saving
-        // time, so a timestamp without an offset is ambiguous for one hour every autumn — and an
-        // ambiguous timestamp in a legal record is a finding, not a rounding error.
+        // Thứ giá trị nhất mà DateTimeOffset mang lại ở đây. Site DE1 quan sát daylight saving time,
+        // nên một timestamp không có offset sẽ mập mờ trong một giờ mỗi mùa thu — và một timestamp
+        // mập mờ trong một legal record là một finding, không phải một lỗi làm tròn.
         var envelope = JsonSerializer.Deserialize(GoldenFile.ReadText(Golden), EnvelopeInfo);
 
         envelope!.Time.Offset.ShouldBe(TimeSpan.Zero);

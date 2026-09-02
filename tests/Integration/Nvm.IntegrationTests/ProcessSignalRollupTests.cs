@@ -9,7 +9,7 @@ using Nvm.Sparkplug.Topics;
 
 namespace Nvm.IntegrationTests;
 
-/// <summary>C07 — real process signals roll up by site and by exact UTC minute.</summary>
+/// <summary>C07 — process signal thật được rollup theo site và đúng từng phút UTC.</summary>
 public sealed class ProcessSignalRollupTests
 {
     private static readonly EquipmentPath Nv1Channel =
@@ -18,7 +18,7 @@ public sealed class ProcessSignalRollupTests
     private static readonly EquipmentPath De1Channel =
         EquipmentPath.Parse("NOVAVOLT/DE1/FORMATION/F1/FORM-01/FORM-01-CH-0001");
 
-    /// <summary>A second channel on the same machine, so the machine rollup has something to weigh.</summary>
+    /// <summary>Channel thứ hai trên cùng máy, để machine rollup có dữ liệu để weigh.</summary>
     private static readonly EquipmentPath Nv1SecondChannel =
         EquipmentPath.Parse("NOVAVOLT/NV1/FORMATION/F1/FORM-01/FORM-01-CH-0002");
 
@@ -43,8 +43,8 @@ public sealed class ProcessSignalRollupTests
 
         aggregate.ShouldBe(["ts", "telemetry_measurement", "true", "_timescaledb_internal", "true"]);
 
-        // Jobs key their configs with the internal materialization-hypertable id. Join through the
-        // continuous-aggregate catalogue rather than assuming its generated name or id is stable.
+        // Job key config bằng id materialization-hypertable nội bộ. Join qua catalogue continuous
+        // aggregate thay vì giả định name hoặc id được generate của nó ổn định.
         var policies = await ReadRowsAsync(
             dataSource,
             """
@@ -73,23 +73,21 @@ public sealed class ProcessSignalRollupTests
             ORDER BY jobs.proc_name;
             """);
 
-        // Refresh and compression, and NO retention. Migration 005 scheduled a 15-year retention on
-        // the rollup and migration 010 took it back off, for the same reason 007 did on raw:
-        // scope.md §8.4 puts a legal hold in front of EVERY retention policy, and the hold is M12.
-        // The rollup is not the exception it looks like — past day 400 the raw rows are gone and it
-        // is the only surviving record of its period, so its retention job was quietly the last
-        // deletion in the chain.
+        // Refresh và compression, KHÔNG retention. Migration 005 schedule retention 15 năm trên rollup
+        // và migration 010 gỡ nó, cùng lý do 007 gỡ ở raw: scope.md §8.4 đặt legal hold trước MỌI
+        // retention policy, và hold là M12. Rollup không phải ngoại lệ như vẻ ngoài — qua ngày 400, raw
+        // row đã mất và nó là record duy nhất còn lại của period, nên retention job của nó âm thầm là
+        // lần xóa cuối chuỗi.
         //
-        // Compression arrived in migration 011 and is a different kind of job entirely: it changes
-        // how rows are stored, never whether they exist. It is here because the rollup was the only
-        // relation in the read path with no clustering at all — measured at roughly three useful
-        // rows per 8 kB page — which took D2 from 144 to 201 ms once the database grew. The seven
-        // day horizon matches the raw table so the newest week, the part an operator refreshes
-        // most, stays rowstore.
+        // Compression đến ở migration 011 và là loại job hoàn toàn khác: nó đổi cách lưu row, không
+        // bao giờ đổi row có tồn tại hay không. Nó ở đây vì rollup là relation duy nhất trên read path
+        // hoàn toàn không có clustering — đo được khoảng ba row hữu ích mỗi page 8 kB — khiến D2 từ 144
+        // thành 201 ms khi database lớn lên. Chân trời bảy ngày khớp raw table, nên tuần mới nhất,
+        // phần operator refresh nhiều nhất, vẫn là rowstore.
         //
-        // This assertion is exact on purpose. It is what failed when 011 was added, and that is the
-        // point: a new job on the rollup must be a decision someone writes down here, not something
-        // that appears because a migration happened to call add_*_policy.
+        // Assertion này chính xác có chủ ý. Đây là thứ fail khi thêm 011, và đó là điểm chính: job mới
+        // trên rollup phải là quyết định ai đó ghi ở đây, không phải thứ xuất hiện vì migration tình cờ
+        // gọi add_*_policy.
         policies.ShouldBe(
         [
             ["policy_compression", "12:00:00", "<null>", "<null>", "<null>", "7 days"],
@@ -127,13 +125,13 @@ public sealed class ProcessSignalRollupTests
         (await ingestor.IngestAsync([nv1, de1], CancellationToken.None))
             .ShouldBe(new IngestionResult(5, 0));
 
-        // WITH NO DATA is intentional: migration does not hide a potentially unbounded backfill.
+        // WITH NO DATA có chủ ý: migration không che giấu một backfill có thể không bị giới hạn.
         (await TelemetryHypertableTests.ReadAsync(
             dataSource,
             "SELECT count(*)::text FROM ts.process_signal_1m WHERE site_id = 'NV1';"))
             .ShouldBe(["0"]);
 
-        // The compatibility view exposes only values for which avg/min/max have physical meaning.
+        // Compatibility view chỉ expose value mà avg/min/max có ý nghĩa vật lý.
         (await TelemetryHypertableTests.ReadAsync(
             dataSource,
             """
@@ -175,7 +173,7 @@ public sealed class ProcessSignalRollupTests
             ["2026-01-15 10:01:00+00", "30.000", "30", "30", "1"],
         ]);
 
-        // The second site remains independently addressable; every process-data read filters it (K3).
+        // Site thứ hai vẫn address được độc lập; mọi lần đọc process data đều filter nó (K3).
         (await TelemetryHypertableTests.ReadAsync(
             dataSource,
             """
@@ -196,14 +194,13 @@ public sealed class ProcessSignalRollupTests
 
         await using var dataSource = NpgsqlDataSource.Create(postgres.GetConnectionString());
 
-        // Reverse order. The site-scoped read views of migration 008 are built ON the rollup, so
-        // dropping the rollup first is refused — and that refusal is correct: a rollback able to take
-        // a security boundary with it silently is not one anybody should run by accident.
+        // Thứ tự ngược. Site-scoped read view của migration 008 được build TRÊN rollup, nên drop rollup
+        // trước bị từ chối — và từ chối đó đúng: rollback có thể âm thầm mang theo security boundary
+        // không phải thứ ai nên vô tình chạy.
         //
-        // 013 first: the machine rollup is a continuous aggregate built ON
-        // ts.process_signal_1m, so migration 005 cannot drop the rollup while it still has a
-        // dependant. Then 011, because leaving its compression policy in place would hand 005 a
-        // rollup with a scheduled job still attached.
+        // 013 trước: machine rollup là continuous aggregate build TRÊN ts.process_signal_1m, nên
+        // migration 005 không thể drop rollup khi nó còn dependant. Rồi 011, vì để compression policy
+        // của nó tại chỗ sẽ đưa cho 005 rollup vẫn gắn scheduled job.
         (await TelemetryHypertableTests.ReadAsync(
             dataSource,
             """
@@ -277,33 +274,33 @@ public sealed class ProcessSignalRollupTests
               AND hypertable_name = 'telemetry_measurement'
               AND proc_name IN ('policy_compression', 'policy_retention');
             """))
-            // Compression only. Retention was unscheduled by migration 007 and stays unscheduled;
-            // rolling the rollup back is not an occasion to quietly re-arm deletion of raw evidence.
+            // Chỉ compression. Retention đã được migration 007 unschedule và vẫn vậy; rollback rollup
+            // không phải dịp âm thầm re-arm việc xóa raw evidence.
             .ShouldBe(["1"]);
     }
 
     [Fact]
     public async Task TheMachineRollup_WeighsChannelsByTheirSampleCountInsteadOfAveragingAverages()
     {
-        // Migration 013, and the whole reason it exists is the number this test pins.
+        // Migration 013, và toàn bộ lý do nó tồn tại là con số test này pin.
         //
-        // "Average temperature of FORM-01 this minute" is a question about a MACHINE. Storing the
-        // answer per channel and re-aggregating on every read was costing 1.312,404 ms once the
-        // database held the line's other nine cyclers, because a machine-scope read had to scan
-        // 8.000 compressed segments to find its 100. The machine rollup answers it directly.
+        // "Nhiệt độ trung bình của FORM-01 trong phút này" là câu hỏi về MÁY. Lưu câu trả lời theo
+        // channel và re-aggregate mỗi lần đọc tốn 1.312,404 ms khi database đã có chín cycler khác của
+        // line, vì lần đọc scope máy phải scan 8.000 compressed segment để tìm 100 segment của nó.
+        // Machine rollup trả lời trực tiếp.
         //
-        // The arithmetic here is the trap the migration had to avoid. Two channels in the same
-        // minute with DIFFERENT sample counts:
+        // Phép tính ở đây là bẫy migration phải tránh. Hai channel trong cùng phút có sample count
+        // KHÁC NHAU:
         //
-        //     CH-0001   three readings at 10   ->  avg 10, count 3
-        //     CH-0002   one reading   at 30    ->  avg 30, count 1
+        //     CH-0001   ba reading ở 10        ->  avg 10, count 3
+        //     CH-0002   một reading ở 30       ->  avg 30, count 1
         //
-        //     weighted   (10*3 + 30*1) / 4  =  15   <- what a thermometer would have read
-        //     unweighted (10 + 30) / 2      =  20   <- what avg(avg_value) returns
+        //     weighted   (10*3 + 30*1) / 4  =  15   <- điều thermocouple đã đọc
+        //     unweighted (10 + 30) / 2      =  20   <- điều avg(avg_value) trả về
         //
-        // Both are plausible-looking numbers and only one is the temperature. Report-by-exception
-        // guarantees channels do not share a sample count, so the two answers differ in practice
-        // rather than in theory, and a test that used equal counts would pass either way.
+        // Cả hai đều là số nghe có vẻ hợp lý nhưng chỉ một là nhiệt độ. Report-by-exception đảm bảo
+        // channel không cùng sample count, nên hai đáp án khác nhau trên thực tế chứ không chỉ lý
+        // thuyết; test dùng count bằng nhau sẽ pass cả hai cách.
         await using var postgres = await TelemetryHypertableTests.StartAsync();
         IngestionSchemaMigrator.Upgrade(postgres.GetConnectionString());
 
@@ -340,8 +337,8 @@ public sealed class ProcessSignalRollupTests
                 force => false);
             """);
 
-        // A hierarchical continuous aggregate is not refreshed merely because its parent is.
-        // Pin the stale-child state that N-M3-8 exposed before refreshing the child explicitly.
+        // Continuous aggregate phân cấp không tự refresh chỉ vì parent đã refresh. Pin trạng thái
+        // child stale mà N-M3-8 lộ ra trước khi explicit refresh child.
         (await TelemetryHypertableTests.ReadAsync(
             dataSource,
             """
@@ -385,9 +382,8 @@ public sealed class ProcessSignalRollupTests
                 ["NOVAVOLT/NV1/FORMATION/F1/FORM-01", "15.000", "10", "30", "4"],
             ]);
 
-        // The machine id is the channel's parent path, not a string the caller supplies. A rollup
-        // that trusted a caller-provided machine name would let two spellings of one machine become
-        // two machines, and nothing downstream would notice.
+        // Machine id là parent path của channel, không phải string caller cung cấp. Rollup tin machine
+        // name do caller cấp sẽ để hai cách viết của một máy thành hai máy, mà downstream không nhận ra.
         (await TelemetryHypertableTests.ReadAsync(
             dataSource,
             """

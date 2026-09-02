@@ -9,7 +9,7 @@ using Nvm.Sparkplug.Topics;
 
 namespace Nvm.IntegrationTests;
 
-/// <summary>C06 — compression and retention operate on raw-telemetry chunks.</summary>
+/// <summary>C06 — compression và retention hoạt động trên raw-telemetry chunk.</summary>
 public sealed class TelemetryPolicyTests
 {
     private static readonly EquipmentPath Channel =
@@ -35,19 +35,16 @@ public sealed class TelemetryPolicyTests
             ORDER BY proc_name;
             """);
 
-        // Compression only. Migration 004 scheduled retention at 400 days and migration 007 took it
-        // straight back off, because scope.md §8.4 requires a legal hold in front of every retention
-        // policy and legal hold is M12. Asserting the absence is the point: a background job that
-        // deletes legal records unconditionally must not be able to come back by accident, and the
-        // one thing a reviewer cannot see in a diff is a job that is still scheduled.
+        // Chỉ compression. Migration 004 schedule retention 400 ngày rồi migration 007 gỡ ngay, vì
+        // scope.md §8.4 yêu cầu legal hold đứng trước mọi retention policy và legal hold là M12.
+        // Assertion về sự vắng mặt là điểm chính: background job xóa legal record vô điều kiện không
+        // được vô tình trở lại, và thứ reviewer không thấy trong diff là job vẫn đang schedule.
         policies.ShouldBe([["policy_compression", "7 days", "<null>"]]);
 
-        // EVERY retention policy, which is the word scope.md §8.4 uses. Stated over the whole schema
-        // rather than per table because the first version of this fix exempted the rollup on the
-        // grounds that it is derived data — and past day 400 it is not derived from anything, it is
-        // the last copy. A per-table assertion would have agreed with that mistake; this one is the
-        // shape of the rule itself, so the next table to arrive is covered before anyone thinks about
-        // it.
+        // MỌI retention policy, đúng từ scope.md §8.4 dùng. Phát biểu trên toàn schema thay vì từng
+        // table vì phiên bản đầu của fix miễn rollup với lý do nó là derived data — qua ngày 400 nó
+        // không derive từ gì nữa, mà là bản sao cuối. Assertion theo table sẽ đồng ý với sai lầm đó;
+        // cái này là shape của chính rule, nên table tới sau được cover trước khi ai nghĩ về nó.
         (await TelemetryHypertableTests.ReadAsync(
             dataSource,
             """
@@ -102,8 +99,8 @@ public sealed class TelemetryPolicyTests
             new FakeTimeProvider(at.AddDays(30)),
             new IngestionMetrics());
 
-        // Thirty days between the reading and its write, so both ingests below are counted by the
-        // retention-risk counter — this fixture is a small version of the case it exists to measure.
+        // Ba mươi ngày giữa reading và lúc ghi, nên cả hai ingest dưới đây được retention-risk counter
+        // đếm — fixture là bản nhỏ của case nó tồn tại để đo.
         (await ingestor.IngestAsync([Message(at, 3.65)], CancellationToken.None))
             .ShouldBe(new IngestionResult(1, 0, RetentionRisk: 1));
 
@@ -119,9 +116,9 @@ public sealed class TelemetryPolicyTests
             "SELECT count(*)::text FROM ts.telemetry_measurement;"))
             .ShouldBe(["1"]);
 
-        // This is a gateway flush after the chunk was compressed: the physical timestamp is still
-        // in that old chunk, while recorded_at is now. Correctness requires accepting it; the lab
-        // script records the performance price separately because elapsed-time assertions are flaky.
+        // Đây là gateway flush sau khi chunk compressed: physical timestamp vẫn ở chunk cũ còn
+        // recorded_at là bây giờ. Correctness yêu cầu chấp nhận nó; lab script ghi performance price
+        // riêng vì assertion elapsed-time flaky.
         (await ingestor.IngestAsync([Message(at.AddMinutes(1), 3.66)], CancellationToken.None))
             .ShouldBe(new IngestionResult(1, 0, RetentionRisk: 1));
 
@@ -134,16 +131,14 @@ public sealed class TelemetryPolicyTests
     [Fact]
     public async Task DroppingChunks_WouldDeleteAFreshRecordWhoseDeviceClockIsFiveHundredDaysOld()
     {
-        // The C06 lab, restated after migration 007. It used to run the scheduled retention job; there
-        // is no scheduled retention job any more, so it calls drop_chunks by hand — which is now the
-        // only way this can happen at all, and that is the substance of the fix rather than a
-        // mechanical rewrite. The failure mode itself is unchanged and still real: the reading is
-        // recorded NOW, and it is deleted anyway, because the chunk it lands in is chosen by the
-        // device clock. Nothing raises, nothing is logged, and the row was a legal record (K4).
+        // Lab C06, phát biểu lại sau migration 007. Nó từng chạy scheduled retention job; giờ không còn
+        // job đó nên gọi drop_chunks bằng tay — cách duy nhất điều này có thể xảy ra, và đó là bản chất
+        // của fix chứ không phải mechanical rewrite. Failure mode không đổi và vẫn thật: reading được
+        // recorded NGAY BÂY GIỜ nhưng vẫn bị xóa vì chunk nó vào được chọn bởi device clock. Không gì
+        // raise, không gì log, và row là legal record (K4).
         //
-        // The retention-risk counter is asserted in the same breath, because a number that fires on
-        // this case and stays quiet on ordinary late data is the only thing that lets M12 decide when
-        // retention may come back.
+        // Retention-risk counter được assert cùng lúc, vì number fire ở case này nhưng im lặng với late
+        // data thông thường là thứ duy nhất để M12 quyết định retention có thể trở lại khi nào.
         await using var postgres = await TelemetryHypertableTests.StartAsync();
         IngestionSchemaMigrator.Upgrade(postgres.GetConnectionString());
 
@@ -163,9 +158,8 @@ public sealed class TelemetryPolicyTests
         (await ingestor.IngestAsync([expired, current], CancellationToken.None))
             .ShouldBe(new IngestionResult(2, 0, Drifted: 1, RetentionRisk: 1));
 
-        // One of the two, not both. The current reading is a day behind its write — a gateway that
-        // buffered, which happens constantly — and a counter that fired on that would be a counter
-        // nobody reads by the second week.
+        // Một trong hai, không phải cả hai. Reading hiện tại lùi một ngày sau lúc ghi — gateway buffer,
+        // chuyện xảy ra thường xuyên — và counter fire vì vậy sẽ là counter không ai đọc sau tuần hai.
         metrics.RetentionRiskCount.ShouldBe(1);
         (await CountChunksContainingAsync(dataSource, expiredAt)).ShouldBe(1);
 
@@ -189,8 +183,8 @@ public sealed class TelemetryPolicyTests
             dataSource,
             "SELECT drop_chunks('ts.telemetry_measurement', older_than => INTERVAL '400 days');");
 
-        // Retention acts on the device-time chunk. The claim intentionally remains global, because
-        // deleting it would let a replay of the old measurement through as new (ADR-030).
+        // Retention tác động trên chunk device-time. Claim cố ý vẫn global, vì xóa nó sẽ để replay
+        // measurement cũ đi qua như mới (ADR-030).
         (await TelemetryHypertableTests.ReadAsync(
             dataSource,
             "SELECT count(*)::text FROM ts.telemetry_measurement;"))
@@ -201,8 +195,8 @@ public sealed class TelemetryPolicyTests
             .ShouldBe(["2"]);
         (await CountChunksContainingAsync(dataSource, expiredAt)).ShouldBe(0);
 
-        // Retention must not erase the dedup authority. Replaying the exact natural key is still a
-        // duplicate and cannot recreate telemetry after its raw-data horizon has elapsed.
+        // Retention không được xóa dedup authority. Replay đúng natural key vẫn là duplicate và không
+        // thể tạo lại telemetry sau khi raw-data horizon đã qua.
         (await ingestor.IngestAsync([expired], CancellationToken.None))
             .ShouldBe(new IngestionResult(0, 1));
         (await TelemetryHypertableTests.ReadAsync(
@@ -229,9 +223,9 @@ public sealed class TelemetryPolicyTests
             dataSource,
             "SELECT compress_chunk(chunk) FROM show_chunks('ts.telemetry_measurement') AS chunk;");
 
-        // Reverse order, so this proves the supported chain: 007 down puts retention back on the
-        // schedule and 004 down then has both policies to remove. Running 004 down on its own would
-        // pass here for the wrong reason — there is nothing to remove until 007 is undone.
+        // Thứ tự ngược để chứng minh supported chain: 007 down đưa retention lại schedule và 004 down
+        // có cả hai policy để gỡ. Chạy riêng 004 down sẽ pass ở đây vì lý do sai — không có gì để gỡ
+        // cho đến khi undo 007.
         await TelemetryHypertableTests.ExecuteAsync(
             dataSource,
             await File.ReadAllTextAsync(

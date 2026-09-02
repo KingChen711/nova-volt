@@ -14,10 +14,10 @@ using Testcontainers.PostgreSql;
 namespace Nvm.IntegrationTests;
 
 /// <summary>
-/// C15: an end-of-line tester that has never heard of MQTT still comes in through the same door.
-/// The two adapters differ in how they read and in nothing else — same natural key, same claim, same
-/// transaction — because two dedup definitions drift within months and the symptom is one
-/// measurement stored twice for exactly the machines that report through both routes.
+/// C15: một end-of-line tester chưa từng nghe tới MQTT vẫn đi vào qua cùng một cánh cửa.
+/// Hai adapter chỉ khác nhau ở cách chúng đọc dữ liệu và không khác gì khác — cùng natural key, cùng
+/// claim, cùng transaction — vì hai định nghĩa dedup lệch nhau chỉ trong vài tháng, và triệu chứng là
+/// một measurement bị lưu hai lần đúng vào những máy báo cáo qua cả hai route.
 /// </summary>
 public sealed class FileDropTests
 {
@@ -28,8 +28,8 @@ public sealed class FileDropTests
     private static readonly EquipmentPath OtherChannel =
         EquipmentPath.Parse("NOVAVOLT/NV1/FORMATION/F1/FORM-01/FORM-01-CH-0143");
 
-    // Interpolation rather than string.Format: one reading per index, and the analyzers are right
-    // that a format string used in a loop wants a CompositeFormat it does not need here.
+    // Dùng interpolation thay vì string.Format: mỗi index một reading, và các analyzer nói đúng
+    // rằng một format string dùng trong loop cần một CompositeFormat mà ở đây không cần tới.
     private static string Row(int index) =>
         string.Create(
             CultureInfo.InvariantCulture,
@@ -38,13 +38,14 @@ public sealed class FileDropTests
     [Fact]
     public async Task TheOriginalBytes_AreArchivedBeforeTheFileIsFiledAsProcessed()
     {
-        // C12 had a WORM store with no caller: ArchiveAsync was reachable only from its own test, so
-        // a running plant kept measurements and threw the machine's own export away. This is the wire.
+        // C12 từng có một WORM store mà không ai gọi tới: ArchiveAsync chỉ reachable được từ chính
+        // test của nó, nên một nhà máy đang chạy vẫn giữ measurement nhưng lại vứt bỏ export gốc của
+        // máy. Đây là dây nối.
         //
-        // What is asserted is the shape of the claim an auditor would test: the exact bytes on disk,
-        // the machine they came from, the interval they cover, and — K5 — who handed them over and
-        // why. The digest and the object lock belong to RawCurveArchiveTests; here the question is
-        // only whether anything calls it at all.
+        // Điều được assert là hình dạng của claim mà một auditor sẽ kiểm tra: đúng từng byte trên
+        // đĩa, máy nào tạo ra chúng, khoảng thời gian chúng bao phủ, và — K5 — ai đã bàn giao chúng
+        // và vì sao. Digest và object lock thuộc về RawCurveArchiveTests; ở đây câu hỏi chỉ là có
+        // bất kỳ ai gọi nó hay không.
         await using var harness = await FileDropHarness.StartAsync();
 
         var result = await harness.DropAsync("eol-export.csv", Lines(3));
@@ -57,38 +58,39 @@ public sealed class FileDropTests
         archived.Provenance.Reason.ShouldContain("eol-export.csv");
         archived.Provenance.SupersedesArchiveId.ShouldBeNull();
 
-        // Byte for byte what is on disk, not a re-serialisation of the parsed rows. Everything the
-        // archive exists for depends on this being the file the machine wrote.
+        // Đúng từng byte những gì có trên đĩa, không phải một bản re-serialize từ các row đã parse.
+        // Toàn bộ lý do archive tồn tại phụ thuộc vào việc đây chính là file mà máy đã ghi.
         archived.Bytes.ShouldBe(
             await File.ReadAllBytesAsync(
                 Path.Combine(harness.ProcessedPath, "eol-export.csv"),
                 TestContext.Current.CancellationToken));
 
-        // The interval is read off the samples, not off the file name, and it is half-open like every
-        // other interval here: the last sample is inside it by exactly one microsecond. A tick would
-        // read better and cannot be stored — the archive keeps the interval in a `timestamptz`, and
-        // an end that only exists at 100 ns resolution comes back as a different interval than the
-        // one that was written. This assertion pinned the tick until a probe on the running stack
-        // showed what it cost.
+        // Interval được đọc từ chính các sample, không phải từ tên file, và nó half-open giống mọi
+        // interval khác ở đây: sample cuối cùng nằm trong nó đúng bằng một microsecond. Dùng tick sẽ
+        // đọc dễ hiểu hơn nhưng không thể lưu được — archive giữ interval trong một `timestamptz`,
+        // vốn chỉ giữ tới microsecond, nên một điểm end chỉ tồn tại ở độ phân giải 100 ns sẽ quay
+        // lại thành một interval khác với interval đã ghi. Assertion này ghim chặt tick cho tới khi
+        // một phép đo trên stack đang chạy cho thấy cái giá phải trả.
         var span = await harness.MeasuredSpanAsync();
         archived.Descriptor.CurveStartAt.ShouldBe(span.First);
         archived.Descriptor.CurveEndAt.ShouldBe(span.Last.AddTicks(TimeSpan.TicksPerMicrosecond));
 
-        // And the file only reaches `processed` once its original is kept.
+        // Và file chỉ tới được `processed` sau khi bản gốc của nó đã được giữ lại.
         harness.Processed().ShouldHaveSingleItem().ShouldBe("eol-export.csv");
     }
 
     [Fact]
     public async Task AFileNamingTwoMachines_IsRejectedWholeAndStoresNothing()
     {
-        // An export is one machine's record of one run. A file mixing two channels has no single
-        // answer to "whose curve is this", so it can never have an original — and a measurement whose
-        // original cannot be produced is not evidence (K4).
+        // Một export là bản ghi của một máy cho một run. Một file trộn lẫn hai channel không có câu
+        // trả lời duy nhất cho câu hỏi "curve này là của ai", nên nó không bao giờ có thể có bản gốc
+        // — và một measurement không thể tạo ra bản gốc thì không phải là bằng chứng (K4).
         //
-        // The first version of this fix stored the rows, logged a warning and filed the file under
-        // `processed`. That contradicted the guarantee stated three lines above it in the same method,
-        // and it is the exact failure mode this adapter exists to prevent: a path that looks handled.
-        // Rejecting is a whole-file decision, so it happens before the first row is stored.
+        // Phiên bản đầu tiên của fix này đã lưu các row, log một warning rồi xếp file vào
+        // `processed`. Điều đó mâu thuẫn với guarantee đã nêu ba dòng phía trên trong cùng method,
+        // và đó chính xác là failure mode mà adapter này tồn tại để ngăn chặn: một path trông như đã
+        // được xử lý. Reject là một quyết định trên toàn bộ file, nên nó xảy ra trước khi row đầu
+        // tiên được lưu.
         await using var harness = await FileDropHarness.StartAsync();
 
         var mixed = new List<string>(Lines(2))
@@ -112,9 +114,9 @@ public sealed class FileDropTests
         reason.ShouldContain("names 2 machines");
         reason.ShouldContain("Nothing was stored");
 
-        // Split into two exports, the same three readings go in. The rejection is about the shape of
-        // the file, not about the data being unusable — otherwise it would just be data loss with an
-        // explanation attached.
+        // Tách thành hai export, cùng ba reading đó vẫn đi vào. Việc reject là về hình dạng của
+        // file, không phải vì dữ liệu không dùng được — nếu không thì đây chỉ là mất dữ liệu kèm
+        // theo một lời giải thích.
         (await harness.DropAsync("ch-0142.csv", Lines(2))).ShouldNotBeNull();
         (await harness.DropAsync("ch-0143.csv", [mixed[^1]])).ShouldNotBeNull();
         (await harness.CountTelemetryAsync()).ShouldBe(3);
@@ -124,19 +126,19 @@ public sealed class FileDropTests
     [Fact]
     public async Task AFileWhoseSecondMachineOnlyAppearsOnAnUnparseableLine_IsStillRejectedWhole()
     {
-        // The hole the previous fix left open, found by an independent audit on 2026-09-01.
+        // Lỗ hổng mà fix trước để lại, được phát hiện bởi một audit độc lập vào ngày 2026-09-01.
         //
-        // The single-machine check used to read the machines off the measurements that parsed. A line
-        // can fail on its VALUE and still name its machine perfectly clearly, so a file holding good
-        // rows for CH-0142 and one broken row for CH-0143 named two machines and looked like one: the
-        // CH-0142 rows were stored, the whole file was archived as CH-0142's original, and it was
-        // filed under `processed`. An auditor pulling that original would be handed bytes containing
-        // another machine's readings.
+        // Trước đây, single-machine check đọc danh sách máy từ các measurement đã parse thành công.
+        // Một dòng có thể fail ở VALUE mà vẫn nêu tên máy của nó hoàn toàn rõ ràng, nên một file
+        // chứa các row tốt cho CH-0142 và một row hỏng cho CH-0143 đã nêu tên hai máy nhưng trông
+        // như chỉ một: các row của CH-0142 được lưu, cả file được archive như bản gốc của CH-0142,
+        // và nó được xếp vào `processed`. Một auditor lấy bản gốc đó sẽ nhận về những byte chứa cả
+        // reading của một máy khác.
         await using var harness = await FileDropHarness.StartAsync();
 
         var mixed = new List<string>(Lines(2))
         {
-            // Valid path, valid timestamp, value that is not a number.
+            // Path hợp lệ, timestamp hợp lệ, value không phải là một số.
             "NOVAVOLT/NV1/FORMATION/F1/FORM-01/FORM-01-CH-0143,,Formation/CapacityResult,"
             + "2026-08-28T09:28:12.000Z,real,not-a-number",
         };
@@ -150,8 +152,8 @@ public sealed class FileDropTests
         var reason = await harness.ReadRejectedAsync("value-broken-second-machine.csv.error");
         reason.ShouldContain("names 2 machines");
 
-        // The rejection names both, including the one that only ever appeared on a failing line —
-        // otherwise an operator reading the error cannot tell which file to split.
+        // Lời reject nêu tên cả hai, kể cả máy chỉ từng xuất hiện trên một dòng lỗi — nếu không một
+        // operator đọc lỗi sẽ không biết phải tách file nào.
         reason.ShouldContain("FORM-01-CH-0142");
         reason.ShouldContain("FORM-01-CH-0143");
     }
@@ -159,10 +161,11 @@ public sealed class FileDropTests
     [Fact]
     public async Task AFileWhoseEveryDataLineFails_IsFiledUnderRejectedRatherThanProcessed()
     {
-        // One machine, no ambiguity, and not one readable reading. Nothing is stored, so nothing
-        // lacks its original and K4 is not violated — but the file used to land in `processed`,
-        // whose name says the readings in it went in. An operator scanning that directory could not
-        // tell this apart from an export that worked, and the explanation sat in another directory.
+        // Một máy, không mập mờ, và không một reading nào đọc được. Không gì được lưu, nên không gì
+        // thiếu bản gốc và K4 không bị vi phạm — nhưng trước đây file lại rơi vào `processed`, cái
+        // tên vốn nói rằng các reading trong nó đã đi vào hệ thống. Một operator quét thư mục đó
+        // không thể phân biệt trường hợp này với một export đã thành công, còn lời giải thích thì
+        // nằm ở một thư mục khác.
         await using var harness = await FileDropHarness.StartAsync();
 
         var unreadable = new List<string>
@@ -191,9 +194,9 @@ public sealed class FileDropTests
     [Fact]
     public async Task AHeaderOnlyFile_IsRejectedBecauseAnEmptyExportCanHideAnExporterFailure()
     {
-        // An empty export is valid CSV but not a successful production outcome. There is no machine
-        // to attribute an immutable original to, and marking it processed would hide the common
-        // failure where an exporter wrote its header after losing the run it was meant to export.
+        // Một export rỗng là CSV hợp lệ nhưng không phải một kết quả sản xuất thành công. Không có
+        // máy nào để gán bản gốc bất biến vào, và đánh dấu nó là processed sẽ che giấu lỗi thường
+        // gặp: một exporter ghi header rồi mất luôn run mà nó lẽ ra phải export.
         await using var harness = await FileDropHarness.StartAsync();
 
         (await harness.DropAsync("empty-export.csv", [])).ShouldBeNull();
@@ -212,9 +215,10 @@ public sealed class FileDropTests
     [Fact]
     public async Task AFileWithALineWhoseMachineCannotBeRead_IsRejectedWholeRatherThanAttributed()
     {
-        // Stricter than "one bad line does not reject the file", and deliberately so. A bad VALUE
-        // costs one measurement. A bad IDENTITY costs the ability to say whose file this is, and an
-        // archive filed under a machine that might not own every line in it is not evidence.
+        // Nghiêm ngặt hơn cả "một dòng hỏng không làm reject cả file", và đây là chủ ý. Một VALUE
+        // hỏng chỉ mất một measurement. Một IDENTITY hỏng làm mất khả năng nói file này là của ai,
+        // và một archive được xếp dưới tên một máy có thể không sở hữu mọi dòng trong đó thì không
+        // phải là bằng chứng.
         var logger = new RecordingLogger<FileDropProcessor>();
         await using var harness = await FileDropHarness.StartAsync(logger: logger);
 
@@ -241,9 +245,9 @@ public sealed class FileDropTests
     [Fact]
     public async Task ReplacingThePublicPathAfterClaim_DoesNotChangeTelemetryArchiveOrProcessedBytes()
     {
-        // The old implementation parsed A, released the file, wrote the rows, and then reopened the
-        // public path for archival. An exporter replacing that path while ingestion was blocked made
-        // the database describe A while the WORM object and `processed` both claimed B was original.
+        // Implementation cũ parse A, giải phóng file, ghi các row, rồi mới mở lại public path để
+        // archive. Một exporter thay thế path đó trong lúc ingestion bị chặn khiến database mô tả A
+        // trong khi object WORM và `processed` đều khẳng định B mới là bản gốc.
         await using var harness = await FileDropHarness.StartAsync(blockFileIngestion: true);
 
         var path = await harness.WriteDropAsync("replaced-during-ingest.csv", Lines(2));
@@ -280,9 +284,10 @@ public sealed class FileDropTests
             Path.Combine(harness.ProcessedPath, "replaced-during-ingest.csv"),
             TestContext.Current.CancellationToken)).ShouldBe(snapshotA);
 
-        // B is a genuinely new drop and remains for the next poll; completing A must not overwrite it.
-        // It also has to still be *published*: claiming A took A's readiness with it in one rename,
-        // so there is nothing of B's for A's claim to have consumed.
+        // B thực sự là một drop mới và vẫn còn đó cho lần poll tiếp theo; hoàn tất A không được ghi
+        // đè lên nó. B cũng phải vẫn còn ở trạng thái *published*: việc claim A đã mang theo
+        // readiness của A trong một lần rename duy nhất, nên không có gì của B để claim của A tiêu
+        // thụ mất.
         (await File.ReadAllBytesAsync(publishedB, TestContext.Current.CancellationToken)).ShouldBe(bytesB);
         harness.InboxNames().ShouldHaveSingleItem().ShouldBe("replaced-during-ingest.csv.ready");
     }
@@ -290,11 +295,11 @@ public sealed class FileDropTests
     [Fact]
     public async Task AnExportNotYetPublished_IsNotClaimedAndNothingInItIsStored()
     {
-        // Renaming a file out of the inbox does not close the handle its exporter still holds. On
-        // NFS the exporter keeps appending to the same inode afterwards, so ingestion stores the
-        // head of a run and the tail is deleted along with the claim, with nothing anywhere saying
-        // so. A quiet mtime cannot tell that case from a finished file; only the producer can, and
-        // the rename into the published name is how it says so.
+        // Rename một file ra khỏi inbox không đóng handle mà exporter của nó vẫn đang giữ. Trên NFS,
+        // exporter sau đó vẫn tiếp tục append vào cùng inode, nên ingestion lưu phần đầu của một run
+        // còn phần đuôi thì bị xóa cùng với claim, mà không có gì ở đâu nói điều đó. Một mtime lặng
+        // lẽ không thể phân biệt trường hợp đó với một file đã hoàn tất; chỉ có producer mới biết,
+        // và việc rename sang tên published chính là cách nó nói ra.
         await using var harness = await FileDropHarness.StartAsync();
 
         var dataPath = harness.DataPath("still-being-written.csv");
@@ -312,8 +317,8 @@ public sealed class FileDropTests
         harness.Processed().ShouldBeEmpty();
         harness.Rejected().ShouldBeEmpty();
 
-        // Left exactly where it was, and not half-claimed: the export is the exporter's until the
-        // rename says otherwise.
+        // Được để nguyên đúng chỗ cũ, không bị claim dở dang: export vẫn thuộc về exporter cho tới
+        // khi rename nói khác đi.
         File.Exists(dataPath).ShouldBeTrue();
         Directory.EnumerateFileSystemEntries(harness.ProcessingPath).ShouldBeEmpty();
 
@@ -329,10 +334,11 @@ public sealed class FileDropTests
     [Fact]
     public async Task ClaimingAnExport_TakesItsReadinessWithItAndLeavesNothingInTheInbox()
     {
-        // The invariant behind the one rename. An earlier version published readiness in a second
-        // file beside the data and took the two in sequence; every leftover of that pair was a flag
-        // in the inbox with nothing behind it, and the next export to arrive under that name
-        // inherited it — readable the instant it appeared, however much of it had been written.
+        // Đây là invariant đứng sau một lần rename duy nhất. Một phiên bản trước đó publish
+        // readiness trong một file thứ hai bên cạnh data và xử lý cả hai theo tuần tự; mọi phần còn
+        // sót lại của cặp đó là một flag trong inbox mà không có gì đứng sau nó, và export tiếp theo
+        // tới dưới cùng cái tên đó sẽ thừa hưởng nó — đọc được ngay khi vừa xuất hiện, bất kể đã ghi
+        // được bao nhiêu.
         await using var harness = await FileDropHarness.StartAsync();
 
         var published = await harness.WriteDropAsync("one-step.csv", Lines(2));
@@ -350,12 +356,12 @@ public sealed class FileDropTests
     [Fact]
     public async Task RestoringAClaimedExport_TakesANameNoProducerWouldPublish()
     {
-        // The restore used to aim at the name the export arrived under, first with File.Exists and
-        // then with an exclusive create. Neither survives a producer: a POSIX rename replaces
-        // whatever is at the destination, so `mv` walks straight through a placeholder and the
-        // restore then deletes the export that walked in — a file destroyed by the component whose
-        // whole job is to lose nothing. Nothing on this side can defend a name a producer may use,
-        // so the restore no longer aims at one.
+        // Trước đây, restore nhắm vào chính cái tên mà export đã tới dưới đó, đầu tiên bằng
+        // File.Exists rồi sau đó bằng một exclusive create. Cả hai đều không chịu nổi một producer:
+        // một POSIX rename sẽ thay thế bất cứ thứ gì đang ở đích, nên `mv` đi thẳng xuyên qua một
+        // placeholder, rồi restore lại xóa mất export vừa đi vào — một file bị chính component có
+        // nhiệm vụ duy nhất là không làm mất gì phá hủy. Không có gì ở phía này có thể bảo vệ một
+        // cái tên mà producer có thể dùng, nên restore không còn nhắm vào một cái tên nào nữa.
         await using var harness = await FileDropHarness.StartAsync(blockFileIngestion: true);
 
         var published = await harness.WriteDropAsync("published-twice.csv", Lines(2));
@@ -379,8 +385,9 @@ public sealed class FileDropTests
 
         (await File.ReadAllBytesAsync(publishedB, TestContext.Current.CancellationToken)).ShouldBe(bytesB);
 
-        // A comes back published, under a name of its own, so the next poll reads both and
-        // deduplication decides what is new — instead of one of them never having existed.
+        // A quay lại ở trạng thái published, dưới một cái tên riêng của nó, để lần poll tiếp theo đọc
+        // được cả hai và dedup quyết định cái nào là mới — thay vì một trong hai coi như chưa từng
+        // tồn tại.
         var restored = harness.InboxNames()
             .Where(name => name.StartsWith("published-twice.retry-", StringComparison.Ordinal))
             .ShouldHaveSingleItem();
@@ -397,8 +404,8 @@ public sealed class FileDropTests
     [Fact]
     public async Task RecoveringAClaimAbandonedByACrash_KeepsBothExports()
     {
-        // Same rule on the startup path, where it matters more: the process died holding a claim,
-        // and by the time it comes back the exporter has published that name again.
+        // Cùng một quy tắc trên startup path, nơi nó còn quan trọng hơn: process chết trong lúc đang
+        // giữ một claim, và tới khi nó quay lại thì exporter đã publish lại cái tên đó.
         await using var harness = await FileDropHarness.StartAsync();
 
         var claimDirectory = Path.Combine(harness.ProcessingPath, "0123456789abcdef0123456789abcdef");
@@ -432,7 +439,8 @@ public sealed class FileDropTests
         (await File.ReadAllBytesAsync(recoveredPath, TestContext.Current.CancellationToken)).ShouldBe(snapshotA);
         Directory.EnumerateFileSystemEntries(harness.ProcessingPath).ShouldBeEmpty();
 
-        // Recovered means readable: a file put back unpublished would sit there for good.
+        // Recovered nghĩa là đọc được: một file được trả lại ở trạng thái chưa published sẽ nằm ì ở
+        // đó mãi mãi.
         (await harness.ProcessPathAsync(recoveredPath, TestContext.Current.CancellationToken))
             .ShouldNotBeNull()
             .Inserted.ShouldBe(2);
@@ -441,11 +449,11 @@ public sealed class FileDropTests
     [Fact]
     public async Task AnExportOfOneReading_ReachesProcessedLikeAnyOther()
     {
-        // The most ordinary export an end-of-line tester writes, and the one that could not be
-        // archived at all. `Describe` ended the interval one 100 ns tick after the single reading;
-        // the archive stores it in a `timestamptz`, which keeps microseconds, so the interval
-        // arrived at PostgreSQL with no duration and the row was refused. The file then went round
-        // the retry loop for ever. Every test here used several readings, so none of them looked.
+        // Export bình thường nhất mà một end-of-line tester ghi ra, và cũng là loại từng hoàn toàn
+        // không thể archive được. `Describe` kết thúc interval một tick 100 ns sau reading duy nhất;
+        // còn archive lưu nó trong một `timestamptz`, vốn chỉ giữ tới microsecond, nên interval tới
+        // PostgreSQL với duration bằng 0 và row bị từ chối. File sau đó cứ vòng quanh mãi trong retry
+        // loop. Mọi test ở đây đều dùng nhiều reading, nên không test nào phát hiện ra.
         await using var harness = await FileDropHarness.StartAsync();
 
         var published = await harness.WriteDropAsync("one-reading.csv", [Row(1)]);
@@ -456,8 +464,8 @@ public sealed class FileDropTests
         result.Inserted.ShouldBe(1);
         harness.Processed().ShouldHaveSingleItem().ShouldBe("one-reading.csv");
 
-        // The interval has to survive the round trip through microsecond storage, so it must not
-        // carry anything below a microsecond.
+        // Interval phải sống sót qua vòng round-trip lưu trữ ở độ phân giải microsecond, nên nó
+        // không được mang theo bất kỳ phần nào nhỏ hơn một microsecond.
         var archived = harness.Archive.Calls.ShouldHaveSingleItem();
         archived.Descriptor.CurveEndAt.ShouldBeGreaterThan(archived.Descriptor.CurveStartAt);
         (archived.Descriptor.CurveEndAt.Ticks % TimeSpan.TicksPerMicrosecond).ShouldBe(0);
@@ -467,11 +475,11 @@ public sealed class FileDropTests
     [Fact]
     public async Task AnExportThatKeepsFailing_CountsItsRoundsInsteadOfGrowingItsName()
     {
-        // The retry marker used to be appended to whatever name the export arrived under, so every
-        // round of the loop made the name ~40 bytes longer. After six rounds it passed the 255-byte
-        // limit, the move failed, and the export was stranded under `.processing` with only a log
-        // line to say so — the failure mode being that a file which cannot be processed eventually
-        // cannot be returned either.
+        // Trước đây, retry marker được append vào bất kể cái tên nào mà export đã tới dưới đó, nên
+        // mỗi vòng của loop làm cái tên dài thêm ~40 byte. Sau sáu vòng nó vượt quá giới hạn 255
+        // byte, move thất bại, và export mắc kẹt dưới `.processing` chỉ với một dòng log để nói về
+        // việc đó — failure mode ở đây là một file không thể xử lý được thì rốt cuộc cũng không thể
+        // trả lại được.
         await using var harness = await FileDropHarness.StartAsync(blockFileIngestion: true);
 
         var published = await harness.WriteDropAsync("keeps-failing.csv", Lines(2));
@@ -485,7 +493,7 @@ public sealed class FileDropTests
         var first = harness.InboxNames().ShouldHaveSingleItem();
         first.ShouldStartWith("keeps-failing.retry-");
 
-        // Round two and three fail the same way, because the blocker stays failed.
+        // Vòng hai và vòng ba fail theo cùng cách, vì blocker vẫn đang ở trạng thái fail.
         await Should.ThrowAsync<InvalidOperationException>(() =>
             harness.ProcessPathAsync(
                 Path.Combine(harness.InboxPath, first),
@@ -502,7 +510,7 @@ public sealed class FileDropTests
         var third = harness.InboxNames().ShouldHaveSingleItem();
         third.ShouldStartWith("keeps-failing.retry3-");
 
-        // The name says how many rounds it has had, and nothing else grows.
+        // Cái tên nói lên nó đã trải qua bao nhiêu vòng, và không có gì khác lớn thêm.
         third.Length.ShouldBe(second.Length);
         third.Split(".retry").Length.ShouldBe(2);
         Directory.EnumerateFileSystemEntries(harness.ProcessingPath).ShouldBeEmpty();
@@ -511,9 +519,9 @@ public sealed class FileDropTests
     [Fact]
     public async Task AClaimCancelledBeforeItIsRead_ComesBackPublishedRatherThanStayingClaimed()
     {
-        // The restore of a claim whose bytes were never read used to be able to throw out of the
-        // catch block, replacing the failure that caused the retry and leaving the export under
-        // .processing until a restart nobody had scheduled.
+        // Trước đây, việc restore một claim mà bytes của nó chưa từng được đọc có thể throw ra khỏi
+        // catch block, thay thế failure vốn là nguyên nhân gây ra retry và để export nằm lại dưới
+        // .processing cho tới một lần restart mà không ai lên lịch.
         await using var harness = await FileDropHarness.StartAsync();
 
         var published = await harness.WriteDropAsync("host-stopping.csv", Lines(2));
@@ -546,8 +554,8 @@ public sealed class FileDropTests
         first.Inserted.ShouldBe(3);
         (await harness.CountTelemetryAsync()).ShouldBe(3);
 
-        // Byte for byte the same export. The natural key is a function of what was measured, not of
-        // when the file arrived, so nothing new is stored.
+        // Đúng từng byte cùng một export. Natural key là một hàm của những gì đã được đo, không phải
+        // của thời điểm file tới, nên không có gì mới được lưu.
         var second = await harness.DropAsync("eol-export.csv", Lines(3));
         second.ShouldNotBeNull();
         second.Inserted.ShouldBe(0);
@@ -571,7 +579,7 @@ public sealed class FileDropTests
         result.Inserted.ShouldBe(99);
         (await harness.CountTelemetryAsync()).ShouldBe(99);
 
-        // The file itself succeeded; only the line failed.
+        // Bản thân file thành công; chỉ dòng đó fail.
         harness.Processed().ShouldHaveSingleItem().ShouldBe("eol-export.csv");
 
         var rejected = harness.Rejected();
@@ -582,8 +590,8 @@ public sealed class FileDropTests
         reason.ShouldContain("not-a-number");
         reason.ShouldContain("The other lines of the file were stored");
 
-        // The header travels with the rejected line: a row of commas alone is something an operator
-        // has to decode by counting.
+        // Header đi kèm với dòng bị reject: một hàng chỉ toàn dấu phẩy là thứ mà operator phải giải
+        // mã bằng cách đếm.
         (await harness.ReadRejectedAsync("eol-export.line-52.csv"))
             .ShouldStartWith(CsvMeasurementReader.Header);
     }
@@ -605,10 +613,11 @@ public sealed class FileDropTests
     [Fact]
     public async Task FileDropRows_AreStoredWithClockQualityUnknown()
     {
-        // The case the Sparkplug path cannot produce. C02 refuses a metric with no timestamp because
-        // device_timestamp is in the natural key; here the CSV carries a measurement time, so the key
-        // works — but no device clock was ever involved, so calling it Good would be a claim nobody
-        // made. This is the third value of scope.md §7.3 arriving from its real source.
+        // Trường hợp mà Sparkplug path không thể tạo ra. C02 từ chối một metric không có timestamp vì
+        // device_timestamp nằm trong natural key; ở đây CSV mang theo một thời điểm đo, nên key vẫn
+        // hoạt động — nhưng không có đồng hồ thiết bị nào tham gia cả, nên gọi nó là Good sẽ là một
+        // khẳng định không ai đưa ra. Đây là giá trị thứ ba của scope.md §7.3 tới từ đúng nguồn thật
+        // của nó.
         await using var harness = await FileDropHarness.StartAsync();
 
         await harness.DropAsync("eol-export.csv", Lines(2));
@@ -734,11 +743,11 @@ public sealed class FileDropTests
             return PublishAsync(DataPath(fileName), lines);
         }
 
-        /// <summary>Drops a file the way the publish contract says a producer has to.</summary>
+        /// <summary>Drop một file theo đúng cách mà publish contract yêu cầu một producer phải làm.</summary>
         /// <remarks>
-        /// Every test goes through here, so all of them exercise the contract rather than only the
-        /// one test that is about it: write a temporary name, close it, and rename it into place in
-        /// one step. Returns the published path, which is the only name the adapter will look at.
+        /// Mọi test đều đi qua đây, nên tất cả chúng đều thực thi contract chứ không chỉ riêng test
+        /// nói về nó: ghi một tên tạm, đóng nó lại, rồi rename nó vào đúng chỗ trong một bước. Trả về
+        /// published path, cái tên duy nhất mà adapter sẽ nhìn vào.
         /// </remarks>
         internal async Task<string> PublishAsync(string dataFilePath, IReadOnlyList<string> lines)
         {
@@ -862,7 +871,7 @@ public sealed class FileDropTests
 
         internal void Release() => _release.TrySetResult();
 
-        /// <summary>Lets the ingest go on and then fail, the way a rolled-back transaction does.</summary>
+        /// <summary>Cho phép ingest tiếp tục rồi fail, giống cách một transaction bị rollback vẫn làm.</summary>
         internal void ReleaseWith(Exception failure)
         {
             _failure = failure;
@@ -914,11 +923,12 @@ public sealed class FileDropTests
         internal sealed record LogEntry(EventId EventId, string Message);
     }
 
-    /// <summary>An archive that keeps what it was handed, so the wiring can be asserted on.</summary>
+    /// <summary>Một archive giữ lại bất cứ thứ gì được đưa cho nó, để phần wiring có thể được assert.</summary>
     /// <remarks>
-    /// A fake rather than MinIO on purpose. RawCurveArchiveTests already proves the digest, the object
-    /// lock and the idempotency against a real S3; the open question this file answers is whether the
-    /// running adapter calls any of it, and the answer to that should not need a container.
+    /// Là một fake thay vì MinIO, có chủ đích. RawCurveArchiveTests đã chứng minh digest, object lock
+    /// và tính idempotent trên một S3 thật rồi; câu hỏi còn bỏ ngỏ mà file này trả lời là adapter
+    /// đang chạy có gọi tới bất kỳ cái nào trong số đó hay không, và câu trả lời cho điều đó không
+    /// nên cần tới một container.
     /// </remarks>
     internal sealed class RecordingRawCurveArchive : IRawCurveArchive
     {

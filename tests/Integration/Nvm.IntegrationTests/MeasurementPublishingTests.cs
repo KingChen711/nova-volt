@@ -15,9 +15,9 @@ using Testcontainers.PostgreSql;
 namespace Nvm.IntegrationTests;
 
 /// <summary>
-/// The join R-M1-6 said would only become visible at M2. Device deduplication keys on
-/// <c>source_event_id</c> and command deduplication keys on <c>ce_id</c>; if those two are ever
-/// different values, both mechanisms carry on working and neither protects the other.
+/// Phần join mà R-M1-6 nói sẽ chỉ trở nên hữu hình ở M2. Dedup thiết bị dùng key
+/// <c>source_event_id</c> còn dedup command dùng key <c>ce_id</c>; nếu hai giá trị đó từng khác
+/// nhau, cả hai cơ chế vẫn tiếp tục hoạt động mà không cơ chế nào bảo vệ cơ chế còn lại.
 /// </summary>
 public sealed class MeasurementPublishingTests
 {
@@ -27,10 +27,10 @@ public sealed class MeasurementPublishingTests
     private static readonly DateTimeOffset RecordedAt = new(2026, 8, 28, 12, 0, 0, TimeSpan.Zero);
     private static readonly DateTimeOffset FileReadAt = RecordedAt.AddSeconds(-10);
 
-    /// <summary>The curve a cycler reports all cycle long. Telemetry, whatever else is true of it.</summary>
+    /// <summary>Curve mà một cycler báo cáo suốt cả chu kỳ. Là telemetry, dù có đúng thêm điều gì khác về nó.</summary>
     private const string Capacity = "Formation/Capacity";
 
-    /// <summary>The capacity a cell finished at, as a test station reports it. A different signal.</summary>
+    /// <summary>Capacity mà một cell kết thúc ở đó, theo báo cáo của một test station. Một signal khác.</summary>
     private const string CapacityResult = "Formation/CapacityResult";
 
     private const string Telemetry = "Formation/Voltage";
@@ -39,8 +39,8 @@ public sealed class MeasurementPublishingTests
     [Fact]
     public async Task RawFormationCapacity_IsStoredAsTelemetryAndNotAnnounced()
     {
-        // The simulator reports this value throughout the cycle. It is a different signal from the
-        // result, so it cannot reach the bus by any route: the whitelist never names it.
+        // Simulator báo cáo giá trị này xuyên suốt chu kỳ. Đây là một signal khác với result, nên nó
+        // không thể tới được bus qua bất kỳ route nào: whitelist không bao giờ nêu tên nó.
         await using var fixture = await IngestionFixture.StartAsync(new PublishedSignals([CapacityResult]));
 
         var result = await fixture.Ingestor.IngestAsync(
@@ -56,13 +56,13 @@ public sealed class MeasurementPublishingTests
     [Fact]
     public async Task RawFormationCapacityThatKnowsItsCell_IsStillNotAnnounced()
     {
-        // M7 maps a channel to the cell sitting in it, and from that day every point on the curve
-        // carries a unit id. A system that read finality off the unit id would start announcing the
-        // whole curve on the day that mapping landed - hundreds of thousands of "results" a shift,
-        // each one a midpoint of a charge nobody has finished grading.
+        // M7 map một channel với cell đang nằm trong đó, và từ ngày đó mỗi điểm trên curve đều mang
+        // theo một unit id. Một hệ thống đọc tính "đã hoàn tất" từ unit id sẽ bắt đầu announce cả
+        // curve ngay từ ngày mapping đó xuất hiện - hàng trăm nghìn "result" mỗi ca, mỗi cái là một
+        // điểm giữa chừng của một lần charge chưa ai chấm điểm xong.
         //
-        // Nothing about this row changed except that it now knows its cell. It is still telemetry,
-        // and the signal code is what says so.
+        // Không có gì thay đổi ở row này ngoài việc giờ nó đã biết cell của mình. Nó vẫn là
+        // telemetry, và signal code chính là thứ nói lên điều đó.
         await using var fixture = await IngestionFixture.StartAsync(new PublishedSignals([CapacityResult]));
 
         var result = await fixture.Ingestor.IngestAsync(
@@ -78,10 +78,10 @@ public sealed class MeasurementPublishingTests
     [Fact]
     public async Task AnEvaluatedResultWithoutACell_IsStoredAndLeftUnannounced()
     {
-        // The other half of the rule. The signal code makes this a business fact, but an event that
-        // grades a cell has to name the cell - so a result that arrives without one is malformed,
-        // and the honest response is to keep the reading and say nothing rather than announce a
-        // grade about nobody.
+        // Nửa còn lại của quy tắc. Signal code khiến đây là một business fact, nhưng một event chấm
+        // điểm cho một cell thì phải nêu tên cell đó - nên một result tới mà không có nó là
+        // malformed, và phản ứng trung thực là giữ lại reading và không nói gì thay vì announce một
+        // điểm số về không ai cả.
         await using var fixture = await IngestionFixture.StartAsync(new PublishedSignals([CapacityResult]));
 
         var result = await fixture.Ingestor.IngestAsync(
@@ -113,8 +113,8 @@ public sealed class MeasurementPublishingTests
         published.UnitId.ShouldBe(CellId);
         published.RealValue.ShouldBe(4.812);
 
-        // The whole point of C14: the identity in the CloudEvents header comes from the same natural
-        // key already committed in the ingestion transaction.
+        // Toàn bộ mục đích của C14: identity trong CloudEvents header tới từ đúng natural key đã
+        // được commit trong ingestion transaction.
         var storedId = await fixture.ReadSourceEventIdAsync(CapacityResult, TestContext.Current.CancellationToken);
         published.EventId.ShouldBe(storedId);
 
@@ -125,9 +125,9 @@ public sealed class MeasurementPublishingTests
     [Fact]
     public async Task PublishFailure_LeavesTheTelemetryRowsAndIsCounted()
     {
-        // The dual write ADR-022 measured at 18/200. M2 does not close it — M6's outbox does — so the
-        // requirement here is that it fails in the honest direction: the reading survives and the
-        // system says how far behind the bus is.
+        // Dual write mà ADR-022 đã đo được ở mức 18/200. M2 không đóng nó lại — outbox của M6 mới
+        // làm việc đó — nên yêu cầu ở đây là nó phải fail theo hướng trung thực: reading vẫn sống
+        // sót và hệ thống nói rõ bus đang chậm bao xa.
         await using var fixture = await IngestionFixture.StartAsync(new PublishedSignals([CapacityResult]));
         fixture.Publisher.FailEverything = true;
 
@@ -158,9 +158,9 @@ public sealed class MeasurementPublishingTests
     [Fact]
     public async Task ARepeatedDelivery_IsNotAnnouncedTwice()
     {
-        // A duplicate stores nothing, so it must announce nothing. Publishing on the duplicate path
-        // would put the same ce_id on the bus twice — harmless for an idempotent handler and
-        // completely misleading for anyone counting events against rows.
+        // Một duplicate không lưu gì, nên nó cũng không được announce gì. Publish trên duplicate
+        // path sẽ đặt cùng một ce_id lên bus hai lần — vô hại với một handler idempotent nhưng gây
+        // hiểu lầm hoàn toàn cho bất kỳ ai đếm event theo row.
         await using var fixture = await IngestionFixture.StartAsync(new PublishedSignals([CapacityResult]));
         var result = EvaluatedCapacityResult();
 
@@ -186,8 +186,8 @@ public sealed class MeasurementPublishingTests
 
     private static FileMeasurement EvaluatedCapacityResult() => CsvRow(CapacityResult, CellId);
 
-    // The file-drop path is the only one that carries a unit id in M2, which makes it the only way
-    // to build a row that knows its cell - including the raw-curve row M7 will eventually produce.
+    // File-drop path là con đường duy nhất mang theo unit id ở M2, điều này khiến nó là cách duy
+    // nhất để dựng một row biết được cell của mình - kể cả raw-curve row mà M7 rồi sẽ tạo ra.
     private static FileMeasurement CsvRow(string signalCode, string unitId)
     {
         var line = string.Join(

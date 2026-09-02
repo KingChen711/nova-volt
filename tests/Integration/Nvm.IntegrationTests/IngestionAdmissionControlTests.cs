@@ -9,9 +9,9 @@ using Nvm.Ingestion;
 namespace Nvm.IntegrationTests;
 
 /// <summary>
-/// Locks the half of the C10 contract that lives on the server. The gateway's rate limiter,
-/// backoff and Retry-After handling are all worthless if ingestion's answer to saturation is a
-/// connection-pool timeout instead of a status the caller can read.
+/// Khóa chặt nửa phần của C10 contract sống ở phía server. Rate limiter, backoff và xử lý
+/// Retry-After của gateway đều vô nghĩa nếu câu trả lời của ingestion khi bị saturation là một
+/// connection-pool timeout thay vì một status mà caller đọc được.
 /// </summary>
 public sealed class IngestionAdmissionControlTests
 {
@@ -51,8 +51,8 @@ public sealed class IngestionAdmissionControlTests
     [Fact]
     public async Task HealthEndpoints_StayOutsideTheLimiterWhileIngestionIsSaturated()
     {
-        // A busy ingestion that fails its readiness probe gets restarted by Docker, and a restart
-        // drops every in-flight batch. Backpressure must not be able to become an outage.
+        // Một ingestion đang bận mà fail readiness probe sẽ bị Docker restart, và một restart làm
+        // mất mọi batch đang in-flight. Backpressure không được phép biến thành một outage.
         await using var busy = new BusyEndpoint();
         using var host = await StartAsync(
             new IngestionOptions
@@ -104,7 +104,7 @@ public sealed class IngestionAdmissionControlTests
         return await builder.StartAsync(TestContext.Current.CancellationToken);
     }
 
-    /// <summary>An endpoint that holds its permit until the test hands it back.</summary>
+    /// <summary>Một endpoint giữ permit của nó cho tới khi test trả lại.</summary>
     private sealed class BusyEndpoint : IAsyncDisposable
     {
         private readonly TaskCompletionSource _occupied =
@@ -125,8 +125,8 @@ public sealed class IngestionAdmissionControlTests
 
         public ValueTask DisposeAsync()
         {
-            // Never leave the pipeline holding a permit: a failed assertion would otherwise hang
-            // the whole test run instead of reporting one red test.
+            // Không bao giờ để pipeline giữ một permit: nếu không, một assertion fail sẽ làm treo
+            // cả test run thay vì chỉ báo một test đỏ.
             _release.TrySetResult();
             return ValueTask.CompletedTask;
         }

@@ -14,14 +14,13 @@ using Nvm.Sparkplug.Topics;
 namespace Nvm.IntegrationTests;
 
 /// <summary>
-/// R6. The dropout fault the simulator already had holds messages in RAM and releases them later —
-/// useful, but it never closes a socket, so it cannot show the one behaviour that only exists
-/// because the link can die: the broker speaking for a node that can no longer speak for itself.
+/// R6. Dropout fault sẵn có của simulator giữ message trong RAM rồi thả ra sau — hữu ích, nhưng nó
+/// không bao giờ đóng socket, nên không thể cho thấy behavior chỉ tồn tại vì link có thể chết: broker
+/// nói thay node không còn tự nói được.
 ///
-/// This exercises the real <see cref="MqttSparkplugPublisher"/> against a real broker and cuts the
-/// connection underneath it, the way a pulled cable would. Two things have to follow, and neither is
-/// visible in a unit test: the broker publishes the last will as an <c>NDEATH</c>, and the node comes
-/// back with a fresh <c>NBIRTH</c> under a new <c>bdSeq</c>.
+/// Test này chạy <see cref="MqttSparkplugPublisher"/> thật với broker thật và cắt connection bên dưới,
+/// như rút cáp. Hai việc phải theo sau mà unit test không thấy được: broker publish last will thành
+/// <c>NDEATH</c>, và node trở lại với <c>NBIRTH</c> mới dưới <c>bdSeq</c> mới.
 /// </summary>
 public sealed class SimulatorMqttDisconnectTests : IAsyncLifetime
 {
@@ -29,7 +28,7 @@ public sealed class SimulatorMqttDisconnectTests : IAsyncLifetime
     private const ulong FirstSession = 7;
 
     private readonly IContainer _broker = new ContainerBuilder("eclipse-mosquitto:2.0.22")
-        // The image ships this config precisely so a broker can be started without a password file.
+        // Image mang config này để broker khởi động được mà không cần password file.
         .WithCommand("mosquitto", "-c", "/mosquitto-no-auth.conf")
         .WithPortBinding(1883, true)
         .Build();
@@ -40,8 +39,8 @@ public sealed class SimulatorMqttDisconnectTests : IAsyncLifetime
         await WaitForBrokerAsync(TestContext.Current.CancellationToken);
     }
 
-    // Mosquitto is listening within a second, but "the container started" and "the port answers"
-    // are not the same event, and connecting into the gap fails the test for the wrong reason.
+    // Mosquitto lắng nghe trong một giây, nhưng "container đã chạy" và "port trả lời" không là cùng
+    // một event; connect vào khoảng hở sẽ làm test fail vì lý do sai.
     private async Task WaitForBrokerAsync(CancellationToken cancellationToken)
     {
         var port = _broker.GetMappedPublicPort(1883);
@@ -71,10 +70,9 @@ public sealed class SimulatorMqttDisconnectTests : IAsyncLifetime
         var token = TestContext.Current.CancellationToken;
         var brokerPort = _broker.GetMappedPublicPort(1883);
 
-        // The publisher reaches the broker through a proxy we control. Killing the proxy's sockets
-        // is the only way to produce what a cut cable produces: no DISCONNECT packet. Asking MQTTnet
-        // to disconnect would be a clean goodbye, and a clean goodbye tells the broker to DISCARD the
-        // will — the exact case this test exists to rule out.
+        // Publisher đến broker qua proxy ta kiểm soát. Giết socket của proxy là cách duy nhất tạo ra
+        // điều cáp bị cắt tạo ra: không có DISCONNECT packet. Yêu cầu MQTTnet disconnect là lời tạm
+        // biệt sạch, và lời tạm biệt sạch bảo broker DISCARD will — đúng case test này loại trừ.
         await using var link = new CuttableLink(_broker.Hostname, brokerPort);
 
         var observed = new ConcurrentQueue<(string Topic, byte[] Payload)>();
@@ -106,16 +104,16 @@ public sealed class SimulatorMqttDisconnectTests : IAsyncLifetime
         await WaitForAsync(observed, SparkplugMessageType.NodeBirth, token);
         observed.Clear();
 
-        // The cable comes out.
+        // Cáp bị rút.
         link.Cut();
 
         var death = await WaitForAsync(observed, SparkplugMessageType.NodeDeath, token);
         var birth = await WaitForAsync(observed, SparkplugMessageType.NodeBirth, token);
         await reborn.Task.WaitAsync(TimeSpan.FromSeconds(30), token);
 
-        // The will names the session that ended, not the one that replaced it. The gateway compares
-        // exactly these two numbers to decide whether a death still applies, so a will carrying the
-        // NEW bdSeq would let a late delivery kill a session that is alive and publishing.
+        // Will gọi tên session đã kết thúc, không phải session thay thế. Gateway compare đúng hai số
+        // này để quyết định death còn áp dụng không; will mang bdSeq MỚI sẽ để delivery muộn giết
+        // session còn sống và đang publish.
         BirthDeathSequenceOf(death).ShouldBe(FirstSession);
         BirthDeathSequenceOf(birth).ShouldBe(FirstSession + 1);
         line.Current.ShouldBe(FirstSession + 1);
@@ -182,8 +180,8 @@ public sealed class SimulatorMqttDisconnectTests : IAsyncLifetime
 
         client.ApplicationMessageReceivedAsync += arguments =>
         {
-            // Typed local first: ImmutableArray's ToArray extension is in scope and makes the call
-            // on a ReadOnlySequence ambiguous. Same reason the gateway does this.
+            // Khai báo local có type trước: extension ToArray của ImmutableArray trong scope làm lời gọi
+            // trên ReadOnlySequence ambiguous. Cùng lý do gateway làm vậy.
             ReadOnlySequence<byte> payload = arguments.ApplicationMessage.Payload;
             observed.Enqueue((arguments.ApplicationMessage.Topic, payload.ToArray()));
             return Task.CompletedTask;
@@ -220,14 +218,14 @@ public sealed class SimulatorMqttDisconnectTests : IAsyncLifetime
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
-                // Tearing down an observer must not fail a test that already has its answer.
+                // Tear down observer không được làm fail test đã có đáp án.
             }
 
             client.Dispose();
         }
     }
 
-    // The bdSeq counter the line owns, reduced to the part this test needs.
+    // Counter bdSeq mà line sở hữu, rút gọn còn phần test này cần.
     private sealed class FormationSessions(ulong first)
     {
         public ulong Current { get; private set; } = first;

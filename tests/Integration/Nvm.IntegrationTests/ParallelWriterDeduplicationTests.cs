@@ -13,18 +13,18 @@ using Testcontainers.PostgreSql;
 namespace Nvm.IntegrationTests;
 
 /// <summary>
-/// Splitting one batch across several writers is what let ingestion pass N1, and it is also the
-/// only change in M2 that gives up a single transaction per batch. What must survive is the
-/// property D1 is stated in: a measurement is stored exactly once, no matter how the rows were
-/// distributed across connections or how many times the gateway replays the batch afterwards.
+/// Việc tách một batch ra nhiều writer chính là thứ giúp ingestion vượt qua N1, và cũng là thay đổi
+/// duy nhất trong M2 từ bỏ việc dùng một transaction duy nhất cho mỗi batch. Điều bắt buộc phải sống
+/// sót là property được nêu trong D1: một measurement được lưu đúng một lần, bất kể các row được
+/// phân phối thế nào qua các connection hay gateway đã replay batch bao nhiêu lần sau đó.
 /// </summary>
 public sealed class ParallelWriterDeduplicationTests
 {
     private const int Writers = 4;
     private const int MinRowsPerWriter = 256;
 
-    // Comfortably past Writers * MinRowsPerWriter so the batch really is split rather than
-    // quietly falling back to the single-writer path.
+    // Vượt xa Writers * MinRowsPerWriter để batch thực sự được tách ra thay vì âm thầm rơi trở lại
+    // con đường single-writer.
     private const int Readings = 4_000;
 
     private static readonly EquipmentPath Channel =
@@ -61,9 +61,9 @@ public sealed class ParallelWriterDeduplicationTests
         first.ShouldBe(new IngestionResult(Readings, 0));
         (await CountAsync(dataSource, ids)).ShouldBe((Processed: (long)Readings, Telemetry: (long)Readings));
 
-        // At-least-once is the contract on the conduit, so the same batch arriving again is normal
-        // rather than exceptional. Every row must come back as a duplicate and nothing may be
-        // written a second time, which is what makes a partial commit safe to retry.
+        // At-least-once là contract trên conduit, nên cùng một batch tới lần nữa là chuyện bình
+        // thường chứ không phải ngoại lệ. Mọi row phải quay lại dưới dạng duplicate và không gì được
+        // ghi lần thứ hai, đó chính là điều khiến một partial commit an toàn để retry.
         var replay = await ingestor.IngestAsync([batch], TestContext.Current.CancellationToken);
 
         replay.ShouldBe(new IngestionResult(0, Readings));
@@ -90,8 +90,9 @@ public sealed class ParallelWriterDeduplicationTests
         var batch = Batch(Readings);
         var ids = SourceIds(batch);
 
-        // The same input through one writer and through four has to land identically; the split is
-        // a throughput decision and must not be observable in the data.
+        // Cùng một input đi qua một writer và đi qua bốn writer phải cho kết quả giống hệt nhau;
+        // việc tách ra là một quyết định về throughput và không được phép quan sát thấy trong dữ
+        // liệu.
         var serial = new PostgresMeasurementIngestor(dataSource, clock, new IngestionMetrics());
         var serialResult = await serial.IngestAsync([batch], TestContext.Current.CancellationToken);
 
@@ -163,9 +164,10 @@ public sealed class ParallelWriterDeduplicationTests
         (await CountChunksAsync(dataSource, firstDay, firstDay.AddDays(FreshDays))).ShouldBe(FreshDays);
         metrics.WriteRetryCount.ShouldBe(0);
 
-        // An ordinary replay must not add chunks. The separate retention-policy regression drops an
-        // old chunk while retaining its global claim and proves that replay does not recreate it;
-        // this stress case keeps the concurrent path bounded to eight connections at a time.
+        // Một replay bình thường không được thêm chunk. Regression test riêng cho retention-policy
+        // drop một chunk cũ trong khi vẫn giữ lại global claim của nó và chứng minh rằng replay
+        // không tạo lại nó; stress case này giữ concurrent path bị giới hạn ở tám connection cùng
+        // lúc.
         var replayIngestor = new PostgresMeasurementIngestor(
             dataSource,
             new FakeTimeProvider(firstDay.AddDays(FreshDays)),
@@ -196,8 +198,8 @@ public sealed class ParallelWriterDeduplicationTests
         TestContext.Current.TestOutputHelper?.WriteLine(evidence);
     }
 
-    // One message carrying many readings: that is how a real DDATA batch reaches the ingestor, and
-    // it is the shape the writer split actually divides.
+    // Một message mang nhiều reading: đó là cách một DDATA batch thật tới được ingestor, và đó cũng
+    // là hình dạng mà writer split thực sự chia ra.
     private static DecodedSparkplugMessage Batch(int readings, DateTimeOffset? startsAt = null)
     {
         var at = startsAt ?? new DateTimeOffset(2026, 8, 29, 7, 0, 0, TimeSpan.Zero);

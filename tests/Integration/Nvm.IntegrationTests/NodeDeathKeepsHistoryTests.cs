@@ -12,10 +12,10 @@ using Testcontainers.PostgreSql;
 namespace Nvm.IntegrationTests;
 
 /// <summary>
-/// D4, both halves at once. The interesting half is not that a node goes STALE — it is that the
-/// readings it already produced are still there afterwards. A formation cell that loses the network
-/// six hours into an eighteen-hour cycle still has six hours of legally required record behind it,
-/// and K4 says nothing may delete that.
+/// D4, cả hai nửa cùng lúc. Nửa thú vị không phải là việc một node chuyển sang STALE — mà là việc
+/// những reading nó đã tạo ra trước đó vẫn còn nguyên sau đó. Một formation cell mất mạng ở giờ thứ
+/// sáu trong một chu kỳ mười tám giờ vẫn có sáu giờ record bắt buộc theo luật đứng sau nó, và K4
+/// nói không gì được phép xóa điều đó.
 /// </summary>
 public sealed class NodeDeathKeepsHistoryTests
 {
@@ -59,7 +59,7 @@ public sealed class NodeDeathKeepsHistoryTests
         var before = await CountTelemetryAsync(dataSource, TestContext.Current.CancellationToken);
         before.ShouldBe(2);
 
-        // The broker publishes the will. Nothing else happens.
+        // Broker publish will. Không có gì khác xảy ra.
         clock.Advance(TimeSpan.FromMinutes(3));
         decoder.Decode(NodeDeathTopic, SparkplugPayloads.NodeDeath(birthDeathSequence: 6)).ShouldBeNull();
 
@@ -94,11 +94,11 @@ public sealed class NodeDeathKeepsHistoryTests
                 : null;
     }
 
-    /// <summary>The few payload shapes this test needs, built here rather than captured.</summary>
+    /// <summary>Vài hình dạng payload mà test này cần, được dựng ở đây thay vì capture lại.</summary>
     /// <remarks>
-    /// Duplicated from the unit-test helper on purpose: the two projects answer different questions
-    /// and sharing a fixture builder between them would make a change made for one silently rewrite
-    /// the other's evidence.
+    /// Cố tình được sao chép lại từ unit-test helper: hai project trả lời hai câu hỏi khác nhau, và
+    /// việc dùng chung một fixture builder giữa chúng sẽ khiến một thay đổi cho bên này âm thầm viết
+    /// lại bằng chứng của bên kia.
     /// </remarks>
     private static class SparkplugPayloads
     {

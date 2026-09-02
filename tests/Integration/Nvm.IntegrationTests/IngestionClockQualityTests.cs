@@ -11,9 +11,10 @@ using Testcontainers.PostgreSql;
 namespace Nvm.IntegrationTests;
 
 /// <summary>
-/// D5, and the three-timestamp rule behind it. The claim being tested is not that a drifted reading
-/// is detected — it is that a drifted reading is <b>stored</b>. Refusing it would let one dead CMOS
-/// battery erase a line's traceability record, quietly, until an auditor asked.
+/// D5, và quy tắc ba timestamp đứng sau nó. Điều được kiểm chứng ở đây không phải là một reading bị
+/// drift có được phát hiện hay không — mà là một reading bị drift vẫn được <b>lưu lại</b>. Từ chối
+/// nó sẽ để một viên pin CMOS chết âm thầm xóa mất traceability record của một line, cho tới khi
+/// một auditor hỏi tới.
 /// </summary>
 public sealed class IngestionClockQualityTests
 {
@@ -42,8 +43,8 @@ public sealed class IngestionClockQualityTests
             metrics,
             clockDriftThreshold: ClockQualityClassifier.DefaultThreshold);
 
-        // The gateway received both at the same instant. One device is two hours behind; the other
-        // is ten seconds out, which is an ordinary healthy clock.
+        // Gateway nhận cả hai cùng một thời điểm. Một thiết bị chậm hai giờ; thiết bị còn lại lệch
+        // mười giây, vốn là một đồng hồ khỏe mạnh bình thường.
         var gatewayTimestamp = RecordedAt.AddSeconds(-30);
         var drifted = Message("Formation/Voltage", gatewayTimestamp.AddHours(-2), gatewayTimestamp);
         var healthy = Message("Formation/Current", gatewayTimestamp.AddSeconds(-10), gatewayTimestamp);
@@ -57,16 +58,16 @@ public sealed class IngestionClockQualityTests
         var rows = await ReadAsync(dataSource, TestContext.Current.CancellationToken);
         rows.Count.ShouldBe(2);
 
-        // D5: present, and saying it cannot be trusted.
+        // D5: có mặt, và nói rằng nó không thể được tin tưởng.
         var flagged = rows["Formation/Voltage"];
         flagged.ClockQuality.ShouldBe("Drifted");
         flagged.DeviceTimestamp.ShouldBe(gatewayTimestamp.AddHours(-2));
 
         rows["Formation/Current"].ClockQuality.ShouldBe("Good");
 
-        // scope.md §7.3: three timestamps, three different questions, three different values. M3
-        // orders by device_timestamp for business and by recorded_at for audit, and one column
-        // overwritten with another would silently collapse those two orderings into one.
+        // scope.md §7.3: ba timestamp, ba câu hỏi khác nhau, ba giá trị khác nhau. M3 sắp xếp theo
+        // device_timestamp cho business và theo recorded_at cho audit, và một cột bị ghi đè bởi cột
+        // khác sẽ âm thầm gộp hai cách sắp xếp đó thành một.
         foreach (var row in rows.Values)
         {
             row.DeviceTimestamp.ShouldNotBe(row.GatewayTimestamp);

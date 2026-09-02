@@ -14,7 +14,7 @@ using Testcontainers.PostgreSql;
 
 namespace Nvm.IntegrationTests;
 
-/// <summary>C12: one original machine file stays one verifiable WORM object and one metadata row.</summary>
+/// <summary>C12: một file máy gốc vẫn là một WORM object và một metadata row có thể kiểm chứng.</summary>
 public sealed class RawCurveArchiveTests
 {
     private const string MinioImage = "minio/minio:RELEASE.2025-09-07T16-13-09Z";
@@ -134,10 +134,9 @@ public sealed class RawCurveArchiveTests
             harness.ExecuteAsync("DELETE FROM ts.raw_curve_archive WHERE site_id = 'NV1';"));
         deleteMetadataFailure.SqlState.ShouldBe("P1201");
 
-        // K5. The row says who put these bytes here and why, and it kept the FIRST answer: the same
-        // bytes archived twice are one piece of evidence, so the second caller's reason does not
-        // overwrite the first one's. An archive whose attribution changes on a re-upload is an
-        // archive whose attribution means nothing.
+        // K5. Row nói ai đã đưa byte này vào đây và vì sao, đồng thời giữ câu trả lời ĐẦU TIÊN: cùng
+        // byte archive hai lần vẫn là một evidence, nên reason của caller thứ hai không ghi đè reason
+        // của caller đầu. Archive có attribution thay đổi khi re-upload thì attribution vô nghĩa.
         (await harness.ReadAsync(
             "SELECT actor, reason, coalesce(supersedes_archive_id::text, '<null>') "
             + "FROM ts.raw_curve_archive WHERE site_id = 'NV1';"))
@@ -147,11 +146,10 @@ public sealed class RawCurveArchiveTests
     [Fact]
     public async Task ACurveOfOneInstant_IsArchivedAndStaysIdempotent()
     {
-        // Every other test here spans whole minutes, which survive the trip through a `timestamptz`
-        // untouched. A file drop of one reading does not: its interval ends one microsecond after it
-        // begins, and the version of this that ended it one 100 ns tick after it began stored as an
-        // interval of zero. PostgreSQL refused the row, the export went round the retry loop for
-        // ever, and no test noticed because none of them archived an interval that short.
+        // Mọi test khác ở đây trải trên phút trọn vẹn, nên đi qua `timestamptz` không đổi. File drop
+        // một reading thì không: interval của nó kết thúc một microsecond sau khi bắt đầu; phiên bản
+        // kết thúc sau một tick 100 ns lại lưu thành interval bằng không. PostgreSQL từ chối row, export
+        // chạy mãi trong retry loop, và không test nào phát hiện vì không test nào archive interval ngắn vậy.
         await using var harness = await RawCurveHarness.StartAsync();
         var instant = new DateTimeOffset(2026, 8, 31, 6, 0, 0, TimeSpan.Zero);
         var descriptor = new RawCurveDescriptor(
@@ -167,9 +165,9 @@ public sealed class RawCurveArchiveTests
             new RawCurveProvenance("tester:jo", "Original export of a single reading"),
             TestContext.Current.CancellationToken);
 
-        // The second archival is where the identity check compares the descriptor against the row
-        // that came back. A descriptor carrying precision the column cannot hold fails here, and
-        // reports "different plant evidence" about evidence that is identical.
+        // Lần archive thứ hai là nơi identity check so descriptor với row trả về. Descriptor mang
+        // precision mà column không chứa được sẽ fail ở đây, và báo "different plant evidence" về
+        // evidence giống hệt nhau.
         await using var secondSource = new MemoryStream(Original, writable: false);
         var second = await harness.Store.ArchiveAsync(
             descriptor,
@@ -185,8 +183,8 @@ public sealed class RawCurveArchiveTests
     [Fact]
     public void AnIntervalThatOnlyExistsBelowAMicrosecond_IsRefusedWhereItIsBuilt()
     {
-        // The rule lives in the descriptor rather than in the caller, so the next caller cannot
-        // reintroduce an interval the archive is unable to store.
+        // Rule nằm trong descriptor thay vì caller, để caller kế tiếp không thể đưa lại interval mà
+        // archive không lưu được.
         var instant = new DateTimeOffset(2026, 8, 31, 6, 0, 0, TimeSpan.Zero);
 
         Should.Throw<ArgumentException>(() => new RawCurveDescriptor(
@@ -201,8 +199,7 @@ public sealed class RawCurveArchiveTests
             instant.AddTicks(3),
             instant.AddTicks(TimeSpan.TicksPerMicrosecond + 7));
 
-        // Rounded down to what the column holds, on both ends, so the row that comes back is the
-        // descriptor that wrote it.
+        // Round down về thứ column chứa được ở cả hai đầu, nên row trả về chính là descriptor đã ghi nó.
         kept.CurveStartAt.ShouldBe(instant);
         kept.CurveEndAt.ShouldBe(instant.AddTicks(TimeSpan.TicksPerMicrosecond));
     }
@@ -210,9 +207,9 @@ public sealed class RawCurveArchiveTests
     [Fact]
     public async Task ACorrection_IsANewRowThatNamesItsAuthorAndWhatItReplaces()
     {
-        // The shape K5 asks for, and the shape migration 006 half-built: the mistaken record stays,
-        // readable and verifiable, and the correction stands beside it saying what was wrong. What was
-        // missing until now is every part of that sentence except "beside it".
+        // Hình dạng K5 yêu cầu, và migration 006 mới build một nửa: record sai vẫn ở đó, đọc và kiểm
+        // chứng được, correction đứng cạnh nó nói điều gì sai. Đến nay thiếu mọi phần của câu đó, trừ
+        // "đứng cạnh".
         await using var harness = await RawCurveHarness.StartAsync();
         var descriptor = new RawCurveDescriptor(
             EquipmentPath.Parse("NOVAVOLT/NV1/FORMATION/F1/FORM-01/FORM-01-CH-0142"),
@@ -252,16 +249,16 @@ public sealed class RawCurveArchiveTests
                 wrong.ArchiveId.ToString(),
             ]);
 
-        // The superseded evidence is still there and still verifiable. A correction that removed it
-        // would answer "what does the system say now" and destroy "what did it say before".
+        // Evidence đã bị thay thế vẫn ở đó và kiểm chứng được. Correction xóa nó sẽ trả lời "hệ thống
+        // nói gì bây giờ" và phá hủy "nó đã nói gì trước đây".
         (await harness.CountRowsAsync("NV1", wrong.ArchiveId)).ShouldBe(1);
         (await harness.Store.VerifyAsync(
             "NV1",
             wrong.ArchiveId,
             TestContext.Current.CancellationToken)).ShouldBeTrue();
 
-        // And two rows cannot both claim to correct the same one, which would leave an auditor with
-        // two answers and no way to choose.
+        // Hai row cũng không thể cùng nhận là correction của một row, vì sẽ để auditor có hai câu trả
+        // lời mà không có cách chọn.
         await using var thirdSource = new MemoryStream(
             Encoding.UTF8.GetBytes(Encoding.UTF8.GetString(Original).Replace("3.120", "3.122", StringComparison.Ordinal)),
             writable: false);
@@ -278,16 +275,14 @@ public sealed class RawCurveArchiveTests
     [Fact]
     public async Task ACorrectionCannotReachAcrossSites()
     {
-        // K3 and K5 at the same time, and until migration 012 the schema enforced only half of it.
-        // Migration 009 linked a correction to what it replaces with a foreign key on archive_id
-        // alone, so a row at NV1 could declare itself the correction of a row at DE1 — an evidence
-        // chain crossing the boundary that is supposed to be a security boundary, with both rules
-        // reporting themselves satisfied.
+        // K3 và K5 đồng thời, nhưng đến migration 012 schema chỉ ép một nửa. Migration 009 liên kết
+        // correction với thứ nó thay bằng foreign key chỉ trên archive_id, nên row ở NV1 có thể tự nhận
+        // là correction của row ở DE1 — evidence chain băng qua ranh giới lẽ ra là security boundary,
+        // trong khi cả hai rule đều tự báo đã thỏa.
         //
-        // Found by an independent audit on 2026-09-01, in the very migration written to close the K5
-        // half of this table. RawCurveArchiveStore passes the id straight through from its caller, so
-        // the constraint has to live in the schema; a check in the store would only bind the one
-        // caller that exists today.
+        // Independent audit tìm ra ngày 2026-09-01, ngay trong migration viết để khép nửa K5 của table
+        // này. RawCurveArchiveStore truyền thẳng id từ caller, nên constraint phải nằm trong schema;
+        // check ở store chỉ bind caller duy nhất tồn tại hôm nay.
         await using var harness = await RawCurveHarness.StartAsync();
 
         await using var deSource = new MemoryStream(Original, writable: false);
@@ -318,8 +313,7 @@ public sealed class RawCurveArchiveTests
 
         crossSite.SqlState.ShouldBe(PostgresErrorCodes.ForeignKeyViolation);
 
-        // The DE1 record is untouched. A refused correction must not be able to damage what it was
-        // pointing at.
+        // Record DE1 không bị đụng tới. Correction bị từ chối không được làm hỏng thứ nó trỏ vào.
         (await harness.CountRowsAsync("DE1", atDe1.ArchiveId)).ShouldBe(1);
     }
 
@@ -342,8 +336,8 @@ public sealed class RawCurveArchiveTests
                 new RawCurveProvenance("tester:jo", "   "),
                 TestContext.Current.CancellationToken));
 
-        // Nothing at all, not even the object: a blank reason is caught before the upload, so a
-        // rejected archive does not leave an orphan under a compliance lock that cannot be deleted.
+        // Không gì cả, kể cả object: reason trống bị bắt trước upload, nên archive bị từ chối không để
+        // orphan dưới compliance lock không thể xóa.
         (await harness.ReadAsync("SELECT count(*)::text FROM ts.raw_curve_archive;")).ShouldBe(["0"]);
     }
 

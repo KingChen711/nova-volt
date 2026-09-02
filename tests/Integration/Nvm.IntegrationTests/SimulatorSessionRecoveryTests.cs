@@ -17,17 +17,16 @@ using Nvm.Sparkplug.Topics;
 namespace Nvm.IntegrationTests;
 
 /// <summary>
-/// R6, second half. <see cref="SimulatorMqttDisconnectTests"/> proved the broker publishes the will
-/// and the publisher dials back in — but it drove <see cref="MqttSparkplugPublisher"/> on its own,
-/// with a stub standing in for the line and a hand-written NBIRTH standing in for a declaration.
-/// Nothing in it ran the worker, so nothing in it could see the two failures that only exist when a
-/// plant is producing data while the link dies underneath it.
+/// R6, nửa sau. <see cref="SimulatorMqttDisconnectTests"/> chứng minh broker publish will và publisher
+/// kết nối lại — nhưng nó chạy riêng <see cref="MqttSparkplugPublisher"/>, với stub thay cho line và
+/// NBIRTH viết tay thay cho declaration. Nó không chạy worker, nên không thấy hai failure chỉ tồn tại
+/// khi nhà máy đang tạo data mà link chết bên dưới.
 ///
 /// <para>
-/// This runs the real <see cref="SimulatorWorker"/> over the real line and cuts the connection while
-/// <c>DDATA</c> is flowing. What has to follow is what a gateway on the other end depends on: the
-/// plant keeps running, the will names the session that ended, and the session that replaces it is
-/// <b>readable</b> — declared from <c>seq</c> zero, every device born before any of its data.
+/// Test này chạy <see cref="SimulatorWorker"/> thật trên line thật và cắt connection khi <c>DDATA</c>
+/// đang chảy. Điều phải theo sau là thứ gateway ở đầu kia phụ thuộc vào: nhà máy vẫn chạy, will gọi tên
+/// session đã kết thúc, và session thay thế <b>đọc được</b> — declaration từ <c>seq</c> zero, mọi
+/// device birth trước bất kỳ data nào của nó.
 /// </para>
 /// </summary>
 public sealed class SimulatorSessionRecoveryTests : IAsyncLifetime
@@ -43,13 +42,13 @@ public sealed class SimulatorSessionRecoveryTests : IAsyncLifetime
 
     private static readonly DateTimeOffset StartedAt = new(2026, 8, 29, 7, 0, 0, TimeSpan.Zero);
 
-    /// <summary>Sparkplug rolls <c>seq</c> here, and a consumer counts on the wrap.</summary>
+    /// <summary>Sparkplug roll <c>seq</c> ở đây, và consumer dựa vào việc wrap.</summary>
     private const ulong SequenceWrap = 256;
 
     private const ulong FirstSession = 4;
 
     private readonly IContainer _broker = new ContainerBuilder("eclipse-mosquitto:2.0.22")
-        // The image ships this config precisely so a broker can be started without a password file.
+        // Image mang config này để broker khởi động được mà không cần password file.
         .WithCommand("mosquitto", "-c", "/mosquitto-no-auth.conf")
         .WithPortBinding(1883, true)
         .Build();
@@ -68,9 +67,8 @@ public sealed class SimulatorSessionRecoveryTests : IAsyncLifetime
         var token = TestContext.Current.CancellationToken;
         var brokerPort = _broker.GetMappedPublicPort(1883);
 
-        // Only the simulator goes through the proxy. The observer talks to the broker directly, so
-        // cutting the link is something that happens to the plant and not to the instrument watching
-        // it — otherwise the test would lose the evidence at the moment it is produced.
+        // Chỉ simulator đi qua proxy. Observer nói với broker trực tiếp, nên cắt link là việc xảy ra
+        // với nhà máy chứ không với instrument quan sát nó — nếu không test mất evidence ngay lúc nó sinh ra.
         await using var link = new CuttableLink(_broker.Hostname, brokerPort);
 
         var observed = new ConcurrentQueue<Observation>();
@@ -84,9 +82,8 @@ public sealed class SimulatorSessionRecoveryTests : IAsyncLifetime
             BirthDeathSequence = FirstSession,
             SamplePeriod = TimeSpan.FromMinutes(1),
 
-            // 100 ms per tick, against a reconnect that takes at least 750. The window has to be
-            // several ticks wide or the test would only sometimes publish inside it, and a test that
-            // only sometimes reproduces a defect is a test that will one day be deleted as flaky.
+            // 100 ms mỗi tick, so với reconnect mất tối thiểu 750. Window phải rộng vài tick, nếu không
+            // test chỉ đôi khi publish trong nó; test chỉ đôi khi reproduce defect thì sẽ bị xóa vì flaky.
             TimeCompression = 600,
             ReconnectDelay = TimeSpan.FromMilliseconds(750),
             ReportInterval = TimeSpan.FromSeconds(1),
@@ -97,8 +94,8 @@ public sealed class SimulatorSessionRecoveryTests : IAsyncLifetime
 
         await using var mqtt = new MqttSparkplugPublisher(options, NullLogger<MqttSparkplugPublisher>.Instance);
 
-        // Through the fault injector, because that is the arrangement the simulator actually runs in.
-        // Every rate is zero here: the only thing allowed to go wrong in this test is the cable.
+        // Qua fault injector vì đó là arrangement mà simulator thực sự chạy. Mọi rate ở đây bằng zero:
+        // điều duy nhất được phép sai trong test là cáp.
         var publisher = new FaultInjectingPublisher(
             mqtt,
             options.Faults,
@@ -121,7 +118,7 @@ public sealed class SimulatorSessionRecoveryTests : IAsyncLifetime
 
             var beforeCut = line.MeasurementCount;
 
-            // The cable comes out.
+            // Cáp bị rút.
             link.Cut();
 
             await WaitUntilAsync(
@@ -142,10 +139,9 @@ public sealed class SimulatorSessionRecoveryTests : IAsyncLifetime
 
             messages = [.. observed];
 
-            // 1. The plant did not stop. A publish inside the reconnect window used to throw
-            //    MqttClientNotConnectedException straight out of ExecuteAsync, which ends the
-            //    BackgroundService and, in the real host, the process — a cut cable taking the line
-            //    down with it, which is exactly what N15 forbids.
+            // 1. Nhà máy không dừng. Publish trong reconnect window từng ném
+            //    MqttClientNotConnectedException thẳng từ ExecuteAsync, làm kết thúc BackgroundService
+            //    và trong host thật, cả process — cáp bị rút kéo line xuống, đúng điều N15 cấm.
             var execute = worker.ExecuteTask
                 ?? throw new InvalidOperationException("The worker never started, so nothing was cut.");
 
@@ -154,8 +150,8 @@ public sealed class SimulatorSessionRecoveryTests : IAsyncLifetime
             worker.IsRunning.ShouldBeTrue();
             line.MeasurementCount.ShouldBeGreaterThan(beforeCut, "The line took no readings after the cut.");
 
-            // Nobody asked for a rebirth in this test, so every seq reset below is a session
-            // boundary and not a re-declaration inside one.
+            // Không ai yêu cầu rebirth trong test này, nên mọi lần reset seq dưới đây là session
+            // boundary chứ không phải re-declaration trong một session.
             worker.Rebirths.ShouldBe(0);
         }
         finally
@@ -164,8 +160,8 @@ public sealed class SimulatorSessionRecoveryTests : IAsyncLifetime
             File.Delete(options.ReportPath);
         }
 
-        // 2. The will names the session that ENDED. A death carrying the new number would let a late
-        //    delivery mark a node stale that is alive and publishing.
+        // 2. Will gọi tên session ĐÃ KẾT THÚC. Death mang số mới sẽ để delivery muộn đánh dấu stale
+        //    một node còn sống và đang publish.
         var deaths = messages.Where(m => m.Topic.MessageType == SparkplugMessageType.NodeDeath).ToArray();
         deaths.Length.ShouldBe(1, "One cut cable is one death.");
         SparkplugPayload.DecodeDeath(deaths[0].Payload).BirthDeathSequence.ShouldBe(FirstSession);
@@ -173,34 +169,33 @@ public sealed class SimulatorSessionRecoveryTests : IAsyncLifetime
         var reborn = Reborn(messages);
         var died = Array.FindIndex(messages, m => m.Topic.MessageType == SparkplugMessageType.NodeDeath);
 
-        // Nothing from the dead session got out on the new connection. The window between the will
-        // and the new birth belongs to the reconnect, and a DDATA in it is a message the old session
-        // numbered being published after that session ended - one stale seq sitting in front of the
-        // declaration, where a consumer counting seq cannot make sense of it.
+        // Không gì từ session chết ra được connection mới. Window giữa will và birth mới thuộc reconnect,
+        // còn DDATA trong đó là message session cũ đã đánh số nhưng publish sau khi session ấy kết thúc —
+        // một seq stale đứng trước declaration, nơi consumer đếm seq không thể hiểu được.
         messages[died..reborn]
             .ShouldAllBe(m => m.Topic.MessageType != SparkplugMessageType.DeviceData);
 
         var tail = messages[reborn..];
 
-        // 3. The new session declares itself completely before it says anything else: NBIRTH, then a
-        //    DBIRTH for every channel, and no data wedged in among them.
+        // 3. Session mới declaration đầy đủ trước khi nói điều khác: NBIRTH, rồi DBIRTH cho mọi channel,
+        //    và không data nào chen giữa chúng.
         var declaration = tail[..(1 + Channels.Length)];
         declaration[0].Topic.MessageType.ShouldBe(SparkplugMessageType.NodeBirth);
         declaration[1..].ShouldAllBe(m => m.Topic.MessageType == SparkplugMessageType.DeviceBirth);
         declaration[1..].Select(m => m.Topic.DeviceCode!).Order(StringComparer.Ordinal)
             .ShouldBe(Channels.Select(channel => channel.Code).Order(StringComparer.Ordinal));
 
-        // 4 and 5. Read the tail the way the gateway reads it. Two properties fall out of one walk,
-        //    and neither can be checked from inside the simulator:
+        // 4 và 5. Đọc tail như gateway đọc. Hai property rút ra từ một walk, và không cái nào check được
+        //    từ bên trong simulator:
         //
-        //      seq is contiguous from zero — so nothing composed under the dead session slipped into
-        //      the new one, and Advance never took a number out of the middle of Connect's run. That
-        //      interleaving is what evaluating _line.Advance(...) outside the publishing lock made
-        //      possible, and a consumer meets it as a gap it never missed anything over.
+        //      seq contiguous từ zero — nên không thứ nào compose dưới session chết lọt vào session mới,
+        //      và Advance không lấy số từ giữa run của Connect. Interleaving này là điều evaluate
+        //      _line.Advance(...) ngoài publishing lock từng cho phép; consumer gặp nó như gap dù không
+        //      bỏ lỡ gì.
         //
-        //      every DDATA decodes — against the alias table THIS session's DBIRTH declared. A DDATA
-        //      published before its birth throws UnknownMetricAliasException right here, which is
-        //      the same wall a real gateway hits and the reason the ordering matters at all.
+        //      mọi DDATA decode được — theo alias table mà DBIRTH của session NÀY declaration. DDATA
+        //      publish trước birth ném UnknownMetricAliasException ngay đây, cùng bức tường gateway
+        //      thật đụng phải và là lý do thứ tự quan trọng.
         var aliases = new Dictionary<string, MetricAliasTable>(StringComparer.Ordinal);
         var expected = 0UL;
         var readings = 0;
@@ -241,9 +236,8 @@ public sealed class SimulatorSessionRecoveryTests : IAsyncLifetime
         readings.ShouldBeGreaterThan(0, "The new session declared itself and then measured nothing.");
     }
 
-    // Where the second session starts, or -1 when it has not started yet. The bdSeq is what says so:
-    // the node publishes an NBIRTH for the first session too, and the two are only told apart by the
-    // number they carry.
+    // Nơi session thứ hai bắt đầu, hoặc -1 nếu chưa bắt đầu. bdSeq nói điều đó: node cũng publish NBIRTH
+    // cho session đầu, và chỉ số mà chúng mang mới phân biệt được hai session.
     private static int Reborn(IReadOnlyList<Observation> messages)
     {
         for (var index = 0; index < messages.Count; index++)
@@ -282,8 +276,8 @@ public sealed class SimulatorSessionRecoveryTests : IAsyncLifetime
         throw new TimeoutException(whatWentWrong);
     }
 
-    // Mosquitto is listening within a second, but "the container started" and "the port answers"
-    // are not the same event, and connecting into the gap fails the test for the wrong reason.
+    // Mosquitto lắng nghe trong một giây, nhưng "container đã chạy" và "port trả lời" không là cùng
+    // một event; connect vào khoảng hở sẽ làm test fail vì lý do sai.
     private async Task WaitForBrokerAsync(CancellationToken cancellationToken)
     {
         var port = _broker.GetMappedPublicPort(1883);
@@ -315,8 +309,8 @@ public sealed class SimulatorSessionRecoveryTests : IAsyncLifetime
 
         client.ApplicationMessageReceivedAsync += arguments =>
         {
-            // Typed local first: ImmutableArray's ToArray extension is in scope and makes the call
-            // on a ReadOnlySequence ambiguous. Same reason the gateway does this.
+            // Khai báo local có type trước: extension ToArray của ImmutableArray trong scope làm lời gọi
+            // trên ReadOnlySequence ambiguous. Cùng lý do gateway làm vậy.
             ReadOnlySequence<byte> payload = arguments.ApplicationMessage.Payload;
 
             if (SparkplugTopic.TryParse(arguments.ApplicationMessage.Topic, out var topic))
@@ -345,7 +339,7 @@ public sealed class SimulatorSessionRecoveryTests : IAsyncLifetime
         return new Disposer(client);
     }
 
-    /// <summary>One message as it reached a consumer, in arrival order.</summary>
+    /// <summary>Một message khi nó đến consumer, theo thứ tự arrival.</summary>
     private sealed record Observation(SparkplugTopic Topic, byte[] Payload);
 
     private sealed class Disposer(IMqttClient client) : IAsyncDisposable
@@ -361,7 +355,7 @@ public sealed class SimulatorSessionRecoveryTests : IAsyncLifetime
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
-                // Tearing down an observer must not fail a test that already has its answer.
+                // Tear down observer không được làm fail test đã có đáp án.
             }
 
             client.Dispose();

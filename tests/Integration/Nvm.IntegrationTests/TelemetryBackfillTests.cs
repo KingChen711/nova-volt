@@ -6,7 +6,7 @@ using Nvm.TelemetryBackfill;
 
 namespace Nvm.IntegrationTests;
 
-/// <summary>C08 — direct binary COPY preserves the global claim and simulator data shape.</summary>
+/// <summary>C08 — binary COPY trực tiếp giữ nguyên global claim và data shape của simulator.</summary>
 public sealed class TelemetryBackfillTests
 {
     [Fact]
@@ -90,7 +90,7 @@ public sealed class TelemetryBackfillTests
             """))
             .ShouldBe(["0"]);
 
-        // Wide enough for the stable per-channel spread, narrow enough to reject random filler.
+        // Đủ rộng cho độ phân tán ổn định theo channel, đủ hẹp để từ chối filler ngẫu nhiên.
         (await TelemetryHypertableTests.ReadAsync(
             dataSource,
             """

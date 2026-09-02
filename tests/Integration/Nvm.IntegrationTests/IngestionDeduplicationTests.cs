@@ -33,8 +33,9 @@ public sealed class IngestionDeduplicationTests
         var metrics = new IngestionMetrics();
         var ingestor = new PostgresMeasurementIngestor(dataSource, clock, metrics);
 
-        // Same logical reading, first seen in January and replayed after the calendar has moved to
-        // June. A first_seen_at partition must not make this key new again (ADR-030).
+        // Cùng một logical reading, lần đầu thấy vào tháng Một và được replay lại sau khi lịch đã
+        // chuyển sang tháng Sáu. Một partition theo first_seen_at không được phép biến key này thành
+        // mới trở lại (ADR-030).
         var repeated = Message("Formation/Voltage", new DateTimeOffset(2026, 1, 31, 23, 58, 50, TimeSpan.Zero));
         var first = await ingestor.IngestAsync([repeated], CancellationToken.None);
         clock.SetUtcNow(new DateTimeOffset(2026, 6, 1, 0, 0, 0, TimeSpan.Zero));
@@ -48,7 +49,7 @@ public sealed class IngestionDeduplicationTests
         (await CountRowsAsync(dataSource, SourceIds(repeated), CancellationToken.None))
             .ShouldBe((Processed: 1L, Telemetry: 1L));
 
-        // Device timestamp is part of the natural key. Everything else is deliberately identical.
+        // Device timestamp là một phần của natural key. Mọi thứ khác đều cố tình giống hệt nhau.
         var at = new DateTimeOffset(2026, 6, 1, 1, 0, 0, TimeSpan.Zero);
         var earlier = Message("Formation/Current", at);
         var later = Message("Formation/Current", at.AddSeconds(1));
@@ -58,8 +59,8 @@ public sealed class IngestionDeduplicationTests
         (await CountRowsAsync(dataSource, SourceIds(earlier, later), CancellationToken.None))
             .ShouldBe((Processed: 2L, Telemetry: 2L));
 
-        // The claim insert has already run when the signal-length constraint rejects the telemetry
-        // insert. Disposing the failed transaction must remove both, or retry would be lost forever.
+        // Claim insert đã chạy xong khi signal-length constraint từ chối telemetry insert. Dispose
+        // transaction đã fail phải xóa cả hai, nếu không retry sẽ mất vĩnh viễn.
         var invalid = Message(new string('X', 257), at.AddSeconds(2));
         var invalidId = SourceIds(invalid);
 

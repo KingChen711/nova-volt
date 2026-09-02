@@ -12,6 +12,8 @@ public sealed class IngestionMetrics
         Meter.CreateCounter<long>("nvm.ingest.duplicates", unit: "{reading}");
     private static readonly Counter<long> DriftedCounter =
         Meter.CreateCounter<long>("nvm.ingest.drifted", unit: "{reading}");
+    private static readonly Counter<long> RetentionRiskCounter =
+        Meter.CreateCounter<long>("nvm.ingest.retention_risk", unit: "{reading}");
     private static readonly Counter<long> PublishFailureCounter =
         Meter.CreateCounter<long>("nvm.ingest.publish_failures", unit: "{event}");
     private static readonly Counter<long> PublishedCounter =
@@ -22,6 +24,7 @@ public sealed class IngestionMetrics
     private long _insertedCount;
     private long _duplicateCount;
     private long _driftedCount;
+    private long _retentionRiskCount;
     private long _publishFailureCount;
     private long _publishedCount;
     private long _writeRetryCount;
@@ -39,6 +42,31 @@ public sealed class IngestionMetrics
     /// more likely, and this is the number that tells the two apart before M3 builds on the data.
     /// </remarks>
     public long DriftedCount => Interlocked.Read(ref _driftedCount);
+
+    /// <summary>Rows stored more than one chunk away from the moment they were recorded.</summary>
+    /// <remarks>
+    /// <para>
+    /// The number ADR-011 promised and the reason migration 007 took raw retention off the schedule.
+    /// The hypertable is partitioned on <c>device_timestamp</c>, one day per chunk, so a reading whose
+    /// device clock is a day or more away from <c>recorded_at</c> is filed in a chunk that has nothing
+    /// to do with when the plant produced it. Far enough away and that chunk is already past the
+    /// 400-day horizon: the row is stored, correct, and deleted by the next retention run with no
+    /// error anywhere.
+    /// </para>
+    /// <para>
+    /// Deliberately NOT the same question as <see cref="DriftedCount"/>, which compares the device
+    /// clock with the gateway's at a five-minute threshold and answers "is this timestamp
+    /// trustworthy". This one compares the device clock with the moment the row was written, at the
+    /// width of a chunk, and answers "could this row have landed somewhere retention will reach". A
+    /// two-hour buffer flush is drifted-clean and irrelevant here; a cycler whose clock says 2024 is
+    /// the case this exists for.
+    /// </para>
+    /// <para>
+    /// Reported per site (K3), because the answer to "should retention be switched back on" is a
+    /// per-plant answer: one line with one bad cycler must not be averaged away by nine good ones.
+    /// </para>
+    /// </remarks>
+    public long RetentionRiskCount => Interlocked.Read(ref _retentionRiskCount);
 
     /// <summary>Events whose row is stored and whose announcement never reached the broker.</summary>
     /// <remarks>
@@ -74,6 +102,17 @@ public sealed class IngestionMetrics
     /// </para>
     /// </remarks>
     public long WriteRetryCount => Interlocked.Read(ref _writeRetryCount);
+
+    internal void RecordRetentionRisk(string siteId, int count)
+    {
+        if (count <= 0)
+        {
+            return;
+        }
+
+        Interlocked.Add(ref _retentionRiskCount, count);
+        RetentionRiskCounter.Add(count, new KeyValuePair<string, object?>("site_id", siteId));
+    }
 
     internal void RecordWriteRetry()
     {
@@ -119,4 +158,14 @@ public sealed class IngestionMetrics
 /// Events that could not be announced. The rows are stored regardless — that is the dual write
 /// ADR-022 measured, kept visible rather than closed.
 /// </param>
-public sealed record IngestionResult(int Inserted, int Duplicates, int Drifted = 0, int PublishFailures = 0);
+/// <param name="RetentionRisk">
+/// Stored readings whose device clock is more than one chunk away from <c>recorded_at</c>, and which
+/// therefore landed in a chunk retention would judge by the wrong date. See
+/// <see cref="IngestionMetrics.RetentionRiskCount"/>.
+/// </param>
+public sealed record IngestionResult(
+    int Inserted,
+    int Duplicates,
+    int Drifted = 0,
+    int PublishFailures = 0,
+    int RetentionRisk = 0);

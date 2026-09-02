@@ -298,7 +298,7 @@ Bảng quan trọng nhất để hiệu chỉnh kỳ vọng — cột trái là 
 
 **Tích hợp**
 - ERP: hệ thống giả lập `NovaERP`, **B2MML XML trên SFTP** (chiều xuống) + **REST** (chiều lên).
-- Thiết bị: **MQTT Sparkplug B** (formation, EOL), **OPC UA** (coating — qua adapter), **CSV drop** (một máy test cũ — cố ý, để học integration bẩn).
+- Thiết bị: **MQTT Sparkplug B** (formation, EOL), **OPC UA** (coating — qua adapter), **CSV drop** (một máy test cũ — cố ý, để học integration bẩn; publish bằng rename theo `ADR-035`).
 - Historian: chưa có, dự án tự dựng TimescaleDB.
 - Unified Namespace: **dự án phải dựng** (EMQX).
 - OT/IT: 3 vùng mạng docker `ot-net` / `dmz-net` / `it-net`; service IT **không có route** tới `ot-net` (§13).
@@ -410,6 +410,11 @@ Không có "nhanh", "ổn định", "realtime". Chỉ có số. Mỗi dòng ph�
 > Điều M2 nghiệm thu là **tính đúng đắn dưới tải**: cái vào bằng cái ra, EMQX không vứt message nào, và
 > receiver theo kịp nguồn trong suốt cửa sổ chạy — đã đạt trên topology **1.000 kênh**, 2.361.174 message
 > exact. Số N1/N2 đo được ở topology đó: **3.933,2 msg/s** và p95 **99,5 s**.
+>
+> **N1/N2 không phải câu hỏi sức chứa.** Cả hai đo trong **10 phút**. Câu *"24 giờ telemetry ≈ 86 triệu
+> điểm"* là một mệnh đề khác và có ô riêng: **hard capacity/soak test 24 giờ**, DoD của **M13** (§9/M13,
+> `ADR-034` owner 2026-08-31). Đạt N1/N2 mà trượt ô đó là kết quả hoàn toàn có thể xảy ra — bloat, vacuum
+> và compression policy chỉ lộ ra sau nhiều giờ.
 
 > [!danger] N15 là ràng buộc cứng nhất, và nó quyết định kiến trúc
 > Nếu MES chết, dây chuyền **vẫn phải chạy**. Nghĩa là **mọi** lời gọi từ tầng thiết bị lên là **fire-and-forget có buffer**, không bao giờ synchronous blocking. Edge gateway store-and-forward khi mất kết nối, và hệ thống phải nuốt được trận lũ dữ liệu tồn đọng khi mạng có lại.
@@ -954,6 +959,7 @@ Tên event dùng **thì quá khứ**, theo **ngôn ngữ nhà máy** chứ khôn
 
 | Event | FB phát ra | Ý nghĩa |
 |---|---|---|
+| `FactoryModelRevisionActivated` | FactoryModel | Một revision của cây ISA-95 bắt đầu có hiệu lực tại một site |
 | `MaterialLotReceived` | Material | Nhận lot từ nhà cung cấp |
 | `MaterialLotReleased` | Quality | Lab đạt → cho phép dùng |
 | `MaterialLotConsumed` | Material | Tiêu hao trong một operation |
@@ -966,7 +972,7 @@ Tên event dùng **thì quá khứ**, theo **ngôn ngữ nhà máy** chứ khôn
 | `DuplicateSerialDetected` | Traceability | Trùng mã — luồng ngoại lệ có thật |
 | `ProcessStepStarted` | ProductionExecution | Bắt đầu một bước |
 | `ProcessStepCompleted` | ProductionExecution | Kết thúc, kèm actual |
-| `MeasurementRecorded` | Quality | OCV, ACIR, torque, áp suất hàn… |
+| `MeasurementRecorded` | Quality | OCV, ACIR, torque, áp suất hàn… **đã được đánh giá**; không phải telemetry/đường cong thô |
 | `FormationRunStarted` | ProductionExecution | Vào máy formation, gắn tray/channel |
 | `FormationRunCompleted` | ProductionExecution | Xong, kèm summary + URI đường cong |
 | `AgingPeriodElapsed` | ProductionExecution | Saga timeout — đủ ngày aging |
@@ -1690,43 +1696,81 @@ Không đoán số — **đo rồi điền**. Đây là loại bảng khiến ng
 
 ### 8.3 TimescaleDB — telemetry
 
+> [!note] Mục này đã được M3 sửa theo cái dựng thật — bốn chỗ, mỗi chỗ một lý do
+> Bản phác thảo đầu tiên nằm trong lịch sử git. Bốn khác biệt dưới đây **không** phải trôi dạt; mỗi
+> cái là một quyết định có ADR đứng sau, và ghi lại ở đây để `scope.md` không nói khác với database.
+>
+> 1. **Bảng thô tên `ts.telemetry_measurement`**, không phải `ts.process_signal`. Nó chở được **cả 5
+>    `value_kind`** (`real`/`integer`/`boolean`/`text`/`absent`), chứ không chỉ `DOUBLE PRECISION` —
+>    `Formation/StepIndex` là số nguyên và `Formation/Charging` là boolean; ép chúng thành `double`
+>    là mất chúng. `ts.process_signal` vẫn tồn tại, dưới dạng **view** đúng hình dạng số mà mục này
+>    hứa (`ADR-011`).
+> 2. **Không có cột `quality SMALLINT`.** Nó viết cho nguồn **OPC UA**; dự án này đi **Sparkplug B**
+>    và mang `clock_quality` — một đại lượng khác hẳn. Dựng một cột trông giống nó rồi nhét thứ khác
+>    vào là tạo ra một trường mà sáu tháng sau không ai biết nghĩa là gì (`ADR-011`).
+> 3. **Trục phân mảnh là `device_timestamp`** — giờ trên máy, không phải giờ nhận. Mọi câu hỏi của kỹ
+>    sư quy trình đặt bằng giờ máy (`ADR-011`).
+> 4. **`start_offset` là 5 giờ, không phải 3.** Ba giờ nhỏ hơn ngân sách đến muộn đã **đo được**: 2
+>    giờ buffer gateway + 2 giờ lệch đồng hồ + 1 giờ dự phòng. Cửa sổ hẹp hơn ngân sách nghĩa là dữ
+>    liệu về muộn **im lặng** không vào rollup (`ADR-032`).
+
 ```sql
-CREATE TABLE ts.process_signal (
-    time         TIMESTAMPTZ      NOT NULL,
-    site_id      TEXT             NOT NULL,
-    equipment_id TEXT             NOT NULL,
-    signal_code  TEXT             NOT NULL,
-    unit_id      TEXT             NULL,        -- gắn với cell nếu có
-    value        DOUBLE PRECISION NOT NULL,
-    quality      SMALLINT         NOT NULL     -- OPC UA quality code
+-- Bảng thô: một dòng một phép đo, mọi kiểu giá trị. PK phải chứa cột phân mảnh.
+CREATE TABLE ts.telemetry_measurement (
+    source_event_id  UUID        NOT NULL,
+    site_id          TEXT        NOT NULL,
+    equipment_id     TEXT        NOT NULL,
+    unit_id          TEXT        NULL,        -- gắn với cell sau M7
+    step_code        TEXT        NOT NULL,
+    signal_code      TEXT        NOT NULL,
+    device_timestamp TIMESTAMPTZ NOT NULL,    -- giờ trên máy: TRỤC PHÂN MẢNH
+    gateway_timestamp TIMESTAMPTZ NOT NULL,   -- giờ gateway nhận
+    recorded_at      TIMESTAMPTZ NOT NULL,    -- giờ hệ thống ghi
+    clock_quality    TEXT        NOT NULL,    -- Good | Drifted | Unknown
+    value_kind       TEXT        NOT NULL,    -- real | integer | boolean | text | absent
+    real_value       DOUBLE PRECISION NULL,
+    integer_value    BIGINT      NULL,
+    boolean_value    BOOLEAN     NULL,
+    text_value       TEXT        NULL,
+    PRIMARY KEY (source_event_id, device_timestamp)
 );
 
-SELECT create_hypertable('ts.process_signal', 'time',
+SELECT create_hypertable('ts.telemetry_measurement', 'device_timestamp',
                          chunk_time_interval => INTERVAL '1 day');
 
-ALTER TABLE ts.process_signal SET (
+ALTER TABLE ts.telemetry_measurement SET (
     timescaledb.compress,
     timescaledb.compress_segmentby = 'site_id, equipment_id, signal_code',
-    timescaledb.compress_orderby   = 'time DESC'
+    timescaledb.compress_orderby   = 'device_timestamp DESC'
 );
 
-SELECT add_compression_policy('ts.process_signal', INTERVAL '7 days');
-SELECT add_retention_policy  ('ts.process_signal', INTERVAL '400 days');
+SELECT add_compression_policy('ts.telemetry_measurement', INTERVAL '7 days');
+-- Retention: xem §8.4. CỐ Ý chưa lên lịch cho tới khi có legal hold (M12).
 
--- Rollup 1 phút, giữ lâu hơn nhiều so với dữ liệu thô
+-- View tương thích: đúng hình dạng số mà mục này hứa, chỉ lấy tín hiệu thực.
+CREATE VIEW ts.process_signal AS
+SELECT device_timestamp AS time, site_id, equipment_id, signal_code, unit_id,
+       real_value AS value, clock_quality
+FROM   ts.telemetry_measurement
+WHERE  value_kind = 'real';
+
+-- Rollup 1 phút. materialized_only: đọc đúng sản phẩm đã materialize, không nối
+-- raw tail để che bucket cũ và giấu lỗi đối chiếu.
 CREATE MATERIALIZED VIEW ts.process_signal_1m
-WITH (timescaledb.continuous) AS
-SELECT time_bucket('1 minute', time) AS bucket,
+WITH (timescaledb.continuous, timescaledb.materialized_only = true) AS
+SELECT time_bucket('1 minute', device_timestamp) AS bucket,
        site_id, equipment_id, signal_code,
-       avg(value) AS avg_value,
-       min(value) AS min_value,
-       max(value) AS max_value,
-       count(*)   AS sample_count
-FROM   ts.process_signal
-GROUP  BY bucket, site_id, equipment_id, signal_code;
+       avg(real_value) AS avg_value,
+       min(real_value) AS min_value,
+       max(real_value) AS max_value,
+       count(*)        AS sample_count
+FROM   ts.telemetry_measurement
+WHERE  value_kind = 'real'
+GROUP  BY bucket, site_id, equipment_id, signal_code
+WITH NO DATA;
 
 SELECT add_continuous_aggregate_policy('ts.process_signal_1m',
-    start_offset => INTERVAL '3 hours',
+    start_offset => INTERVAL '5 hours',   -- > ngân sách đến muộn đã đo (ADR-032)
     end_offset   => INTERVAL '1 minute',
     schedule_interval => INTERVAL '1 minute');
 ```
@@ -1743,10 +1787,22 @@ SELECT add_continuous_aggregate_policy('ts.process_signal_1m',
 | Chạy migration | **Không** tự chạy lúc startup app. Chạy bằng job riêng trong pipeline |
 | Rollback | Mỗi migration có script down; test rollback trong CI |
 | Retention event store | **Không xoá** — 15 năm. Chuyển chunk cũ sang filegroup rẻ hơn |
-| Retention telemetry thô | 400 ngày (policy tự động) |
-| Retention rollup 1 phút | 15 năm |
-| Retention MinIO | Ảnh vision 3 năm; raw curve 15 năm (object lock) |
-| Legal hold | Cờ `legal_hold` chặn mọi retention policy — test bắt buộc |
+| Retention telemetry thô | Chân trời **400 ngày**. Job **chưa lên lịch** tới M12 — xem dòng `Legal hold` |
+| Retention rollup 1 phút | Chân trời **15 năm**. Job **chưa lên lịch** tới M12 — cùng lý do |
+| Retention MinIO | Ảnh vision 3 năm; raw curve 15 năm (object lock COMPLIANCE, **đang bật**) |
+| Legal hold | Cờ `legal_hold` chặn **mọi** retention policy — test bắt buộc. **M12.** |
+
+> [!important] Vì sao hai job retention đang tắt, và vì sao đó không phải "chưa làm xong"
+> Retention xoá **cả chunk** theo `device_timestamp`. `ADR-011` ghi rằng một đồng hồ máy sai đưa hồ sơ
+> **mới** vào chunk **cũ** — nên bật retention khi chưa có legal hold nghĩa là bật một cơ chế xoá hồ
+> sơ pháp lý mà **không có gì chặn được nó**, không lỗi, không cảnh báo.
+>
+> Nửa xoá không được chạy trước nửa chặn. Migration `007` (thô) và `010` (rollup) gỡ cả hai job khỏi
+> lịch; M12 bật lại **sau** khi legal hold tồn tại. Trong lúc đó đĩa đầy dần — một vấn đề nhìn thấy
+> được và cứu được, rẻ hơn nhiều so với mất bằng chứng mà không ai biết là đã mất.
+>
+> Rollup **không** là ngoại lệ dù nó là dữ liệu dẫn xuất: sau ngày 400 raw đã bị xoá, nên nó không dẫn
+> xuất từ gì nữa — nó là bản ghi cuối cùng của quãng đó (`ADR-032`).
 
 > [!danger] Schema migration phải đọc được dữ liệu ghi từ 10 năm trước
 > Traceability là **hồ sơ pháp lý**, không phải log ứng dụng. Không `UPDATE`, không `DELETE` — sửa sai bằng bút toán bù trừ có ghi lý do và người thực hiện. Nghĩa là code phiên bản 2036 phải đọc được event ghi bởi code 2026. **Đây là lý do event phải version hoá ngay từ v1**, không phải "để sau tính".
@@ -1786,7 +1842,7 @@ SELECT add_continuous_aggregate_policy('ts.process_signal_1m',
 **Mục tiêu**: có một đường đi xuyên suốt từ hạ tầng tới UI, dù nó chưa làm gì cả.
 
 **Việc làm**
-- `docker-compose.yml`: SQL Server 2022, PostgreSQL 17 + TimescaleDB, RabbitMQ (management plugin), EMQX, MinIO, Keycloak, Grafana + Tempo + Prometheus + Loki.
+- `docker-compose.yml`: SQL Server 2022, PostgreSQL 17 + TimescaleDB, RabbitMQ (management plugin), EMQX, MinIO và Keycloak. M0 chỉ giữ chỗ profile `obs`; Grafana được thêm ở M3, còn OpenTelemetry Collector + Prometheus + Tempo + Loki thuộc M13.
 - Ba docker network `ot-net`, `dmz-net`, `it-net` với `internal: true` cho `ot-net`.
 - Solution .NET 10: `Directory.Build.props` (Nullable, `TreatWarningsAsErrors`, `LangVersion latest`), Central Package Management.
 - `Nvm.Host.All` trả về `/health` xanh khi tất cả dependency sẵn sàng.
@@ -1865,12 +1921,15 @@ SELECT add_continuous_aggregate_policy('ts.process_signal_1m',
 - `Nvm.EdgeGateway`: subscribe EMQX, decode Sparkplug, gán `gateway_timestamp`, buffer trên đĩa khi backend down (store-and-forward), flush có rate limit khi backend lên lại.
 - `Nvm.Ingestion`: dedup bằng UUIDv5 từ natural key, ghi telemetry, publish canonical CloudEvents lên bus.
 - `clock_quality` classifier.
-- CSV file-drop adapter (máy test cũ) — cùng đường dedup.
+- CSV file-drop adapter (máy test cũ) — cùng đường dedup, và chỉ đọc export **đã publish**:
+  producer ghi `<tên>.csv.partial`, đóng file, rồi rename nguyên tử thành `<tên>.csv.ready`.
+  Đổi tên một file không đóng handle của exporter, nên không có hợp đồng thì adapter đọc nửa
+  run và mất phần đuôi mà không lỗi ở đâu cả (`ADR-035`).
 - Load harness: bắn 5.000 msg/s.
 
 **Definition of Done**
 - [x] Chạy 1 giờ với 10% duplicate: **số bản ghi trong DB khớp chính xác số phép đo logic** — không dư, không thiếu (T1, N4). `make reconcile` 3.600 giây đồng hồ thật: **3.540 = 3.540, lệch 0**, 409 duplicate bị dedup chặn.
-      Chạy lại **2026-08-30 trên `8d06c7e`**, tức sau khi vế trái chuyển sang đếm lúc đo (J7) và waiter của D3 đổi (J8):
+      Chạy lại **2026-08-30 trên `f60ba15`**, tức sau khi vế trái chuyển sang đếm lúc đo (J7) và waiter của D3 đổi (J8):
       **trùng từng con số** — 3.540 = 3.540, 409 duplicate, 922 row `Drifted`, 2 rebirth, 0 publish hỏng, 2.618 mẫu `Good`,
       và `abandonedMeasurements` **0**. Trên một run không mất gì thì hai cách đếm phải cho cùng một số, và chúng cho cùng một số.
 - [x] **Đúng đắn dưới tải, 10 phút liên tục, trên topology 1.000 kênh**: source = gateway decode = fsync =
@@ -1910,13 +1969,13 @@ SELECT add_continuous_aggregate_policy('ts.process_signal_1m',
       fail đầu tiên — tức từ giữa outage có chủ ý — chứ không phải từ lúc backend sẵn sàng.
       Xem `benchmarks.md` các dòng `working tree J8`.
   > **Chặng ingestion → bus vẫn có thể mất**, và M2 không đóng được điều đó: chưa có transactional outbox (M6), nên đó vẫn là dual-write — `ADR-022` đã đo **18/200 event mất** khi broker chết 30 giây. M2 **đếm** số mất ở chặng này thay vì tuyên bố nó bằng 0. **N3** (*0 message mất toàn hệ thống*) giữ ở **M13**, đo lại sau khi outbox có ở M6. Lý do đầy đủ: `plans/M2-simulator-ingestion-idempotency.md` §2.3.
-- [ ] `NDEATH` làm mọi metric của node chuyển `STALE` mà không xoá dữ liệu lịch sử.
-- [ ] Message có `device_timestamp` lệch 2 giờ vẫn được nhận, gắn cờ `Drifted`.
+- [x] `NDEATH` làm mọi metric của node chuyển `STALE` mà không xoá dữ liệu lịch sử. `NodeDeathKeepsHistoryTests` chứng minh trạng thái đổi sang `STALE`, giá trị/thời điểm cuối giữ nguyên và số row telemetry không đổi.
+- [x] Message có `device_timestamp` lệch 2 giờ vẫn được nhận, gắn cờ `Drifted`. `IngestionClockQualityTests` chứng minh row vẫn được lưu; đối chứng lệch 10 giây là `Good`.
 
 **Lab phá hoại**
 1. Bỏ dedup → chạy lại → đếm số bản ghi thừa. **Ghi con số vào ADR-010.**
 2. Đổi natural key thiếu `device_timestamp` → xem hai phép đo khác nhau bị nuốt mất một.
-3. Cho gateway buffer 30 phút rồi flush cùng lúc → đo xem ingestion có sập không, có cần backpressure không.
+3. Cho gateway buffer 30 phút rồi flush cùng lúc → đã đo **9.071.178 record / 1,55 GiB**. Xả không rate limit mất **686 s**, có static limit mất **851 s**; ingestion trả **0** lần 429/503 và cả hai lượt lệch **0 row**. Trên rig này không có receiver backpressure để đáp lại, nên limit mặc định được tắt (`ADR-029`).
 
 **Học được** (T1): at-least-once là mặc định của thế giới thật; idempotency là **điều kiện đúng đắn**, không phải tối ưu hoá. Và nó cần **hai tầng**, không phải một (§7.2) — M2 đóng tầng ingestion, nơi khoá dedup commit được cùng transaction với dữ liệu nó bảo vệ; tầng command handler đóng ở **M4**, nơi effect bền vững đầu tiên xuất hiện (`ADR-023`, cập nhật 2026-08-30).
 
@@ -1939,16 +1998,42 @@ SELECT add_continuous_aggregate_policy('ts.process_signal_1m',
 **Mục tiêu**: dữ liệu tần suất cao nằm đúng chỗ, và khái niệm "ngày sản xuất" đúng ngay từ đầu.
 
 **Việc làm**
-- Hypertable `ts.process_signal`, compression policy, retention policy, continuous aggregate 1 phút (§8.3).
-- Upload đường cong formation gốc lên MinIO, lưu key + SHA-256 trong DB.
+- Hypertable `ts.telemetry_measurement` + view `ts.process_signal`, compression policy, continuous
+  aggregate 1 phút (§8.3). Retention **chưa lên lịch** tới M12 — §8.4.
+- Upload đường cong formation gốc lên MinIO, lưu key + SHA-256 + `actor`/`reason` trong DB.
 - `Nvm.Time.IProductionCalendar`: `GetProductionDay(DateTimeOffset, SiteId)`, `GetShift(...)`, `GetShiftBoundaries(...)`.
-- Grafana dashboard đầu tiên: nhiệt độ coating, throughput ingestion.
+- Grafana dashboard đầu tiên: **đường cong formation** (điện áp/dòng/nhiệt độ theo kênh) + sample
+  volume. **Không** phải coating — coating đã defer sang M9, nên panel đó sẽ không có dữ liệu.
 
-**Definition of Done**
-- [ ] 24 giờ telemetry (≈ 86 triệu điểm ở tốc độ nén) nén xuống < 15% dung lượng gốc.
-- [ ] Truy vấn "nhiệt độ trung bình mỗi phút của máy X trong 7 ngày qua" < 200 ms.
-- [ ] **Test DST**: ca C ngày 29/03/2026 và 25/10/2026 ở site DE1 cho `production_day` đúng. Cả hai test đỏ trước, xanh sau.
-- [ ] Test: `production_day` của lúc 05:59 và 06:01 khác nhau đúng một ngày.
+**Definition of Done** — D1/D2/D3 phát biểu lại theo `ADR-034`
+
+- [x] **D1**: tỉ số nén **< 15 %** ở **mọi** phép đo, và ổn định trên **hai trục**:
+      **(a)** hai **cardinality** khác nhau, cùng số ngày; **(b)** hai **bậc dung lượng** **tại cùng
+      một cardinality**, bậc lớn ≥ 4× bậc nhỏ về số row. `max − min` của **toàn bộ** các tỉ số phải
+      **< 2 điểm phần trăm**. Cả bốn phép đo dùng đúng code đường cong của simulator và **cùng điều
+      kiện dữ liệu** (chu kỳ mẫu, tỉ lệ lệch đồng hồ, site, `segmentby`, đường ghi `COPY`).
+      Phép đo (b) đã chốt: **40 kênh × 7 ngày** so với **40 kênh × 28 ngày**, kèm preflight dung lượng
+      đĩa và cửa sổ ngày. Owner **dự đoán tỉ số và độ lệch trước khi đo** (`AGENTS.md` §5.8.4).
+      *Ngưỡng "≈ 86 triệu điểm" đã bỏ khỏi M3: tỉ số nén là tính chất của **hình dạng** dữ liệu. Câu
+      hỏi sức chứa không mất — nó thành **hard capacity/soak test 24 giờ ở M13** (§9/M13), tách khỏi
+      N1/N2 (qualification M9, requalification M13 — `ADR-031`). `ADR-034`, owner duyệt 2026-08-31.*
+- [x] **D2**: *"nhiệt độ trung bình mỗi phút của `FORM-01` trong 7 ngày qua"* **< 200 ms** (p95).
+      `FORM-01` là **một cycler = 100 kênh**; `F1` là line = **10 cycler × 100 kênh = 1.000 kênh**.
+      Số của cả line đo bằng **topology thật** (`deploy/seed-load/`), ghi vào `benchmarks.md` như
+      **evidence**, không phải gate M3. Nếu ≥ 200 ms → ghi **nợ có deadline**, deadline là **trước
+      dashboard line-wide của M6/M7**.
+- [x] **D3**: **Test DST**: ca C ngày 29/03/2026 và 25/10/2026 ở site `DE1` cho `production_day`
+      đúng; ca C dài 7 giờ một lần và 9 giờ một lần. Test phải **phân biệt được** — chứng minh bằng
+      mutation, không phải bằng việc nó xanh. *Mutation **không** thay thế TDD history. M3 ghi nhận
+      **đạt về hành vi, không đạt về quy trình** vì C02 đã cài đặt trước C03; owner chấp nhận sai lệch
+      này **cho riêng M3** và không rewrite history. Từ **M4**: RED phải **tái lập được trên parent
+      SHA bằng diff chỉ chứa test**, và đỏ **bởi đúng assertion nghiệp vụ**; **không** đòi commit đỏ
+      trên `main` (`ADR-034`).*
+- [x] **D4**: `production_day` của 05:59 và 06:01 khác nhau đúng một ngày, ở **cả hai** site.
+- [x] **D5**: dữ liệu đến muộn hơn cửa sổ refresh **không biến mất im lặng** — hoặc vào rollup, hoặc
+      **được đếm** (`ADR-032`). Oracle ba tầng đo raw/parent/child
+      `3/0/0 → 3/3/0 → 3/3/3`; hai trạng thái lệch đều trả `P1101`, và wide refresh chạy đúng thứ tự
+      parent → child trên cùng khoảng.
 
 **Lab phá hoại**: viết `SELECT CAST(time AS date)` để tính sản lượng ngày, so với `IProductionCalendar` trên bộ dữ liệu ca C → xem lệch bao nhiêu %. Ghi vào ADR-012.
 
@@ -2273,6 +2358,39 @@ SELECT add_continuous_aggregate_policy('ts.process_signal_1m',
       OpenTelemetry đầy đủ và trace context xuyên MQTT đã ở trên đường nóng. Vẫn phải **≥ 5.000 msg/s**
       và p95 **< 5 s** trên rig qua preflight. Một con số đạt ở M9 **không** tự động còn đạt ở đây — ba thứ
       M13 thêm vào đều nằm trên chính đường dữ liệu đó, và đó là toàn bộ lý do có ô này.
+- [ ] ★ **Hard capacity / soak test tương đương 24 giờ** (`ADR-034`, owner 2026-08-31; audit
+      2026-09-02 bổ sung cold/hot fixture). Đây là chỗ câu hỏi *"24 giờ telemetry ≈ **86 triệu điểm**"*
+      của §9/M3 chuyển về, và nó là **DoD**, không phải mục tuỳ chọn. Phải đúng **cả sáu** vế, theo đúng
+      thứ tự sau:
+      1. **Pre-seed trước `T0`** trên chính topology 1.000 kênh: tạo ít nhất một **cold tail** gồm các
+         raw chunk đầy đủ có `range_end < T0 - 7 days`; refresh continuous aggregate **parent rồi
+         child** cho đúng khoảng đó. Chưa nén thủ công. Ghi baseline số chunk nén/chưa nén và
+         `total_successes`/`total_failures` của compression job cho raw, parent và child. Nếu không có
+         cold tail này thì 24 giờ chạy mới không thể tự sinh dữ liệu đủ 7 ngày tuổi, nên phép kiểm
+         compression policy sẽ false-pass.
+      2. **Liên tục 24 giờ từ `T0`** ở quy mô 1.000 kênh — không phải 24 lần chạy một giờ cộng lại.
+         Đây là **hot head**; timestamp phải nằm trong `[T0, T0 + 24 hours]`. Bài này đo thứ mà một lần
+         chạy 10 phút không nhìn thấy: autovacuum, bloat của btree UUID trong
+         `ingest.processed_message` (`ADR-030`), chunk mới sinh liên tục và compression policy chạy
+         song song với ghi.
+      3. **Không mất message**: source = gateway decode = fsync = forward = row delta, **exact**, đúng
+         phép đối chiếu của M2/D1. Số pre-seed là baseline riêng; chỉ delta của hot head được so với
+         source 24 giờ.
+      4. **Throughput cuối giờ 24 không thấp hơn giờ đầu quá 10 %**. Một con số đầu giờ mà không có
+         con số cuối giờ thì không nói gì về sức chứa.
+      5. **Oracle vật lý cold/hot** sau soak: raw, parent và child đều có ít nhất một cold chunk đã nén,
+         đều còn ít nhất một hot chunk chưa nén, số cold chunk nén tăng so với baseline, compression
+         job có `total_successes` tăng và `total_failures` không tăng. Chạy lại truy vấn D2 qua role
+         scoped trên ba cửa sổ ghi rõ biên — cold-only, hot-only và một cửa sổ đi qua cả hai — rồi ghi
+         p95 cùng `EXPLAIN (ANALYZE, BUFFERS)`; cả ba phải đọc continuous aggregate child có dữ liệu,
+         không được xanh trên tập rỗng.
+      6. **Dung lượng đĩa in trước và sau**, và tỉ số nén đo trên chính cold tail đó — đối chiếu với tỉ
+         số M3/D1 đo trên bộ nhỏ. Đây là lần duy nhất dự án kiểm được rằng phép ngoại suy của
+         `ADR-034` đúng.
+
+      *Sức chứa và thông lượng là **hai** câu hỏi. N1/N2 hỏi "nhanh bao nhiêu" trong 10 phút; ô này hỏi
+      "chịu được bao lâu". Trượt ô này mà N1/N2 xanh là kết quả hoàn toàn có thể xảy ra, và đó chính là
+      lý do nó tồn tại riêng.*
 - [ ] Chaos: tắt SQL Server 2 phút → 0 message mất, tự phục hồi < 60 s sau khi bật lại (T10, N3).
 - [ ] Chaos: latency RabbitMQ +500 ms → hệ thống chậm nhưng không sập, alert bắn đúng.
 - [ ] Mutation score domain layer ≥ 70%.
@@ -2729,9 +2847,7 @@ Dòng cuối là quan trọng nhất: **dữ liệu lịch sử luôn thiếu fi
 
 ## 16. Câu hỏi hỏi đồng nghiệp — bản ngôn ngữ đời thường
 
-Bộ câu hỏi đầy đủ nằm ở file riêng: **[cau-hoi-cho-dong-nghiep.md](cau-hoi-cho-dong-nghiep.md)**.
-
-Tóm tắt: **nếu chỉ hỏi được một câu, hỏi câu này** —
+**Nếu chỉ hỏi được một câu, hỏi câu này** —
 
 > *"Anh/chị ơi, em đang tự làm một project nhỏ ở nhà để chuẩn bị trước. Em hình dung hệ thống mình làm đại khái là: hứng dữ liệu từ máy dưới xưởng, lưu lại để sau này truy ngược được, rồi có màn hình cho người vận hành thao tác. Em hiểu vậy có đúng không, hay thực tế khác nhiều ạ?"*
 
@@ -2851,8 +2967,8 @@ Câu bám theo, nếu không khí đang mở: *"Thế phần nào hay trục tr�
 |---|---|---|---|---|---|---|---|---|
 | M0 | Bootstrap & Walking Skeleton | 1,0 | 2026-08-25 | 2026-08-26 | ☑ | ☑ | ☑ | 16 commit. Cả 5 DoD đạt. 4 ADR |
 | M1 | Factory Model & Service Bus | 1,5 | 2026-08-26 | 2026-08-30 | ☑ | ☑ | ☑ | **ĐÓNG.** Cả 5 DoD đạt. ★D1: một publish → hai queue độc lập cùng nhận, consumer thứ hai chậm hơn **1 ms**; D2: **5** lần thử rồi vào `_error`, queue chính còn 0; D4: **18/200** event mất khi broker chết 30 s — con số đầu vào của outbox ở M6; D5: 6 dòng OEF đúng trạng thái **và** chủ repo giải thích được (hỏi 2026-08-30, câu N15/K12 phải bổ sung vế *dây chuyền dừng* trước khi tick). **K7 đầy đủ KHÔNG phải nợ của M1**: nó đóng ở M4 (`ADR-023`; mốc đổi từ M5 sang M4 ngày 2026-08-30 vì effect của M4 là bền vững). 8 ADR: 004, 008, 010, 021, 022, 023, 024, 025. 328 test (`make ci`: 282 unit + 23 analyzer + 17 architecture + 6 contract). ★ Lab phá hoại: **18/200 event mất** khi broker chết 30 s |
-| M2 | Simulator, Ingestion & Idempotency | 2,5 | 2026-08-28 | *(chưa)* | ☐ | ☑ | — | **đang làm**. **Cả năm DoD đã đạt**: ★D1 (3.600 giây thật: **3.540 = 3.540, lệch 0**, đo lại trên oracle cuối `8d06c7e` — trùng từng con số), D2 vế M2 (**2.361.174** message exact trên **1.000 kênh**, EMQX dropped 0), ★D3 (**16.288 = 16.288**, drain **37 s** trên ngân sách strict < 180, `abandonedMeasurements` 0), D4, D5. N1/N2 đã rời sang **M9/M13** (`ADR-031`). Còn lại **một** điều kiện đóng: chủ repo trả lời được các câu *vì sao* mà không mở tài liệu. 6 ADR: 026, 027, 028, 029, 030, 031. **585 test**, buffer-crash **0/200**. ★ D2 lộ nút thắt thật: harness bắn đúng 5.000 msg/s nhưng đường ống nuốt **936 msg/s**, EMQX xả **80 %**. ★ Lab: bỏ dedup **+24,5 %** row thừa · bỏ `device_timestamp` khỏi khoá **99,93 %** row bị nuốt, cả hai **không ném lỗi nào** |
-| M3 | Telemetry & Production Calendar | 1,0 | | | ☐ | ☐ | — | |
+| M2 | Simulator, Ingestion & Idempotency | 2,5 | 2026-08-28 | *(chưa)* | ☐ | ☑ | — | **đang làm**. **Cả năm DoD đã đạt**: ★D1 (3.600 giây thật: **3.540 = 3.540, lệch 0**, đo lại trên oracle cuối `f60ba15` — trùng từng con số), D2 vế M2 (**2.361.174** message exact trên **1.000 kênh**, EMQX dropped 0), ★D3 (**16.288 = 16.288**, drain **37 s** trên ngân sách strict < 180, `abandonedMeasurements` 0), D4, D5. N1/N2 đã rời sang **M9/M13** (`ADR-031`). Còn lại **một** điều kiện đóng: chủ repo trả lời được các câu *vì sao* mà không mở tài liệu. 6 ADR: 026, 027, 028, 029, 030, 031. **585 test**, buffer-crash **0/200**. ★ Lượt D2 đầu từng lộ nút thắt **936 msg/s** và EMQX drop **80 %**; sau remediation, tính đúng đắn đạt exact nhưng qualification hiệu năng vẫn chưa đạt: **3.933,2 msg/s**, p95 **99,525 s** trên 1.000 kênh. ★ Lab: bỏ dedup **+24,5 %** row thừa · bỏ `device_timestamp` khỏi khoá **99,93 %** row bị nuốt, cả hai **không ném lỗi nào** |
+| M3 | Telemetry & Production Calendar | 1,0 | 2026-08-30 | *(chưa)* | ☐ | ☑ | — | **ĐANG LÀM. Năm DoD kỹ thuật đã có bằng chứng nhưng teach-back hard DoD chưa thực hiện.** ★D1 nén **8,385723 / 8,140036 / 8,147113 / 8,151416 %** trên hai trục, spread **0,245687 pp** (`ADR-034`); ★D2 p95 **8,080 ms**, biên **24,8×**, và ~1,2 / ~1,0 ms ở hai cửa sổ khác nhau; ★D3 hành vi đạt (mutation **8/564** đỏ) nhưng quy trình không đạt, owner chấp nhận riêng M3; D4 2/2 site; ★D5 raw/parent/child **3/0/0 → 3/3/0 → 3/3/3**, hai negative control `P1101`. Audit 2026-09-02 mở lại milestone vì empty export vi phạm invariant archive và vì câu *"bỏ qua các câu hỏi"* không phải phê duyệt thay hard DoD. Các lỗ hổng kỹ thuật `N-M3-11`–`N-M3-22` nay đã sửa; gate mới nhất đạt preflight **45/45**, backup provenance **9/9**, Release build sạch và test **688/688**. Buffer-crash 200 vòng được owner yêu cầu bỏ qua ở lượt này, không được ghi như số vừa đo; teach-back vẫn là blocker cuối để đóng milestone. **Data Collection** trong `oef-mapping.md` giữ `đang làm` |
 | M4 | Mendix — Operator Station v1 | 2,0 | | | ☐ | ☐ | ☐ | |
 | M5 | Functional Block & Event Store | 3,0 | | | ☐ | ☐ | ☐ | |
 | M6 | Outbox, CQRS & Genealogy Trace | 3,0 | | | ☐ | ☐ | ☐ | |
@@ -2870,8 +2986,8 @@ Câu bám theo, nếu không khí đang mở: *"Thế phần nào hay trục tr�
 
 | Chỉ số | Mục tiêu | M2 | M6 | M9 | M13 |
 |---|---|---|---|---|---|
-| Ingestion throughput (msg/s) | ≥ 5.000 | **936** ✗ | | | |
-| Ingestion lag p95 (s) | < 5 | **2,42** ✓ | | | |
+| Ingestion throughput (msg/s) | ≥ 5.000 | **3.933,2** ✗ | | | |
+| Ingestion lag p95 (s) | < 5 | **99,525** ✗ | | | |
 | Forward trace p95 (ms) | < 200 | — | | | |
 | Backward trace p95 (ms) | < 150 | — | | | |
 | Command API p95 (ms) | < 300 | — | | | |

@@ -55,8 +55,9 @@ pipeline (C05). ADR này chỉ chốt **cách sinh ra giá trị**.
   byte và hai dòng set bit version/variant — cả hai đều hỏng im lặng nếu sai.
 - **Phải tắt CA5350 tại chỗ**. SHA-1 là thuật toán yếu; ở đây nó chỉ trộn bit, không bảo vệ gì.
   Suppress bằng `[SuppressMessage]` **ngay tại method**, không tắt cả repo.
-- **Chi phí băm mỗi lần sinh khoá.** SHA-1 trên chuỗi ngắn là không đáng kể ở 5.000 msg/s, nhưng
-  đây là phán đoán chứ chưa đo — đo ở M2 cùng N1.
+- **Chi phí băm mỗi lần sinh khoá.** SHA-1 trên chuỗi ngắn được phán đoán là không đáng kể, nhưng
+  M2 không có phép đo cô lập để chứng minh. Đo microbenchmark trước qualification N1 ở **M9**;
+  không dùng throughput đầu-cuối để suy ngược chi phí của riêng hàm băm.
 - **Natural key trở thành một phần của contract.** Đổi thứ tự hay thêm bớt một trường trong natural
   key sẽ đổi mọi khoá sinh ra sau đó, và dữ liệu cũ trong bảng dedup không còn khớp với dữ liệu mới.
   Đổi natural key = một cuộc migration, không phải một lần refactor.
@@ -185,5 +186,6 @@ mảnh index, và **không có gì báo**. Liên quan tới ADR này vì M6 sẽ
 bảng outbox. Ba cách xử lý: lưu `binary(16)`, hoán vị byte, hoặc `NEWSEQUENTIALID()` cho khoá
 clustered.
 
-**5. Phán đoán chưa đo.** Chi phí SHA-1 ở 5.000 msg/s được **giả định** là không đáng kể. Chưa đo.
-Đo ở M2 cùng N1 và ghi vào `benchmarks.md`.
+**5. Phán đoán chưa đo.** Chi phí SHA-1 được **giả định** là không đáng kể. M2 đã chạy tải đầu-cuối
+nhưng phép đó không cô lập SHA-1, nên khoản này vẫn **chưa đo**. Đo microbenchmark trước qualification
+N1 ở **M9** và ghi vào `benchmarks.md`.

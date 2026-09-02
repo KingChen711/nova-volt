@@ -9,7 +9,7 @@ Hệ thống MES / Traceability mô phỏng cho nhà máy sản xuất pin xe đ
 | **Backend** | .NET 10 LTS · SQL Server (event store, write model) · PostgreSQL + TimescaleDB (telemetry, read model) |
 | **Messaging** | RabbitMQ (Manufacturing Service Bus) · EMQX (MQTT Sparkplug B) |
 | **UI** | Mendix (toàn bộ) |
-| **Trạng thái** | **M0 xong** 2026-08-26 · **M1 đang làm** — code xong, milestone chưa đóng vì D5 còn mở · [lộ trình 14 milestone](docs/scope.md#9-lộ-trình-milestone) |
+| **Trạng thái** | **M0, M1 đã đóng** · **M2 và M3 đang chờ teach-back** dù các DoD kỹ thuật đã đạt · M3 được mở lại sau audit 2026-09-02 vì câu *"bỏ qua các câu hỏi"* không phải phê duyệt thay hard DoD · [lộ trình 14 milestone](docs/scope.md#9-lộ-trình-milestone) |
 
 ---
 
@@ -37,7 +37,7 @@ nói thẳng ra.
 cp .env.example .env          # 1. Không có .env thì make up dừng ngay, có hướng dẫn
 make up                       # 2. Hạ tầng + khởi tạo DB/bucket. ~40–60 s khi image đã cache
 make hooks                    # 3. Bật pre-commit hook — KHÔNG tự bật khi clone
-make test                     # 4. 328 automated test toàn solution, ~5 s
+make test                     # 4. Test gate; kỹ thuật M3 hiện 688/688
 dotnet run --project src/Apps/Nvm.Host.All   # 5. Host .NET ở :5080
 ```
 
@@ -81,7 +81,7 @@ MassTransit: nó nói về bus **trong process này** — đã khởi động ch
 | 5432 | PostgreSQL + TimescaleDB | — | `NVM_POSTGRES_USER` |
 | 5672 | RabbitMQ AMQP | — | — |
 | 1883 | EMQX MQTT | **không publish** — xem ghi chú dưới bảng | — |
-| 3000 | Grafana — profile `obs`, chưa bật tới M13 | — | — |
+| 3000 | Grafana — profile `obs`, được thêm từ M3 và chỉ bật khi cần | — | — |
 
 Mật khẩu nằm trong `.env` dưới đúng khoá ghi ở cột cuối. **Không chép chúng vào tài liệu** —
 hai bản sẽ trôi khỏi nhau.
@@ -160,7 +160,7 @@ novavolt-mes/
 |---|---|
 | Hiểu nguyên tắc làm việc trong repo | [`AGENTS.md`](AGENTS.md) |
 | Hiểu nghiệp vụ và kiến trúc | [`docs/scope.md`](docs/scope.md) |
-| Biết việc tiếp theo phải làm gì | [`docs/plans/M0-bootstrap.md`](docs/plans/M0-bootstrap.md) |
+| Biết việc tiếp theo phải làm gì | [`docs/plans/M3-telemetry-timescaledb-production-calendar.md`](docs/plans/M3-telemetry-timescaledb-production-calendar.md) |
 | Biết vì sao chọn công nghệ X | [`docs/adr/`](docs/adr/) |
 
 ---

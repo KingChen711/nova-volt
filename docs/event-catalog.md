@@ -87,26 +87,24 @@ thành đúng cái TSDB nằm cạnh nó.
 
 ---
 
-## Trạng thái sau M1
+## Trạng thái hiện tại — sau implementation M3
 
 | | Số |
 |---|---|
-| Đã cài đặt | **1** / 35 |
-| Có golden file | **1** / 1 đã cài đặt |
-| Chưa có gì | 34 |
+| Đã cài đặt | **2** / 35 |
+| Có golden file | **2** / 2 đã cài đặt |
+| Chưa có gì | 33 |
 
-**Một dòng, và đó là con số đúng.** M1 dựng *đường ống*, không dựng nghiệp vụ. Event duy nhất tồn
-tại là thứ nhỏ nhất đủ để chứng minh đường ống chạy: bus chở được nó, hai consumer nhận độc lập, và
-lab phá hoại đếm được bao nhiêu cái mất khi broker chết.
+M1 kết thúc với **1/35** (`FactoryModelRevisionActivated`). M2 thêm `MeasurementRecorded` v1 nhưng
+chỉ phát các signal đã được đánh giá, không biến mọi telemetry reading thành domain event. M3 cố ý
+không thêm event mới: hypertable, rollup và production calendar là persistence/read model, không phải
+một sự kiện nghiệp vụ mới.
 
-> [!note] `FactoryModelRevisionActivated` **không** có trong `scope.md` §6.5
-> Nó được thêm ở M1/C03 vì `scope.md` §6.5 liệt kê event của *sản phẩm* — cell, lot, pack — và
-> không có event nào cho việc **cấu hình nhà máy thay đổi**. Đó là một khoảng trống thật của scope,
-> không phải một event bịa ra cho đủ: một work cell bị gỡ khỏi cây trong khi vẫn còn WIP đứng trên
-> nó là tình huống có thật, và nó dẫn thẳng tới bài toán hold ở M9.
->
-> Cập nhật `scope.md` §6.5 khi tiện — không cần commit riêng.
+> [!note] Khoảng trống của scope đã được đóng
+> `FactoryModelRevisionActivated` được thêm ở M1/C03 vì việc cấu hình nhà máy đổi revision là một
+> sự kiện thật: một work cell bị gỡ trong khi vẫn còn WIP có thể dẫn tới hold ở M9. `scope.md` §6.5
+> nay đã liệt kê event này thay vì để catalog và scope trôi khỏi nhau.
 
 > [!warning] Bảng này sẽ đứng yên rất lâu, và đó là dự kiến
-> 34/35 event thuộc M5–M12. Trước M5 bảng gần như không nhúc nhích. Đừng vì thế mà tưởng dự án
+> 33/35 event thuộc M5–M12. Trước M5 bảng gần như không nhúc nhích. Đừng vì thế mà tưởng dự án
 > đứng — cùng lý do đã ghi ở cuối `oef-mapping.md`.

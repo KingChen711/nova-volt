@@ -48,6 +48,9 @@ jobs:
           key: nuget-${{ runner.os }}-${{ hashFiles('**/Directory.Packages.props', '**/*.csproj') }}
           restore-keys: nuget-${{ runner.os }}-
 
+      - name: Rotation verifier preflight
+        run: sh scripts/rotate-env-preflight-test.sh
+
       - name: Restore
         run: dotnet restore NovaVolt.Mes.slnx
 

@@ -19,12 +19,22 @@ public sealed record FileMeasurement(
 /// <param name="LineNumber">1-based line number in the source file, header included.</param>
 /// <param name="Line">The line exactly as it was written.</param>
 /// <param name="Reason">What was wrong with it, in words an operator can act on.</param>
+/// <param name="Identity">
+/// The machine the line named, when that much was readable before it failed, and null when it was
+/// not. This exists because a line can fail on its value and still say perfectly clearly whose
+/// machine it belongs to — and a file naming a second machine only on such lines used to pass the
+/// single-machine check, be archived under the first machine, and be filed as processed.
+/// </param>
 /// <remarks>
 /// The line is kept verbatim. A rejection an operator cannot see the original of is a rejection they
 /// have to reproduce before they can fix it, and by then the tester has usually overwritten its own
 /// export.
 /// </remarks>
-public sealed record RejectedLine(int LineNumber, string Line, string Reason);
+public sealed record RejectedLine(
+    int LineNumber,
+    string Line,
+    string Reason,
+    EquipmentPath? Identity = null);
 
 /// <summary>What one CSV file turned into.</summary>
 /// <param name="Measurements">Lines that parsed.</param>
@@ -32,3 +42,12 @@ public sealed record RejectedLine(int LineNumber, string Line, string Reason);
 public sealed record FileDropParseResult(
     IReadOnlyList<FileMeasurement> Measurements,
     IReadOnlyList<RejectedLine> Rejected);
+
+/// <summary>A file would have been consumed with nowhere to keep its original bytes.</summary>
+/// <param name="message">Which file, and what to configure.</param>
+/// <remarks>
+/// Thrown rather than logged. The alternative — warn and file the export under <c>processed</c> — is
+/// how a deployment ends up holding measurements it cannot produce the source of, and a measurement
+/// whose original cannot be produced is not evidence (C12.1, AGENTS.md K4).
+/// </remarks>
+public sealed class RawCurveArchiveMissingException(string message) : Exception(message);

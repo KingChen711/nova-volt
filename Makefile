@@ -22,7 +22,7 @@ ALL_PROFILES := --profile probe --profile init --profile obs --profile tools --p
 BACKUP_DIR := $(shell grep -E '^NVM_BACKUP_DIR=' .env 2>/dev/null | cut -d= -f2-)
 
 .DEFAULT_GOAL := help
-.PHONY: help up up-obs down down-v reset ps logs net-check grafana-net-check dmz-shell build test ci hooks format format-check clean backup bus-fanout bus-dlq bus-chaos sim-up sim-down sim-logs sim-report sim-net-check edge-up edge-down edge-logs edge-net-check buffer-crash ingestion-up ingestion-down ingestion-logs ingestion-migrate telemetry-policy-lab rollup-refresh-wide telemetry-backfill compression-report rollup-bench rollup-reconcile calendar-lab outage-lab backpressure-lab load load-session-check load-net-check reconcile
+.PHONY: help up up-obs down down-v reset ps logs net-check grafana-net-check dmz-shell build test ci hooks format format-check clean backup secret-check rotation-preflight rabbitmq-durability-check bus-fanout bus-dlq bus-chaos sim-up sim-down sim-logs sim-report sim-net-check edge-up edge-down edge-logs edge-net-check buffer-crash ingestion-up ingestion-down ingestion-logs ingestion-migrate file-drop-race-probe telemetry-policy-lab rollup-refresh-wide telemetry-backfill compression-report rollup-bench rollup-bench-line rollup-reconcile calendar-lab outage-lab backpressure-lab load load-session-check load-net-check reconcile
 
 help:
 	@echo "NovaVolt MES"
@@ -36,6 +36,7 @@ help:
 	@echo "    make ps            Trang thai container"
 	@echo "    make logs          Theo doi log"
 	@echo "    make net-check     Kiem ranh gioi OT/IT (K11) - 9 phep do"
+	@echo "    make rabbitmq-durability-check  Message durable co song qua recreate khong"
 	@echo "    make grafana-net-check Kiem Grafana toi TimescaleDB, khong toi EMQX"
 	@echo "    make dmz-shell     Mo shell trong dmz-net de dung MQTT"
 	@echo ""
@@ -63,6 +64,7 @@ help:
 	@echo "    make telemetry-backfill Sinh lich su tu dung duong cong simulator va binary COPY"
 	@echo "    make compression-report D1/M3: do nen o hai cardinality tren chunk that"
 	@echo "    make rollup-bench   D2/M3: do truy van nhiet do 1 phut trong 7 ngay"
+	@echo "    make rollup-bench-line C15-3: cung truy van o muc line F1 1.000 kenh (evidence)"
 	@echo "    make rollup-reconcile D5/M3: dem mau den muon ma rollup con thieu"
 	@echo "    make calendar-lab  C14/M3: do CAST(date) sai voi lich san xuat bao nhieu"
 	@echo "    make outage-lab    D3 fail-closed: tat backend 2 phut, assert row delta = 0"
@@ -81,6 +83,7 @@ help:
 	@echo "    make build         Build solution"
 	@echo "    make test          Chay toan bo test cua solution"
 	@echo "    make ci            Chay dung chuoi kiem tra cua CI"
+	@echo "    make rotation-preflight Kiem 45 negative control cua rotation verifier"
 	@echo "    make hooks         Bat pre-commit hook cho repo nay"
 	@echo "    make format        Tu dong sua format theo .editorconfig"
 	@echo "    make format-check  Kiem format, khong sua"
@@ -102,6 +105,19 @@ help:
 # Doi lai, phai chay `make net-check` moi khi dung toi docker-compose.yml.
 net-check: .env
 	@sh scripts/net-check.sh
+
+# K13 o tang runtime. .env.example duoc commit, nen moi mat khau trong no la cong khai; copy
+# nguyen xi sang .env de credential that cua stack dang chay bang credential ai cung doc duoc.
+#
+# CO Y khong nam trong `make up`: xoay mat khau sau khi volume da tao doi hoi `down -v`, va do
+# la quyet dinh cua nguoi van hanh chu khong phai cua mot task runner. `up` chi CANH BAO.
+secret-check:
+	@sh scripts/secret-check.sh
+
+# N-M3-4. Hoi "message co con khong" chu khong hoi "co ghim hostname chua": cau thu hai luon tra loi
+# duoc bang cach doc file, cau thu nhat chi mot lan recreate that moi tra loi duoc.
+rabbitmq-durability-check: .env
+	@sh scripts/rabbitmq-durability-check.sh
 
 grafana-net-check: .env
 	@sh scripts/grafana-net-check.sh
@@ -132,7 +148,8 @@ up: .env
 	$(COMPOSE) run --rm mssql-init || exit 1; \
 	$(COMPOSE) run --rm minio-init || exit 1; \
 	echo ""; \
-	echo "All healthy in $$(($$(date +%s)-start))s"
+	echo "All healthy in $$(($$(date +%s)-start))s"; \
+	sh scripts/secret-check.sh || true
 
 # M3/C13 bat Grafana som de nhin duong cong formation. Migration phai chay truoc
 # grant: role read-only khong duoc tu suy ra quyen tren table da ton tai.
@@ -144,7 +161,8 @@ up-obs: .env
 	$(COMPOSE) run --rm mssql-init || exit 1; \
 	$(COMPOSE) run --rm minio-init || exit 1; \
 	echo ""; \
-	echo "All healthy in $$(($$(date +%s)-start))s"
+	echo "All healthy in $$(($$(date +%s)-start))s"; \
+	sh scripts/secret-check.sh || true
 
 down:
 	$(COMPOSE) $(ALL_PROFILES) down
@@ -175,11 +193,15 @@ test:
 # restore -> format -> build -> test la co y: format chay TRUOC build de mot loi
 # thut le khong phai cho het mot lan build Release moi lo ra.
 ci:
+	$(MAKE) rotation-preflight
 	dotnet restore $(SOLUTION)
 	dotnet format $(SOLUTION) --verify-no-changes --no-restore
 	dotnet build $(SOLUTION) -c Release --no-restore --nologo
 	dotnet test --solution $(SOLUTION) -c Release --no-build
 	$(MAKE) buffer-crash
+
+rotation-preflight:
+	sh scripts/rotate-env-preflight-test.sh
 
 # Hook KHONG tu cai khi clone — Git bo qua .git/hooks tu repo vi ly do bao mat.
 # core.hooksPath la cach chinh thuc de tro sang thu muc duoc version hoa.
@@ -267,6 +289,11 @@ ingestion-up: .env
 	@$(COMPOSE) --profile ingestion up -d --wait ingestion
 	@echo "Ingestion healthy tren dmz-net + it-net. Theo doi: make ingestion-logs"
 
+# Hai probe cua vong audit 7, chay lai tren image dang chay (ADR-035 §Evidence).
+# CANH BAO: xoa sach inbox/processed/rejected va tat MinIO mot lat. Lab, khong phai lenh van hanh.
+file-drop-race-probe:
+	@sh scripts/file-drop-race-probe.sh $${PROBE:-all}
+
 ingestion-down:
 	@$(COMPOSE) --profile ingestion rm -sf ingestion
 
@@ -282,9 +309,10 @@ ingestion-migrate: .env
 telemetry-policy-lab: ingestion-migrate
 	@sh scripts/telemetry-policy-lab.sh
 
-# C07 recovery path for readings older than the regular five-hour refresh window. Defaults to a
-# paired, closed seven-day range; explicit UTC-minute boundaries must stay inside the 399-day raw
-# horizon and can cover at most 399 days.
+# C07 recovery path for readings older than the regular five-hour refresh window. Refreshes the
+# channel parent before the machine child on the same closed range. Defaults to a paired, closed
+# seven-day range; explicit UTC-minute boundaries must stay inside the 399-day raw horizon and can
+# cover at most 399 days.
 rollup-refresh-wide: ingestion-migrate
 	@sh scripts/rollup-refresh-wide.sh
 
@@ -307,8 +335,14 @@ compression-report: ingestion-migrate
 rollup-bench: ingestion-migrate
 	@sh scripts/rollup-bench.sh
 
+# C15-3 do CUNG truy van do o muc line F1 (1.000 kenh) lam evidence cho M6/M7, khong phai gate M3.
+# File SQL rieng vi rollup-bench.sql la gate D2 dang xanh: them mot fixture 1.000 kenh vao giua
+# no se bat moi so cu phai do lai de chung minh chung khong doi.
+rollup-bench-line: ingestion-migrate
+	@EXPECTED_ROWS="$(EXPECTED_ROWS)" sh scripts/rollup-bench-line.sh
+
 # C11 creates a uniquely labelled late-arrival probe, proves the regular five-hour refresh misses
-# it, then proves an explicit bounded refresh repairs the materialized read product.
+# it, proves a parent-only repair still leaves the machine child stale, then repairs both levels.
 rollup-reconcile: ingestion-migrate
 	@sh scripts/rollup-reconcile.sh
 

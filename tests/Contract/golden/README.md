@@ -20,4 +20,5 @@ giữ **15 năm** và là hồ sơ pháp lý — không `UPDATE`, không `DELETE
 
 | Context | Event | Version | Ra ở | Trạng thái |
 |---|---|---|---|---|
-| `factory-model` | `revision-activated` | v1 | M1 · C03 | **nháp** — chưa publish thật, còn sửa được tới hết M1 |
+| `factory-model` | `revision-activated` | v1 | M1 · C03 | **đã phát hành — bất biến** |
+| `quality` | `measurement-recorded` | v1 | M2 · C14 | **đã phát hành — bất biến** |

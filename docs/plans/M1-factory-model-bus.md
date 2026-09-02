@@ -1145,7 +1145,7 @@ Trả lời lúng túng câu nào → dòng tương ứng **chưa** phải `xong
 | D2 | 5 lần thử → `_error` queue, không mất | ☑ 2026-08-27 | `make bus-dlq`: **5** lần thử, khoảng cách **245 / 480 / 920 / 1933 ms** (exponential + jitter). `_error` có **1** message, queue chính còn **0** |
 | D3 | `DateTime.UtcNow` làm build FAILED | ☑ 2026-08-27 | `error NVM001` khi vi phạm cố ý; `DateTimeOffset.Now` cũng bị bắt. `NVM002`/`NVM003` cùng cơ chế (C16) |
 | D4 | Tắt RabbitMQ: không crash, số mất được đếm | ☑ 2026-08-27 | **18 / 200 event mất**, cửa sổ mất **48 → 65** (một khối liền). App restart **0** lần, `/health/live` xanh suốt. Publish thành công = consumer nhận = **182** — không có vùng xám. `ADR-022` |
-| D5 | 6 dòng OEF đúng trạng thái, ≥ 2 dòng `xong` | ☑ 2026-08-30 | Vế máy kiểm được: **xong** — 13 dòng cập nhật, 2 dòng `xong` (C18). Vế thứ hai **chưa**: chủ repo chưa trả lời 3 câu hỏi ở §C18 mà không đọc lại tài liệu. Xem ghi chú bên dưới |
+| D5 | 6 dòng OEF đúng trạng thái, ≥ 2 dòng `xong` | ☑ 2026-08-30 | Vế máy kiểm được: **xong** — 13 dòng cập nhật, 2 dòng `xong` (C18). Vế giải thích cũng **đã đóng** sau khi chủ repo trả lời và xác nhận nắm phần N15/K12 còn thiếu; xem ghi chú bên dưới |
 
 **Sản phẩm phụ bắt buộc**
 

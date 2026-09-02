@@ -2,7 +2,7 @@
 title: "M3 — Telemetry, TimescaleDB & Production Calendar"
 milestone: M3
 duration: "1,6–2,0 tuần (19 giờ 30 phút ước lượng). `scope.md` dự trù 1 tuần — chênh lệch giải thích ở §4"
-status: planned
+status: in_progress   # D1–D5 đạt có bằng chứng; còn lại teach-back (§7) — hard DoD, chỉ owner làm được
 created: 2026-08-30
 depends_on: [M0, M1, M2]
 unlocks: [M4]
@@ -22,9 +22,9 @@ Milestone chỉ được đóng khi **cả 5** mệnh đề đúng, có bằng c
 
 | # | Tiêu chí | Cách chứng minh |
 |---|---|---|
-| ★ D1 | Telemetry nén xuống **< 15%** dung lượng gốc | `make compression-report`: `hypertable_detailed_size` trước và sau `compress_chunk`, đo ở **hai** cardinality khác nhau; hai tỉ số lệch **< 2 điểm phần trăm** thì mới được ngoại suy. Phát biểu lại so với `scope.md` — lý do ở §2.4 |
-| ★ D2 | *"Nhiệt độ trung bình mỗi phút của `FORM-01` trong 7 ngày qua"* trả về **< 200 ms** | `make rollup-bench`: 10 lần chạy, lấy p95, kèm `EXPLAIN (ANALYZE, BUFFERS)` chứng minh **có** chunk exclusion và **có** đọc continuous aggregate. Đo ở **hai** mức: một kênh, và cả máy (mọi kênh của `FORM-01`) — §3.2 |
-| ★ D3 | **Test DST**: ca C ngày **29/03/2026** và **25/10/2026** ở site `DE1` cho `production_day` **đúng**; ca C dài **9 giờ** một lần và **7 giờ** một lần. Cả hai test **đỏ trước, xanh sau** | `ProductionCalendarDaylightSavingTests`. `scope.md` §2.3 gọi đây là bài tập bắt buộc của M3 |
+| ★ D1 | Telemetry nén xuống **< 15%** dung lượng gốc, và tỉ số đó **ngoại suy được** trên **hai trục** | `make compression-report`: `hypertable_detailed_size` trước và sau `compress_chunk`. Trục **cardinality**: hai số kênh khác nhau. Trục **dung lượng**: hai bậc ≥ 4× **tại cùng một cardinality**, cùng điều kiện dữ liệu. `max − min` của **toàn bộ** tỉ số **< 2 điểm phần trăm**. Phát biểu lại so với `scope.md` — lý do ở §2.4, trục thứ hai ở `ADR-034` |
+| ★ D2 | *"Nhiệt độ trung bình mỗi phút của `FORM-01` trong 7 ngày qua"* trả về **< 200 ms**, và con số đó **không đổi theo việc trong database còn có gì khác** | `make rollup-bench`: 10 lần chạy, lấy p95, kèm `EXPLAIN (ANALYZE, BUFFERS)` chứng minh **có** chunk exclusion và **có** đọc continuous aggregate. Đo ở **hai** mức đọc (một kênh, cả máy) và trên **hai** cửa sổ: cửa sổ chỉ có `FORM-01`, và cửa sổ có đủ 1.000 kênh của line `F1` (topology thật `deploy/seed-load/`). Hai số phải **cùng bậc** — §3.2 và §C15-2 |
+| ★ D3 | **Test DST**: ca C ngày **29/03/2026** và **25/10/2026** ở site `DE1` cho `production_day` **đúng**; ca C dài **9 giờ** một lần và **7 giờ** một lần. Test phải **phân biệt được** — chứng minh bằng mutation, không bằng một commit đỏ | `ProductionCalendarDaylightSavingTests`. `scope.md` §2.3 gọi đây là bài tập bắt buộc của M3. Vế *"đỏ trước"* **không đạt về quy trình** ở M3 (test viết sau cài đặt) và owner chấp nhận sai lệch **cho riêng M3**. Từ **M4**, `ADR-034` đặt luật: RED phải **tái lập được trên parent SHA** bằng diff chỉ chứa test |
 | D4 | `production_day` của **05:59** và **06:01** khác nhau **đúng một ngày** — ở **cả hai** site | Test chạy cho `NV1` (UTC+7, không DST) và `DE1` (có DST). Một site đúng không chứng minh gì cho site kia |
 | D5 | Dữ liệu đến muộn hơn cửa sổ refresh **không biến mất im lặng**: hoặc được gộp vào rollup, hoặc **được đếm** | `make rollup-reconcile`: so `sum(sample_count)` của rollup với `count(*)` thô trên cùng một khoảng **đã đóng**. Lệch phải bằng **0**, hoặc phải có counter nói **đúng** số lệch. Lý do mệnh đề này tồn tại: §2.2 |
 
@@ -35,7 +35,8 @@ Milestone chỉ được đóng khi **cả 5** mệnh đề đúng, có bằng c
 - `ADR-030` nhận thêm §Evidence: **số đo suy giảm tốc độ insert của `ingest.processed_message` khi bảng lớn dần** (§2.5). Đây là lần đầu dự án có đủ dữ liệu để đo nó.
 - `docs/glossary.md` bổ sung **hypertable**, **chunk**, **continuous aggregate / rollup**, **segmentby**, **compression policy**, **retention policy**, **backfill**, **watermark / cửa sổ refresh**, **cardinality**, **DST**, **object lock**, **checksum** — làm **trước** khi code, đúng `AGENTS.md` §5.8.2.
 - `docs/benchmarks.md` mục `## M3`, tối thiểu **10** dòng số thật.
-- `docs/oef-mapping.md`: dòng **Data Collection** chuyển `đang làm` → `xong` (nó đang ghi *"Chưa `xong` vì hypertable, compression và retention là M3"*).
+- `docs/oef-mapping.md`: dòng **Data Collection** chỉ chuyển `đang làm` → `xong` sau khi teach-back
+  hoàn tất; bằng chứng kỹ thuật một mình không thay phép kiểm hiểu biết.
 - `docs/event-catalog.md`: **không thêm dòng nào**. M3 không phát event — xem callout dưới.
 - `make net-check` vẫn **9/9** sau khi thêm Grafana, và Grafana **không** tới được `ot-net`.
 
@@ -552,10 +553,14 @@ make up-obs && make net-check && make grafana-net-check
 đường cong — [`glossary.md`](../glossary.md) nói thẳng: *"biểu đồ không có nó là biểu đồ của một máy
 chưa sạc thật"*. Đây là phép kiểm bằng mắt mà không test nào thay được.
 
-> [!warning] Grafana ở M3 **chưa có phân quyền**, và đó là một khoảng trống có thật
-> Ai vào được Grafana thì đọc được dữ liệu **mọi site** — biến `site` là bộ lọc hiển thị, không phải authorization. Đúng thứ mà `scope.md` §7.5 phân biệt rạch ròi ở phía Mendix.
+> [!note] Cảnh báo phân quyền ban đầu đã được audit M3 thay thế
+> Bản plan đầu coi biến `site` là lớp lọc duy nhất, nên ai vào Grafana có thể đọc mọi site. Migration
+> `008` và `014` đã đóng lỗ K3 đó ngay ở database: datasource chỉ đọc các view `ts_scoped`, server
+> lọc theo `site_read_grant`; role Grafana đọc được site được cấp và bị từ chối khi đọc thẳng schema
+> `ts`. Biến dashboard vẫn chỉ là bộ lọc hiển thị, **không** được tính là authorization.
 >
-> **Không** vá tạm bằng cách khoá cứng một site vào datasource. Đường đúng là gắn Grafana vào Keycloak cùng lượt với phần bảo mật còn lại ở **M13**. `ADR-032` hoặc commit message ghi khoảng trống này thành một dòng để M13 nhặt — cùng cách M2/C08 đã ghi lại khoảng trống mTLS.
+> M13 vẫn phải gắn Grafana vào Keycloak và ánh xạ user/group động. Hiện tại quyền là của một database
+> role dùng chung, đủ chặn cross-site ở server nhưng chưa biểu diễn quyền từng người.
 
 ---
 
@@ -580,14 +585,181 @@ Kỳ vọng: ở `NV1` sai số đến từ **6 giờ mỗi ngày** bị gán nh
 
 ### C15 — `docs: close m3 with benchmarks and checklist`
 
-**Mục tiêu**: đóng milestone bằng số.
+**Mục tiêu**: đóng milestone bằng số, và đóng những chỗ bốn giai đoạn trước để hở.
+
+C15 **không** là một commit docs. Nó gồm sáu phần việc, trong đó **hai phần chỉ owner làm được** và
+không uỷ quyền cho agent: dự đoán trước khi đo, và teach-back. Cả hai đều mất nghĩa nếu agent làm hộ.
+
+| # | Việc | Ai | Chặn |
+|---|---|---|---|
+| C15-1 | Owner **dự đoán** hai tỉ số nén và độ lệch, ghi vào `benchmarks.md` **trước** khi lệnh đo chạy | **owner** | D1b |
+| C15-2 | Backfill 40 kênh × 7 ngày và 40 kênh × 28 ngày; mở gate `compression-report.sql` từ 2 lên 4 scenario; đo lại | agent | **D1** |
+| C15-3 | Đưa truy vấn mức máy về dưới ngưỡng D2 **khi database còn chín máy khác** | agent | **D2** |
+| C15-4 | Xoay 9 credential tại chỗ theo `runbook.md` §1 tới khi `make secret-check` in `OK`. **Cấm `make down-v`** | **owner** | K13 runtime |
+| C15-5 | `benchmarks.md` §M3 ≥ 10 dòng số thật; `ADR-011`/`ADR-012`/`ADR-030` §Evidence điền số C06/C14/C08 | agent | C15 |
+| C15-6 | **Teach-back** ba câu §7, trả lời thành lời, không mở tài liệu | **owner** | Hard DoD |
+
+> [!warning] C15-1 và C15-6 không uỷ quyền được
+> Dự đoán-trước đo xem mô hình trong đầu người học có đúng không; teach-back đo xem họ đã hiểu chưa.
+> Agent viết đáp án mẫu — kể cả khi được hỏi *"gợi ý một chút"* — thì cả hai vế cùng mất nghĩa.
+
+#### C15-1 — Trục dung lượng của D1, và cửa sổ đo phải đặt ở đâu
+
+D1 hỏi tỉ số nén có **ngoại suy được** không. Cặp `channels_8`/`channels_40` sẵn có chỉ trả lời trục
+**cardinality**; trục **dung lượng** đòi hai bậc ≥ 4× **tại cùng một cardinality**, cùng điều kiện dữ
+liệu. Hai lượt sinh mới, đặt ở tháng 5–6/2026 — trước toàn bộ dữ liệu cũ (`min(device_timestamp)`
+của hypertable là `2026-07-03T12:00Z`), nên không lượt nào chạm fixture của C09/C10:
+
+| Lượt | Sinh | **Cửa sổ đo** | Ngày | Row |
+|---|---|---|---:|---:|
+| Nhỏ | `END_AT=2026-06-01T00:00:00Z DAYS=9` | `[2026-05-24, 2026-05-31)` | 7 | 3.062.323 |
+| Lớn | `END_AT=2026-07-02T00:00:00Z DAYS=30` | `[2026-06-03, 2026-07-01)` | 28 | 12.253.575 |
+
+**Bỏ một ngày mỗi đầu là bắt buộc, không phải cho chắc.** `DRIFTED_RATE=0.25` và `CLOCK_DRIFT_HOURS=2`
+đẩy 25 % row lệch ±2 giờ, nên hai chunk biên **không** phải ngày sản xuất đầy đủ — đây cũng là lý do
+C09 sinh 7 ngày rồi chỉ đo 5 ngày trong. Một ngày đệm nữa nằm giữa hai span (`2026-06-01`) để drift
+của lượt nhỏ không với sang vùng đo của lượt lớn.
+
+**Kết quả**: bội số dung lượng thật **4,001404×**; tỉ số **8,147113 %** và **8,151416 %**, lệch
+**0,004303 pp**. Cùng với trục cardinality (8,385723 % / 8,140036 %), spread toàn tập là
+**0,245687 pp** trên bốn phép đo — dưới ngưỡng 2 pp, và **< 15 %** ở cả bốn. Gate
+`compression-report.sql` mở từ 2 lên 4 scenario, 5 nhánh đối chứng đều đỏ đúng chỗ.
+
+> [!note] Con số đáng nhớ không phải "đạt" mà là **tỉ lệ giữa hai trục: 57×**
+> Nhân bốn số dòng lên gần như không đổi gì (0,004303 pp); đổi cardinality thì đổi thật
+> (0,245687 pp). Nén TimescaleDB ăn theo **hình dạng cột trong một segment**, không theo số dòng.
+> Đó là lý do D1 phải có hai trục — một trục mình nó cho một kết luận sai về cái còn lại.
+
+Lượt sinh này tự nó là **17 phép đo mới** cho `ADR-030` §Evidence, ở dải 20,80 → 33,93 triệu key —
+đúng vùng mà C08 (6,13 → 9,19 triệu) chưa với tới.
+
+#### C15-2 — D2: vì sao số đầu tiên bị gỡ dấu ☑, và cái gì thay nó
+
+C10 đo `FORM-01` ở **144,061 ms** và tick D2. Phép đo đó **đúng với thứ nó nói** nhưng cửa sổ của nó
+**chỉ chứa** 100 kênh của `FORM-01`. Khi fixture line 1.000 kênh có mặt, cùng predicate ấy cho
+**1.312,404 ms**. Cái bị bác bỏ không phải phép đo mà là **phép suy rộng**: *"máy X đọc nhanh"* chỉ
+đúng khi máy X là thứ duy nhất trong khoảng thời gian đó — ở nhà máy thật, chín cycler còn lại luôn
+có mặt. **Dấu ☑ đã bị gỡ và chỉ được tick lại sau khi tính chất đó đúng.**
+
+Hai nguyên nhân, tách bằng `EXPLAIN (ANALYZE, BUFFERS)` chứ không đoán:
+
+| # | Nguyên nhân | Bằng chứng | Bản sửa |
+|---|---|---|---|
+| 1 | **Rollup là quan hệ duy nhất trong đường đọc chưa nén, chưa gom cụm** — lưu theo thứ tự refresh, trộn 1.000 kênh × 6 signal | `compression_enabled=false`, 0/6 chunk; `Heap Blocks exact=33.400` ⇒ **~3 row hữu ích mỗi trang 8 kB** | Migration **`011`**: nén rollup với cùng `segmentby (site_id, equipment_id, signal_code)` mà bảng thô đã có từ C06 |
+| 2 | **Không có đường tra cứu *segment*** — để tìm 100 segment của `FORM-01`, PostgreSQL quét tuần tự cả 8.000 dòng nén | `Seq Scan … actual rows=100, Rows Removed by Filter: 7900` | Migration **`013`**: CAGG phân cấp gộp theo **máy**, `segmentby (site_id, machine_id, signal_code)` |
+
+Sửa (2) bằng một index thường **không** được: predicate là `equipment_id LIKE '<máy>/%'`, database
+chạy `en_US.utf8`, và dưới collation đó btree thường không phục vụ `LIKE 'prefix%'`. `text_pattern_ops`
+thì phục vụ được — đã kiểm — nhưng nó nằm trên bảng **giải nén**, còn thứ cần tra cứu là bảng **nén**.
+Migration `013` vì thế đổi **hình dạng câu hỏi** thay vì đổi cách trả lời: một máy là một segment, nên
+phép lọc thành phép **bằng** — thứ segment exclusion khai thác trực tiếp.
+
+| | Sau `011` | Sau `013` |
+|---|---:|---:|
+| Dung lượng rollup | 4,62 GB → **483.287.040 byte** (9,56×) | rollup máy **7.405.568 byte** |
+| Block đọc, mức máy | 33.667 | **85** (nhỏ hơn 396×) |
+| **D2 gate** p95 | 192,560 ms *(biên 3,7 %)* | **8,080 ms**, biên **24,8×** |
+| Mức máy, cửa sổ **một** máy | 192,560 ms | **~1,2 ms** |
+| Mức máy, cửa sổ **đủ mười** máy | 1.312,404 ms | **~1,0 ms** |
+| Mức line 1.000 kênh | 1.171,168 ms | **140,831 ms** nguội, ~20 ms ấm |
+
+> [!important] Con số đáng giá không phải 8,080 ms mà là **hai con số bằng nhau**
+> ~1,2 ms ở cửa sổ chỉ có một máy và ~1,0 ms ở cửa sổ có đủ mười máy — trước đó cùng hai cửa sổ ấy cho
+> **192,560** và **1.312,404 ms**. Một DoD về độ trễ chỉ có nghĩa khi câu trả lời **không đổi theo
+> việc trong database còn có gì khác**. Đó chính là tính chất mà 144,061 ms không có.
+
+**Tính đúng đắn kiểm trước khi nhận con số**: đối chiếu rollup máy với phép gộp mức kênh trên cả hai
+cửa sổ — 10.080 và 3.488 bucket, lệch **0** ở `sample_count` và **0** ở trung bình tới 9 chữ số. Test
+`TheMachineRollup_WeighsChannelsByTheirSampleCountInsteadOfAveragingAverages` ghim cái bẫy: hai kênh
+cùng phút với số mẫu khác nhau cho **15** khi tính có trọng số và **20** khi lấy trung bình của các
+trung bình. Cả hai đều là số trông hợp lý; chỉ một là nhiệt độ.
+
+Hai defect hạ tầng phát hiện trong lúc đo, sửa ngay: **`/dev/shm` 64 MB** (mặc định Docker, compose
+không khai `shm_size`) làm 1/12 lượt chết với `could not resize shared memory segment` — đặt **1 GB**;
+và **fingerprint checksum 9 chữ số** không ổn định dưới `Gather` (lệch một ULP, 3/11 lượt) — hạ xuống
+**6** chữ số, trên nhiễu 100 lần và dưới mọi tín hiệu thật.
+
+#### C15-3 — Hợp đồng publish cho file drop (`ADR-035`)
+
+C15 là đường ghi thật vào TimescaleDB và MinIO WORM, nên nó là chỗ đầu tiên mà một file đọc sớm gây
+hậu quả **bất biến**: telemetry của nửa run và một bản gốc WORM cũng chỉ có nửa run — cả hai đều sai,
+và K4 vẫn báo xanh vì bản gốc *có tồn tại*.
+
+`ADR-033` điểm 10 nói adapter rename file khỏi inbox rồi đọc bytes đúng một lần. Câu đó đúng về phía
+**đọc** và không nói gì về phía **ghi**: rename **không** đóng handle của người khác — trên Linux/NFS
+exporter đang mở `foo.csv` vẫn ghi tiếp vào cùng inode sau khi ingestion đã rename đi, không có
+exception ở đâu cả. `SettleTime` chỉ hỏi mtime đã im 2 giây chưa; một exporter ngưng 3 giây giữa chừng
+trả lời "xong" cho một file chưa xong.
+
+**Quyết định (`ADR-035`): một export là một file, và tên của nó là lời tuyên bố nó đã xong.** Producer
+ghi ra `<tên>.csv.partial` → đóng file → **rename nguyên tử** thành `<tên>.csv.ready`; phép rename đó
+**là** publish. Adapter chỉ đọc `*.csv.ready` và claim bằng **đúng một** `File.Move`. Khôi phục không
+bao giờ nhắm vào một cái tên producer có thể dùng — file trả về inbox mang tên mới
+`<stem>.retry-<guid>.csv.ready`, vì POSIX `rename` luôn ghi đè và bên đọc **không thể** giữ chỗ một
+cái tên trước một producer.
+
+Kiểm bằng `make file-drop-race-probe` trên image mang bản sửa, có negative control (file không rename
+vào `.ready` ⇒ **0 row**, nằm nguyên trong inbox; rename vào chỗ ⇒ **20 row** ngay):
+
+```
+PAIR_RACE claimed_data=AB torn_archives=0 inbox_leftover=none
+RESERVATION_RACE final_data=AB
+```
+
+> [!note] Thiết kế đầu tiên cho chỗ này đã bị chính probe bác bỏ
+> Bản sửa đầu là một file marker `<tên>.csv.ready` **nằm cạnh** file dữ liệu. Nó hỏng vì filesystem
+> không có rename nguyên tử cho **nhiều** file: probe bắt được `inbox_marker=present` và
+> `final_data=A` — mất B. Đó là lý do quyết định cuối cùng chỉ có **một** file. Ghi lại ở đây vì
+> ranh giới *"cái gì nguyên tử được"* là thứ dễ tưởng mình đã có.
+
+Probe cũng tìm ra hai lỗi **nằm ngoài** hai race nó đi tìm, cả hai sống sót qua 679 test xanh:
+
+- **Interval của một export một dòng không lưu được.** `Describe` kết thúc interval bằng
+  `last.AddTicks(1)` — **100 ns** — còn `curve_start_at`/`curve_end_at` là `timestamptz`, tức
+  **micro-giây**. Export một dòng có interval bằng 0 sau khi lưu và bị `ck_raw_curve_archive_interval`
+  từ chối, nên **cái export đời thường nhất của một máy EOL không bao giờ archive được** — và vì
+  archive chặn đường file drop, file không bao giờ vào tới `processed/`. Test cũ
+  `TheOriginalBytes_AreArchivedBeforeTheFileIsFiledAsProcessed` **đã ghim nguyên cái tick đó** bằng một
+  assertion: một mệnh đề tự tin, xanh suốt, và sai.
+- **Tên file retry dài thêm mỗi vòng.** `UniqueName` gắn marker vào *tên nó nhận được*, nên qua sáu
+  vòng thì vượt 255 byte, `File.Move` hỏng, export kẹt trong `.processing`. Nay marker **thay** marker
+  cũ và mang số vòng: `retry-` → `retry2-` → `retry3-`.
+
+Kể từ đây, thả file bằng tay phải đi theo hợp đồng — `cat > .../inbox/x.csv` **không còn được đọc**:
+
+```bash
+docker exec -i nvm-ingestion sh -c 'cat > /var/lib/nvm-ingestion/inbox/x.csv.partial && mv /var/lib/nvm-ingestion/inbox/x.csv.partial /var/lib/nvm-ingestion/inbox/x.csv.ready'
+```
+
+#### C15-4 — K13 runtime: xoay 9 credential tại chỗ
+
+Xoay **tại chỗ**, không `make down-v` — mất volume là mất luôn bằng chứng rằng credential cũ **bị từ
+chối**, chứ không phải *"không còn ai để hỏi"*. `scripts/rotate-verify.sh` chạy **19 phép**: 9 giá trị
+mới dùng được, 1 phép K3, và **9/9 giá trị cũ chứng minh đã bị từ chối**.
+
+Một chỗ mà lần đầu làm sai: compose không ghim `hostname`/`RABBITMQ_NODENAME`, nên mỗi lần recreate là
+một Erlang node mới — node đang chạy thấy **0 queue** trong khi node bị bỏ rơi giữ 4,1 MB, và volume
+tích được **5** node identity. Đó là **mất state**, không phải "cơ chế xoay chạy được". Node nay đã
+ghim; `make rabbitmq-durability-check` giữ **5/5** message qua một lượt recreate.
+
+#### C15-5 — Nợ M3 để lại, có chỗ nhận
+
+| # | Nợ | Hạn | Vì sao không làm ở M3 |
+|---|---|---|---|
+| `N-M3-1` | Chọn `work_mem` cho đường đọc dashboard (per-role hoặc per-query). Đo được: `work_mem=256MB` từng đưa 14.758 → 9.328 ms trên đường cũ | Trước dashboard line-wide **M6/M7** | 4 MB là mặc định hợp lý cho đường **ghi**. Đây là xung đột thật giữa hai workload, không phải một hằng số đặt sai |
+| `N-M3-2` | Oracle cấu trúc của `rollup-bench.sql` chưa ánh xạ chunk cho materialization thứ hai | Trước khi ai dựa vào chunk-count của scenario đó | Cần ~50 dòng gần trùng lặp. Thứ đứng thay mạnh hơn một phép đếm chunk: đối chiếu từng bucket lệch **0**, và `Buffers: shared hit=85` so với 33.667 |
+| `N-M3-3` | Requalification D2 trên cửa sổ **chưa nén hoàn toàn**: pre-seed cold tail rồi mới chạy hot head | **M13** soak 24 h | Benchmark M3 chạy trên cửa sổ lịch sử đã nén. Contract đã executable, chỉ thiếu lượt chạy dài |
+| `N-M3-4` | Soak producer ‖ consumer cho file drop: không mất export, không đọc file chưa xong | **M13**, cùng soak 24 h | Probe trả lời race trong vài giây; nó không trả lời *"qua 24 giờ thì sao"* |
+| `N-M3-5` | Đo lại D1 fan-out ở chế độ publish | M13 | 7.558 ms cũ gồm 2.000 ms `SettleTime` không còn tồn tại sau `ADR-035` |
+| `N-M3-6` | Bảy thư mục RabbitMQ node bỏ rơi (5,9 MB) | M13 backup/cleanup | Xoá là thao tác **dữ liệu**, không phải gate M3. Node active đã ghim, credential cũ đã bị từ chối |
 
 **Việc làm**
+
 - `docs/benchmarks.md` mục `## M3`, tối thiểu **10** dòng số thật: tỉ số nén ở cardinality 1 · ở cardinality 2 · byte trước/sau · p95 truy vấn 7 ngày mức kênh · mức máy · cùng truy vấn trên bảng thô · lệch của `rollup-reconcile` trước và sau refresh rộng · tốc độ backfill mỗi triệu row · dung lượng đĩa trước/sau · độ dài ca C ở bốn tổ hợp (2 ngày × 2 site) · tỉ lệ row bị gán sai ngày ở lab C14 · thời gian `make ci`.
 - `scope.md` §8.3 sửa câu chữ theo §2.1 và §2.2 (tên bảng, cột `quality`, `start_offset`); §9/M3 sửa DoD D1 theo §2.4 và bỏ "nhiệt độ coating" khỏi dashboard theo §2.6; cập nhật Phụ lục A.
-- `docs/oef-mapping.md`: dòng **Data Collection** → `xong`; thêm dòng cho tầng historian nếu bảng §5.2 còn thiếu.
-- `ADR-011` §Evidence (số của C06), `ADR-012` §Evidence (số của C14), `ADR-030` §Evidence (số của C08).
-- Điền checklist §7. Đổi `status` của plan này sang `done` — **chỉ khi cả 5 DoD đạt**.
+- `docs/oef-mapping.md`: cập nhật bằng chứng kỹ thuật của **Data Collection**, nhưng giữ `đang làm` tới khi teach-back hoàn tất.
+- `ADR-011` §Evidence (số của C06), `ADR-012` §Evidence (số của C14), `ADR-030` §Evidence (số của C08 và C15-1).
+- Điền checklist §7. Đổi `status` của plan này từ `in_progress` sang `done` — **chỉ khi cả 5 DoD đạt và teach-back xong**.
 
 **Kiểm chứng**: đọc lại `benchmarks.md` tìm ô nào ghi ước lượng thay vì số đo. Có một ô như vậy thì M3 chưa đóng được (`AGENTS.md` §1.3).
 
@@ -598,7 +770,7 @@ Kỳ vọng: ở `NV1` sai số đến từ **6 giờ mỗi ngày** bị gán nh
 | # | Rủi ro | Dấu hiệu | Xử lý |
 |---|---|---|---|
 | R-M3-1 | `create_hypertable` bị từ chối vì index/khoá ngoại | Migration đỏ ngay lần đầu | C05: đọc hết index **trước**, và ghi lại thông báo lỗi thật rồi mới chọn đường vòng. Không bỏ khoá ngoại chỉ vì nó cản |
-| R-M3-2 | Tỉ số nén đo trên dữ liệu hư cấu | Số đẹp bất thường (> 95%) hoặc tệ bất thường (< 40%) | §3.4 và C09: dùng đúng code đường cong, đo ở hai cardinality. Số đẹp quá cũng là dấu hiệu, không chỉ số xấu |
+| R-M3-2 | Tỉ số nén đo trên dữ liệu hư cấu | Số đẹp bất thường (**< 5 %**) hoặc tệ bất thường (**> 40 %**). Tỉ số là `sau / trước` — *càng thấp càng tốt*, ngưỡng D1 là **< 15 %**, và số đo thật là **8,14–8,39 %** | §3.4 và C09: dùng đúng code đường cong, đo ở hai cardinality. Số đẹp quá cũng là dấu hiệu, không chỉ số xấu |
 | R-M3-3 | Rollup nuốt dữ liệu về muộn | **Không có dấu hiệu** — đây là điều nguy hiểm nhất | D5 và C11. Một phép đối chiếu không bao giờ đỏ thì phải tự kiểm bằng kịch bản cố tình sai |
 | R-M3-4 | `Europe/Berlin` không tra được vì `InvariantGlobalization` bị bật lại | `TimeZoneNotFoundException` — nhưng chỉ trên máy/container cấu hình sai | C02: test khẳng định cả hai ID IANA tra được, fail có thông báo. `ADR-020` |
 | R-M3-5 | `production_day` tính bằng phép trừ 6 giờ trên UTC | Ba test đầu xanh; hai ngày DST đỏ — hoặc tệ hơn, cũng xanh vì test viết theo cùng logic sai | C02/C03: tính trong **giờ local**, và test DST viết **trước** khi sửa cài đặt |
@@ -614,55 +786,75 @@ Kỳ vọng: ở `NV1` sai số đến từ **6 giờ mỗi ngày** bị gán nh
 
 Đánh dấu khi commit đã vào `main`.
 
-| # | Commit | ☐ | Ngày | Ghi chú |
-|---|---|---|---|---|
-| C01 | `Nvm.Time` + định nghĩa ca | ☐ | | glossary làm trước |
-| C02 | production day & shift theo múi giờ site | ☐ | | **D4** |
-| C03 | hai ngày DST ở `DE1` | ☐ | | **D3**, ADR-012, đỏ trước xanh sau |
-| C04 | múi giờ đọc từ factory model | ☐ | | |
-| C05 | hypertable trên `device_timestamp` | ☐ | | ADR-011 |
-| C06 | compression + retention policy | ☐ | | Lab đồng hồ sai → ADR-011 §Evidence |
-| C07 | rollup 1 phút + cửa sổ refresh | ☐ | | ADR-032 |
-| C08 | backfill từ code đường cong | ☐ | | Số `processed_message` → ADR-030 §Evidence |
-| C09 | tỉ số nén ở hai cardinality | ☐ | | **D1** |
-| C10 | truy vấn 7 ngày, hai mức đọc | ☐ | | **D2** |
-| C11 | đối chiếu rollup vs thô | ☐ | | **D5** |
-| C12 | raw curve lên MinIO + sha256 | ☐ | | ADR-033. Cắt được (R-M3-8) |
-| C13 | Grafana + dashboard formation | ☐ | | Cắt được (R-M3-8) |
-| C14 | lab `CAST(date)` vs lịch sản xuất | ☐ | | ADR-012 §Evidence |
-| C15 | benchmarks + đóng M3 | ☐ | | |
+| # | Commit | ☐ | Ngày | Commit thật | Ghi chú |
+|---|---|---|---|---|---|
+| C01 | `Nvm.Time` + định nghĩa ca | ☑ | 2026-08-30 | `70f0d7d` | glossary làm trước |
+| C02 | production day & shift theo múi giờ site | ☑ | 2026-08-30 | `26c752b` | **D4** |
+| C03 | hai ngày DST ở `DE1` | ☑ | 2026-08-30 | `0d482ee` | **D3**, ADR-012. **Đứng SAU C02** — đây chính là chỗ vế *"đỏ trước"* không đạt (`ADR-034`) |
+| C04 | múi giờ đọc từ factory model | ☑ | 2026-08-30 | `e2f6231` | |
+| C05 | hypertable trên `device_timestamp` | ☑ | 2026-08-30 | `95385c1` | ADR-011 |
+| C06 | compression + retention policy | ☑ | 2026-08-30 | `7dbd41c` | Lab đồng hồ sai → ADR-011 §Evidence |
+| C07 | rollup 1 phút + cửa sổ refresh | ☑ | 2026-08-30 | `d8cd023` | ADR-032 |
+| C08 | backfill từ code đường cong | ☑ | 2026-08-31 | `0aa5a34` | Số `processed_message` → ADR-030 §Evidence |
+| C09 | tỉ số nén ở hai cardinality | ☑ | 2026-08-31 | `5221785` | **D1** vế cardinality |
+| C10 | truy vấn 7 ngày, hai mức đọc | ☑ | 2026-08-31 | `0694812` | **D2** |
+| C11 | đối chiếu rollup vs thô | ☑ | 2026-08-31 | `0c9028a` | D5 raw ↔ parent ban đầu; C15 đóng chuỗi raw ↔ parent ↔ child |
+| C12 | raw curve lên MinIO + sha256 | ☑ | 2026-08-31 | `ad3abcb` | ADR-033 |
+| C13 | Grafana + dashboard formation | ☑ | 2026-08-31 | `81843a0` | Scoped access theo site (K3) |
+| C14 | lab `CAST(date)` vs lịch sản xuất | ☑ | 2026-08-31 | `7474968` | ADR-012 §Evidence |
+| C15 | benchmarks + đóng M3 | ☑ | 2026-09-02 | *(chính commit này)* | Gói kỹ thuật đóng; **teach-back §7 vẫn chặn `status: done`** |
+
+> [!note] Vì sao cột "Commit thật" tồn tại
+> `ADR-034` đặt luật cho M4: khi DoD nói *"đỏ trước"* thì RED phải **tái lập được trên parent
+> SHA**. Luật đó chỉ kiểm được nếu biết commit nào là commit nào. Bảng này là chỗ đầu tiên trong
+> repo ghi ánh xạ đó, và nó cho thấy ngay điều C03 thú nhận: test đứng **sau** cài đặt.
 
 **Definition of Done**
 
 | # | Tiêu chí | ☐ | Bằng chứng |
 |---|---|---|---|
-| ★ D1 | Nén < 15% dung lượng gốc, tỉ số ổn định giữa hai cardinality | ☐ | |
-| ★ D2 | Truy vấn 7 ngày mỗi phút < 200 ms (cả mức kênh lẫn mức máy) | ☐ | |
-| ★ D3 | Hai ngày DST ở `DE1` đúng; ca C 9 giờ và 7 giờ | ☐ | |
-| D4 | 05:59 vs 06:01 lệch đúng một `production_day`, ở cả hai site | ☐ | |
-| D5 | Dữ liệu về muộn được gộp hoặc được đếm — lệch bằng 0 sau refresh rộng | ☐ | |
+| ★ D1a | Nén < 15 % ở **hai cardinality** (8 và 40 kênh, cùng 5 ngày) | ☑ | 8,385723 % và 8,140036 %, lệch **0,245687 pp** |
+| ★ D1b | Nén < 15 % ở **hai bậc dung lượng tại cùng cardinality** — 40 kênh × 7 ngày so với 40 kênh × 28 ngày (4,001399×) | ☑ | **8,147113 %** và **8,151416 %**, lệch **0,004303 pp** |
+| ★ D1c | `max − min` của **toàn bộ** tỉ số < 2 pp, cùng điều kiện dữ liệu | ☑ | Spread **0,245687 pp** trên cả 4 phép đo; gate 5 nhánh, 5/5 đối chứng đỏ |
+| ★ D2 | Truy vấn 7 ngày mỗi phút của `FORM-01` (**100 kênh**) < 200 ms | ☑ | **8,080 ms**, biên **24,8×**, và **không còn phụ thuộc database có gì khác**: ~1,2 ms ở cửa sổ một máy, ~1,0 ms ở cửa sổ đủ mười máy. Đóng bằng migration `013` sau khi dấu ☑ cũ bị gỡ — xem §C15-2 |
+| ★ D3 | Hai ngày DST ở `DE1` đúng; ca C 9 giờ và 7 giờ; test **phân biệt được** | ☑ | 8/8 xanh, mutation **8/564** đỏ. **Quy trình không đạt** — ghi đúng như vậy (`ADR-034`) |
+| D4 | 05:59 vs 06:01 lệch đúng một `production_day`, ở cả hai site | ☑ | 2/2 case, `NV1` và `DE1` |
+| D5 | Dữ liệu về muộn được gộp hoặc được đếm — lệch bằng 0 sau refresh rộng | ☑ | Raw/parent/child `3/0/0 → 3/3/0 → 3/3/3`; hai negative control bắt `P1101`; wide refresh báo `2` aggregate theo `parent_then_machine` |
+
+> [!note] D5 từng được tick chỉ theo raw ↔ parent và bị mở lại vì thiếu child; nó chỉ đóng sau chuỗi
+> ba tầng có negative control. D2 cũng từng bị gỡ dấu ☑ — xem §C15-2. Cả hai là lý do bảng này ghi
+> **cách đo**, không chỉ ghi dấu ☑.
 
 **Sản phẩm phụ bắt buộc**
 
-- [ ] `make ci` xanh, số test tăng thật (M2 kết thúc ở **585**)
-- [ ] `ADR-011`, `ADR-012`, `ADR-032`, `ADR-033` viết xong — mỗi cái trong commit ra quyết định
-- [ ] `ADR-011` §Evidence có số của lab retention; `ADR-012` §Evidence có số của lab C14; `ADR-030` §Evidence có đường cong insert của `processed_message`
-- [ ] `docs/glossary.md` có đủ cụm từ M3 *(làm trước, ở C01)*
-- [ ] `docs/benchmarks.md` có ≥ 10 dòng số thật cho M3, không ô nào là ước lượng
-- [ ] `docs/oef-mapping.md` dòng **Data Collection** chuyển sang `xong`
-- [ ] `docs/event-catalog.md` **không đổi** — M3 không phát event
-- [ ] `scope.md` §8.3, §9/M3 và Phụ lục A sửa theo §2.1, §2.2, §2.4, §2.6
-- [ ] `make net-check` vẫn **9/9** sau khi thêm Grafana
+- [x] CI kỹ thuật xanh, số test tăng thật (M2 kết thúc ở **585**): test **688/688**, rotation
+      preflight **45/45**, backup thật ↔ manifest **9/9**, format sạch, Release build **0 warning /
+      0 error**. `buffer-crash` **0/200** đo ở lượt trước và **không** được trình bày như số vừa đo
+- [x] `ADR-011`, `ADR-012`, `ADR-032`, `ADR-033` viết xong — mỗi cái trong commit ra quyết định. Thêm hai bản plan không dự liệu: **`ADR-034`** (điều kiện nghiệm thu phát biểu lại) và **`ADR-035`** (hợp đồng publish cho file drop, §C15-3)
+- [x] `ADR-011` §Evidence có số lab retention **và** bằng chứng `segmentby` từ D1; `ADR-012` §Evidence có số lab C14; `ADR-030` §Evidence có đường cong insert của `processed_message` ở **hai** dải — C08 (6,13 → 9,19 triệu key) và C15-2 (20,80 → 33,93 triệu)
+- [x] `docs/glossary.md` có đủ 12 cụm từ M3 *(làm trước, ở C01)*
+- [x] `docs/benchmarks.md` có **ít nhất 124** dòng số thật cho M3 *(yêu cầu ≥ 10)*, không ô nào là ước lượng — mọi phép ngoại suy đều nằm trong plan/ADR và được gọi đúng tên
+- [ ] `docs/oef-mapping.md` dòng **Data Collection** chuyển sang `xong` — chỉ tick sau khi owner hoàn
+      tất teach-back; đây vẫn là gate M3
+- [x] M3 **không thêm domain event hay golden file** — hai event cài đặt vẫn là hai event từ M1/M2; `event-catalog.md` chỉ được cập nhật phần summary
+- [x] `scope.md` §8.3, §9/M3, §4 (chú thích N1/N2), §9/M13 (soak 24 giờ) và Phụ lục A đã sửa
+- [x] `make net-check` vẫn **9/9** sau khi thêm Grafana, và vẫn 9/9 sau khi xoay 9 credential
+- [x] **K13 — cả hai nửa**. Repo: đóng. Runtime: **19/19** phép ở `scripts/rotate-verify.sh` — 9 giá trị mới dùng được, 1 phép K3, và **9/9 giá trị cũ chứng minh đã bị từ chối**. Node RabbitMQ đã ghim; `make rabbitmq-durability-check` giữ 5/5 message qua recreate. Bảy thư mục node bỏ rơi → `N-M3-6` (§C15-5)
 
 > [!important] Câu hỏi "vì sao" cuối M3 (`AGENTS.md` §5.8.4)
-> Trả lời **thành lời, không mở tài liệu**. Tắc câu nào thì phần đó chưa xong.
+> **Chưa thực hiện — đây là thứ duy nhất còn chặn `status: done`.** Trả lời **thành lời, không mở
+> tài liệu**. Tắc câu nào thì phần đó chưa xong.
 >
-> 1. Vì sao hypertable chia theo `device_timestamp` chứ không theo `recorded_at`, và cái giá của lựa chọn đó là gì?
-> 2. Một phép đo lúc 23:47 ngày 25/10 ở Leipzig thuộc ca nào, `production_day` nào — và vì sao câu trả lời năm nay khác cách tính "trừ 6 giờ"?
-> 3. Dữ liệu về muộn hơn cửa sổ refresh thì nằm ở đâu, và ai phát hiện ra là nó thiếu?
-> 4. Vì sao telemetry thô giữ 400 ngày mà rollup giữ 15 năm? Ai là người hỏi mỗi loại?
-> 5. Vì sao vẫn phải giữ file CSV gốc trên MinIO khi mọi điểm của nó đã nằm trong DB?
-> 6. Tỉ số nén 90% nói lên điều gì về **dữ liệu**, và điều gì nó **không** nói lên?
+> **Chủ repo tự trả lời. Agent không trả lời hộ, không viết đáp án mẫu, không "gợi ý một chút"**
+> *(owner 2026-08-31)*. Việc của agent ở đây là **hỏi** và **nghe**; chấm điểm là việc của chính
+> người trả lời. Một đáp án đọc được trước khi tự nói là một teach-back đã hỏng.
+>
+> 1. Vì sao hypertable chia theo `device_timestamp` chứ không theo `recorded_at`; lựa chọn đó tạo rủi
+>    ro retention nào, và thiết kế hiện tại chặn rủi ro ấy ở đâu?
+> 2. Instant `2026-03-29T07:00:00+02:00` ở Leipzig thuộc ca và `production_day` nào? Nếu đổi instant
+>    ấy sang UTC rồi trừ cứng 6 giờ thì ra ngày nào, và vì sao hai cách không tương đương?
+> 3. Metric `compressed/original ≈ 8,14–8,39 %` nói gì và không nói gì; con số khoảng 92 % phải gọi
+>    là gì; vì sao kết quả nén đó vẫn không thay thế file CSV gốc trong WORM archive?
 
 ---
 

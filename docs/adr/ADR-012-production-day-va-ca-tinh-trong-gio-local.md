@@ -105,7 +105,7 @@ lịch nghỉ lễ, ca gãy (split shift), và mọi phép tính nghiệp vụ t
 
 ## Evidence
 
-Đo ngày 2026-08-30, commit `857dd3b` (C02) + cây làm việc C03. Lệnh:
+Đo ngày 2026-08-30, commit `26c752b` (C02) + cây làm việc C03. Lệnh:
 `dotnet test --project tests/Unit/Nvm.UnitTests/Nvm.UnitTests.csproj`.
 
 **Độ dài thật của ca C — bốn tổ hợp** (2 ngày × 2 site), từ `ProductionCalendarDaylightSavingTests`:

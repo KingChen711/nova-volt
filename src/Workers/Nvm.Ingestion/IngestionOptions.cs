@@ -75,6 +75,9 @@ public sealed class IngestionOptions
     /// <summary>The CSV file-drop adapter (C15). Off unless a plant has an old machine.</summary>
     public FileDrop.FileDropOptions FileDrop { get; set; } = new();
 
+    /// <summary>Where the original bytes of a dropped export are kept (C12). Off by default.</summary>
+    public RawCurves.RawCurveArchiveOptions RawCurveArchive { get; set; } = new();
+
     /// <summary>Signal codes that name an evaluated result rather than an observation.</summary>
     /// <remarks>
     /// Empty means telemetry only, which is the safe default: the reading is stored either way. List
@@ -175,6 +178,7 @@ public sealed class IngestionOptions
         }
 
         FileDrop.Validate();
+        RawCurveArchive.Validate();
     }
 
     private static string BuildDevelopmentConnectionString(IConfiguration configuration)

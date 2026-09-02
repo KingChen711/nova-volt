@@ -166,11 +166,11 @@ thì restart về 0. Bài học thuộc về ADR-028 nhiều hơn ADR này: **th
 chết là buffer bền vững, không phải chính sách xả** — và một chính sách xả tinh vi trên một
 process tự chết là chính sách không bao giờ được chạy.
 
-**Lab #3 (`scope.md` §9/M2 — buffer 30 phút, xả A/B) CHƯA CHẠY.** Đây là lab **duy nhất** đo được
-ADR này có đáng tồn tại không, và nó vẫn còn nợ. Theo `AGENTS.md` §3.2: nếu lần A (tắt rate limit)
-cũng không sao, thì ADR này đang giải một vấn đề chưa tồn tại ở quy mô này, và điều đó phải được
-ghi thẳng vào đây thay vì giữ rate limit vì nó là một pattern nổi tiếng. Bằng chứng hiện có
-**nghiêng về hướng đó**, và nó chưa đủ để kết luận.
+### Trạng thái trước R8 — giữ lại như lịch sử
+
+Trước R8, **Lab #3 (`scope.md` §9/M2 — buffer 30 phút, xả A/B) chưa chạy**. Khi đó ADR chưa có phép
+đo duy nhất đủ để biết rate limit có giải một vấn đề thật ở quy mô này hay không. Khoản nợ ấy đã
+được đóng bằng Evidence ngay dưới; không đọc đoạn lịch sử này như trạng thái hiện tại.
 
 ## Evidence — lab #3 đã chạy (2026-08-29, R8)
 

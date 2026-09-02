@@ -95,7 +95,7 @@ khác chỗ đứng.
 > hai — chính là điều ADR này mở đầu bằng cách nói. Viết "M6 sẽ lo" ở đây là ghi một khoản nợ vào một
 > tài khoản không tồn tại.
 
-Đường mất event, đọc thẳng từ code tại `bab2391`
+Đường mất event, đọc thẳng từ code tại `f60ba15` (M2/C19)
 ([`PostgresMeasurementIngestor.StoreAsync`](../../src/Workers/Nvm.Ingestion/Persistence/PostgresMeasurementIngestor.cs)):
 
 1. `SplitAcrossWriters` cắt batch thành nhiều chunk, mỗi chunk **một connection, một transaction**.

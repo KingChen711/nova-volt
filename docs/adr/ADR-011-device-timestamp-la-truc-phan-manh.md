@@ -71,16 +71,18 @@ rollup dựng **thẳng trên hypertable** — chi tiết ở C07 và `ADR-032`.
 **Mất / phải chịu**
 
 - **Đồng hồ thiết bị sai thì row rơi vào chunk sai.** Sai vài giờ thì vô hại. Sai vài năm thì row rơi
-  vào chunk mà retention policy 400 ngày **xoá ở lần chạy kế tiếp** — mất một hồ sơ pháp lý, không lỗi,
-  không cảnh báo. Đây là cái giá thật của quyết định này; số đo ở §Evidence.
+  vào chunk mà retention 400 ngày **xoá ở lần chạy kế tiếp** — mất một hồ sơ pháp lý, không lỗi, không
+  cảnh báo. Đây là cái giá thật của quyết định này; số đo ở §Evidence. **Hệ quả trực tiếp**: migration
+  `007` **gỡ retention policy khỏi lịch** cho tới khi có legal hold (M12). Nửa xoá không được chạy khi
+  nửa chặn chưa tồn tại — xem `007_retention_awaits_legal_hold.sql`.
 - **Chunk không lấp đầy tuần tự.** Dữ liệu về muộn mở lại chunk cũ, nên compression policy phải chấp
   nhận ghi vào chunk đã nén (C06 đo cái giá đó).
-- **Ghi song song vào một chunk chưa tồn tại thì deadlock.** Tạo chunk lấy
-  `ShareUpdateExclusiveLock` trên hypertable, nên nhiều writer cùng với tới **cùng một** chunk mới sẽ
-  tạo vòng chờ và PostgreSQL giết tất cả trừ một. Đây là **regression mà C05 tự sinh ra và phải tự
-  đóng**: đường ghi retry có giới hạn khi gặp `40P01`/`40001` và **đếm** số lần retry. An toàn vì
-  transaction bị giết đã rollback **cả claim lẫn telemetry** (`ADR-030`), và claim là
-  `ON CONFLICT DO NOTHING`.
+- **Ghi song song vào một chunk chưa tồn tại từng tạo deadlock.** Nếu TimescaleDB tạo chunk sau khi
+  transaction đã giữ claim, DDL lấy lock trên hypertable rồi quay lại bảng claim để chép foreign key;
+  nhiều writer có thể tạo thành vòng chờ. Đường ghi hiện **pre-create từng daily slice bằng autocommit
+  trước khi mở transaction claim + telemetry**, nên contract tại ranh giới chunk là
+  `write_retries = 0`. Retry có giới hạn cho `40P01`/`40001` vẫn ở lại như safety net cho contention
+  không liên quan; bất kỳ số retry nào khác 0 giờ là tín hiệu điều tra, không phải hành vi bình thường.
 - **Rollback đắt.** Không có lệnh nào biến hypertable về bảng thường; script `Down` phải chép sang một
   bảng mới rồi đổi tên, tức chi phí tỉ lệ với dữ liệu.
 
@@ -88,14 +90,24 @@ rollup dựng **thẳng trên hypertable** — chi tiết ở C07 và `ADR-032`.
 
 - Retention và compression policy (**C06**), kèm lab đo mất mát do đồng hồ sai.
 - Một **cái đếm** row có `|device_timestamp − recorded_at|` lớn hơn một chunk. M3 dựng cái đếm, không
-  dựng cột dẫn xuất.
-- Đường ghi phải chịu được deadlock lúc tạo chunk — đã làm ở C05, và
-  `IngestionMetrics.WriteRetryCount` là chỗ nhìn thấy nó.
+  dựng cột dẫn xuất. **Đã dựng**: `nvm.ingest.retention_risk`, tag `site_id` (K3), đọc ở
+  `IngestionMetrics.RetentionRiskCount`. Ngưỡng là **một chunk = 1 ngày**, đúng
+  `chunk_time_interval` của migration `003`, và **khác hẳn** `DriftedCount`: `Drifted` so đồng hồ
+  thiết bị với đồng hồ gateway ở ngưỡng 5 phút để trả lời *"timestamp này có tin được không"*;
+  `retention_risk` so đồng hồ thiết bị với lúc **ghi** ở bề rộng một chunk để trả lời *"row này có
+  rơi vào chỗ retention với tới không"*. Một lần xả buffer 2 giờ sạch ở cả hai; một cycler báo năm
+  2024 thì chỉ cái sau bắt được.
+- Đường ghi phải tạo đủ slice trước claim và ép retry bằng 0 ở fixture song song qua nhiều ngày;
+  `IngestionMetrics.WriteRetryCount` giữ vai trò cảnh báo nếu lock cycle khác xuất hiện.
 
 **Điều kiện phải mở lại quyết định**: khi tỉ lệ row có `|device_timestamp − recorded_at|` vượt một
 chunk lớn tới mức mất mát do retention không còn chấp nhận được, trục phân mảnh cần một **cột dẫn
 xuất bị chặn hai đầu** (`least(greatest(device_timestamp, recorded_at − k), recorded_at + k)`) thay vì
 đọc thẳng đồng hồ thiết bị. **M3 không dựng cột đó** — M3 dựng cái đếm để lần sau quyết bằng số.
+
+**M12 bật lại retention theo điều kiện nào**: legal hold chặn được mọi retention policy, **và** tỉ lệ
+`nvm.ingest.retention_risk` trên mỗi site đã được đọc trong một khoảng vận hành thật. Hai điều kiện,
+không phải một — một cái chặn cố ý, một cái đo tai nạn.
 
 ## Alternatives considered
 
@@ -130,13 +142,16 @@ xuất bị chặn hai đầu** (`least(greatest(device_timestamp, recorded_at �
   1.000 row vào được.
 - Lần 2 (chunk đã có): **0 / 4** deadlock, 4.000 row vào đủ.
 
-Kết luận: hiện tượng chỉ xảy ra ở **ranh giới chunk**, tức một lần mỗi ngày cho mỗi hypertable, và
-retry là cách xử đúng.
+**Đính chính sau N-M3-10 (2026-09-01):** kết luận *"một vài retry ở ranh giới chunk là bình thường"*
+ở trên không còn đúng. Lock graph tái hiện trực tiếp cho thấy **2/4** transaction chết ở đoạn
+TimescaleDB thêm foreign key cho chunk sau khi claim đã được giữ. Trên fixture 16 ngày mới × 8 batch,
+bỏ đúng lời gọi pre-create sinh **119 retry**; khôi phục pre-create cho **0 retry**, đủ **128 claim =
+128 telemetry**, replay thành 128 duplicate và đúng 16 chunk. Năm lượt dựng database mới đều xanh.
+Vì vậy retry chỉ là lớp chống sự cố thứ hai; pre-create ngoài transaction mới là phần sửa root cause.
 
-**Test**: `TelemetryHypertableTests` (3 test) — hypertable tồn tại và phân mảnh theo `device_timestamp`
-mỗi 1 ngày; PK là `(source_event_id, device_timestamp)`; khoá ngoại còn nguyên; ba message cách nhau
-ba ngày rơi vào **3** chunk; bốn writer tranh nhau tạo một chunk mới vẫn ghi **4.000 / 4.000** row;
-`Down` đưa bảng về bảng thường, giữ nguyên row, PK và khoá ngoại.
+**Test**: `TelemetryHypertableTests` ghim hypertable, trục một ngày, PK, foreign key và rollback;
+`ParallelWriterDeduplicationTests.ConcurrentBatchesAcrossFreshDays_PrecreateEveryChunkBeforeClaiming`
+ghim exact count, replay, 16 physical chunk và **`WriteRetryCount = 0`** qua 128 batch song song.
 
 **Hợp đồng M2 không đổi**: `IngestionDeduplicationTests` và `ParallelWriterDeduplicationTests` chạy
 **nguyên văn**, không sửa một dòng nào — 23/23 integration test xanh.
@@ -161,6 +176,14 @@ ba ngày rơi vào **3** chunk; bốn writer tranh nhau tạo một chunk mới 
 - chạy lại trên bản script cuối có `SHARE` lock bảo vệ sentinel: median của năm tỉ số theo cặp =
   **1,040×**; hai median biên **643,808 / 735,849 ms**; năm treatment
   **21.413.888–21.512.192 → 1.572.864–1.581.056 byte** trước timing.
+
+**Bằng chứng cho lựa chọn `segmentby`, từ D1/C15-2 (2026-08-31).** Bốn phép đo nén trên hai trục
+tách rời cho thấy tỉ số nén bị chi phối bởi **cardinality**, gần như không bởi **số dòng**: đổi
+cardinality 8 → 40 kênh làm tỉ số dịch **0,245687 pp**, còn nhân số dòng lên **4,001399×** ở cùng
+cardinality chỉ dịch **0,004303 pp** — chênh nhau **57 lần**. Đây là số đứng sau câu *"nén theo cột
+chỉ hiệu quả khi các giá trị cạnh nhau thì giống nhau"*: `segmentby = (site_id, equipment_id,
+signal_code)` giữ mỗi segment thuần một chuỗi, và chính tính chất đó — không phải độ dài segment —
+là thứ quyết định tỉ số.
 
 Kết luận có giới hạn: bản 2.29.2 vẫn nhận dữ liệu về muộn đúng; hai lần năm cặp đại diện đo median
 theo cặp chậm hơn **13,2 %** và **4,0 %**. Đây là số của local stack và workload 10.000 row, không phải hằng

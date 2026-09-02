@@ -69,20 +69,28 @@ public sealed class CsvMeasurementReader
                 continue;
             }
 
+            // Identity first, and remembered outside the try. A line that fails on its VALUE has
+            // already told us whose machine it is, and that fact has to survive the failure: the
+            // single-machine check downstream is only sound if it sees every machine the file names,
+            // not only the machines whose lines happened to parse all the way through.
+            EquipmentPath? identity = null;
+
             try
             {
-                measurements.Add(ParseLine(line));
+                var columns = SplitColumns(line);
+                identity = ParseIdentity(columns);
+                measurements.Add(ParseMeasurement(columns, identity));
             }
             catch (Exception exception) when (exception is FormatException or ArgumentException)
             {
-                rejected.Add(new RejectedLine(index + 1, line, exception.Message));
+                rejected.Add(new RejectedLine(index + 1, line, exception.Message, identity));
             }
         }
 
         return new FileDropParseResult(measurements, rejected);
     }
 
-    private FileMeasurement ParseLine(string line)
+    private static string[] SplitColumns(string line)
     {
         var columns = line.Split(Separator);
 
@@ -92,6 +100,12 @@ public sealed class CsvMeasurementReader
                 $"Expected {ColumnCount} columns and found {columns.Length}. Header: '{Header}'.");
         }
 
+        return columns;
+    }
+
+    /// <summary>Reads only who the line is about, before anything about what it measured.</summary>
+    private EquipmentPath ParseIdentity(string[] columns)
+    {
         var equipmentPath = EquipmentPath.Parse(columns[0].Trim());
 
         // The same server-side check the MQTT path makes (K3). A file naming a plant nobody activated,
@@ -104,6 +118,11 @@ public sealed class CsvMeasurementReader
                 $"'{equipmentPath.Value}' is not in the active model of plant '{equipmentPath.SiteId}'.");
         }
 
+        return equipmentPath;
+    }
+
+    private static FileMeasurement ParseMeasurement(string[] columns, EquipmentPath equipmentPath)
+    {
         var unitId = string.IsNullOrWhiteSpace(columns[1]) ? null : columns[1].Trim();
         var signalCode = columns[2].Trim();
 

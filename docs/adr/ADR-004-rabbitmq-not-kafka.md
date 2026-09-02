@@ -122,6 +122,8 @@ rảnh. Tổng profile mặc định 6,00 GB / 8 GB quota — không còn chỗ 
 `ot-net` + `dmz-net`. Đã kiểm 5 chiều: IT → OT bị chặn (`ping: bad address`), MQTT từ `it-net` bị
 chặn (`Unable to connect`). Quyết định này không phá ranh giới đó.
 
-**3. Chưa đo**: throughput thật của RabbitMQ trong cấu hình này. **Phán đoán** là 5.000 msg/s nằm
-thoải mái trong tầm, dựa trên tài liệu chứ không dựa trên phép đo. Đo ở **M2** cùng N1 và ghi vào
-`benchmarks.md`. Nếu sai, ADR này phải mở lại — và đó là lý do dòng này ở đây.
+**3. Chưa đo**: throughput thật của RabbitMQ trong cấu hình này. Con số N1 của M2 **không** trả lời
+câu hỏi đó: raw telemetry đi MQTT → HTTP → TimescaleDB, còn bus chỉ nhận domain event đã chọn lọc.
+Đo ở **M6** bằng workload outbox → consumer/projection thật và ghi vào `benchmarks.md`. Nếu workload
+domain-event đo được vượt khả năng broker, ADR này phải mở lại — không dùng 5.000 raw reading/s làm
+đại diện cho một contract khác.

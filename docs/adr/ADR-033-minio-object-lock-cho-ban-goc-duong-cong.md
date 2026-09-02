@@ -40,6 +40,21 @@ thể để DB trỏ tới object chưa từng được tạo — một hồ sơ
    nghĩa là lưu một archive mới với digest mới, không sửa hồ sơ cũ.
 8. Tất cả query metadata nhận `site_id` từ caller và ép filter phía server. `site_id` của lúc ghi được
    suy ra từ `EquipmentPath`, không nhận một tham số rời có thể mâu thuẫn.
+9. **Mỗi archive row phải nói ai ghi, vì sao, và sửa bản nào** — `actor`, `reason`,
+   `supersedes_archive_id` (migration `009`). Điểm 7 đã cho đúng *hình dạng* của K5 nhưng chưa cho
+   *nội dung*: hai row cùng channel cùng khoảng thời gian mà không có lời giải thích nào thì auditor
+   thấy bằng chứng đã đổi và không biết ai đổi hay vì sao. `supersedes_archive_id` là `UNIQUE`
+   (partial, khi khác `NULL`): hai row cùng nhận sửa một bản gốc là hai câu trả lời và không có cách
+   chọn. Bản bị sửa **không** bị xoá — cả row lẫn object đều ở lại.
+10. **Có caller thật và chỉ một snapshot**, không chỉ có primitive. Adapter atomically rename file
+    khỏi public inbox vào `.processing`, đọc bytes **đúng một lần**, rồi dùng cùng buffer đó cho parse,
+    WORM archive và bản dưới `processed`/`rejected`. Nếu exporter tạo lại cùng public path trong lúc
+    ingest, file mới là lượt kế tiếp; nó không thể thay "bản gốc" của telemetry đang ghi. MinIO không
+    tới được thì exact snapshot được trả về inbox để poll sau retry; claim còn lại sau process crash
+    cũng được phục hồi lúc watcher khởi động. Một export phải có ít nhất một measurement hợp lệ và quy
+    về đúng một máy; file nhiều máy, có identity không đọc được, hoặc chỉ có header đều bị từ chối
+    **toàn file trước khi ingest**. Dòng lỗi value của cùng máy vẫn được tách thành artefact `rejected`,
+    còn exact byte của cả export vẫn được archive trước khi snapshot sang `processed`.
 
 ## Client và license
 
@@ -71,6 +86,12 @@ Apache-2.0 vì API upload của nó không cung cấp conditional create cần c
   descriptor vẫn có metadata row riêng. Object là bằng chứng nội dung, row là ngữ cảnh nhà máy.
 - `EnsureRetentionAsync` thêm một S3 request cho mỗi lần archive. Khi có tải thật có thể cache cấu hình
   ngắn hạn, nhưng chỉ sau khi đo và vẫn phải fail closed nếu cấu hình hết hạn hoặc sai.
+- Archive **chặn** đường file-drop: MinIO chết thì file dừng ở inbox thay vì chảy tiếp. Đổi lại,
+  không có file nào vào `processed` mà bản gốc không được giữ. Đây là đánh đổi có chủ ý cho hồ sơ
+  pháp lý; đường MQTT không bị ảnh hưởng.
+- `actor` của adapter là `ingestion:file-drop`, tức **danh tính của luồng**, chưa phải của con người.
+  Con người nào thả file lên share là câu hỏi của identity ở M13; ADR này chỉ bảo đảm cột không bao
+  giờ trống và không bao giờ là một service account vô danh.
 
 ## Những phương án không chọn
 
@@ -104,6 +125,12 @@ Kết quả ngày 2026-08-31 với image `minio/minio:RELEASE.2025-09-07T16-13-0
   **`Object is WORM protected`**;
 - `UPDATE` và `DELETE` metadata đều bị PostgreSQL từ chối bằng **`P1201`**;
 - chạy Down migration 006 xoá raw-curve index nhưng continuous aggregate C07 vẫn còn.
+
+Regression `ReplacingThePublicPathAfterClaim_DoesNotChangeTelemetryArchiveOrProcessedBytes` chặn
+ingestor sau parse, ghi file B vào lại đúng public path rồi mới cho transaction tiếp tục. Oracle xác
+nhận telemetry, archive và `processed` đều thuộc snapshot A byte-for-byte; B vẫn nằm nguyên trong
+inbox cho lần poll kế tiếp. Test log riêng còn ghim identity không đọc được vào EventId **2511**, không
+được phát nhầm EventId 2508 của file nhiều máy.
 
 Lệnh compose kiểm provisioning của bucket:
 

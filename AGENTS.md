@@ -111,6 +111,26 @@ Chủ động đề xuất lệch khi gặp một trong các dấu hiệu sau:
 
 Khi code đã lệch khỏi docs mà lệch đó là đúng → **sửa docs**, đừng để docs thành tài liệu chết. Việc này là một phần của công việc, không phải "để sau".
 
+### 2.5 Docs tinh gọn — bài học **ghi đè** plan cũ, không chồng thêm một tầng
+
+Cập nhật docs nghĩa là **sửa câu sai thành câu đúng**, không phải viết thêm một mục *"bài học rút ra"*
+bên dưới câu sai. Hai câu mâu thuẫn cùng nằm trong một file thì người đọc sau phải tự đoán câu nào
+còn hiệu lực — và họ sẽ đoán sai.
+
+| Tình huống | Làm | **Không** làm |
+|---|---|---|
+| DoD được phát biểu lại | Sửa thẳng bảng §1 của plan | Giữ bảng cũ rồi thêm callout *"chỗ nào lệch thì ADR-xxx thắng"* |
+| Một phép đo bác bỏ số cũ | Thay số trong plan/ADR; số cũ chỉ sống ở `benchmarks.md` (có ngày, có commit) | Thêm mục *"đo lại lần 2, lần 3"* vào plan |
+| Audit bắt được lỗi | Sửa chỗ plan đã mô tả sai, rồi ghi phần **còn nợ** vào đúng bảng nợ | Thêm §*"Audit vòng N"* thuật lại diễn biến |
+| Một bản sửa bị bác bỏ | Xoá mô tả bản sửa đó, viết bản đúng | Kể cả hai và để người đọc chọn |
+
+Plan là **mô tả trạng thái cuối**, không phải nhật ký. Diễn biến ai sửa gì lúc nào đã nằm trong
+`git log` và `benchmarks.md`; chép nó vào plan là nhân đôi dữ liệu và làm plan dài gấp ba mà không
+thêm một mệnh đề kiểm được nào.
+
+Ngoại lệ duy nhất: một quyết định **thay đổi hướng đi** thì viết ADR — ADR có chỗ cho §Context và
+được phép kể vì sao. Plan thì không.
+
 ---
 
 ## 3. Audit sau khi implement
@@ -145,6 +165,108 @@ Ví dụ đúng:
 ### 3.3 Audit không được tự sửa code
 
 Audit là **đọc và báo cáo**. Muốn sửa → đề xuất, chờ đồng ý, rồi sửa ở lượt sau. Lý do: audit mà vừa sửa vừa đánh giá thì không còn khách quan, và người dùng mất cơ hội tự nhìn thấy vấn đề.
+
+### 3.4 Audit theo phễu — full CI là gate cuối, không phải công cụ dò lỗi đầu tiên
+
+Thứ tự bắt buộc trong một lượt re-audit:
+
+1. Đọc diff, kiểm DoD/ràng buộc/docs và chạy các **targeted test** rẻ nhất có thể bác bỏ thay đổi.
+2. Nếu còn bất kỳ finding actionable nào: **dừng, báo cáo, không chạy full CI**.
+3. Chỉ khi hai bước trên sạch mới chạy `make ci` làm gate cuối.
+
+Đặc biệt, **không chạy `buffer-crash` 200 vòng trong lúc audit vẫn còn lỗi đã biết**. Phép kiểm đó tốn
+thời gian và chỉ trả lời contract crash-recovery; nó không phát hiện mâu thuẫn nghiệp vụ, ADR sai,
+test false-positive hay bằng chứng vận hành thiếu. Không dùng một CI xanh để thay cho việc đọc và
+đánh giá thay đổi.
+
+Nếu người dùng yêu cầu rõ không chạy full CI trong lượt hiện tại thì dừng sau targeted checks, kể cả
+khi audit đã sạch, và ghi rõ `full CI chưa chạy theo yêu cầu`.
+
+### 3.5 File audit là file **tạm**, và có vòng đời bắt buộc
+
+Audit được phép **xin một file tạm** để giữ danh sách lỗi bắt được — `docs/audit-<milestone>-<ngày>.md`
+— vì một lượt sửa dài sẽ làm mất findings nếu chúng chỉ nằm trong hội thoại. File đó có ba luật:
+
+1. **Xin trước, không tự tạo.** Nói rõ nó là file tạm và điều kiện xoá là gì.
+2. **Chỉ chứa findings và trạng thái sửa.** Kết luận nào cần sống lâu hơn — quyết định, số đo, ràng
+   buộc mới — phải được chuyển vào ADR, `benchmarks.md` hoặc plan **ngay lúc đóng finding đó**, không
+   để dồn tới lúc xoá.
+3. **Sửa xong hết thì xoá file, cùng mọi dòng trỏ tới nó.** Không có file audit nào được sống qua
+   milestone của nó. Còn nợ mở thì nợ đó đi vào bảng nợ của plan (`N-<milestone>-<n>`), không phải
+   lý do giữ file lại.
+
+Áp dụng §2.5 khi chuyển: bản sửa **ghi đè** chỗ plan đã mô tả sai. Chuyển đúng cách thì lúc xoá file
+không mất gì — nếu thấy tiếc khi xoá, nghĩa là bước 2 chưa làm.
+
+---
+
+### 3.6 Giao audit cho một agent khác — thứ tự nguồn sự thật, rules of engagement, khung phát hiện
+
+Dự án chạy **audit độc lập** cuối mỗi milestone: một agent **không tham gia viết code** đọc repo và
+trả lời đúng một câu — *milestone này có đóng được không*. M3 chứng minh nó đáng làm: các vòng audit
+ở đó bắt được năm blocker và bốn lỗi thực thi mà chính người viết code đã đọc qua và không thấy.
+
+**Ba lỗi đã lọt qua một vòng audit rồi mới bị bắt ở vòng sau.** Đưa thẳng vào prompt, đừng để auditor
+tự tìm ra:
+
+1. **Đọc hệ thống đang chạy, không đọc diff.** Một vòng audit M3 phát hiện container `ingestion` vẫn
+   là image từ **hai ngày trước**: mọi thứ vòng trước tuyên bố *"đã wire"* đều đúng trong code và
+   **chưa từng chạy**. Diff xanh, runtime cũ. Luôn hỏi *thứ tôi vừa đọc trong code có đang chạy trong
+   process nào không* — kiểm bằng `docker inspect ... --format '{{.Created}}'`, bằng biến môi trường
+   thật, bằng một phép thử end-to-end; **không** bằng việc file `.cs` trông đúng.
+2. **So lời hứa trong comment với code ngay bên dưới nó.** M3 có một comment viết *"không file nào vào
+   `processed` mà chưa giữ bản gốc"* và **ba dòng dưới** là đúng cái nhánh đó. Mỗi mệnh đề khẳng định
+   trong comment/XML doc là một **test case**; không tìm được test cho nó thì đó là một phát hiện.
+   Comment càng tự tin thì càng đáng kiểm.
+3. **Đọc nguyên văn contract, không đọc bản diễn giải của người sửa.** `scope.md` nói legal hold chặn
+   *"mọi retention policy"*; một bản sửa chỉ tắt retention của raw và **tự miễn trừ** cho rollup bằng
+   một lý do nghe hợp lý. Một luật có ngoại lệ do chính người thực thi tự khoét thì không còn là luật.
+   Khi bản sửa nói *"X không áp dụng ở đây vì Y"* — kiểm **Y**, đừng kiểm X.
+
+**Thứ tự nguồn sự thật.** Hai tài liệu mâu thuẫn thì **cái trên thắng**, và mâu thuẫn đó **tự nó là
+một phát hiện**:
+
+1. `AGENTS.md` §4 — ràng buộc **K1–K13**. Không milestone nào được nới.
+2. `docs/adr/ADR-*.md` — quyết định đã `Accepted`. ADR **không sửa**; đổi ý thì viết ADR mới.
+3. `docs/scope.md` — hợp đồng gốc.
+4. `docs/plans/M*.md` — DoD và checklist của milestone.
+5. Code, migration, `docker-compose.yml`.
+6. Hệ thống đang chạy.
+
+**Rules of engagement — mặc định cho mọi audit:**
+
+- **Read-only.** Không sửa file, không commit, không recreate container, không chạy script làm đổi dữ
+  liệu persistent (`make telemetry-backfill`, các lab `*-lab`, `down -v`). Working tree phải sạch khi
+  xong. Query read-only lên DB đang chạy thì được — nhưng `EXPLAIN ANALYZE` **chạy thật** câu lệnh,
+  nên chỉ dùng với `SELECT`.
+- **Không in giá trị credential**, kể cả credential dev-only. Nêu **tên khoá**, không nêu giá trị.
+  Lỗi này đã xảy ra hai lần trong M3 qua thông báo lỗi của `wget` và `docker inspect` — redact
+  **trước**, không redact sau.
+- **Không tin số đã ghi.** Số trong `benchmarks.md` là bằng chứng *đã tuyên bố*. Chạy lại được mà rẻ
+  thì chạy lại; không thì nói rõ là chưa kiểm.
+- Phân biệt rạch ròi **đã đo** / **đã đọc trong code** / **suy luận**. Mỗi phát hiện phải nói nó
+  thuộc loại nào.
+- Kết thúc bằng **những gì chưa kiểm được và vì sao**. Bắt buộc — một audit không nói mình chưa kiểm
+  gì là một audit không dùng được.
+
+**Khung phát hiện** — mỗi phát hiện đúng năm phần:
+
+```
+[P1|P2|P3] <một câu, nói cái SAI chứ không nói cái THIẾU>
+PHÁT HIỆN : chuyện gì, ở đâu (đường dẫn:dòng)
+BẰNG CHỨNG: output lệnh / trích code / query — tái lập được
+CONTRACT  : điều khoản nào bị vi phạm, trích nguyên văn
+ẢNH HƯỞNG : hỏng gì trên dây chuyền, hoặc auditor sẽ không trả lời được câu nào
+ĐỀ XUẤT   : ≥ 2 đường, nói rõ đường nào cần chủ repo duyệt
+```
+
+**P1** — vi phạm K1–K13, mất dữ liệu, hoặc một DoD được tuyên bố đạt mà không đạt. **P2** — contract
+và thực tế lệch nhau; đúng nhưng không kiểm được. **P3** — nợ kỹ thuật đã biết, ghi để không quên.
+**Không đề xuất giải pháp cho P3 nếu chưa được hỏi**: audit nói *cái gì sai*, sửa là lượt khác (§3.3).
+
+**Sau khi nhận báo cáo:** findings vào file tạm theo §3.5. Mỗi quyết định **đổi contract** đi kèm một
+ADR — sửa `scope.md` mà không có ADR là sửa DoD cho khớp kết quả, kể cả khi lý do đúng. Việc **chỉ chủ
+repo làm được** (teach-back, xoay credential) không uỷ quyền cho agent.
 
 ---
 
@@ -354,7 +476,6 @@ Cả ba đều nhẹ. Bỏ cả ba thì dự án 6 tháng này sản xuất ra m
 | `AGENTS.md` | Tài liệu này — nguyên tắc làm việc |
 | `docs/scope.md` | Scope & design đầy đủ: nghiệp vụ, kiến trúc, domain, contract, 14 milestone |
 | **`docs/glossary.md`** | **Từ điển nghiệp vụ. Thuật ngữ chưa có ở đây thì không được dùng (§5.8.2)** |
-| `docs/cau-hoi-cho-dong-nghiep.md` | Câu hỏi để làm rõ dự án thật ở FPT, và bảng chỉnh trọng số scope |
 | `.claude/skills/mendix-manual/` | Skill Mendix: bố cục hướng dẫn, bẫy Studio Pro, tích hợp backend |
 | `docs/plans/M*.md` | Plan chi tiết từng milestone, chia theo commit |
 | `docs/adr/` | Architecture Decision Records — tối thiểu 18 bản |
@@ -362,7 +483,6 @@ Cả ba đều nhẹ. Bỏ cả ba thì dự án 6 tháng này sản xuất ra m
 | `docs/benchmarks.md` | Số đo hiệu năng theo thời gian, kèm ngày và commit hash |
 | `docs/runbook.md` | 10 sự cố thường gặp và cách xử lý |
 | `docs/event-catalog.md` | Danh mục domain event: version, đã cài đặt chưa, có golden file chưa |
-| `docs/package-versioning.md` | SemVer từng Functional Block, compatibility matrix |
 
 ---
 
@@ -371,7 +491,8 @@ Cả ba đều nhẹ. Bỏ cả ba thì dự án 6 tháng này sản xuất ra m
 0. **Chủ repo không tự gõ code** (§0.1). Sản phẩm của commit là **hiểu biết**, code là sản phẩm phụ. Nghiệp vụ giao **trước** code, không đợi được hỏi (§5.8). Thuật ngữ chưa có trong `docs/glossary.md` thì thêm vào trước khi dùng.
 1. **Không tự commit.** Chuẩn bị xong thì dừng và đề xuất message.
 2. Docs là bản đồ, không phải đường ray — **được phép làm trái, nhưng phải nói ra và cập nhật docs**.
-3. Audit thì kiểm cả plan, không chỉ kiểm code. Plan sai thì đề xuất sửa plan.
+2b. Cập nhật docs = **sửa câu sai**, không phải viết thêm mục *"bài học"* bên dưới nó (§2.5). Plan mô tả trạng thái cuối; diễn biến ở `git log`.
+3. Audit thì kiểm cả plan, không chỉ kiểm code. Plan sai thì đề xuất sửa plan. File audit là file tạm và **phải bị xoá** khi sửa xong (§3.5).
 4. §4 là ràng buộc cứng, không lách.
 5. Một lần làm việc = một commit.
 6. Test đỏ thì nói đỏ.

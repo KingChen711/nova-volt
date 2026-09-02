@@ -14,6 +14,12 @@
 #   load        harness đo 5.000 msg/s của M2 (D2)
 #
 # Mọi service PHẢI khai báo mem_limit: máy chỉ có 15,4 GB và cần biết cái nào ngốn.
+#
+# MỌI `ports:` đều bind `127.0.0.1`, không phải `0.0.0.0`. Docker publish mặc định ra mọi interface,
+# nên `5432:5432` nghĩa là Postgres của máy này mở cho cả LAN và cả Wi-Fi quán cà phê — với mật khẩu
+# nằm trong `.env.example` đã commit. Comment "dev-only" không phải một ràng buộc; dòng bind mới là.
+# Muốn cho máy khác vào thật thì sửa có chủ đích ở đúng service đó, đừng bỏ tiền tố này hàng loạt.
+# Xem thêm `make secret-check`: credential local phải khác giá trị example (K13).
 
 name: novavolt-mes
 
@@ -57,6 +63,14 @@ services:
     # 2 GiB, không phải 1: `shared_buffers` nằm TRONG hạn mức của container, nên cap 1 GiB ép
     # Postgres chạy với 128 MB mặc định. Xem `command` bên dưới để biết vì sao con số đó là nút thắt.
     mem_limit: 2g
+    # /dev/shm mac dinh cua Docker la 64 MB, va Postgres dung no cho parallel worker (Gather,
+    # Parallel Bitmap Heap Scan, hash/sort chia se). Do duoc 2026-09-01 tren truy van muc line
+    # 1.000 kenh: mot trong 12 lan chay chet voi
+    #   could not resize shared memory segment "/PostgreSQL.1939511196" to 8388608 bytes:
+    #   No space left on device
+    # Loi nay NGAU NHIEN va khong lien quan gi toi SQL — no chi phu thuoc co bao nhieu worker
+    # xin bo nho cung luc. Mot dashboard Grafana muc line se gap dung no.
+    shm_size: 1g
     # Postgres mặc định là cấu hình cho một máy không ai biết trước. Ở đây thì biết: ingestion ghi
     # liên tục ở N1 vào một bảng vài triệu dòng có HAI index trên UUID ngẫu nhiên
     # (`source_event_id` là hàm của natural key nên KHÔNG thể sắp theo thời gian được).
@@ -92,7 +106,7 @@ services:
       POSTGRES_USER: ${NVM_POSTGRES_USER}
       POSTGRES_PASSWORD: ${NVM_POSTGRES_PASSWORD}
     ports:
-      - "${NVM_PORT_POSTGRES}:5432"
+      - "127.0.0.1:${NVM_PORT_POSTGRES}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./deploy/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -106,7 +120,16 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
-      start_period: 20s
+      # 180s, khong phai 20s. Do duoc 2026-08-31 sau khi dataset D1 nang database tu 5,7 len
+      # 16 GB va tu 61 len 103 chunk: container `Started` luc 09:51:10, healthcheck dau tien
+      # xanh luc 09:53:31 — 141 giay. Ngan sach cu (20s + 20x5s) het truoc moc do, nen
+      # `make up-obs` bao "container nvm-timescale is unhealthy" va BO service phu thuoc lai,
+      # trong khi Postgres hoan toan binh thuong vai giay sau do.
+      #
+      # Day la healthcheck do sai vi du lieu lon len, khong phai Postgres cham di. Nang
+      # start_period chu khong nang retries: start_period la cua so "dang khoi dong", va
+      # that bai trong do KHONG dot vao quota retries — dung ngu nghia can o day.
+      start_period: 180s
 
   # One-shot: tạo/rotate role chỉ-đọc sau khi migration đã dựng schema ts. Không
   # nhét password vào SQL hay provisioning file; .env local là nguồn duy nhất.
@@ -125,6 +148,7 @@ services:
       NVM_POSTGRES_USER: ${NVM_POSTGRES_USER}
       NVM_POSTGRES_PASSWORD: ${NVM_POSTGRES_PASSWORD}
       NVM_GRAFANA_DB_PASSWORD: ${NVM_GRAFANA_DB_PASSWORD}
+      NVM_GRAFANA_SITES: ${NVM_GRAFANA_SITES}
     networks: [it-net]
     entrypoint: ["/bin/sh", "-ec"]
     command:
@@ -134,6 +158,7 @@ services:
           --set ON_ERROR_STOP=1 \
           --set database="$$NVM_POSTGRES_DB" \
           --set owner="$$NVM_POSTGRES_USER" \
+          --set grafana_sites="$$NVM_GRAFANA_SITES" \
           --set grafana_password="$$NVM_GRAFANA_DB_PASSWORD" <<'SQL'
         DO $$$$
         BEGIN
@@ -146,10 +171,27 @@ services:
         ALTER ROLE nvm_grafana SET statement_timeout = '30s';
         ALTER ROLE nvm_grafana SET default_transaction_read_only = on;
         GRANT CONNECT ON DATABASE :"database" TO nvm_grafana;
-        GRANT USAGE ON SCHEMA ts TO nvm_grafana;
-        GRANT SELECT ON ALL TABLES IN SCHEMA ts TO nvm_grafana;
+
+        -- KHONG cap quyen tren schema ts. Migration 008 dung ts_scoped: view loc theo current_user
+        -- va doc bang goc bang quyen cua chu view. Cap SELECT thang tren ts la mo lai dung cai lo K3
+        -- ma 008 vua dong — mot panel editor la du de doi sang site khac.
+        REVOKE ALL ON ALL TABLES IN SCHEMA ts FROM nvm_grafana;
+        REVOKE ALL ON SCHEMA ts FROM nvm_grafana;
         ALTER DEFAULT PRIVILEGES FOR ROLE :"owner" IN SCHEMA ts
+            REVOKE SELECT ON TABLES FROM nvm_grafana;
+        GRANT USAGE ON SCHEMA ts_scoped TO nvm_grafana;
+        GRANT SELECT ON ALL TABLES IN SCHEMA ts_scoped TO nvm_grafana;
+        ALTER DEFAULT PRIVILEGES FOR ROLE :"owner" IN SCHEMA ts_scoped
             GRANT SELECT ON TABLES TO nvm_grafana;
+
+        -- Site nao duoc doc la quyet dinh cua deployment, khong phai cua migration va cang khong
+        -- phai cua dashboard. Doi NVM_GRAFANA_SITES roi chay lai `make up-obs` la duong duy nhat de
+        -- mo rong; DELETE truoc INSERT nen bo mot site khoi bien la thu hoi that.
+        DELETE FROM ts.site_read_grant WHERE role_name = 'nvm_grafana';
+        INSERT INTO ts.site_read_grant (role_name, site_id, reason)
+        SELECT 'nvm_grafana', btrim(site), 'Local obs stack, NVM_GRAFANA_SITES'
+        FROM unnest(string_to_array(:'grafana_sites', ',')) AS site
+        WHERE btrim(site) <> '';
         SQL
 
   # Grafana OSS 13.2.0, AGPL-3.0-only, chạy nguyên container chính thức. C13 chỉ
@@ -173,7 +215,7 @@ services:
       NVM_POSTGRES_DB: ${NVM_POSTGRES_DB}
       NVM_GRAFANA_DB_PASSWORD: ${NVM_GRAFANA_DB_PASSWORD}
     ports:
-      - "${NVM_PORT_GRAFANA}:3000"
+      - "127.0.0.1:${NVM_PORT_GRAFANA}:3000"
     volumes:
       - grafanadata:/var/lib/grafana
       - ./deploy/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
@@ -210,7 +252,7 @@ services:
       MSSQL_SA_PASSWORD: ${NVM_MSSQL_SA_PASSWORD}
       MSSQL_AGENT_ENABLED: "false"
     ports:
-      - "${NVM_PORT_MSSQL}:1433"
+      - "127.0.0.1:${NVM_PORT_MSSQL}:1433"
     volumes:
       - mssqldata:/var/opt/mssql
     networks: [it-net]
@@ -278,12 +320,26 @@ services:
     container_name: nvm-rabbitmq
     restart: unless-stopped
     mem_limit: 512m
+    # Erlang node name bam theo hostname, va hostname mac dinh cua Docker la container id — moi lan
+    # `up` sau mot `down` la mot NODE MOI, va node cu bi bo lai nguyen trong volume. Do duoc
+    # 2026-09-01: volume chua 5 thu muc `rabbit@<id>`, cai bi bo roi lon nhat giu 4,1 MB, con node
+    # dang chay bao 0 queue. Trong ca thang M2/M3 khong ai thay vi khong co gi durable ton tai du
+    # lau de mat — nhung mot bus "at-least-once" ma state bien mat moi lan recreate thi khong the
+    # goi la at-least-once (K12, N15).
+    #
+    # Ghim vao DUNG luc nay la re nhat co the: node hien tai giu 0 queue, 0 exchange tu tao, mot
+    # vhost mac dinh va mot user sinh lai duoc tu .env. Tuc la defect da pha sach roi, nen viec sua
+    # no khong ton gi. Sau day thi state bat dau song that, va moi `down`/`up` giu nguyen.
+    #
+    # `hostname` chu khong phai RABBITMQ_NODENAME: mot bien moi truong bi bo qua neu ai do chay
+    # container bang tay, con hostname thi khong.
+    hostname: nvm-rabbitmq
     environment:
       RABBITMQ_DEFAULT_USER: ${NVM_RABBITMQ_USER}
       RABBITMQ_DEFAULT_PASS: ${NVM_RABBITMQ_PASSWORD}
     ports:
-      - "${NVM_PORT_RABBITMQ}:5672"
-      - "${NVM_PORT_RABBITMQ_UI}:15672"
+      - "127.0.0.1:${NVM_PORT_RABBITMQ}:5672"
+      - "127.0.0.1:${NVM_PORT_RABBITMQ_UI}:15672"
     volumes:
       - rabbitmqdata:/var/lib/rabbitmq
     networks: [it-net]
@@ -372,8 +428,8 @@ services:
       MINIO_ROOT_USER: ${NVM_MINIO_USER}
       MINIO_ROOT_PASSWORD: ${NVM_MINIO_PASSWORD}
     ports:
-      - "${NVM_PORT_MINIO}:9000"
-      - "${NVM_PORT_MINIO_UI}:9001"
+      - "127.0.0.1:${NVM_PORT_MINIO}:9000"
+      - "127.0.0.1:${NVM_PORT_MINIO_UI}:9001"
     volumes:
       - miniodata:/data
     networks: [it-net]
@@ -432,7 +488,7 @@ services:
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${NVM_KEYCLOAK_PASSWORD}
       KC_HEALTH_ENABLED: "true"
     ports:
-      - "${NVM_PORT_KEYCLOAK}:8080"
+      - "127.0.0.1:${NVM_PORT_KEYCLOAK}:8080"
     volumes:
       - ./deploy/keycloak:/opt/keycloak/data/import:ro
     # CỐ Ý không có volume cho H2.
@@ -582,6 +638,22 @@ services:
       NVM_INGEST__FileDrop__InboxPath: /var/lib/nvm-ingestion/inbox
       NVM_INGEST__FileDrop__ProcessedPath: /var/lib/nvm-ingestion/processed
       NVM_INGEST__FileDrop__RejectedPath: /var/lib/nvm-ingestion/rejected
+      # Hop dong publish: exporter ghi ra ten tam, dong file, roi rename NGUYEN TU thanh
+      # `<ten>.csv.ready`. Chinh phep rename do la publish, va do la thu duy nhat adapter doc.
+      # Doi ten mot file KHONG dong handle ma exporter dang giu — tren NFS no van ghi tiep vao cung
+      # inode sau khi ingestion da claim, va ingestion luu nua run roi xoa phan duoi cung claim.
+      # Readiness nam trong CHINH TEN file chu khong o mot file marker ben canh: hai file thi phai
+      # lay bang hai lan rename, va producer publish lai giua hai lan do lam nguoi doc lay byte cua
+      # export nay duoi readiness cua export khac (ADR-035, probe PAIR_RACE).
+      # De trong bien nay la tat hop dong va quay ve doan mo bang SettleTime.
+      NVM_INGEST__FileDrop__PublishedSuffix: .ready
+      # C12: byte GOC cua moi file drop di thang len bucket WORM `raw-curve` (object lock COMPLIANCE
+      # 15 nam, do minio-init dung). Truoc audit M3, `RawCurveArchiveStore` chi duoc goi tu integration
+      # test — tuc la M3 co primitive luu ban goc chu chua co luong nao that su luu.
+      NVM_INGEST__RawCurveArchive__Enabled: "true"
+      NVM_INGEST__RawCurveArchive__ServiceUrl: http://minio:9000
+      NVM_INGEST__RawCurveArchive__AccessKey: ${NVM_MINIO_USER}
+      NVM_INGEST__RawCurveArchive__SecretKey: ${NVM_MINIO_PASSWORD}
     volumes:
       - ingestdata:/var/lib/nvm-ingestion
     networks: [dmz-net, it-net]

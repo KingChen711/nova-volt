@@ -61,6 +61,12 @@ Kiểm tra máy ngày 2026-08-25 cho ra ba điểm lệch. Xử lý theo [`AGENT
 | *(mặc định)* | mssql, timescale, rabbitmq, emqx, minio, keycloak | ~5,8 GB *(đo lại sau C08: 4,50 GB cho 4 service đầu)* |
 | `obs` | otel-collector, prometheus, tempo, loki, grafana | ~1,5 GB |
 
+> [!note] Trạng thái implementation sau M3
+> M0 chỉ **giữ chỗ** cho profile `obs`; không dựng cả stack ở milestone này. M3 mới thêm Grafana
+> vào profile đó cho dashboard formation. OpenTelemetry Collector, Prometheus, Tempo và Loki vẫn
+> thuộc M13. Bảng trên giữ nguyên phương án dung lượng lúc lập M0, không phải danh sách service đã
+> được cài đặt ở M0.
+
 ### 2.3 Docker daemon chưa chạy
 
 Không phải vấn đề thiết kế, chỉ là điều kiện tiên quyết: **bật Docker Desktop trước C05**, và trong Settings → Resources đặt Memory ≥ 8 GB (mặc định WSL2 thường lấy 50% RAM, tức ~7,7 GB — vừa đủ).
@@ -1101,4 +1107,4 @@ Mọi lệnh trong quickstart phải đã chạy được ít nhất một lần
 
 M1 (Factory Model & Manufacturing Service Bus) là nơi bắt đầu chạm vào khái niệm Opcenter thật: bus topology, `ICommand`/`ICommandHandler`, pipeline behavior, Roslyn analyzer. Đọc `scope.md` §5.2 và §9/M1 trước khi lập plan M1.
 
-**Trước khi sang M1**, nếu đã hỏi được đồng nghiệp ([`cau-hoi-cho-dong-nghiep.md`](../cau-hoi-cho-dong-nghiep.md)) thì chỉnh trọng số scope theo bảng §16 và ghi `ADR-000-scope-revision.md`.
+**Trước khi sang M1**, nếu đã hỏi được đồng nghiệp về dự án thật thì chỉnh trọng số scope theo bảng §16 và ghi `ADR-000-scope-revision.md`.

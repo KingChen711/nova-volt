@@ -68,6 +68,8 @@ việc khác.
 | [031](ADR-031-nang-luc-N1-do-o-M13-khong-o-M2.md) | Năng lực N1 nghiệm thu ở M9, đo lại ở M13; M2 chỉ nghiệm thu tính đúng đắn dưới tải | **Accepted** 2026-08-30 | M2 |
 | [032](ADR-032-cua-so-refresh-rollup-khong-phai-bao-dam.md) | Cửa sổ rollup 5 giờ + wide refresh + reconciliation | **Accepted** 2026-08-30 | M3 · C07 |
 | [033](ADR-033-minio-object-lock-cho-ban-goc-duong-cong.md) | MinIO Object Lock + exact version cho bản gốc đường cong formation | **Accepted** 2026-08-31 | M3 · C12 |
+| [034](ADR-034-dieu-kien-nghiem-thu-m3-sau-audit.md) | Điều kiện nghiệm thu M3 phát biểu lại theo thứ đo được, không theo con số đã hứa | **Accepted** 2026-08-31 — **owner duyệt kèm 5 sửa đổi** | M3 · D1/D2/D3 · K13 · soak 24 h ở M13 |
+| [035](ADR-035-hop-dong-publish-cho-file-drop.md) | Readiness của một export nằm trong chính tên nó, không ở marker bên cạnh | **Accepted** 2026-09-02 | M3 · C15 · làm rõ điểm 10 của ADR-033 |
 
 Cột **Ra ở** là milestone dự kiến, không phải cam kết. Quyết định đến sớm hơn thì viết sớm hơn.
 

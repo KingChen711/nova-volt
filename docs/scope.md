@@ -720,7 +720,12 @@ NV1 C L1 6 238 A 00123
 
 Tổng **16 ký tự**, chỉ chữ hoa và số → khắc Data Matrix hoặc Code128 đều được.
 
-**Sức chứa**: 99.999 unit/ca/line. Với 6.000 cell/ngày chia 3 ca 2 line → 1.000/ca/line. Dư 100 lần. Ghi con số này vào ADR-007, vì câu hỏi "mã có đủ dùng 10 năm không" chắc chắn sẽ được hỏi.
+[ADR-007](adr/ADR-007-dinh-dang-serial-number.md) giữ parser nghiêm ngặt hiện có: không tự sửa chữ thường
+hoặc mã thiếu ký tự. Mã đúng format chưa chứng minh unit tồn tại hay user được phép xem. Chữ số năm
+lặp sau mười năm; sức chứa mỗi ca không chứng minh uniqueness suốt thời gian lưu hồ sơ.
+
+**Sức chứa**: 99.999 unit/ca/line. Với 6.000 cell/ngày chia 3 ca 2 line → 1.000/ca/line, dư xấp xỉ
+100 lần tải mẫu. ADR-007 ghi phép tính và giới hạn lặp chữ số năm; không suy ra độ duy nhất lâu dài từ sức chứa này.
 
 > [!danger] Serial number KHÔNG unique tuyệt đối trong thực tế
 > Máy khắc lỗi, cell bị khắc đè, cell rớt sàn rồi nhặt lên khắc lại. Nếu bạn đặt `UNIQUE` cứng rồi để service crash, dây chuyền dừng — vi phạm N15.
@@ -745,7 +750,7 @@ ELY-SUP-240612-A778       Electrolyte lot (mã của nhà cung cấp, cố ý kh
 Passport dùng chuẩn quốc tế, không dùng ID nội bộ:
 
 ```
-https://dpp.novavolt.example/01/09506000134352/21/NV1P16238A00042
+https://dpp.novavolt.example/01/09506000134352/21/NV1PP16238A00042
                                 │                 │
                                 │                 └─ AI 21 = serial number
                                 └─────────────────── AI 01 = GTIN-14 của model pin
@@ -972,6 +977,7 @@ Tên event dùng **thì quá khứ**, theo **ngôn ngữ nhà máy** chứ khôn
 | `DuplicateSerialDetected` | Traceability | Trùng mã — luồng ngoại lệ có thật |
 | `ProcessStepStarted` | ProductionExecution | Bắt đầu một bước |
 | `ProcessStepCompleted` | ProductionExecution | Kết thúc, kèm actual |
+| `DataCollectionRecorded` | ProductionExecution | Kết quả đo do người vận hành nhập đã được ghi nhận; không hoàn tất bước hay kết luận chất lượng (M4, ADR-038) |
 | `MeasurementRecorded` | Quality | OCV, ACIR, torque, áp suất hàn… **đã được đánh giá**; không phải telemetry/đường cong thô |
 | `FormationRunStarted` | ProductionExecution | Vào máy formation, gắn tray/channel |
 | `FormationRunCompleted` | ProductionExecution | Xong, kèm summary + URI đường cong |
@@ -1225,6 +1231,7 @@ Thiết bị gửi lại khi không nhận ack. Gateway gửi lại sau khi khô
 | Process step | `(site_id, unit_id, step_code, device_timestamp)` |
 | Material consumption | `(site_id, operation_run_id, lot_id, sequence_no)` |
 | Genealogy link | `(site_id, parent_id, child_id, edge_kind, linked_at)` |
+| Data collection thủ công | `(site_id, "RecordDataCollection", submission_id)` — UUID của draft, giữ nguyên khi retry; xem ADR-038 |
 
 **Chuyển thành `source_event_id` = UUIDv5** (deterministic, namespace-based):
 
@@ -1373,7 +1380,7 @@ GET /pom/v1/ProductionUnits('NV1CL16238A00123')?$expand=Measurements,Genealogy
 GET /pom/v1/WipBoard?$filter=Line eq 'L1'
 GET /pom/v1/MaterialLots?$filter=ExpiresAt lt 2026-09-01T00:00:00Z
 GET /pom/v1/TraceForward(lotId='ELY-SUP-240612-A778')
-GET /pom/v1/TraceBackward(unitId='NV1P16238A00042')
+GET /pom/v1/TraceBackward(unitId='NV1PP16238A00042')
 GET /pom/v1/OeeByShift?$filter=ProductionDay eq 2026-08-25
 GET /pom/v1/NcrQueue?$filter=Status eq 'PendingDisposition'
 ```
@@ -1385,7 +1392,7 @@ GET /pom/v1/NcrQueue?$filter=Status eq 'PendingDisposition'
 | `SiteId` filter được **ép ở server** theo token, không tin client | Multiplant isolation (§5.6) |
 | `$top` mặc định 50, tối đa 1.000 | Chặn Mendix vô tình kéo 100k dòng |
 | Không expose entity write model | POM là read model, đổi read model không phá write |
-| Mọi collection có `@odata.nextLink` | Mendix paging |
+| Collection còn trang tiếp có `@odata.nextLink`; trang cuối không có | Mendix paging, không tạo vòng lặp đọc trang cuối |
 | `ETag` trên entity đơn | Cache và optimistic concurrency phía UI |
 
 #### Command endpoint — quy ước
@@ -1393,6 +1400,7 @@ GET /pom/v1/NcrQueue?$filter=Status eq 'PendingDisposition'
 ```
 POST /api/v1/commands/production/start-step
 POST /api/v1/commands/production/complete-step
+POST /api/v1/commands/production/record-data-collection
 POST /api/v1/commands/traceability/serialize-unit
 POST /api/v1/commands/traceability/assemble-into
 POST /api/v1/commands/traceability/remove-from
@@ -1402,6 +1410,10 @@ POST /api/v1/commands/quality/release-hold
 POST /api/v1/commands/quality/apply-disposition
 POST /api/v1/commands/grading/run-matching
 ```
+
+M4 triển khai `record-data-collection` theo [ADR-038](adr/ADR-038-data-collection-thu-cong-o-m4.md).
+Command nhận điện áp pack tại `EOL`, phát `DataCollectionRecorded`; không ngầm thực hiện `complete-step`.
+Các command còn lại được triển khai ở milestone tương ứng, không phải toàn bộ ở M4.
 
 **Mọi command request** đều có:
 
@@ -1436,7 +1448,7 @@ POST /api/v1/commands/grading/run-matching
 
 | App | Persona | Màn hình chính | Kỹ thuật Mendix |
 |---|---|---|---|
-| `NvmShopFloor` | Operator, Supervisor | Dispatch list, Scan station, EWI viewer, Data collection form, Andon board, WIP board | Data grid, nanoflow gọi REST, offline-ish caching |
+| `NvmShopFloor` | Operator, LineLeader; Supervisor ở màn hình sau | Dispatch list, Scan station, EWI viewer, Data collection form, Andon board, WIP board | POM qua OData; REST phía server; M4 lưu draft trong DB riêng Mendix trước POST, retry thủ công (ADR-014) |
 | `NvmQuality` | QA Engineer, QA Manager | NCR inbox, Investigation, Disposition, E-signature, SPC chart | **Mendix Workflow**, user task, parallel approval |
 | `NvmTrace` | Supervisor, Compliance | Trace Explorer (đồ thị genealogy), Recall impact, DPP Viewer | Consumed OData, custom widget vẽ graph |
 | `NvmShared` | — | Module dùng chung: OIDC config, POM connector, response mapper, UI building block | Marketplace module + custom |
@@ -1444,30 +1456,41 @@ POST /api/v1/commands/grading/run-matching
 > [!tip] Bắt đầu từ `NvmShared`
 > Viết connector + response mapper một lần trong `NvmShared`, ba app kia import. Đây đúng là cách Siemens tổ chức Extension App, và cũng là cách tránh copy-paste microflow ba lần.
 
-**Màn hình Scan Station — luồng chuẩn** (mẫu cho mọi màn hình operator):
+**Màn hình Scan Station — luồng M4 ghi nhận kết quả đo** (nhánh backend chấp nhận):
 
 ```mermaid
 sequenceDiagram
     participant OP as Operator
     participant MX as Mendix NvmShopFloor
+    participant MXDB as DB riêng Mendix
     participant POM as Public Object Model
     participant CMD as Command API
+    participant SQL as SQL Server
     participant BUS as Service Bus
 
-    OP->>MX: Quét serial NV1CL16238A00123
-    MX->>POM: GET ProductionUnits('...')?$expand=Blocks
+    OP->>MX: Quét serial NV1PP16250A00001
+    MX->>POM: GET ProductionUnits theo serial
     POM-->>MX: unit + quality state + rule đang chặn
     alt Bị chặn
         MX-->>OP: Hiện lý do + hành động được phép
     else Hợp lệ
-        MX-->>OP: Hiện EWI + form data collection
-        OP->>MX: Nhập kết quả, bấm Complete
-        MX->>CMD: POST complete-step (idempotencyKey)
-        CMD->>BUS: publish ProcessStepCompleted
+        MX-->>OP: Hiện form điện áp pack
+        OP->>MX: Nhập kết quả, bấm Gửi kết quả
+        MX->>MXDB: Lưu draft Pending, kết thúc transaction
+        MXDB-->>MX: Đã lưu
+        MX->>CMD: POST record-data-collection (idempotencyKey)
+        CMD->>SQL: Kiểm context, claim + kết quả + outcome trong transaction
+        SQL-->>CMD: Commit thành công
+        CMD->>BUS: Publish DataCollectionRecorded
         CMD-->>MX: accepted=true
-        MX-->>OP: Xanh, sẵn sàng quét cell tiếp theo
+        MX->>MXDB: Lưu trạng thái Accepted và outcome
+        MX-->>OP: Đã ghi nhận kết quả, state sản xuất giữ nguyên
     end
 ```
+
+Backend kiểm lại quyền/context khi nhận command; việc POM vừa cho phép không thay kiểm tra này.
+Draft và các trường hợp rejection/timeout theo [ADR-014](adr/ADR-014-mendix-ui-va-draft-ben-vung.md);
+commit SQL và publish vẫn có cửa sổ mất event tới outbox M6 theo ADR-022/023.
 
 > [!warning] Mendix không được gọi thẳng vào database của .NET
 > Nghe hiển nhiên nhưng đây là cám dỗ thật khi deadline gấp: mở một connection string PostgreSQL trong Mendix để "lấy nhanh". Làm vậy là phá vỡ bounded context, và mọi thay đổi schema sẽ làm vỡ UI mà không ai biết. **Chỉ đi qua POM và Command API.** Ép bằng: user DB của Mendix không tồn tại.
@@ -2043,17 +2066,25 @@ SELECT add_continuous_aggregate_policy('ts.process_signal_1m',
 
 ### M4 — Mendix nhập môn: Operator Station v1 · 2 tuần
 
+Plan chi tiết: [M4 — Operator Station v1](plans/M4-mendix-operator-station.md).
+
 **Mục tiêu**: dựng lớp UI đầu tiên và học đúng pattern của Opcenter Starter Kit (auth → query → command).
 
 **Việc làm**
 - Module `NvmShared`: cấu hình OIDC, connector gọi POM (OData), connector gọi Command API, response mapper cho `{accepted, reasonCode, reasonText, allowedNextActions}`.
-- POM v1 trên `Nvm.App.Execution`: `ProductionUnits`, `WipBoard`, `Equipment` (đọc từ read model, dữ liệu tạm thời do M2 sinh).
+- POM v1 trên `Nvm.App.Execution`: `ProductionUnits`, `WipBoard`, `Equipment`, đọc snapshot PostgreSQL từ
+  fixture M4 xác định được cho **1.000 unit/site** NV1/DE1. M2 sinh telemetry, chưa sinh read model này.
+  Context ghi SQL Server dùng cùng nguồn fixture; M5/M6 thay bằng write model/projection thật (ADR-038).
 - `NvmShopFloor`:
   - **Dispatch list**: việc theo line/resource.
   - **Scan station**: nhập/quét serial → hiện trạng thái + rule đang chặn.
-  - **Data collection form**: nhập kết quả đo, submit qua Command API.
+  - **Data collection form**: nhập điện áp pack tại `EOL` (`PackVoltage`, `V`); lưu draft bền vững trong
+    DB riêng Mendix trước POST. `RecordDataCollection` ghi nhận số đo, phát `DataCollectionRecorded` v1,
+    không hoàn tất công đoạn hay release pack. Retry thủ công dùng nguyên key/payload (ADR-014/038).
   - **WIP board**: đếm unit theo (line, step, quality state), auto refresh.
-- Mendix security: module role `Operator`, `LineLeader`; XPath constraint theo `SiteId`.
+- Mendix security: `Operator`, `LineLeader` cùng quyền đọc/gửi kết quả trong site mình, chỉ đọc/sửa/retry
+  draft của chính mình; chưa có override/release. XPath theo `SiteId` và owner cho draft, backend ép site
+  trên mọi query/command theo principal (ADR-014).
 - **`IIdempotencyStore` bền vững — K7, kéo lên từ M5** (`ADR-023`, cập nhật 2026-08-30). Phải có mặt
   **trong hoặc trước** commit đầu tiên của M4 có write: `Claim` với unique key ở tầng database, outcome
   **được lưu** để replay trả lại kết quả cũ thay vì chạy lại handler, và claim + effect nghiệp vụ +
@@ -2074,6 +2105,10 @@ SELECT add_continuous_aggregate_policy('ts.process_signal_1m',
 - [ ] User thuộc NV1 **không** thấy bất kỳ dữ liệu DE1 nào.
 
 **Lab phá hoại**: tắt `Nvm.App.Execution` → Mendix phải hiện "hệ thống tạm thời không phản hồi, dữ liệu đã được ghi tạm", chứ không phải trang lỗi trắng.
+
+Draft phải lưu xong trước POST và còn sau reload. Execution sống lại thì user gửi lại cùng request;
+timeout không được cấp key mới vì backend có thể đã commit. Nếu chính việc lưu draft thất bại,
+không được hiển thị câu đã ghi tạm (ADR-014).
 
 **Học được** (X1, X2): mô hình low-code ↔ pro-code; vì sao contract response phải nói được lý do; XPath constraint là authorization, không phải bộ lọc hiển thị.
 

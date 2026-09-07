@@ -62,6 +62,7 @@ thành đúng cái TSDB nằm cạnh nó.
 | `DuplicateSerialDetected` | Traceability | Trùng mã — luồng ngoại lệ có thật | — | ☐ | ☐ | M5 |
 | `ProcessStepStarted` | ProductionExecution | Bắt đầu một bước | — | ☐ | ☐ | M5 |
 | `ProcessStepCompleted` | ProductionExecution | Kết thúc, kèm actual | — | ☐ | ☐ | M5 |
+| `DataCollectionRecorded` | ProductionExecution | Kết quả do người vận hành nhập đã được ghi nhận; không kết luận hoàn tất bước hay đạt chất lượng ([ADR-038](adr/ADR-038-data-collection-thu-cong-o-m4.md)) | — | ☐ | ☐ | M4 · C06 |
 | **`MeasurementRecorded`** | **Quality** | **OCV, ACIR, torque, áp suất hàn… — giá trị ĐÃ ĐÁNH GIÁ, không phải đường cong thô** | **v1** | **✅** | **✅** | **M2** ¹ |
 | `FormationRunStarted` | ProductionExecution | Vào máy formation, gắn tray/channel | — | ☐ | ☐ | M7 |
 | `FormationRunCompleted` | ProductionExecution | Xong, kèm summary + URI đường cong | — | ☐ | ☐ | M7 |
@@ -91,9 +92,9 @@ thành đúng cái TSDB nằm cạnh nó.
 
 | | Số |
 |---|---|
-| Đã cài đặt | **2** / 35 |
+| Đã cài đặt | **2** / 36 |
 | Có golden file | **2** / 2 đã cài đặt |
-| Chưa có gì | 33 |
+| Chưa cài đặt | 34 |
 
 M1 kết thúc với **1/35** (`FactoryModelRevisionActivated`). M2 thêm `MeasurementRecorded` v1 nhưng
 chỉ phát các signal đã được đánh giá, không biến mọi telemetry reading thành domain event. M3 cố ý
@@ -105,6 +106,5 @@ một sự kiện nghiệp vụ mới.
 > sự kiện thật: một work cell bị gỡ trong khi vẫn còn WIP có thể dẫn tới hold ở M9. `scope.md` §6.5
 > nay đã liệt kê event này thay vì để catalog và scope trôi khỏi nhau.
 
-> [!warning] Bảng này sẽ đứng yên rất lâu, và đó là dự kiến
-> 33/35 event thuộc M5–M12. Trước M5 bảng gần như không nhúc nhích. Đừng vì thế mà tưởng dự án
-> đứng — cùng lý do đã ghi ở cuối `oef-mapping.md`.
+`DataCollectionRecorded` được chốt contract v1 ở M4/C01, cài đặt và golden file ở C06.
+Viết ADR không làm tăng số event đã cài đặt; các ô chỉ được đánh dấu khi có code và bằng chứng tương ứng.

@@ -54,6 +54,7 @@ Routing đầy đủ ở [`scope.md`](scope.md) §2.2.
 | Từ | Nghĩa |
 |---|---|
 | **OCV** | *Open Circuit Voltage* — điện áp khi không tải. `OCV2` là lần đo thứ hai, sau aging. **Sụt nhiều = self-discharge = cell lỗi** |
+| **Điện áp pack** (`PackVoltage`) | Giá trị điện áp của cả pack, đơn vị volt (`V`). M4 dùng một kết quả do người vận hành nhập tại bước `EOL` (End-of-Line); ghi nhận số đo chưa kết luận pack đạt chất lượng hoặc công đoạn đã hoàn tất |
 | **ACIR** | *AC Internal Resistance* — điện trở trong. Cao bất thường = tiếp xúc kém hoặc vật liệu lỗi |
 | **Capacity** *(dung lượng)* | Lượng điện một cell tích trữ hoặc xả được, thường tính bằng Ah. Giá trị tăng dần trong đường cong formation là **telemetry**; chỉ kết quả cuối đã được đánh giá và gắn đúng cell mới được dùng cho grading. Hai thứ đó là **hai tín hiệu khác tên**: đường cong là `Formation/Capacity`, kết quả cuối là `Formation/CapacityResult`. Tách tên vì tính "đã đánh giá" không suy ra được từ dữ liệu — sau khi channel ánh xạ được vào cell (M7) thì mọi điểm trên đường cong cũng có cell, và một hệ thống suy đoán bằng "có cell nghĩa là đã đánh giá" sẽ đẩy cả đường cong lên bus |
 | **Self-discharge** | Cell tự mất điện khi nằm yên. Dấu hiệu của lỗi bên trong |
@@ -94,11 +95,17 @@ Routing đầy đủ ở [`scope.md`](scope.md) §2.2.
 |---|---|
 | **Work Order (WO)** | **Lệnh sản xuất** từ ERP: *"làm 5.000 cell mã NV-P120-NMC, giao 12/9"*. Kéo dài nhiều ngày, nhiều ca. Ví dụ `WO-2026-0042` |
 | **Operation Run (OPRUN)** | **Một lần chạy** của **một bước** trên **một máy**. Ví dụ `OPRUN-8891`. Hẹp hơn work order rất nhiều |
+| **Resource** | Nguồn lực được giao thực hiện một operation run. M4 dùng trạm/thiết bị có equipment path làm resource để chọn việc; đây là vai trò trong phân công, không phải thêm một cấp mới vào cây ISA-95 |
 | **Recipe** | Bộ tham số công nghệ của một bước trên một máy, có **version**. Auditor sẽ hỏi *"lúc 14:20 ngày 12/3 máy này chạy tham số nào?"* |
 | **Effectivity** | Khoảng thời gian một version recipe có hiệu lực |
 | **Shelf life** | Hạn dùng của một lot vật liệu |
 | **Exposure time** | Thời gian vật liệu được phép ở ngoài môi trường kiểm soát trước khi phải bỏ |
 | **WIP** | *Work In Progress* — hàng đang dở trên chuyền |
+| **Operator Station** | Màn hình người vận hành dùng tại trạm: chọn việc, quét serial, xem lý do đang bị chặn và nhập kết quả đo. Ở NovaVolt, Mendix hiển thị và thu thập dữ liệu; backend quyết định thao tác nào được phép |
+| **Dispatch list** | Danh sách việc đã được giao cho một line hoặc resource, giúp người vận hành chọn việc tiếp theo. Ở M4, danh sách lấy từ fixture có work order và operation run; chưa phải bộ lập lịch hay tối ưu thứ tự sản xuất |
+| **Data collection** | Ghi nhận kết quả đo cùng ngữ cảnh: đo cho unit nào, ở bước nào, trên thiết bị nào, lúc nào và ai nhập. Một kết quả đã được ghi nhận chưa tự chứng minh công đoạn hoàn tất hoặc sản phẩm được release; đó là các quyết định nghiệp vụ riêng |
+| **Draft nhập kết quả** | Bản nháp của người vận hành được lưu trong DB riêng của Mendix trước khi gửi Command API. Sau lần gửi đầu, nội dung và khoá được giữ nguyên để hỏi lại kết quả khi timeout; draft còn tồn tại chưa chứng minh backend đã nhận kết quả đo |
+| **Interlock** | Điều kiện chặn một thao tác không được phép tại thời điểm thực hiện. Ví dụ unit đang bị quality hold thì thao tác sản xuất bị chặn, kèm lý do. Kiểm tra ở backend khi nhận command; việc vô hiệu hoá nút trên UI chỉ giúp người vận hành thấy điều đó sớm hơn |
 | **OEE** | *Overall Equipment Effectiveness* — chỉ số hiệu suất thiết bị |
 | **Ca (shift)** | 3 ca/ngày: `A` 06–14, `B` 14–22, `C` 22–06 |
 | **Bảng ca** *(shift table)* | Danh sách ca kèm giờ bắt đầu **giờ local** và độ dài danh nghĩa. Là **dữ liệu**, không phải `switch-case`: M10 có site dùng bảng khác. Phải phủ **đúng 24 giờ**, không hở không chồng — hở một phút là một phép đo không thuộc ca nào, chồng một phút là thuộc hai ca |

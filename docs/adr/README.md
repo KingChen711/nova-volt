@@ -41,14 +41,14 @@ việc khác.
 | [004](ADR-004-rabbitmq-not-kafka.md) | RabbitMQ làm Manufacturing Service Bus, không dùng Kafka | **Accepted** 2026-08-26 | M1 · C09 |
 | 005 | Genealogy là DAG có thời gian | Chưa viết | M5 |
 | 006 | Closure table thay vì recursive CTE | Chưa viết | M6 |
-| 007 | Định dạng serial number | Chưa viết | M4 |
+| [007](ADR-007-dinh-dang-serial-number.md) | Giữ serial 16 ký tự và kiểm format tại backend | **Accepted** 2026-09-07 | M4 · C01 |
 | [008](ADR-008-cloudevents-envelope.md) | CloudEvents đi ở transport header, không thay envelope MassTransit | **Accepted** 2026-08-26 | M1 · C12 |
 | 009 | Ngữ nghĩa EPCIS cho genealogy edge | Chưa viết | M5 |
 | [010](ADR-010-idempotency-key-uuid-v5.md) | Idempotency key = UUIDv5 từ natural key | **Accepted** 2026-08-26 | M1 · C04 |
 | [011](ADR-011-device-timestamp-la-truc-phan-manh.md) | `device_timestamp` là trục phân mảnh của telemetry | **Accepted** 2026-08-30 | M3 · C05 |
 | [012](ADR-012-production-day-va-ca-tinh-trong-gio-local.md) | `production_day` và ca kíp tính trong giờ local của site | **Accepted** 2026-08-30 | M3 · C03 |
 | 013 | OData cho Public Object Model | Chưa viết | M4 |
-| 014 | Mendix là lớp UI duy nhất | Chưa viết | M4 |
+| [014](ADR-014-mendix-ui-va-draft-ben-vung.md) | Mendix sở hữu UI/draft, backend sở hữu quyết định nghiệp vụ | **Accepted** 2026-09-07 | M4 · C01 |
 | 015 | Saga dùng Quartz store thay vì delayed exchange | Chưa viết | M7 |
 | 016 | OR-Tools CP-SAT cho matching | Chưa viết | M11 |
 | 017 | Hold cascade là job có checkpoint | Chưa viết | M9 |
@@ -72,6 +72,7 @@ việc khác.
 | [035](ADR-035-hop-dong-publish-cho-file-drop.md) | Readiness của một export nằm trong chính tên nó, không ở marker bên cạnh | **Accepted** 2026-09-02 | M3 · C15 · làm rõ điểm 10 của ADR-033 |
 | [036](ADR-036-file-drop-bat-buoc-publish.md) | File-drop bắt buộc publish, bỏ fallback theo mtime | **Accepted** 2026-09-06 | M3 · thay ngoại lệ Decision §4 của ADR-035 |
 | [037](ADR-037-benchmark-rollup-chi-doc.md) | Benchmark rollup chỉ đọc, kiểm contract bằng metadata công khai | **Accepted** 2026-09-06 | M3 · giữ DoD của ADR-034 |
+| [038](ADR-038-data-collection-thu-cong-o-m4.md) | M4 ghi nhận kết quả đo thủ công trên context fixture; submission có key/outcome bền vững | **Accepted** 2026-09-07 | M4 · C01 |
 
 Cột **Ra ở** là milestone dự kiến, không phải cam kết. Quyết định đến sớm hơn thì viết sớm hơn.
 

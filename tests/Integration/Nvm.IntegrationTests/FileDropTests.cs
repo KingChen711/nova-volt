@@ -691,7 +691,6 @@ public sealed class FileDropTests
                 InboxPath = Path.Combine(root, "inbox"),
                 ProcessedPath = Path.Combine(root, "processed"),
                 RejectedPath = Path.Combine(root, "rejected"),
-                SettleTime = TimeSpan.Zero,
             };
             options.Validate();
 

@@ -463,6 +463,99 @@ Máy đo: Windows 11, Docker Desktop, quota RAM 8 GB (xem `docs/plans/M0-bootstr
 
 ---
 
+### 2026-09-07 — Giản lược M3, giữ nguyên các gate (ADR-036/037)
+
+HEAD `0e71ba1` + working tree của lượt sửa. Đo trên Docker Desktop đang chạy, TimescaleDB
+**2.29.2 / PostgreSQL 17**, `work_mem=4MB`. `make rollup-bench` và `make rollup-bench-line`
+chạy qua `nvm_grafana`/`ts_scoped`, transaction **REPEATABLE READ READ ONLY**. Một warmup rồi
+mười mẫu đan xen; p95 dùng `percentile_disc`, tức mẫu lớn nhất. Query tính đủ bucket/count/mean
+ở server, không tính network hoặc rendering. EXPLAIN đo riêng trên **đúng query** đó.
+
+| Fixture / phạm vi | Nguồn | p50 (ms) | p95 (ms) | Vai trò |
+|---|---|---:|---:|---|
+| Riêng một máy / kênh | raw | 3,919 | 5,375 | Đối chứng |
+| Riêng một máy / kênh | parent rollup | 2,087 | **2,665** | Gate < 200 ms: đạt |
+| Riêng một máy / máy | machine rollup | 12,255 | **14,042** | Gate bảy ngày < 200 ms: đạt |
+| Riêng một máy / máy | raw | 67,206 | 72,512 | Đối chứng |
+| Riêng một máy / máy | parent rollup | 58,764 | 65,189 | Đối chứng |
+| Có mười máy / kênh | raw | 3,855 | 5,290 | Đối chứng |
+| Có mười máy / kênh | parent rollup | 2,113 | **2,625** | Gate < 200 ms: đạt |
+| Có mười máy / FORM-01 | machine rollup | 5,482 | **11,513** | Gate trong cửa sổ có dữ liệu khác: đạt |
+| Có mười máy / FORM-01 | raw | 244,942 | 262,435 | Đối chứng |
+| Có mười máy / FORM-01 | parent rollup | 150,182 | 183,391 | Đối chứng |
+| Cả line F1 | machine rollup | 24,541 | **29,898** | Evidence, không phải gate M3 |
+| Cả line F1 | raw | 589,096 | 732,234 | Đối chứng |
+| Cả line F1 | parent rollup | 472,483 | 587,990 | Đối chứng |
+
+Fixture riêng: `[2026-07-20, 2026-07-27)` **bảy ngày**, 100 kênh / **121.429** mẫu Temperature.
+Fixture line: `[2026-05-13, 2026-05-19)` **sáu ngày**, 1.000 kênh / **1.040.949** mẫu.
+Cả hai đúng danh sách kênh, clock quality Good và các biên thời gian đã ghim. Không sinh thêm
+fixture trong lượt này. Raw 7/6 chunk, parent và child mỗi cửa sổ 2 chunk; tất cả được metadata
+công khai đánh dấu compressed. Đây không phải bằng chứng không còn rowstore tail hoặc đã
+qualification hot/cold. Hai số mức máy 14,042/11,513 ms cùng bậc trong điều kiện này; không suy
+rộng thành bất biến với mọi database hoặc workload đồng thời, không so tốc độ với protocol cũ.
+
+Tám phép đối chiếu rollup ↔ raw ở hai lệnh: thiếu bucket **0**, lệch sample count **0**,
+mean ngoài tolerance **0**; sai khác mean lớn nhất **4,618527782440651e-14**. Mười ba EXPLAIN
+đều đọc đúng nguồn/trong cửa sổ, chunk ngoài thực thi **0**, có đối chứng ngoài cửa sổ:
+raw **104/105**, mỗi rollup **4**. Identity child được kiểm bằng cùng đường với parent,
+đóng `N-M3-2`; số chunk là output quan sát, không phải hằng số ép layout.
+
+Giữ fingerprint mức đọc của D2: máy **10.080 bucket / 121.429 mẫu**, kênh **965 bucket / 1.172 mẫu**.
+
+Sau khi giữ thêm fingerprint bucket/mẫu của gate cũ, chạy lại `make rollup-bench` trên bản cuối:
+**4/4 gate đạt** (p95 kênh/máy cửa sổ riêng **4,364/21,938 ms**, cửa sổ mười máy **3,751/10,190 ms**).
+Lượt này chạy cùng lúc bài buffer-crash của CI, nên giữ riêng với bảng đo phía trên;
+không dùng hai lượt để khẳng định tăng/giảm tốc độ. Log: `artifacts/rollup-bench-final-2026-09-07.log`.
+
+Sáu negative control tạo SQL tạm dưới `artifacts/`, không sửa dữ liệu persistent:
+
+| Biến đổi có chủ đích | Kết quả |
+|---|---|
+| Cộng 1 vào mean của candidate rollup | exit **3**, `Per-bucket rollup equivalence failed` |
+| Bỏ một bucket candidate bằng `OFFSET 1` | exit **3**, cùng lỗi equivalence |
+| EXPLAIN đường máy bị chuyển từ child sang parent, đổi predicate sang equipment prefix | exit **3**, `Chunk exclusion/source proof failed` |
+| Bỏ hai predicate thời gian khỏi EXPLAIN child | exit **3**, cùng lỗi chunk exclusion |
+| Raw và rollup cùng mất bucket đầu tiên của fixture bảy ngày | exit **3**, `Pinned seven-day D2 bucket/sample fingerprint drifted`; equivalence vẫn xanh nên fingerprint là điều kiện độc lập |
+| Gán **201 ms giả lập** cho từng mẫu timing | exit **3**, `D2 p95 must be < 200 ms` — đây là đối chứng assertion, không phải số đo hiệu năng |
+
+Bốn đối chứng đầu giảm vòng đo xuống một warmup; lỗi equivalence dừng trước bước đo. Đối chứng SLO giữ đủ
+mười mẫu. Tái lập bằng bản sao SQL runner với đúng biến đổi trên. `sh scripts/rollup-bench.sh prepare`
+exit **0**: bốn refresh theo parent → child đều báo already up-to-date, không có chunk chưa nén
+cần xử lý. Các target đo không còn dependency `ingestion-migrate`; preparation vẫn là lệnh có ghi.
+
+Regression file-drop: unit mới **đỏ 1/3 trước sửa**, sau sửa **3/3 xanh**; integration
+`FileDropTests` **18/18 xanh**, **1 phút 32,014 giây**. Test giữ đường không claim file chưa publish,
+archive đúng snapshot, recovery và dedup. `make net-check` **9/9**, `make grafana-net-check` **3/3**.
+
+Startup trên image ingestion mới: `PublishedSuffix` rỗng bị từ chối với `ArgumentException`
+đúng tham số, exit **139**, trong container `--network none --read-only` không gắn volume dữ liệu.
+Ingestion chính đã recreate lúc **2026-09-06T21:15:10.616640309Z**, image `sha256:dc7dd8da4699…`
+khớp image vừa build; health **healthy**, log **2512** xác nhận `.csv.ready`, rồi `Application started`.
+Không trình bày unit test source như bằng chứng container cũ đã chạy bản sửa.
+
+`make ci` exit **0**: suite Release **700/700 xanh**, không skip, **2 phút 22,945 giây**;
+rotation preflight **45/45**, format sạch, build **0 warning / 0 error**. Cùng lượt CI này,
+`buffer-crash` đủ **200/200 vòng**, **0/200 lỗi**; mỗi vòng SIGKILL rồi mở lại bằng process mới.
+Log: `artifacts/ci-m3-simplification-2026-09-07.log`.
+
+Bộ SQL benchmark từ **1.668 → 246 dòng** (tính cả fixture và preparation mới), plan M3 từ
+**871 → 215 dòng**. Giá trị của thay đổi nằm ở bỏ phụ thuộc catalog riêng, đóng oracle còn thiếu,
+loại fallback chưa có producer cần và sửa mô tả lỗi thời; số dòng chỉ ghi quy mô diff.
+
+Log local: `artifacts/rollup-bench-2026-09-07.log`, `artifacts/rollup-bench-line-2026-09-07.log`,
+`artifacts/rollup-negative-*.sql/.log`, `artifacts/rollup-prepare-2026-09-07.log`,
+`artifacts/file-drop-tests-2026-09-06.log`. Log là artefact local; bảng này giữ kết luận lâu dài.
+
+**Giới hạn lượt sửa:** không chạy lại `compression-report`, lab retention/calendar, DST mutation,
+`rollup-reconcile` hoặc file-drop race probe vì không sửa các thuật toán/policy đó và đã kiểm các
+đường bị ảnh hưởng bằng targeted checks cùng full suite. Các số D1/D3/D5 và race probe trước đây
+vẫn là bằng chứng lịch sử, không phải phép đo mới. Chưa chạy soak 24 giờ/hot-cold qualification
+(M13), chưa thực hiện teach-back và chưa audit sâu toàn project. Plan M3/Data Collection vẫn
+`in_progress`/`đang làm`; đóng ba finding này không đồng nghĩa đóng milestone.
+
+---
+
 ## Mục tiêu SLO — còn phải đo
 
 Khung lấy từ `docs/scope.md` Phụ lục A. Điền khi tới milestone tương ứng; mỗi ô điền xong phải

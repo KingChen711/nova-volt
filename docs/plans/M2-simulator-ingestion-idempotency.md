@@ -655,13 +655,12 @@ Hậu quả của đường riêng: hai định nghĩa natural key, hai chỗ de
 
 Một cửa vào, một định nghĩa danh tính. Adapter chỉ khác nhau ở phần **đọc**, không khác ở phần **định danh và ghi**.
 
-> [!important] Phần M2 chưa trả lời: **khi nào một file được coi là đã ghi xong**
-> Watcher ở đây dùng `SettleTime` — mtime im được vài giây thì coi như xong. Phỏng đoán đó đủ cho M2
-> vì đường ghi còn dừng ở một bảng có thể xoá đi làm lại. Nó **không** đủ từ M3, nơi cùng file ấy sinh
-> ra một bản gốc WORM **bất biến**: đọc sớm thì được telemetry của nửa run và một bản gốc cũng chỉ có
-> nửa run. Hợp đồng thay cho phỏng đoán — producer rename `<tên>.csv.partial` → `<tên>.csv.ready`, và
-> phép rename **là** publish — được quyết ở [`ADR-035`](../adr/ADR-035-hop-dong-publish-cho-file-drop.md),
-> cùng lý do đầy đủ ở [plan M3](M3-telemetry-timescaledb-production-calendar.md) §C15-3.
+> [!important] Readiness của file theo hợp đồng publish hiện hành
+> Producer ghi `<tên>.csv.partial`, đóng file, rồi rename nguyên tử sang `<tên>.csv.ready`.
+> Watcher chỉ claim tên đã publish: đọc sớm sẽ giữ bản gốc của nửa run trong WORM archive.
+> [`ADR-035`](../adr/ADR-035-hop-dong-publish-cho-file-drop.md) định nghĩa hand-off;
+> [`ADR-036`](../adr/ADR-036-file-drop-bat-buoc-publish.md) bắt buộc hậu tố khi bật adapter,
+> xoá fallback dựa vào `SettleTime`. Xem [plan M3](M3-telemetry-timescaledb-production-calendar.md) §2.3.
 
 ---
 

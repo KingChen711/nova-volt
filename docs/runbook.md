@@ -503,13 +503,13 @@ docker exec -i nvm-ingestion sh -c 'cat > /var/lib/nvm-ingestion/inbox/x.csv.par
 Log khởi động phải nói **hợp đồng nào đang chạy** — đây là thứ kiểm được, khác với đọc file cấu hình:
 
 ```bash
-docker logs nvm-ingestion 2>&1 | grep -E 'reads an export only once|has no publish contract'
+docker logs nvm-ingestion 2>&1 | grep 'reads an export only once'
 ```
 
 - EventId **2512** (Information): hợp đồng đang bật, kèm hậu tố thật.
-- EventId **2513** (Warning): hợp đồng **đang tắt** (`NVM_INGEST__FileDrop__PublishedSuffix` để rỗng)
-  và adapter đang đọc file sau một khoảng im lặng. Đó là chế độ có thể lưu nửa run — chỉ dùng khi có
-  một exporter thật sự không sửa được, và phải biết mình đang chọn gì.
+- `NVM_INGEST__FileDrop__PublishedSuffix` rỗng hoặc không hợp lệ làm adapter bật bị từ chối khi
+  khởi động. Sửa producer theo §2.2 và đặt hậu tố hợp lệ; runtime chỉ nhận file đã publish
+  ([ADR-036](adr/ADR-036-file-drop-bat-buoc-publish.md)).
 
 Sau khi sửa exporter: thả một export thật, rồi kiểm cả ba mặt trong cùng một lượt — row vào database,
 object trong MinIO, và file trong `processed/`. Chỉ một trong ba là chưa chứng minh được gì.

@@ -70,6 +70,8 @@ việc khác.
 | [033](ADR-033-minio-object-lock-cho-ban-goc-duong-cong.md) | MinIO Object Lock + exact version cho bản gốc đường cong formation | **Accepted** 2026-08-31 | M3 · C12 |
 | [034](ADR-034-dieu-kien-nghiem-thu-m3-sau-audit.md) | Điều kiện nghiệm thu M3 phát biểu lại theo thứ đo được, không theo con số đã hứa | **Accepted** 2026-08-31 — **owner duyệt kèm 5 sửa đổi** | M3 · D1/D2/D3 · K13 · soak 24 h ở M13 |
 | [035](ADR-035-hop-dong-publish-cho-file-drop.md) | Readiness của một export nằm trong chính tên nó, không ở marker bên cạnh | **Accepted** 2026-09-02 | M3 · C15 · làm rõ điểm 10 của ADR-033 |
+| [036](ADR-036-file-drop-bat-buoc-publish.md) | File-drop bắt buộc publish, bỏ fallback theo mtime | **Accepted** 2026-09-06 | M3 · thay ngoại lệ Decision §4 của ADR-035 |
+| [037](ADR-037-benchmark-rollup-chi-doc.md) | Benchmark rollup chỉ đọc, kiểm contract bằng metadata công khai | **Accepted** 2026-09-06 | M3 · giữ DoD của ADR-034 |
 
 Cột **Ra ở** là milestone dự kiến, không phải cam kết. Quyết định đến sớm hơn thì viết sớm hơn.
 

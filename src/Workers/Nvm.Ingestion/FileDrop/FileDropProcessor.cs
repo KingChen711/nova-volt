@@ -506,11 +506,6 @@ public sealed partial class FileDropProcessor
     /// </remarks>
     private string ExportName(string publishedName)
     {
-        if (!_options.RequiresPublishedSuffix)
-        {
-            return publishedName;
-        }
-
         if (!publishedName.EndsWith(_options.PublishedSuffix, StringComparison.Ordinal)
             || publishedName.Length == _options.PublishedSuffix.Length)
         {
@@ -525,7 +520,7 @@ public sealed partial class FileDropProcessor
     }
 
     private string PublishedPath(string dataFilePath) =>
-        _options.RequiresPublishedSuffix ? dataFilePath + _options.PublishedSuffix : dataFilePath;
+        dataFilePath + _options.PublishedSuffix;
 
     /// <summary>Publish một export đã claim trở lại inbox dưới một cái tên của riêng nó.</summary>
     /// <remarks>

@@ -645,7 +645,7 @@ services:
       # Readiness nam trong CHINH TEN file chu khong o mot file marker ben canh: hai file thi phai
       # lay bang hai lan rename, va producer publish lai giua hai lan do lam nguoi doc lay byte cua
       # export nay duoi readiness cua export khac (ADR-035, probe PAIR_RACE).
-      # De trong bien nay la tat hop dong va quay ve doan mo bang SettleTime.
+      # Bat buoc co hau to publish; gia tri rong bi tu choi khi khoi dong (ADR-036).
       NVM_INGEST__FileDrop__PublishedSuffix: .ready
       # C12: byte GOC cua moi file drop di thang len bucket WORM `raw-curve` (object lock COMPLIANCE
       # 15 nam, do minio-init dung). Truoc audit M3, `RawCurveArchiveStore` chi duoc goi tu integration

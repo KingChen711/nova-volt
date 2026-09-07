@@ -14,7 +14,7 @@ public sealed partial class FileDropWatcher : BackgroundService
     /// <summary>Tạo watcher.</summary>
     /// <param name="processor">File được biến thành gì.</param>
     /// <param name="options">Thư mục và timing.</param>
-    /// <param name="clock">Điều khiển poll interval và settle check (K1).</param>
+    /// <param name="clock">Điều khiển poll interval và cảnh báo file chờ publish (K1).</param>
     /// <param name="logger">Structured log sink.</param>
     public FileDropWatcher(
         FileDropProcessor processor,
@@ -39,18 +39,7 @@ public sealed partial class FileDropWatcher : BackgroundService
         _processor.EnsureDirectories();
         WatchingInbox(_logger, _options.InboxPath, _options.PollInterval);
 
-        if (_options.RequiresPublishedSuffix)
-        {
-            PublishContractInForce(_logger, _options.PublishedSuffix);
-        }
-        else
-        {
-            // Nói ra thành lời, một lần, đúng vào khoảnh khắc duy nhất có ai đó đang đọc. Một
-            // deployment đã tắt contract này là đang đọc file theo một timer và coi một exporter im
-            // lặng là một exporter đã xong, và quyết định đó không được phép chỉ khám phá ra bằng
-            // cách đọc configuration.
-            PublishContractDisabled(_logger, _options.SettleTime);
-        }
+        PublishContractInForce(_logger, _options.PublishedSuffix);
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -94,7 +83,7 @@ public sealed partial class FileDropWatcher : BackgroundService
     /// </remarks>
     private IEnumerable<string> EnumerateInbox() =>
         Directory
-            .EnumerateFiles(_options.InboxPath, _options.RequiresPublishedSuffix ? "*" : "*.csv")
+            .EnumerateFiles(_options.InboxPath)
             .Order(StringComparer.Ordinal);
 
     /// <summary>Producer đã nói file này xong chưa.</summary>
@@ -105,11 +94,6 @@ public sealed partial class FileDropWatcher : BackgroundService
     /// </remarks>
     private bool IsReadable(string path)
     {
-        if (!_options.RequiresPublishedSuffix)
-        {
-            return HasSettled(path);
-        }
-
         if (!path.EndsWith(_options.PublishedSuffix, StringComparison.Ordinal))
         {
             return false;
@@ -124,10 +108,9 @@ public sealed partial class FileDropWatcher : BackgroundService
 
     private void ReportIfWaitingTooLong(string path)
     {
-        if (!_options.RequiresPublishedSuffix || !File.Exists(path))
+        if (!File.Exists(path))
         {
-            // Không có gì đang chờ: hoặc không có contract nào để chờ theo, hoặc file đã bị claim
-            // hoặc bị xóa giữa lúc liệt kê và lúc này.
+            // Producer có thể rename file sau lúc liệt kê; không báo chờ cho tên đã biến mất.
             return;
         }
 
@@ -142,22 +125,6 @@ public sealed partial class FileDropWatcher : BackgroundService
                 waited,
                 Path.GetFileNameWithoutExtension(path) + ".csv" + _options.PublishedSuffix);
         }
-    }
-
-    private bool HasSettled(string path)
-    {
-        if (_options.SettleTime <= TimeSpan.Zero)
-        {
-            return true;
-        }
-
-        // Cả hai vế đều UTC, và vế gần đi qua TimeProvider (K1). Vế xa là một timestamp do hệ điều
-        // hành ghi, nên một test lái theo một đồng hồ giả có một giá trị thật trong phép so sánh —
-        // đó là lý do một test không nói về settling thì đặt SettleTime bằng 0 thay vì cố dịch mtime
-        // của file.
-        var lastWrite = new DateTimeOffset(File.GetLastWriteTimeUtc(path), TimeSpan.Zero);
-
-        return _clock.GetUtcNow() - lastWrite >= _options.SettleTime;
     }
 
     [LoggerMessage(
@@ -179,15 +146,6 @@ public sealed partial class FileDropWatcher : BackgroundService
             "File drop reads an export only once it is named '<name>.csv{PublishedSuffix}'; producers "
             + "write to a temporary name, close it, and rename it into place in one step")]
     private static partial void PublishContractInForce(ILogger logger, string publishedSuffix);
-
-    [LoggerMessage(
-        EventId = 2513,
-        Level = LogLevel.Warning,
-        Message =
-            "File drop has no publish contract: an export is read after {SettleTime} of quiet, which "
-            + "cannot tell a finished file from an exporter that paused, so a partial run can be "
-            + "stored and its tail lost")]
-    private static partial void PublishContractDisabled(ILogger logger, TimeSpan settleTime);
 
     [LoggerMessage(
         EventId = 2514,

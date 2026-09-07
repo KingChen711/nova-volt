@@ -63,8 +63,9 @@ help:
 	@echo "    make rollup-refresh-wide Refresh rollup trong mot cua so dong, co gioi han"
 	@echo "    make telemetry-backfill Sinh lich su tu dung duong cong simulator va binary COPY"
 	@echo "    make compression-report D1/M3: do nen o hai cardinality tren chunk that"
-	@echo "    make rollup-bench   D2/M3: do truy van nhiet do 1 phut trong 7 ngay"
-	@echo "    make rollup-bench-line C15-3: cung truy van o muc line F1 1.000 kenh (evidence)"
+	@echo "    make rollup-bench   D2/M3: do chi doc, muc kenh va may tren hai cua so"
+	@echo "    make rollup-bench-line Do chi doc, muc line F1 1.000 kenh (evidence)"
+	@echo "    make rollup-bench-prepare Refresh parent/child va nen fixture (co ghi)"
 	@echo "    make rollup-reconcile D5/M3: dem mau den muon ma rollup con thieu"
 	@echo "    make calendar-lab  C14/M3: do CAST(date) sai voi lich san xuat bao nhieu"
 	@echo "    make outage-lab    D3 fail-closed: tat backend 2 phut, assert row delta = 0"
@@ -329,17 +330,16 @@ telemetry-backfill: ingestion-migrate
 compression-report: ingestion-migrate
 	@sh scripts/compression-report.sh
 
-# C10 pins the seven-day 100-channel fixture and compares the one-minute aggregate with raw data.
-# Fixture generation is intentionally separate because replaying the full duplicate stream adds
-# substantial unrelated work and disturbs the benchmark cache on every invocation.
-rollup-bench: ingestion-migrate
+# ADR-037: phép đo không chạy migration, refresh hoặc compression ngầm.
+rollup-bench: .env
 	@sh scripts/rollup-bench.sh
 
-# C15-3 do CUNG truy van do o muc line F1 (1.000 kenh) lam evidence cho M6/M7, khong phai gate M3.
-# File SQL rieng vi rollup-bench.sql la gate D2 dang xanh: them mot fixture 1.000 kenh vao giua
-# no se bat moi so cu phai do lai de chung minh chung khong doi.
-rollup-bench-line: ingestion-migrate
-	@EXPECTED_ROWS="$(EXPECTED_ROWS)" sh scripts/rollup-bench-line.sh
+rollup-bench-line: .env
+	@sh scripts/rollup-bench-line.sh
+
+.PHONY: rollup-bench-prepare
+rollup-bench-prepare: ingestion-migrate
+	@sh scripts/rollup-bench.sh prepare
 
 # C11 creates a uniquely labelled late-arrival probe, proves the regular five-hour refresh misses
 # it, proves a parent-only repair still leaves the machine child stale, then repairs both levels.

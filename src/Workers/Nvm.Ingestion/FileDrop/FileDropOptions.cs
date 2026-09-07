@@ -44,12 +44,8 @@ public sealed class FileDropOptions
     /// lỗi nào hiện ra ở đâu cả. Chỉ producer mới biết file đã hoàn tất; việc đổi tên là cách nó nói
     /// điều đó.
     /// </para>
-    /// <para>
-    /// Để rỗng thì tắt hợp đồng này cho một exporter không thể sửa đổi, và khi đó
-    /// <see cref="SettleTime"/> là tất cả những gì còn lại: một phỏng đoán cho cùng câu hỏi đó, mà
-    /// một exporter chạy chậm hoặc bị tạm dừng sẽ đánh bại. Watcher nói điều này một lần lúc khởi
-    /// động thay vì để nó vô hình.
-    /// </para>
+    /// Hậu tố bắt buộc có giá trị: thời gian file im lặng không chứng minh exporter đã đóng file.
+    /// <c>ADR-036</c> bỏ chế độ đoán bằng mtime; cấu hình rỗng phải bị từ chối trước khi nhận file.
     /// </remarks>
     public string PublishedSuffix { get; set; } = ".ready";
 
@@ -63,23 +59,12 @@ public sealed class FileDropOptions
     /// </remarks>
     public TimeSpan UnpublishedWarningAfter { get; set; } = TimeSpan.FromMinutes(5);
 
-    /// <summary>Một file phải không bị sửa đổi bao lâu trước khi nó được đọc.</summary>
-    /// <remarks>
-    /// Chỉ được tham khảo khi <see cref="PublishedSuffix"/> để rỗng. Một máy test ghi một file export
-    /// 40 MB qua share sẽ để lộ một file dang dở trong vài giây. Đọc file lúc đó sẽ nạp vào một nửa
-    /// lượt ghi rồi chuyển nó sang processed, và nửa còn lại sẽ không bao giờ được thấy lại — một
-    /// mất mát không có lỗi nào hiện ra ở đâu cả.
-    /// </remarks>
-    public TimeSpan SettleTime { get; set; } = TimeSpan.FromSeconds(2);
-
     /// <summary>Adapter file-drop có chạy hay không.</summary>
     public bool Enabled { get; set; }
 
-    /// <summary>Một producer có phải đổi tên một file export vào đúng chỗ trước khi nó được đọc hay không.</summary>
-    public bool RequiresPublishedSuffix => PublishedSuffix.Length > 0;
-
     /// <summary>Từ chối một cấu hình mà sẽ không thể xử lý được bất kỳ file nào.</summary>
-    /// <exception cref="InvalidOperationException">Thiếu một path hoặc một khoảng thời gian không dương.</exception>
+    /// <exception cref="ArgumentException">Thiếu path hoặc hậu tố publish.</exception>
+    /// <exception cref="InvalidOperationException">Khoảng thời gian, hậu tố hoặc quan hệ giữa các thư mục không hợp lệ.</exception>
     public void Validate()
     {
         if (!Enabled)
@@ -90,24 +75,21 @@ public sealed class FileDropOptions
         ArgumentException.ThrowIfNullOrWhiteSpace(InboxPath);
         ArgumentException.ThrowIfNullOrWhiteSpace(ProcessedPath);
         ArgumentException.ThrowIfNullOrWhiteSpace(RejectedPath);
-        ArgumentNullException.ThrowIfNull(PublishedSuffix);
+        ArgumentException.ThrowIfNullOrWhiteSpace(PublishedSuffix);
 
-        if (PollInterval <= TimeSpan.Zero || SettleTime < TimeSpan.Zero)
+        if (PollInterval <= TimeSpan.Zero)
         {
             throw new InvalidOperationException(
-                "The poll interval must be positive and the settle time cannot be negative.");
+                "The poll interval must be positive.");
         }
 
-        if (RequiresPublishedSuffix)
-        {
-            ValidatePublishedSuffix();
+        ValidatePublishedSuffix();
 
-            if (UnpublishedWarningAfter <= TimeSpan.Zero)
-            {
-                throw new InvalidOperationException(
-                    "The unpublished-file warning delay must be positive, or a file waiting for a "
-                    + "publish that will never come waits without anybody being told.");
-            }
+        if (UnpublishedWarningAfter <= TimeSpan.Zero)
+        {
+            throw new InvalidOperationException(
+                "The unpublished-file warning delay must be positive, or a file waiting for a "
+                + "publish that will never come waits without anybody being told.");
         }
 
         if (string.Equals(InboxPath, ProcessedPath, StringComparison.Ordinal)

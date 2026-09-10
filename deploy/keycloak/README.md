@@ -23,15 +23,17 @@ Keycloak với `start-dev --import-realm`.
 
 **Không có volume cho H2.** Đây là quyết định thiết kế, không phải thiếu sót:
 
-- Mỗi lần khởi động là một lần import lại từ file → `realm-novavolt.json` là **nguồn sự
+- Mỗi lần recreate mà không khôi phục H2 là một lần import lại từ file → `realm-novavolt.json` là **nguồn sự
   thật duy nhất**.
-- Mọi thay đổi bấm tay trong Admin Console **biến mất khi restart**, buộc thay đổi phải đi
+- Mọi thay đổi bấm tay trong Admin Console **biến mất khi recreate mất H2**, buộc thay đổi phải đi
   qua file này và được commit. Realm-as-code.
 - Cũng tránh luôn lỗi kỹ thuật: named volume gắn vào `/opt/keycloak/data/h2` được Docker
   tạo với chủ sở hữu `root`, còn Keycloak chạy bằng uid 1000, nên H2 chết với
   `AccessDeniedException` ngay lúc khởi động.
 
-Muốn thử nghiệm trong console thì cứ thử, nhưng **chốt lại vào file này** trước khi restart.
+`docker restart` giữ writable layer và H2; realm đã tồn tại sẽ không được import đè.
+Chốt mapper/role vào JSON và áp dụng cùng thay đổi vào realm đang chạy. Trước khi recreate container
+đang dùng cho Mendix, phải giữ database/cấu hình hiện có; không dùng recreate như một cách cập nhật mapper.
 
 > [!warning] `docker compose restart` KHÔNG nạp lại realm
 > "Mỗi lần khởi động là một lần import lại" chỉ đúng với **container mới**. H2 nằm trong lớp

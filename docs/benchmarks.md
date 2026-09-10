@@ -603,3 +603,35 @@ Ghi lại để lần sau khỏi tưởng là quên:
 | Throughput bất kỳ | Chưa có đường dữ liệu nào. Bắt đầu ở M2 |
 | Độ trễ truy vấn | Chưa có read model. Bắt đầu ở M6 |
 | Thời gian build | Solution mới có 3 project; số bây giờ không nói lên điều gì về sau |
+
+---
+
+## M4/C02 — Equipment POM, trước PoC grid Mendix
+
+Chưa nghiệm thu C02/M4: các phép kiểm dưới đây không thay login/grid bằng Mendix, refresh token của
+connector, page p95 hoặc lab M4. Chưa chạy full CI ở giai đoạn này.
+
+| Ngày | Commit | Chỉ số | Giá trị | Điều kiện đo |
+|---|---|---|---|---|
+| 2026-09-07 | `ff158c7` + working tree C02 | Fixture Equipment lần đầu | 6 row mới: 3 NV1 + 3 DE1 | `docker compose --profile execution run --rm --no-deps execution-prepare-poc`; lấy MODULE/PACK từ catalog r3; chưa có ProductionUnits/WipBoard |
+| 2026-09-07 | `ff158c7` + working tree C02 | Fixture chạy lại | 0 row mới | Cùng lệnh, cùng PostgreSQL; không sửa row/credential đã tồn tại |
+| 2026-09-07 | `ff158c7` + working tree C02 | Quyền role `nvm_pom` | SELECT=true; INSERT/UPDATE/DELETE=false; CREATE schema=false | Query `has_table_privilege`/`has_schema_privilege` trên `pom.equipment`/`pom`; runtime không dùng credential migration |
+| 2026-09-09 | `ff158c7` + working tree C02 | POM integration/metadata snapshot | 21/21 pass | PostgreSQL 17.9 Testcontainers + TestServer + JWT ký RSA; có invalid signature/issuer/audience/expiry, quyền/site, đổi principal, query/count/key, paging, ETag và từ chối write |
+| 2026-09-09 | `ff158c7` + working tree C02 | Architecture tests | 23/23 pass | `dotnet test --project tests/Architecture/Nvm.ArchitectureTests/Nvm.ArchitectureTests.csproj` |
+| 2026-09-09 | `ff158c7` + working tree C02 | Fixture chạy lại trên image cuối | 0 row mới | Image Execution `sha256:628b0a66ece767afb643ca7a41f85bf03aefd64dc0720f3dd0cf421b5b31f781`; không còn cảnh báo GSSAPI của lần chạy đầu |
+| 2026-09-09 | `ff158c7` + working tree C02 | Execution, token thật NV1 | count=3; trang 2+1; filter DE1=0; key DE1=404; metadata=200; anonymous=401 | Keycloak 26.7.2, client `nvm-mendix`, audience `nvm-api`; HTTP 5081, PostgreSQL fixture thật |
+| 2026-09-09 | `ff158c7` + working tree C02 | Execution, token thật DE1 | count=3; trang 2+1; filter NV1=0; key NV1=404; metadata=200; anonymous=401 | Cùng image/fixture; HTTP 5081 |
+| 2026-09-09 | `ff158c7` + working tree C02 | Host.All, token thật NV1 | count=3; trang 2+1; filter DE1=0; key DE1=404; metadata=200; anonymous=401 | Process local 5080 dùng cùng POM registration/policy; dừng process sau phép kiểm |
+| 2026-09-09 | `ff158c7` + working tree C02 | Host.All, token thật DE1 | count=3; trang 2+1; filter NV1=0; key NV1=404; metadata=200; anonymous=401 | Process local 5080, cùng fixture |
+| 2026-09-09 | `ff158c7` + working tree C02 | Metadata thực tế | XML của Execution khớp snapshot import | So XML từ `$metadata` có Bearer thật với `deploy/pom/Equipment.metadata.xml`; chưa import vào Studio Pro |
+
+Lệnh test POM:
+
+```sh
+dotnet test --project tests/Integration/Nvm.IntegrationTests/Nvm.IntegrationTests.csproj -- --filter-class '*PomEquipmentTests'
+```
+
+Phép kiểm HTTP thật dùng `$count=true&$orderby=Id&$top=2`, trang kế `$skip=2&$top=2`, filter
+`SiteId eq '<site còn lại>'`, lookup key EOL của site còn lại và request không Authorization.
+Kết quả thô local tại `artifacts/m4-c02/runtime-2026-09-09.json` chỉ có status/count/site, không token.
+Execution container tạo lúc `2026-09-09T12:53:34.884172595Z`, UID 1654, chỉ nối `novavolt-mes_it-net`.

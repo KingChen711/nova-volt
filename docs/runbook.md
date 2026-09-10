@@ -513,3 +513,37 @@ docker logs nvm-ingestion 2>&1 | grep 'reads an export only once'
 
 Sau khi sửa exporter: thả một export thật, rồi kiểm cả ba mặt trong cùng một lượt — row vào database,
 object trong MinIO, và file trong `processed/`. Chỉ một trong ba là chưa chứng minh được gì.
+
+<a id="port-windows-m4"></a>
+
+## Mendix/Keycloak không bind được port trên Windows
+
+Nếu không có listener nhưng lỗi chứa `AccessDenied` hoặc
+`An attempt was made to access a socket in a way forbidden by its access permissions`, kiểm dải
+Windows đang giữ. Ngày 2026-09-07 đã gặp dải `8071–8170` chứa cả Mendix 8080 và Keycloak 8081.
+
+```powershell
+Get-NetTCPConnection -State Listen | Where-Object LocalPort -in 7782,8080,8081,5081
+netsh interface ipv4 show excludedportrange protocol=tcp
+netsh interface ipv6 show excludedportrange protocol=tcp
+docker port nvm-keycloak
+```
+
+Chạy lại các lệnh sau mỗi lần restart. Không suy từ `healthy` bên trong container rằng port host đã
+được publish. Với port đang trống, thử bind TCP rồi đóng socket là phép kiểm trực tiếp; trước khi dùng
+port thay thế cũng kiểm như vậy. Đổi port Keycloak/Mendix phải đồng bộ `.env`, issuer, redirect URI
+trong client Keycloak và cấu hình OIDC của app; giữ H2 trước khi recreate Keycloak.
+
+MCP 7782 có thể hiện process `System` vì dùng HTTP.sys. Khi đó đối chiếu request queue:
+
+```powershell
+netsh http show servicestate view=requestq verbose=yes
+```
+
+Queue `HTTP://LOCALHOST:7782/MCP/` thuộc `studiopro.exe`, POST MCP thành công nghĩa là port đang phục vụ
+đúng app. GET MCP trả 405 không chứng minh server hỏng. Sau lần restart tiếp theo ngày 2026-09-09,
+Mendix 8080 bind được, Keycloak 8081 trả discovery/token và MCP 7782 đọc module được; project giữ port cũ.
+
+Nếu Equipment trả 401 sau khi OIDC login đã hoạt động, kiểm audience của access token mới: cần
+`nvm-api`. Client `nvm-mendix` phải có mapper `nvm-api-audience` như realm JSON; cập nhật JSON không tự
+thay đổi realm đã import. Áp dụng mapper vào runtime và đăng nhập lại. Không đưa token hoặc secret vào log.

@@ -1,12 +1,14 @@
 <Solution>
   <Folder Name="/src/" />
   <Folder Name="/src/Apps/">
+    <Project Path="src/Apps/Nvm.App.Execution/Nvm.App.Execution.csproj" />
     <Project Path="src/Apps/Nvm.Host.All/Nvm.Host.All.csproj" />
   </Folder>
   <Folder Name="/src/FunctionalBlocks/">
     <Project Path="src/FunctionalBlocks/FactoryModel/Nvm.FactoryModel.csproj" />
   </Folder>
   <Folder Name="/src/Platform/">
+    <Project Path="src/Platform/Nvm.PublicObjectModel/Nvm.PublicObjectModel.csproj" />
     <Project Path="src/Platform/Nvm.Bus/Nvm.Bus.csproj" />
     <Project Path="src/Platform/Nvm.Contracts/Nvm.Contracts.csproj" />
     <Project Path="src/Platform/Nvm.Hosting/Nvm.Hosting.csproj" />

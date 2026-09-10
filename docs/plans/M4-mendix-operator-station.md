@@ -2,7 +2,7 @@
 title: "M4 — Mendix nhập môn: Operator Station v1"
 milestone: M4
 duration: "2 tuần theo scope; ước lượng lại sau C02 nếu connector không tương thích"
-status: in_progress # C01 hoàn tất tài liệu; C02 và runtime M4 chưa triển khai.
+status: in_progress # C01/C02 hoàn tất; tiếp theo C03 operator read models.
 created: 2026-09-07
 depends_on: [M0, M1, M2, M3]
 unlocks: [M5]
@@ -260,7 +260,7 @@ Agent không sửa model Mendix; hướng dẫn theo skill, mỗi khối tối �
 | Commit | Mục tiêu / nơi sửa chính | Kiểm chứng trước khi giao |
 |---|---|---|
 | C01 · `docs(m4): define operator data collection boundaries` · **tài liệu xong** | Scope, ADR-007/014/038, glossary và catalog đã chốt contract §2.2 | Ba ví dụ review ở §2.3; parser 22/22. Chưa có runtime M4; phần triển khai bắt đầu C02 |
-| C02 · `feat(pom): prove authenticated Mendix OData reads` | Agent dựng `src/Apps/Nvm.App.Execution/`, `src/Platform/Nvm.PublicObjectModel/`, đăng ký trong Host.All, PG migration/fixture Equipment nhỏ, JWT policy và package pin. Owner dựng grid PoC trong app hiện có | Trên runtime thật: login → Equipment có token → trang kế → site khác bị chặn. Viết ADR-013 với metadata đã import được; không expose command ghi |
+| C02 · `feat(pom): prove authenticated Mendix OData reads` · **xong** | Đã có Execution/POM, Host.All registration, PG migration/fixture 6 Equipment, JWT policy, package pin và metadata snapshot; hướng dẫn/bằng chứng ở [deploy/pom](../../deploy/pom/README.md). Owner đã import `NvmShared.POM_v1`, gán URL constant và hai microflow headers/error handling; hai microflow 0 lỗi model, dump xác nhận URL/OData4 và binding. External entity Equipment có quyền ReadOnly cho NvmShared.User. Grid `NvmShopFloor.Equipment_PoC` có 7 cột, page size 2; app role Operator/LineLeader đã gán module role và role-based home page | 21 test POM + 23 architecture xanh; `make ci` xanh. Execution/Host.All đã đọc bằng token Keycloak thật ở cả hai site: trang 2+1 row, cross-site filter 0, key 404, anonymous 401; metadata runtime khớp snapshot. Port cũ hoạt động và audience mapper đã áp dụng. Mendix runtime: grid hiện đúng dữ liệu site, phân trang 2+1, cross-site isolation đúng, SSO login/role-based home page hoạt động. [ADR-013](../adr/ADR-013-odata-cho-public-object-model.md) chốt connector pattern |
 | C03 · `feat(pom): expose operator read models` | Agent thêm fixture đầy đủ và ba entity set §3.2, site filters/ETag/paging; owner import schema cuối vào NvmShared | Contract/integration test query, count, lookup, nextLink, ETag và site; fixture đúng equipment/serial; không query không giới hạn |
 | C04 · `feat(shopfloor): add dispatch and scan pages` | Owner cấu hình roles/access, Dispatch list và Scan station; agent hướng dẫn, đọc model và cung cấp case kiểm | D1/D2, line/resource đúng, state và lý do chặn; API gọi trực tiếp vẫn chặn ngoài site dù bỏ UI |
 | C05 · `feat(kernel): persist command outcomes in SQL transactions` | Agent thêm SQL infrastructure/migration/context từ cùng fixture C03, store, transaction wiring, guard Production; giữ pipeline dùng được với handler hiện có | Test SQL thật: effect/claim/outcome atomic, concurrency, rollback, replay sau restart, payload conflict; D6. Chưa mở command nghiệp vụ mới ra HTTP |
@@ -348,7 +348,7 @@ với một DoD hoặc ràng buộc hiện hành.
 
 ## 7. Checklist bàn giao và teach-back
 
-- [x] C01 đã chốt tài liệu; scope/ADR-007/014/038/plan nói cùng một contract, ba ví dụ ở §2.3. C02–C09 chưa nghiệm thu.
+- [x] C01 đã chốt tài liệu; C02 đã chứng minh connector và có ADR-013. C03–C09 chưa nghiệm thu.
 - [ ] D1–D8 và lab có bằng chứng; số chưa đo không được ghi như kết quả.
 - [ ] Backend đúng image/code đang chạy, base URL đúng; Mendix build/check consistency không lỗi,
   Security Production và quyền được kiểm bằng tài khoản thật.

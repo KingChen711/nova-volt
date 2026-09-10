@@ -14,7 +14,7 @@ SOLUTION := NovaVolt.Mes.slnx
 COMPOSE  := docker compose
 
 # `down` phải nêu đủ profile, nếu không container của profile không active sẽ bị bỏ lại.
-ALL_PROFILES := --profile probe --profile init --profile obs --profile tools --profile sim --profile ingestion --profile load
+ALL_PROFILES := --profile probe --profile init --profile obs --profile tools --profile sim --profile ingestion --profile execution --profile load
 
 # Đọc RIÊNG một biến từ .env thay vì `include .env`.
 # `include` nạp mọi biến vào make — kể cả mật khẩu — và một khoá trùng tên với biến
@@ -59,6 +59,8 @@ help:
 	@echo "    make ingestion-down Dung ingestion"
 	@echo "    make ingestion-logs Theo doi batch inserted/duplicate"
 	@echo "    make ingestion-migrate Chay rieng migration job PostgreSQL"
+	@echo "    make execution-prepare-poc Tao schema va fixture Equipment M4"
+	@echo "    make execution-up     Chay POM Execution (sau prepare-poc)"
 	@echo "    make telemetry-policy-lab Do retention 500 ngay va gia ghi vao chunk da nen"
 	@echo "    make rollup-refresh-wide Refresh rollup trong mot cua so dong, co gioi han"
 	@echo "    make telemetry-backfill Sinh lich su tu dung duong cong simulator va binary COPY"
@@ -284,6 +286,16 @@ buffer-crash:
 # ─────────────────────────────────────────────────────────
 # Ingestion — migration job tách khỏi app startup (scope.md §8.4)
 # ─────────────────────────────────────────────────────────
+# C02 chỉ chuẩn bị fixture Equipment; startup runtime không giữ credential migration.
+.PHONY: execution-up execution-prepare-poc
+execution-prepare-poc: .env
+	@$(COMPOSE) --profile execution build execution
+	@$(COMPOSE) --profile execution run --rm --no-deps execution-prepare-poc
+
+execution-up: .env
+	@$(COMPOSE) --profile execution build execution
+	@$(COMPOSE) --profile execution up -d --wait --no-deps execution
+
 ingestion-up: .env
 	@$(COMPOSE) --profile ingestion build ingestion
 	@$(COMPOSE) --profile ingestion run --rm ingestion-migrate

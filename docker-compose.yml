@@ -11,6 +11,7 @@
 #   probe       container rỗng chỉ để kiểm chứng ranh giới mạng
 #   sim         simulator thiết bị của M2 — `make up` thường KHÔNG kéo nó lên
 #   ingestion   HTTP bridge + migration job của M2
+#   execution   POM của M4; fixture/migration chạy tường minh trước khi start
 #   load        harness đo 5.000 msg/s của M2 (D2)
 #
 # Mọi service PHẢI khai báo mem_limit: máy chỉ có 15,4 GB và cần biết cái nào ngốn.
@@ -47,6 +48,53 @@ volumes:
   miniodata:
 
 services:
+  execution:
+    profiles: [execution]
+    build:
+      context: .
+      dockerfile: src/Apps/Nvm.App.Execution/Dockerfile
+    image: novavolt/nvm-execution:dev
+    container_name: nvm-execution
+    restart: unless-stopped
+    mem_limit: 384m
+    depends_on:
+      timescale:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      # Lab xác thực password; không thử Kerberos khi image không cài GSSAPI.
+      NVM_POM__ConnectionString: "Host=timescale;Port=5432;Database=${NVM_POSTGRES_DB};Username=nvm_pom;Password=${NVM_POM_PASSWORD};Application Name=Nvm.Pom.Read;Command Timeout=10;GSS Encryption Mode=Disable"
+      NVM_POM__Authority: "http://localhost:${NVM_PORT_KEYCLOAK}/realms/novavolt"
+      NVM_POM__MetadataAddress: "http://keycloak:8080/realms/novavolt/.well-known/openid-configuration"
+      NVM_POM__Audience: nvm-api
+    ports:
+      - "127.0.0.1:${NVM_PORT_EXECUTION:-5081}:8080"
+    networks: [it-net]
+    healthcheck:
+      test: ["CMD", "dotnet", "Nvm.App.Execution.dll", "--health-probe"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+
+  execution-prepare-poc:
+    profiles: [execution]
+    image: novavolt/nvm-execution:dev
+    restart: "no"
+    mem_limit: 256m
+    depends_on:
+      timescale:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      NVM_POM__MigrationConnectionString: "Host=timescale;Port=5432;Database=${NVM_POSTGRES_DB};Username=${NVM_POSTGRES_USER};Password=${NVM_POSTGRES_PASSWORD};GSS Encryption Mode=Disable"
+      NVM_POM_PASSWORD: ${NVM_POM_PASSWORD}
+      NVM_POM__FactoryModelPath: /app/seed/factory-model.r3.json
+    networks: [it-net]
+    command: ["--prepare-poc"]
+
   # ─────────────────────────────────────────────────────────
   # PostgreSQL + TimescaleDB — telemetry và read model
   #
@@ -497,9 +545,9 @@ services:
     # chủ sở hữu root, còn Keycloak chạy bằng uid 1000, nên H2 chết với
     # AccessDeniedException ngay lúc khởi động.
     #
-    # Nhưng lý do THIẾT KẾ mới là cái đáng giữ: không có volume thì mỗi lần khởi động
+    # Nhưng lý do THIẾT KẾ mới là cái đáng giữ: không có volume thì mỗi lần recreate
     # là một lần import lại realm từ file. File JSON trong git trở thành nguồn sự thật
-    # duy nhất, và mọi thay đổi bấm tay trong console đều biến mất — buộc thay đổi phải
+    # duy nhất, và mọi thay đổi bấm tay trong console đều biến mất nếu không giữ H2 — buộc thay đổi phải
     # đi qua realm-novavolt.json và được commit. Đây là realm-as-code.
     networks: [it-net]
     healthcheck:

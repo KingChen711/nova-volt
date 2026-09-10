@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <RootNamespace>Nvm.App.Execution</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../Platform/Nvm.Hosting/Nvm.Hosting.csproj" />
+    <ProjectReference Include="../../Platform/Nvm.PublicObjectModel/Nvm.PublicObjectModel.csproj" />
+  </ItemGroup>
+</Project>

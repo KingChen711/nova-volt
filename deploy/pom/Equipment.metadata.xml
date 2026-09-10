@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<edmx:Edmx Version="4.0" xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx">
+  <edmx:DataServices>
+    <Schema Namespace="Nvm.Pom.V1" xmlns="http://docs.oasis-open.org/odata/ns/edm">
+      <EntityType Name="Equipment">
+        <Key>
+          <PropertyRef Name="Id" />
+        </Key>
+        <Property Name="Id" Type="Edm.String" Nullable="false" MaxLength="64" />
+        <Property Name="SiteId" Type="Edm.String" Nullable="false" MaxLength="3" />
+        <Property Name="EquipmentPath" Type="Edm.String" Nullable="false" MaxLength="256" />
+        <Property Name="Name" Type="Edm.String" Nullable="false" MaxLength="128" />
+        <Property Name="Line" Type="Edm.String" Nullable="false" MaxLength="2" />
+        <Property Name="Resource" Type="Edm.String" Nullable="false" MaxLength="32" />
+        <Property Name="Revision" Type="Edm.Int32" Nullable="false" />
+      </EntityType>
+      <EntityContainer Name="PublicObjectModel">
+        <EntitySet Name="Equipment" EntityType="Nvm.Pom.V1.Equipment">
+          <Annotation Term="Org.OData.Core.V1.OptimisticConcurrency">
+            <Collection>
+              <PropertyPath>Revision</PropertyPath>
+            </Collection>
+          </Annotation>
+        </EntitySet>
+      </EntityContainer>
+    </Schema>
+  </edmx:DataServices>
+</edmx:Edmx>

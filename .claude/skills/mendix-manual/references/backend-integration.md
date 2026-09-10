@@ -53,23 +53,24 @@ dùng nó cho XPath constraint — xem §5.
 http://localhost:5080/pom/v1/$metadata
 ```
 
-Studio Pro sinh ra entity ngoài (external entity) tương ứng. Dùng chúng trong DataView,
-Data Grid, List View như entity thường — trừ việc **không ghi được**.
+Import metadata tạo consumed service; external entity cần được thêm riêng vào domain model.
+Phiên 11.12.3 đã xác nhận import `POM_v1` chưa tạo `Equipment` — xem `studio-pro-traps.md` §0.26.
+Sau khi thêm external entity, dùng trong DataView, Data Grid, List View. POM của dự án chỉ cho đọc.
 
 **Quy ước của Public Object Model** (backend đã ép sẵn, biết để khỏi ngạc nhiên):
 
 | Quy ước | Nghĩa với Mendix |
 |---|---|
 | `SiteId` bị ép ở server theo token | Không cần tự lọc, và **không tin được** nếu tự lọc |
-| `$top` mặc định 50, tối đa 1.000 | Grid kéo nhiều hơn sẽ bị cắt |
-| Mọi collection có `@odata.nextLink` | Paging hoạt động bình thường |
-| `ETag` trên entity đơn | Dùng được cho optimistic concurrency phía UI |
+| Server page size 50, `$top` tối đa 1.000 | Phân biệt kích thước trang với giới hạn tổng số row được yêu cầu |
+| `@odata.nextLink` khi còn trang tiếp theo | Trang cuối không bắt buộc có nextLink |
+| `ETag` trên entity đơn | C02 dùng cho conditional read với `If-None-Match`; concurrency của command cần contract riêng |
 
 > [!warning] Đổi read model là đổi hợp đồng
 > Backend đổi shape của POM sẽ làm external entity trong Mendix lệch. Có snapshot của
-> `$metadata` trong contract test ở phía .NET (C12) đúng để bắt việc này ở CI, nhưng Mendix
-> phải **refresh** consumed service thì mới thấy. Sau mỗi lần backend đổi POM: right-click
-> consumed service → **Refresh**.
+> `$metadata` trong contract test phía .NET bắt thay đổi này ở CI, nhưng Mendix cần cập nhật
+> consumed service. Trên Studio Pro 11.12.3: mở consumed service → **Update**, chọn metadata mới.
+> C02 dùng snapshot file và Service URL riêng; xem `deploy/pom/README.md`.
 
 ---
 

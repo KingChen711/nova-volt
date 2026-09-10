@@ -20,11 +20,16 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../../../src/Platform/Nvm.PublicObjectModel/Nvm.PublicObjectModel.csproj" />
     <ProjectReference Include="../../../src/Platform/Nvm.Sparkplug/Nvm.Sparkplug.csproj" />
     <ProjectReference Include="../../../src/Workers/Nvm.EdgeGateway/Nvm.EdgeGateway.csproj" />
     <ProjectReference Include="../../../src/Workers/Nvm.Ingestion/Nvm.Ingestion.csproj" />
     <ProjectReference Include="../../../src/Workers/Nvm.Simulator/Nvm.Simulator.csproj" />
     <ProjectReference Include="../../../tools/telemetry/Nvm.TelemetryBackfill/Nvm.TelemetryBackfill.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="../../../deploy/pom/Equipment.metadata.xml" LogicalName="Equipment.metadata.xml" />
   </ItemGroup>
 
   <ItemGroup>

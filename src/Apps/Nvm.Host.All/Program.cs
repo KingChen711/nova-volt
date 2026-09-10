@@ -7,6 +7,7 @@ using Nvm.FactoryModel.Commands;
 using Nvm.Host.Infrastructure;
 using Nvm.Hosting;
 using Nvm.Kernel;
+using Nvm.PublicObjectModel;
 using Serilog;
 using Serilog.Events;
 
@@ -46,6 +47,7 @@ try
     }
 
     builder.Configuration.AddEnvironmentVariables();
+    builder.Services.AddNvmPublicObjectModel(builder.Configuration, builder.Environment);
 
     // Đồng hồ duy nhất được chấp nhận trong codebase. AGENTS.md K1 cấm DateTime.UtcNow
     // để những saga kéo dài cả ngày vẫn test được bằng FakeTimeProvider.
@@ -128,6 +130,9 @@ try
         app.MapDevBusEndpoints();
     }
 
+    app.UseAuthentication();
+    app.UseAuthorization();
+    app.MapNvmPublicObjectModel();
     app.Run();
     return 0;
 }

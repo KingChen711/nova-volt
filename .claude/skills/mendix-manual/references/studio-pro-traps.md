@@ -513,6 +513,120 @@ trình duyệt hiển thị, nên dùng được cả khi agent chạy không c�
 
 ---
 
+### 0.20 Windows giữ port: container healthy không chứng minh SSO truy cập được
+
+Đã đo ngày 2026-09-07: Windows liệt kê dải TCP **8071–8170** trong excluded ports cho cả IPv4/IPv6.
+Dải này chứa Mendix `8080` và Keycloak `8081`. Dải **7781–7880** cũng được giữ, chứa port MCP `7782`.
+Không suy từ việc Studio Pro mở được rằng runtime hay MCP đã bind được port.
+
+`nvm-keycloak` báo healthy nhưng `docker port nvm-keycloak` rỗng; `.HostConfig.PortBindings` vẫn ghi
+8081 trong khi `.NetworkSettings.Ports` không có binding. Restart và reconnect network không sửa được.
+Sau khi giữ H2 và tạo lại container, Docker trả lỗi thật:
+`bind: An attempt was made to access a socket in a way forbidden by its access permissions.`
+
+Kiểm bằng `netsh interface ipv4 show excludedportrange protocol=tcp` và bản `ipv6`; kiểm thêm
+listener hiện tại, thử bind rồi đóng socket với port đang trống và request HTTP mới từ host.
+Ngày 2026-09-09, sau lần restart tiếp theo của owner: `8080` bind được, Keycloak `8081` trả discovery
+và cấp token thật. Giữ port cũ; không thay OIDC URL khi lỗi đã hết. Restart từng không có tác dụng,
+nên không coi nó là cách sửa chắc chắn hoặc dùng lại output kiểm tra của lần trước.
+
+Riêng **`7782` xuất hiện trong excluded ports không đủ kết luận bị chặn**. Đã thấy listener PID 4
+(`System`) nhưng `netsh http show servicestate view=requestq verbose=yes` xác định request queue
+`HTTP://LOCALHOST:7782/MCP/` thuộc `studiopro.exe`. GET trả 405 là do MCP nhận POST; POST đọc resource
+và danh sách module đều thành công. Phân biệt HTTP.sys đang phục vụ Studio Pro với port reservation
+không có listener, nơi thử bind thật trả `AccessDenied`.
+
+`docker restart` giữ H2 trong writable layer. Recreate mới có nguy cơ mất nó. Phiên này đã lưu archive
+H2 với UID 1000 và khôi phục vào container; không được bỏ database khi xử lý lỗi port.
+
+---
+
+### 0.21 Import metadata từ file không tự điền Service URL
+
+Ảnh owner ngày 2026-09-10 xác nhận trên Studio Pro 11.12.3:
+
+- Hộp **Add Consumed OData Service** có `Name`, `Metadata from` (`URL`/`File`),
+  `Metadata File`, **Browse…** và **OK**.
+- Import `deploy/pom/Equipment.metadata.xml` đã tạo document `NvmShared.POM_v1`.
+- Editor có ba lựa chọn Connection: **Constants only (recommended)**,
+  **Configuration microflow**, **Headers microflow**. `Service URL` có nút **Select…**.
+- Sau import, `Service URL` vẫn là `(none)`; Error List báo đúng **CE5111 — Service URL not specified.**
+
+Đã xử lý CE5111 bằng constant String `NvmShared.POM_ServiceUrl`, giá trị
+`http://localhost:5081/pom/v1/`, `Exposed to client = No`, rồi chọn constant ở **Service URL**.
+Owner báo **0 errors** sau Save All và Check now. MCP đọc được constant; `mx dump-mpr` xác nhận
+`POM_v1.httpConfiguration.customLocation = @NvmShared.POM_ServiceUrl`, `oDataVersion = OData4`.
+Owner đã gán headers microflow `NvmShared.SUB_Pom_CreateHeaders` và error handler
+`NvmShared.SUB_Pom_HandleError`; dump mới xác nhận cả hai binding. Đọc grid có auth **đang kiểm**.
+
+`ped_list_folder` trả document type **Rest$ConsumedODataService** và `ped_get_schema` có schema,
+nhưng `ped_read_document` trả **Unknown document type** cho chính type đó. Đây là giới hạn tầng đọc
+PED trên app này, không phải document thiếu. Sau Save All, dùng `mx dump-mpr` cùng version với
+`--unit-type=Rest$ConsumedODataService` để kiểm cấu hình đã lưu; không sửa model qua file dump.
+
+---
+
+### 0.22 Return value không tự đổi kiểu trả về của microflow
+
+Ngày 2026-09-10, MCP đọc `NvmShared.SUB_Pom_CreateHeaders`: activity **Create list** đã tạo
+`HttpHeaders` kiểu `System.HttpHeader`, End event có `returnValue = $HttpHeaders`, nhưng
+`microflowReturnType` vẫn là **DataTypes$VoidType** (`Nothing`). Không suy ra kiểu trả về đã đúng
+chỉ từ biểu thức End event.
+
+Ảnh owner cùng ngày xác nhận hộp **Edit End Event** báo:
+**The expression is of type List of System.HttpHeader but should be of type Nothing.**
+Nút đúng ở cuối hộp thoại là **Update type to 'List of System.HttpHeader'**.
+Bấm nút đó, **OK**, rồi **File → Save All**; đọc lại `microflowReturnType` để xác nhận đã áp dụng.
+`ped_check_errors` đã trả **No errors found** trong khi biểu thức này vẫn sai trong dialog;
+không dùng riêng kết quả PED làm bằng chứng chữ ký microflow đã đúng. Sau khi owner bấm nút và Save All,
+MCP xác nhận `DataTypes$ListType`, entity `System.HttpHeader`, End event trả `$HttpHeaders`;
+`ped_check_errors` trả **No errors found**. Cách sửa đã được kiểm chứng.
+
+### 0.23 `ped_check_errors` nhận mảng documents
+
+Schema live ngày 2026-09-10 yêu cầu `documents: [{documentType, documentName}]`.
+Đặt `documentType`/`documentName` ngay ở root bị từ chối với lỗi **-32602**; thiếu mảng `documents`.
+Đọc schema tool hiện tại trước khi gọi, không suy chữ ký từ các tool `ped_read_document`.
+
+### 0.24 Decision cần condition value trên từng đường ra
+
+Ảnh owner ngày 2026-09-10: Decision `Has access token?` mới có một đường ra chưa gán nhãn;
+Error List báo hai **CE0079** (thiếu nhánh `true` và `false`) và **CE0773 — Value must be of type Boolean**
+trên **Sequence flow**. MCP xác nhận đường ra có `caseValues = []`, còn biểu thức Decision là
+`if $Token = empty then false else $Token/Access_token != empty`.
+Kiểm nhãn đường ra trước khi sửa biểu thức Decision; CE0773 ở Sequence flow không đồng nghĩa
+biểu thức Decision sai. Owner đặt nhãn qua chuột phải đường nối → **Condition value → true/false**,
+sao chép End event bằng **Ctrl+C**, **Ctrl+V**, rồi nối nhánh còn lại. MCP xác nhận đường phải là
+`true`, đường dưới là `false`, cả hai End event trả `$HttpHeaders`; `ped_check_errors` trả
+**No errors found**. Cách sửa đã được kiểm chứng trên Studio Pro 11.12.3.
+
+### 0.25 Tên trường output của Call microflow trả Boolean
+
+Ảnh owner ngày 2026-09-10 trên Studio Pro 11.12.3 xác nhận hộp **Edit Call Microflow**:
+phần **Output** có **Return type**, **Use return variable** (`Yes`/`No`) và **Variable name**.
+Với `OIDC.GetNewAccessTokenUsingRefreshToken`, Return type là `Boolean`; ảnh đang chọn `Yes`,
+Variable name là `Variable`. Bảng argument hiển thị `Token = $Token` và
+`ClientConfiguration = $ClientConfiguration`. Dùng đúng các nhãn này khi hướng dẫn lưu kết quả refresh.
+
+---
+
+### 0.26 Import metadata chưa tự tạo external entity
+
+Ngày 2026-09-10, sau import `POM_v1` và gán hai microflow, MCP đọc Domain model `NvmShared`
+vẫn chỉ có `NvmAccount`; chưa có `Equipment`. Import tạo consumed service, external entity cần thêm riêng.
+**Connector** và **Integration** là hai pane khác nhau. Ảnh owner trên Studio Pro 11.12.3 xác nhận
+Connector hiển thị **Nothing to connect** khi chọn `NvmAccount`; pane này gợi ý các phần tử có thể nối
+với phần tử đang chọn. Pane dùng cho consumed services/external entities là **Integration**, mở qua
+**View → Integration**. Ảnh owner tiếp theo xác nhận pane này có tab **Used in app**, hiển thị
+`POM_v1 → Entities → Equipment` cùng các thuộc tính; đường mở pane đã được kiểm chứng trên 11.12.3.
+Owner đã kéo dòng `Equipment` vào domain model; ảnh và MCP xác nhận `NvmShared.Equipment`
+có source `Rest$ODataRemoteEntitySource`, trỏ tới `NvmShared.POM_v1`, entity set `Equipment`.
+Thuộc tính local `_Id` ánh xạ tới remote `Id`; không tự đổi tên cho giống backend.
+Entity mới có `accessRules = []` dù checker báo 0 errors; quyền và đọc grid cần kiểm riêng.
+Nguồn: https://docs.mendix.com/refguide/view-menu/ và https://docs.mendix.com/refguide/integration-pane/.
+
+---
+
 ## Ledger kế thừa từ CGVibe
 
 > [!warning] Điểm chung của gần hết danh sách này
@@ -520,6 +634,15 @@ trình duyệt hiển thị, nên dùng được cả khi agent chạy không c�
 > hoặc ở runtime thật. Một model "0 errors" không có nghĩa là app chạy.
 
 ---
+
+### 0.27 Trang Home không có sẵn nút đăng xuất hoặc đăng nhập SSO
+
+Ảnh runtime ngày 2026-09-10 của `MyFirstModule.Home_Web` hiển thị Home, IdP configuration,
+Accounts và thông báo không tìm thấy NovaVolt account; không có nút đăng xuất/đăng nhập.
+Không hướng dẫn người dùng tìm nút chưa được thêm vào page/layout. Ảnh này chưa đủ xác định
+tài khoản đang đăng nhập. GET mới tới `http://localhost:8080/oauth/v2/login` đã trả HTTP 302
+tới endpoint authorization của realm `novavolt` trên port 8081. Có thể hướng dẫn mở URL đó
+trong cửa sổ InPrivate riêng để bắt đầu SSO; đăng nhập và grid trong phiên này còn đang kiểm.
 
 ## 1. Khi kiểm tra lỗi
 

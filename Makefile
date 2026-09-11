@@ -60,7 +60,8 @@ help:
 	@echo "    make ingestion-logs Theo doi batch inserted/duplicate"
 	@echo "    make ingestion-migrate Chay rieng migration job PostgreSQL"
 	@echo "    make execution-prepare-poc Tao schema va fixture Equipment M4"
-	@echo "    make execution-up     Chay POM Execution (sau prepare-poc)"
+	@echo "    make execution-prepare-operator-fixture Seed 1000 unit/site va WIP M4"
+	@echo "    make execution-up     Chay POM Execution (sau seed)"
 	@echo "    make telemetry-policy-lab Do retention 500 ngay va gia ghi vao chunk da nen"
 	@echo "    make rollup-refresh-wide Refresh rollup trong mot cua so dong, co gioi han"
 	@echo "    make telemetry-backfill Sinh lich su tu dung duong cong simulator va binary COPY"
@@ -287,7 +288,7 @@ buffer-crash:
 # Ingestion — migration job tách khỏi app startup (scope.md §8.4)
 # ─────────────────────────────────────────────────────────
 # C02 chỉ chuẩn bị fixture Equipment; startup runtime không giữ credential migration.
-.PHONY: execution-up execution-prepare-poc
+.PHONY: execution-up execution-prepare-poc execution-prepare-operator-fixture
 execution-prepare-poc: .env
 	@$(COMPOSE) --profile execution build execution
 	@$(COMPOSE) --profile execution run --rm --no-deps execution-prepare-poc
@@ -295,6 +296,10 @@ execution-prepare-poc: .env
 execution-up: .env
 	@$(COMPOSE) --profile execution build execution
 	@$(COMPOSE) --profile execution up -d --wait --no-deps execution
+
+execution-prepare-operator-fixture: .env
+	@$(COMPOSE) --profile execution build execution
+	@$(COMPOSE) --profile execution run --rm --no-deps execution-prepare-poc --prepare-operator-fixture
 
 ingestion-up: .env
 	@$(COMPOSE) --profile ingestion build ingestion

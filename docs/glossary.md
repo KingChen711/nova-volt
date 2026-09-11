@@ -39,6 +39,8 @@ Routing đầy đủ ở [`scope.md`](scope.md) §2.2.
 | **`COAT`** | Phủ bùn lên lá kim loại thành cuộn dài. Truy vết tới **vị trí mét trên cuộn** |
 | **`SLIT`** | Xẻ cuộn mẹ thành cuộn con, kèm **ánh xạ toạ độ** để giữ được vị trí mét gốc |
 | **`STACK`** | ★ Xếp chồng điện cực thành hình viên pin. **Serial ra đời ở đây** — ranh giới giữa truy vết theo lot và truy vết theo cá thể |
+| **`MLOAD`** | Đưa cell vào các vị trí của module trong routing sản phẩm A. Fixture M4 dùng trạm `MODULE/M1/MLOAD-01`; đây là công đoạn của module, không phải nơi sinh serial cell |
+| **`PLOAD`** | Đưa module hoặc cell vào các vị trí của pack, tuỳ routing sản phẩm A/B. Fixture M4 dùng trạm `PACK/P1/PLOAD-01`; hoàn tất việc nạp chưa đồng nghĩa pack đã qua kiểm tra cuối chuyền |
 | **`FILL` / `SEAL`** | Bơm điện giải và hàn kín |
 | **Formation** (`FORM`) | **Lần nạp điện đầu tiên** của cell vừa lắp. Tạo lớp **SEI** quyết định tuổi thọ pin. Kéo dài hàng giờ, cell nằm trong **tray**, cắm vào một **channel** |
 | **SEI** | *Solid Electrolyte Interphase* — lớp màng hình thành trên anode trong lúc formation |

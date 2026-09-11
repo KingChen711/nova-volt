@@ -547,3 +547,19 @@ Mendix 8080 bind được, Keycloak 8081 trả discovery/token và MCP 7782 đ�
 Nếu Equipment trả 401 sau khi OIDC login đã hoạt động, kiểm audience của access token mới: cần
 `nvm-api`. Client `nvm-mendix` phải có mapper `nvm-api-audience` như realm JSON; cập nhật JSON không tự
 thay đổi realm đã import. Áp dụng mapper vào runtime và đăng nhập lại. Không đưa token hoặc secret vào log.
+
+### POM C03 trả 503 sau khi thêm ProductionUnits/WipBoard
+
+Readiness kiểm SELECT trên cả ba bảng, nên migrate schema và cấp quyền trước khi chạy image mới.
+Trong môi trường học Development, chạy `make execution-prepare-operator-fixture`, rồi
+`make execution-up`. Job dùng credential migration; runtime `nvm_pom` chỉ cần SELECT.
+Không thêm credential migration vào cấu hình web hoặc kết nối Mendix trực tiếp tới PostgreSQL.
+
+Seed mới thêm 1.000 unit/site, 8 resource tổng cộng và 32 nhóm WIP; trên dữ liệu Equipment C02 đã có,
+chỉ thêm 2 resource NV1. Seed lại giữ bản ghi hiện có, không xoay credential, không xoá telemetry.
+Nếu sửa tay context fixture, seed không tự đồng bộ WIP với thay đổi đó; phục hồi có chủ đích từng
+bản ghi hoặc dùng DB test riêng, không dùng `down -v` hay xoá toàn bộ dữ liệu demo.
+
+Mendix chưa nhìn thấy hai entity mới: mở `NvmShared.POM_v1` → **Update**, import
+`deploy/pom/Pom.metadata.xml`, rồi thêm external entities qua Integration. Giữ headers/error
+microflow và URL constant hiện có. UI cũ chỉ import Equipment không tự có schema C03 sau rebuild backend.

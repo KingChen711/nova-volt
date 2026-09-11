@@ -20,6 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../../../src/Apps/Nvm.App.Execution/Nvm.App.Execution.csproj" />
     <ProjectReference Include="../../../src/Platform/Nvm.PublicObjectModel/Nvm.PublicObjectModel.csproj" />
     <ProjectReference Include="../../../src/Platform/Nvm.Sparkplug/Nvm.Sparkplug.csproj" />
     <ProjectReference Include="../../../src/Workers/Nvm.EdgeGateway/Nvm.EdgeGateway.csproj" />
@@ -29,7 +30,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="../../../deploy/pom/Equipment.metadata.xml" LogicalName="Equipment.metadata.xml" />
+    <EmbeddedResource Include="../../../deploy/pom/Pom.metadata.xml" LogicalName="Pom.metadata.xml" />
+    <Content Include="../../../deploy/seed/factory-model.r3.json" Link="factory-model.r3.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

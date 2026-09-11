@@ -1,0 +1,75 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<edmx:Edmx Version="4.0" xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx">
+  <edmx:DataServices>
+    <Schema Namespace="Nvm.Pom.V1" xmlns="http://docs.oasis-open.org/odata/ns/edm">
+      <EntityType Name="Equipment">
+        <Key>
+          <PropertyRef Name="Id" />
+        </Key>
+        <Property Name="Id" Type="Edm.String" Nullable="false" MaxLength="64" />
+        <Property Name="SiteId" Type="Edm.String" Nullable="false" MaxLength="3" />
+        <Property Name="EquipmentPath" Type="Edm.String" Nullable="false" MaxLength="256" />
+        <Property Name="Name" Type="Edm.String" Nullable="false" MaxLength="128" />
+        <Property Name="Line" Type="Edm.String" Nullable="false" MaxLength="2" />
+        <Property Name="Resource" Type="Edm.String" Nullable="false" MaxLength="32" />
+        <Property Name="Revision" Type="Edm.Int32" Nullable="false" />
+      </EntityType>
+      <EntityType Name="ProductionUnit">
+        <Key>
+          <PropertyRef Name="Id" />
+        </Key>
+        <Property Name="Id" Type="Edm.String" Nullable="false" MaxLength="20" />
+        <Property Name="SiteId" Type="Edm.String" Nullable="false" MaxLength="3" />
+        <Property Name="SerialNumber" Type="Edm.String" Nullable="false" MaxLength="16" />
+        <Property Name="UnitKind" Type="Edm.String" Nullable="false" MaxLength="8" />
+        <Property Name="Line" Type="Edm.String" Nullable="false" MaxLength="2" />
+        <Property Name="Resource" Type="Edm.String" Nullable="false" MaxLength="32" />
+        <Property Name="EquipmentPath" Type="Edm.String" Nullable="false" MaxLength="256" />
+        <Property Name="WorkOrderId" Type="Edm.String" Nullable="false" MaxLength="32" />
+        <Property Name="OperationRunId" Type="Edm.String" Nullable="false" MaxLength="32" />
+        <Property Name="StepCode" Type="Edm.String" Nullable="false" MaxLength="8" />
+        <Property Name="ExecutionState" Type="Edm.String" Nullable="false" MaxLength="16" />
+        <Property Name="QualityState" Type="Edm.String" Nullable="false" MaxLength="16" />
+        <Property Name="LocationState" Type="Edm.String" Nullable="false" MaxLength="24" />
+        <Property Name="BlockingReasonCode" Type="Edm.String" MaxLength="32" />
+        <Property Name="BlockingReasonText" Type="Edm.String" MaxLength="256" />
+        <Property Name="Revision" Type="Edm.Int32" Nullable="false" />
+      </EntityType>
+      <EntityType Name="WipBoardRow">
+        <Key>
+          <PropertyRef Name="Id" />
+        </Key>
+        <Property Name="Id" Type="Edm.String" Nullable="false" MaxLength="48" />
+        <Property Name="SiteId" Type="Edm.String" Nullable="false" MaxLength="3" />
+        <Property Name="Line" Type="Edm.String" Nullable="false" MaxLength="2" />
+        <Property Name="StepCode" Type="Edm.String" Nullable="false" MaxLength="8" />
+        <Property Name="QualityState" Type="Edm.String" Nullable="false" MaxLength="16" />
+        <Property Name="UnitCount" Type="Edm.Int32" Nullable="false" />
+        <Property Name="Revision" Type="Edm.Int32" Nullable="false" />
+      </EntityType>
+      <EntityContainer Name="PublicObjectModel">
+        <EntitySet Name="Equipment" EntityType="Nvm.Pom.V1.Equipment">
+          <Annotation Term="Org.OData.Core.V1.OptimisticConcurrency">
+            <Collection>
+              <PropertyPath>Revision</PropertyPath>
+            </Collection>
+          </Annotation>
+        </EntitySet>
+        <EntitySet Name="ProductionUnits" EntityType="Nvm.Pom.V1.ProductionUnit">
+          <Annotation Term="Org.OData.Core.V1.OptimisticConcurrency">
+            <Collection>
+              <PropertyPath>Revision</PropertyPath>
+            </Collection>
+          </Annotation>
+        </EntitySet>
+        <EntitySet Name="WipBoard" EntityType="Nvm.Pom.V1.WipBoardRow">
+          <Annotation Term="Org.OData.Core.V1.OptimisticConcurrency">
+            <Collection>
+              <PropertyPath>Revision</PropertyPath>
+            </Collection>
+          </Annotation>
+        </EntitySet>
+      </EntityContainer>
+    </Schema>
+  </edmx:DataServices>
+</edmx:Edmx>

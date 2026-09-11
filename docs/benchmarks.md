@@ -606,10 +606,56 @@ Ghi lại để lần sau khỏi tưởng là quên:
 
 ---
 
-## M4/C02 — Equipment POM, trước PoC grid Mendix
+## M4/C03 — Operator read models
 
-Chưa nghiệm thu C02/M4: các phép kiểm dưới đây không thay login/grid bằng Mendix, refresh token của
-connector, page p95 hoặc lab M4. Chưa chạy full CI ở giai đoạn này.
+Parent C02: `7d8b10c6d356abe6194cf793c6f129da8c987181`. Bằng chứng test-only được giữ ở
+[M4-C03-red.patch](evidence/M4-C03-red.patch): thêm `PomNewRoutesTests` chỉ dùng HTTP và fixture test
+đã tồn tại ở parent, không phụ thuộc type/table C03. Trên checkout parent riêng, áp dụng patch rồi chạy:
+
+```sh
+git apply docs/evidence/M4-C03-red.patch
+dotnet build tests/Integration/Nvm.IntegrationTests/Nvm.IntegrationTests.csproj --nologo
+dotnet test tests/Integration/Nvm.IntegrationTests/Nvm.IntegrationTests.csproj --no-build -- --filter-class '*PomNewRoutesTests' --output Detailed
+```
+
+Patch phải lấy từ commit chứa C03; không đổi branch trên working copy dirty. Ngày 2026-09-10,
+trước khi thêm implementation: build 0 warning/0 error; **2/2 assertion đỏ**, cả `ProductionUnits`
+và `WipBoard` trả `NotFound` thay vì `OK`. Đây là lỗi hành vi HTTP, không phải lỗi compile/missing table.
+Sau implementation, **25 test mới/thay đổi đã pass qua các lượt targeted**: 2/2 route mới;
+22/23 operator test ở lượt đầu hoàn chỉnh; sau khi thay metadata placeholder bằng response XML thật,
+chạy riêng test metadata còn lại và **1/1 pass**. Không gọi đây là một lượt 25/25. Build 0 warning/0 error;
+`dotnet format` trên các file C03 và `git diff --check` đều exit 0.
+
+| Phép kiểm C03 | Kết quả | Phạm vi |
+|---|---|---|
+| Fixture PostgreSQL thật | 2.000 unit, 32 nhóm WIP, 8 equipment; seed lại thêm 0/0/0 | Testcontainers; NV1/DE1 mỗi site 1.000 unit; WIP 20/12 nhóm |
+| Serial/equipment/WIP | 2.000 serial duy nhất và hợp lệ; 0 unit thiếu equipment; 0 nhóm đếm sai | So parser, catalog r3 và GROUP BY từ bảng unit; không FORM tại DE1 |
+| Scope và paging | Unit NV1: 20 trang × 50; WIP test: 50+5; không lặp/thiếu/cross-site, trang cuối không nextLink | Sort có giá trị trùng nhau; WIP test thêm row trong DB cô lập rồi xoá |
+| Quyền và seed lặp | SELECT có quyền, INSERT/UPDATE/DELETE không có quyền trên cả ba bảng; row đã sửa được giữ sau reseed | HTTP test dùng role runtime; admin chỉ chuẩn bị fixture |
+| Metadata | XML response khớp `deploy/pom/Pom.metadata.xml`, đủ ba entity set | TestServer + PostgreSQL; Mendix import C03 chưa xác nhận |
+
+Lệnh GREEN dùng project trên, từng class với `--filter-class '*PomNewRoutesTests'` và `--filter-class '*PomOperatorReadModelsTests'`;
+test metadata riêng dùng `--filter-method '*MetadataIncludesAllThreeBoundedEntitiesWithStringKeys'`.
+Log local ở `artifacts/m4-c03/tests.log`, `metadata-green.log`, `build.log`, `format.log` (không commit).
+Full CI và các test C02 không thay đổi **chưa chạy lại theo yêu cầu owner**. Page p95, lab và teach-back
+M4 chưa thực hiện; không dùng kết quả C03 để đóng milestone.
+
+Runtime ngày **2026-09-11** (giờ Việt Nam), cùng working tree C03 trên parent `7d8b10c`:
+`docker compose --profile execution build execution`, job `execution-prepare-poc --prepare-operator-fixture`,
+rồi `up -d --wait --no-deps execution` đều exit 0. Seed thêm **2 equipment, 2.000 unit, 32 WIP rows**
+trên DB C02 hiện có. Query `BEGIN READ ONLY` xác nhận ProductionUnits NV1/DE1 **1.000/1.000**,
+WipBoard **20/12** nhóm và tổng UnitCount **1.000/1.000**, Equipment **5/3**.
+Execution đang chạy image `sha256:7564dc267a566b4a838707e4bbfa1ce452dba91c45c90cf51cb96e2a3d4411a3`,
+container tạo `2026-09-10T23:39:56.947926119Z`, UID **1654**, chỉ nối `novavolt-mes_it-net`;
+`GET http://localhost:5081/health/ready` trả **200**. Không recreate Keycloak/Mendix hay chạy lại
+PoC C02. HTTP có auth cho hai entity mới đã kiểm trong TestServer; **chưa kiểm qua Mendix**.
+
+## M4/C02 — Equipment POM và PoC grid Mendix
+
+Các phép kiểm ngày 2026-09-07/09 bên dưới được chạy trước PoC grid Mendix. Ngày 2026-09-10, owner
+xác nhận phiên kiểm với agent khác đã hoàn tất C02: grid NV1/DE1 tách site, phân trang 2+1, SSO và
+role-based home page hoạt động; plan và ADR-013 ghi nhận kết quả cùng `make ci` xanh. Phiên commit
+`7d8b10c` dùng lại bằng chứng đó theo yêu cầu owner, không chạy lại test. Page p95 và lab M4 vẫn chưa đo.
 
 | Ngày | Commit | Chỉ số | Giá trị | Điều kiện đo |
 |---|---|---|---|---|

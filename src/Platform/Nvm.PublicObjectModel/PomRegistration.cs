@@ -74,6 +74,8 @@ public static class PomRegistration
 
         var model = new ODataConventionModelBuilder { Namespace = "Nvm.Pom.V1", ContainerName = "PublicObjectModel" };
         model.EntitySet<Equipment>("Equipment");
+        model.EntitySet<ProductionUnit>("ProductionUnits");
+        model.EntitySet<WipBoardRow>("WipBoard");
         services.AddControllers().AddApplicationPart(typeof(EquipmentController).Assembly)
             .AddApplicationPart(typeof(MetadataController).Assembly).AddOData(options => options
             .Select().Filter().OrderBy().Count().SetMaxTop(1000).AddRouteComponents("pom/v1", model.GetEdmModel()));

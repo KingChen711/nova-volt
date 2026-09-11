@@ -37,7 +37,18 @@ if (args.Contains("--prepare-poc", StringComparer.Ordinal))
         throw new InvalidOperationException("The Equipment PoC fixture is only allowed in Development.");
     }
 
-    await EquipmentPocSeed.PrepareAsync(builder.Configuration);
+    await PomFixtureSeed.PrepareAsync(builder.Configuration);
+    return;
+}
+
+if (args.Contains("--prepare-operator-fixture", StringComparer.Ordinal))
+{
+    if (!builder.Environment.IsDevelopment())
+    {
+        throw new InvalidOperationException("The operator fixture is only allowed in Development.");
+    }
+
+    await PomFixtureSeed.PrepareAsync(builder.Configuration, includeOperators: true);
     return;
 }
 
@@ -59,8 +70,10 @@ app.MapGet("/health/ready", async (PomReadDbContext database, CancellationToken 
 {
     try
     {
-        // Kết nối được chưa đủ: schema và quyền SELECT cũng phải sẵn sàng.
+        // Kết nối được chưa đủ: schema và quyền SELECT của cả ba read model đều phải sẵn sàng.
         _ = await database.Equipment.AnyAsync(cancellationToken);
+        _ = await database.ProductionUnits.AnyAsync(cancellationToken);
+        _ = await database.WipBoard.AnyAsync(cancellationToken);
         return Results.Ok(new { Status = "Healthy" });
     }
     catch (NpgsqlException)

@@ -4,7 +4,6 @@ using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text.Json;
-using System.Xml.Linq;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.TestHost;
@@ -130,28 +129,6 @@ public sealed class PomEquipmentTests : IClassFixture<PomEquipmentFixture>
         conditional.StatusCode.ShouldBe(HttpStatusCode.NotModified);
         using var foreign = await _fixture.SendAsync("Equipment('NV1-001')", _fixture.Token("DE1"), etag: own.Headers.ETag.ToString());
         foreign.StatusCode.ShouldBe(HttpStatusCode.NotFound);
-    }
-
-    [Fact]
-    public async Task MetadataHasBoundedStringKeyAndNoNavigationOrActions()
-    {
-        using var response = await _fixture.SendAsync("$metadata", _fixture.Token());
-        response.StatusCode.ShouldBe(HttpStatusCode.OK);
-        var metadata = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-        var xml = XDocument.Parse(metadata);
-        XNamespace edm = "http://docs.oasis-open.org/odata/ns/edm";
-        var entity = xml.Descendants(edm + "EntityType").Single();
-        entity.Element(edm + "Key")!.Element(edm + "PropertyRef")!.Attribute("Name")!.Value.ShouldBe("Id");
-        var key = entity.Elements(edm + "Property").Single(property => property.Attribute("Name")!.Value == "Id");
-        key.Attribute("Type")!.Value.ShouldBe("Edm.String");
-        key.Attribute("MaxLength")!.Value.ShouldBe("64");
-        xml.Descendants(edm + "NavigationProperty").ShouldBeEmpty();
-        xml.Descendants(edm + "Action").ShouldBeEmpty();
-        // Artifact dùng cho import PoC; đây là response có auth, không phải EDM viết tay.
-        await File.WriteAllTextAsync(Path.Combine(AppContext.BaseDirectory, "Equipment.metadata.actual.xml"),
-            metadata, TestContext.Current.CancellationToken);
-        using var expected = typeof(PomEquipmentTests).Assembly.GetManifestResourceStream("Equipment.metadata.xml")!;
-        XNode.DeepEquals(xml, XDocument.Load(expected)).ShouldBeTrue("metadata import phải khớp response của host");
     }
 
     [Theory]

@@ -1,9 +1,49 @@
-# Equipment PoC — M4/C02
+# Public Object Model — M4
 
 Backend đã có `GET /pom/v1/Equipment`, lookup theo key, `$count` và `$metadata` có JWT.
 PoC trên Mendix **đã nghiệm thu ngày 2026-09-10**: grid hiện đúng dữ liệu site, phân trang 2+1,
 cross-site isolation đúng, SSO login hoạt động. [ADR-013](../../docs/adr/ADR-013-odata-cho-public-object-model.md)
 chốt connector pattern; plan M4 C02 đã đóng.
+
+## Schema C03 cho Operator Station
+
+C03 thêm hai entity set vào cùng service `POM_v1`; Equipment và cơ chế auth giữ cùng contract C02.
+
+| Entity set | Trường dành cho UI |
+|---|---|
+| `ProductionUnits` | `Id`, `SiteId`, `SerialNumber`, `UnitKind`, `Line`, `Resource`, `EquipmentPath`, `WorkOrderId`, `OperationRunId`, `StepCode`, `ExecutionState`, `QualityState`, `LocationState`, `BlockingReasonCode`, `BlockingReasonText`, `Revision` |
+| `WipBoard` | `Id`, `SiteId`, `Line`, `StepCode`, `QualityState`, `UnitCount`, `Revision` |
+| `Equipment` | `Id`, `SiteId`, `EquipmentPath`, `Name`, `Line`, `Resource`, `Revision` |
+
+`ProductionUnits.Id` là key kỹ thuật; Scan station tìm theo `SerialNumber`. `Line` là line đang làm
+việc, không thay định danh đã khắc lên unit. Ba trường state được hiển thị riêng. Quyền site do
+backend ép từ token; filter của grid chỉ thu hẹp dữ liệu đã được phép đọc.
+
+C05 sẽ dùng cùng nguồn fixture cho context SQL Server. C03 chưa tạo write model, command hay
+projection; các bản ghi kết quả đo và luồng chuyển trạng thái thuộc các commit sau.
+
+Seed cả ba tập bằng `make execution-prepare-operator-fixture`, rồi chạy `make execution-up`.
+Target dùng job chuẩn bị hiện có với argument `--prepare-operator-fixture`, chỉ chạy trong Development.
+Nó áp dụng migration, kiểm resource trong catalog r3, cấp SELECT cho runtime và INSERT fixture trong
+một transaction; chạy lại giữ nguyên row/credential đã tồn tại. Không tự seed khi web khởi động.
+Ngày 2026-09-11 đã chạy trên Docker local: mỗi site có 1.000 unit, WIP NV1/DE1 có 20/12 nhóm,
+Equipment có 5/3 resource; Execution image C03 mới trả `/health/ready` HTTP 200.
+
+| Site | Phân bố unit theo công đoạn | Equipment / nhóm WIP |
+|---|---|---|
+| NV1 | STACK 300; FORM 200; MLOAD 200; PLOAD 150; EOL 150 | 5 resource / 20 nhóm |
+| DE1 | MLOAD 400; PLOAD 300; EOL 300 | 3 resource / 12 nhóm |
+
+Mỗi công đoạn có 70% Pending (60% Running, 10% Scheduled), 10% Held, 10% Released và 10% Scrapped.
+Released gắn với operation đã Completed nhưng unit còn tại trạm; fixture không có hàng Shipped.
+WIP giữ bucket Scrapped ở rack riêng: tổng là số unit trong snapshot, không phải số hàng được phép đi tiếp.
+Cell tại FORM/F1 vẫn mang serial sinh ở L1. Không có formation tại DE1.
+
+Ví dụ scan EOL: NV1 serial `NV1PP16250A00001`, key `NV1-U000851`, run `OPRUN-NV1-EOL-0001`;
+DE1 serial `DE1PP16250A00001`, key `DE1-U000701`. NV1 `NV1-U000857` là case Held.
+Lookup theo serial: `ProductionUnits?$filter=SerialNumber eq 'NV1PP16250A00001'&$top=1`.
+`BlockingReasonCode/Text` cũng nêu operation chưa chạy/đã hoàn tất; giá trị rỗng không thay kiểm tra
+command trên context SQL ở C06.
 
 ## Dữ liệu và quyền
 
@@ -12,7 +52,7 @@ chốt connector pattern; plan M4 C02 đã đóng.
 Đây là WorkCell trong catalog, không tự thêm một tầng Equipment vào path.
 Chạy lại không sửa row đã có hoặc đổi password. Chưa seed ProductionUnits/WipBoard của C03.
 
-Runtime dùng role PostgreSQL `nvm_pom`, chỉ có `USAGE` schema `pom` và `SELECT` bảng Equipment.
+Runtime dùng role PostgreSQL `nvm_pom`, chỉ có `USAGE` schema `pom` và `SELECT` cả ba bảng POM.
 Credential admin chỉ vào process migration/seed riêng. Site lấy từ token; EF query filter chạy trước
 filter/paging/count của OData. Predicate đó là authorization; filter grid chỉ phục vụ hiển thị.
 
@@ -29,7 +69,7 @@ phải đang chạy. Khi dải port Windows bị giữ, xử lý theo [runbook](
 trước bước SSO. Các lệnh chạy từ repo root, trong Git Bash:
 
 ```sh
-make execution-prepare-poc
+make execution-prepare-operator-fixture
 make execution-up
 ```
 
@@ -49,10 +89,10 @@ qua môi trường. Startup web không tự migrate hay seed. M4/C02 chưa mở 
 
 ## Metadata và bước Mendix tiếp theo
 
-[Equipment.metadata.xml](Equipment.metadata.xml) là snapshot response `$metadata` có auth của cùng
+[Pom.metadata.xml](Pom.metadata.xml) là snapshot response `$metadata` có auth của cùng
 registration chạy bằng TestServer + PostgreSQL thật. Integration test so toàn bộ XML với snapshot này;
-response từ Execution Docker dùng token Keycloak thật cũng đã được so khớp ngày 2026-09-09.
-Ngày 2026-09-10, owner đã import snapshot thành `NvmShared.POM_v1` trên Studio Pro 11.12.3.
+snapshot Equipment của C02 đã được so với Execution Docker ngày 2026-09-09; snapshot C03 chứa cả ba entity set.
+Ngày 2026-09-10, owner đã import snapshot Equipment C02 thành `NvmShared.POM_v1` trên Studio Pro 11.12.3.
 Service URL đã trỏ tới constant String `NvmShared.POM_ServiceUrl` với giá trị
 `http://localhost:5081/pom/v1/`, không exposed to client. Owner báo 0 errors sau Save All/Check now;
 `mx dump-mpr` xác nhận binding URL, OData4, `headerListMicroflow = NvmShared.SUB_Pom_CreateHeaders`
@@ -61,15 +101,23 @@ và `errorHandlingMicroflow = NvmShared.SUB_Pom_HandleError`. Owner đã thêm e
 remote `Id`. Access rule `NvmShared.User` đã cấp ReadOnly cho cả 7 thuộc tính, không Create/Delete,
 default quyền thuộc tính mới là None; MCP xác nhận 0 lỗi model. App role Operator/LineLeader đã gán
 `NvmShopFloor.User` và có role-based home page `NvmShopFloor.Equipment_PoC`. Dump model xác nhận
-grid đọc `NvmShared.Equipment`, 7 cột, page size 2 và paging buttons; grid có auth ở runtime chưa kiểm.
+grid đọc `NvmShared.Equipment`, 7 cột, page size 2 và paging buttons. Owner đã xác nhận grid có auth
+ở runtime trong phiên kiểm C02 ngày 2026-09-10.
 
 App đang dùng: `C:\Users\Kingc\Mendix\NvmShopFloor-main\NvmShopFloor.mpr`, branch `main`, Studio Pro 11.12.3.
 Owner đã xác nhận mở đúng app. Chưa sửa model Mendix bằng agent.
 
-File đã import vào Consumed OData Service `NvmShared.POM_v1`. Tài liệu Mendix mô tả
+Snapshot Equipment C02 đã import vào Consumed OData Service `NvmShared.POM_v1`. Tài liệu Mendix mô tả
 menu `Add other > Consumed OData Service` và cách import file tại
 [Importing from a File](https://docs.mendix.com/catalog/register/data-sources-without-mendix-cloud/).
-Tiếp tục chạy app, đăng nhập và kiểm truy cập grid thật, phân trang và token refresh theo plan.
+Grid, phân trang và SSO đã kiểm ở C02. C03 cần owner mở service này, bấm **Update**, chọn snapshot
+`Pom.metadata.xml`, rồi kéo hai entity type `ProductionUnit` và `WipBoardRow` (entity set tương ứng
+`ProductionUnits` và `WipBoard`) từ Integration vào Domain model của
+`NvmShared`. Cấp ReadOnly cho `NvmShared.User`, quyền thuộc tính mới None, không Create/Delete.
+Giữ URL constant và hai binding headers/error handling. Ngày 2026-09-11, owner đã update POM_v1 từ
+`Pom.metadata.xml` C03: entity `ProductionUnits` (16 attr) và `WipBoard` (7 attr) đã thêm vào domain model
+`NvmShared`, ReadOnly cho `NvmShared.User`, default None, 0 errors model. Chưa kiểm runtime hai entity mới;
+commit Mendix C03 chưa tạo.
 
 Studio Pro 11.12 dùng `Headers microflow` trả list `System.HttpHeader`; URL lấy từ constant.
 Owner đã dựng `NvmShared.SUB_Pom_CreateHeaders` trong folder `Sso`; MCP xác nhận parameter
@@ -94,13 +142,15 @@ Ngày 2026-09-10 owner xác nhận runtime: grid hiện đúng dữ liệu NV1 c
 ## Kiểm backend
 
 ```sh
-dotnet test --project tests/Integration/Nvm.IntegrationTests/Nvm.IntegrationTests.csproj -- --filter-class '*PomEquipmentTests'
-dotnet build src/Apps/Nvm.Host.All/Nvm.Host.All.csproj --nologo
+dotnet build tests/Integration/Nvm.IntegrationTests/Nvm.IntegrationTests.csproj --nologo
+dotnet test tests/Integration/Nvm.IntegrationTests/Nvm.IntegrationTests.csproj --no-build -- --filter-class '*PomNewRoutesTests' --output Detailed
+dotnet test tests/Integration/Nvm.IntegrationTests/Nvm.IntegrationTests.csproj --no-build -- --filter-class '*PomOperatorReadModelsTests' --output Detailed
 ```
 
-Test dùng PostgreSQL 17.9 và JWT ký RSA với issuer test; không gọi Keycloak thật.
-Các case kiểm signature/issuer/audience/lifetime, role/site, đổi principal qua cùng EF model cache,
-filter/count/lookup, server paging 50+2, client paging, conditional ETag và từ chối write/query ngoài phạm vi.
+Test C03 dùng PostgreSQL 17.9 và JWT ký RSA với issuer test; runtime test đọc bằng role `nvm_pom`.
+Các case kiểm hai route mới, metadata, đổi principal qua cùng EF model cache, filter/count/lookup,
+phân trang có giá trị sort trùng nhau, conditional ETag, quyền chỉ đọc và từ chối query ngoài phạm vi.
+Fixture được so với serial parser, equipment catalog và tất cả nhóm WIP; seed lại giữ row đã có.
 Số đo hiện tại ở [benchmarks](../../docs/benchmarks.md).
 
 Ngày 2026-09-09: 21/21 test POM và 23/23 architecture xanh. Kiểm thêm hai host đang chạy thật

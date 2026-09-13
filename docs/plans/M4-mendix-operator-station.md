@@ -2,7 +2,7 @@
 title: "M4 — Mendix nhập môn: Operator Station v1"
 milestone: M4
 duration: "2 tuần theo scope; ước lượng lại sau C02 nếu connector không tương thích"
-status: in_progress # C01/C02 hoàn tất; C03 backend đã kiểm, Mendix đã import; chờ commit .NET.
+status: in_progress # C01–C03 hoàn tất; C04 hoàn tất; C05 đang làm.
 created: 2026-09-07
 depends_on: [M0, M1, M2, M3]
 unlocks: [M5]
@@ -261,8 +261,8 @@ Agent không sửa model Mendix; hướng dẫn theo skill, mỗi khối tối �
 |---|---|---|
 | C01 · `docs(m4): define operator data collection boundaries` · **tài liệu xong** | Scope, ADR-007/014/038, glossary và catalog đã chốt contract §2.2 | Ba ví dụ review ở §2.3; parser 22/22. Chưa có runtime M4; phần triển khai bắt đầu C02 |
 | C02 · `feat(pom): prove authenticated Mendix OData reads` · **xong** | Đã có Execution/POM, Host.All registration, PG migration/fixture 6 Equipment, JWT policy, package pin và metadata snapshot; hướng dẫn/bằng chứng ở [deploy/pom](../../deploy/pom/README.md). Owner đã import `NvmShared.POM_v1`, gán URL constant và hai microflow headers/error handling; hai microflow 0 lỗi model, dump xác nhận URL/OData4 và binding. External entity Equipment có quyền ReadOnly cho NvmShared.User. Grid `NvmShopFloor.Equipment_PoC` có 7 cột, page size 2; app role Operator/LineLeader đã gán module role và role-based home page | 21 test POM + 23 architecture xanh; `make ci` xanh. Execution/Host.All đã đọc bằng token Keycloak thật ở cả hai site: trang 2+1 row, cross-site filter 0, key 404, anonymous 401; metadata runtime khớp snapshot. Port cũ hoạt động và audience mapper đã áp dụng. Mendix runtime: grid hiện đúng dữ liệu site, phân trang 2+1, cross-site isolation đúng, SSO login/role-based home page hoạt động. [ADR-013](../adr/ADR-013-odata-cho-public-object-model.md) chốt connector pattern |
-| C03 · `feat(pom): expose operator read models` · **chờ commit .NET** | Backend có ba entity set §3.2, fixture 1.000 unit/site, site filters/ETag/paging. Owner đã import `Pom.metadata.xml` vào POM_v1: entity `ProductionUnits` (16 attr) và `WipBoard` (7 attr), ReadOnly cho `NvmShared.User`, default None, 0 errors model. URL constant, headers/error microflow giữ nguyên. Mendix C02 commit `980fa9b` | 25 test mới/thay đổi đã pass qua các lượt targeted; serial/equipment/WIP và seed lặp đã kiểm. Docker C03 đã seed, readiness 200; bằng chứng trong benchmarks. Import schema Mendix xong ngày 2026-09-11; chưa kiểm runtime hai entity mới |
-| C04 · `feat(shopfloor): add dispatch and scan pages` | Owner cấu hình roles/access, Dispatch list và Scan station; agent hướng dẫn, đọc model và cung cấp case kiểm | D1/D2, line/resource đúng, state và lý do chặn; API gọi trực tiếp vẫn chặn ngoài site dù bỏ UI |
+| C03 · `feat(pom): expose operator read models` · **xong** | Backend có ba entity set §3.2, fixture 1.000 unit/site, site filters/ETag/paging. Owner đã import `Pom.metadata.xml` vào POM_v1: entity `ProductionUnits` (16 attr) và `WipBoard` (7 attr), ReadOnly cho `NvmShared.User`, default None, 0 errors model. URL constant, headers/error microflow giữ nguyên | .NET `da9b08c`, Mendix `d1bb804`; owner xác nhận đã hoàn thành và commit cả hai repo. 25 test mới/thay đổi pass qua các lượt targeted; Docker đã seed, readiness 200. Import schema xong; runtime hai entity mới được kiểm khi dựng màn hình C04/C08 |
+| C04 · `feat(shopfloor): add dispatch and scan pages` · **xong** | Dispatch/Scan, quyền truy cập, VAL/SUB/ACT và nhánh lỗi đã dựng; agent hoàn thiện qua MCP theo yêu cầu owner. Phạm vi và checklist ở §4.1 | Toàn app 0 errors; browser Operator NV1/DE1 và LineLeader đạt; filter/paging xác nhận tại POM, cách ly hai chiều, lỗi kết nối xoá kết quả cũ và retry được. Bằng chứng ở benchmarks |
 | C05 · `feat(kernel): persist command outcomes in SQL transactions` | Agent thêm SQL infrastructure/migration/context từ cùng fixture C03, store, transaction wiring, guard Production; giữ pipeline dùng được với handler hiện có | Test SQL thật: effect/claim/outcome atomic, concurrency, rollback, replay sau restart, payload conflict; D6. Chưa mở command nghiệp vụ mới ra HTTP |
 | C06 · `feat(execution): record operator data collection` | Agent tạo lát cắt `src/FunctionalBlocks/ProductionExecution/`, command/HTTP mapper, event trong Contracts, golden file và cập nhật event-catalog | D3/D4/D5 qua HTTP thật, actor/site/đơn vị/context hợp lệ, blocked case không ghi; quan sát queue trước publish; publish lỗi được báo đúng với trạng thái DB |
 | C07 · `feat(shopfloor): persist submissions before sending commands` | Owner tạo persistent draft, UUIDv5 helper nếu cần, Command API connector, response mapper và form | Save request kết thúc trước POST; reload giữ draft; vector key khớp .NET; retry dùng key/payload cũ; người khác/site khác không đọc draft |
@@ -278,6 +278,120 @@ build/query lỗi không thay cho assertion bắt hành vi sai; không cần com
 Không viết sẵn hàng trăm bước click dựa vào trí nhớ Studio Pro. Mỗi lượt Mendix đọc trạng thái hiện tại,
 giao một khối thao tác đúng phiên bản, kiểm rồi mới giao khối tiếp theo. Hướng dẫn thao tác, giải thích
 nghiệp vụ và giải thích kỹ thuật tách riêng theo AGENTS.
+
+### 4.1 C04 — Dispatch list và Scan station
+
+**Mục tiêu:** tìm việc theo line/resource, mở hoặc quét đúng serial, hiển thị context và lý do bị chặn.
+C04 hoàn tất khi hai màn hình chạy bằng tài khoản thật và các nhánh tra cứu được kiểm. Tạo page rồi
+thấy 0 errors chưa đủ. Thiết kế dưới đây đã dựng và kiểm chức năng; bằng chứng nằm ở cuối mục và benchmarks.
+
+Điểm bắt đầu: .NET `da9b08c`, Mendix `d1bb804`. Dùng lại `NvmShared.POM_v1`, external entity và role
+đã có; document mới đặt trong folder `NvmShopFloor/ProductionUnits`. Không di chuyển Equipment_PoC.
+
+#### Nghiệp vụ
+
+Dispatch list M4 hiển thị unit có work order/operation run trong fixture, lọc theo nơi đang xử lý;
+chưa có bộ lập lịch hay giao lại việc. Serial giữ định danh lúc sinh: cell tại FORM/F1 vẫn có thể mang
+line L1 trong serial. Không dùng phần line khắc trên serial làm vị trí hiện tại.
+
+Scan hiển thị execution state, quality state và location state riêng. Tìm thấy unit không có nghĩa
+là được phép nhập kết quả: hiển thị lý do Held/Scrapped hoặc operation chưa chạy/đã hoàn tất.
+C04 có thao tác quét lại và về danh sách; form nhập kết quả được nối vào ở C07.
+
+#### Thành phần cần dựng
+
+| Thành phần trong NvmShopFloor | Cấu hình / trách nhiệm |
+|---|---|
+| `Dispatch_List` | Page không parameter; Data Grid 2, Database source `NvmShared.ProductionUnits`. Page size 20, Paging buttons; sort Line, Resource, `_Id` tăng dần. Filter cột Line/Resource dùng Text filter, phép Equal; query và paging qua OData |
+| `ScanContext` | Non-persistable; SerialInput String(64), Message String(512); reference `ScanContext_ProductionUnits` tới `NvmShared.ProductionUnits`, owner là ScanContext. Giữ input/thông báo/kết quả hiện tại, không chép 16 thuộc tính vào entity khác |
+| `Scan_Station` | Page nhận ScanContext; ô SerialInput, nút Tra cứu, thông báo và data view qua reference kết quả. Enter và nút gọi cùng action; nút Về danh sách mở Dispatch_List |
+| `SUB_ScanContext_New` | Nhận String SerialInput, tạo ScanContext trong bộ nhớ và trả object; dùng chung cho mở scan trống và mở từ Dispatch |
+| `VAL_Serial_IsValid` | Nhận String, trả Boolean; kiểm đủ ngữ nghĩa SerialNumber.TryParse bên dưới |
+| `SUB_ScanContext_Lookup` | Xoá kết quả/thông báo cũ, validate, retrieve external entity theo serial với Range First; gán kết quả hoặc thông báo, refresh ScanContext; không commit DB |
+| `ACT_ScanStation_Open` | Gọi SUB_New với chuỗi rỗng rồi mở Scan_Station |
+| `ACT_Dispatch_OpenUnit` | Nhận ProductionUnits từ dòng chọn; gọi SUB_New với SerialNumber, SUB_Lookup rồi mở Scan_Station. Đọc lại POM thay vì tin context cũ trên grid |
+| `ACT_ScanStation_Search` | Action dùng chung cho nút và phím Enter, gọi SUB_Lookup với ScanContext |
+
+Các cột Dispatch: SerialNumber, WorkOrderId, Line, Resource, StepCode, ExecutionState, QualityState,
+LocationState. Scan hiển thị thêm OperationRunId, EquipmentPath và BlockingReasonCode/Text.
+Không sinh New/Edit/Delete cho external entity; không dùng microflow kéo 1.000 object rồi lọc trong RAM.
+
+Page và ba ACT cấp quyền `NvmShopFloor.User`, đã map vào app role Operator/LineLeader. ScanContext
+cho User đọc thuộc tính/reference, ghi SerialInput; kết quả do microflow server cập nhật. SUB/VAL là
+microflow nội bộ, không mở gọi trực tiếp từ client. External entity giữ ReadOnly của NvmShared.User.
+Backend vẫn ép site từ token; ScanContext/filter không trở thành nguồn authorization.
+
+#### Contract tra cứu và lỗi
+
+- Giữ nguyên input, không trim/chuyển chữ hoa. String(64) nhận được mã quá dài rồi báo sai, tránh
+  cắt một mã dài thành serial hợp lệ một cách im lặng.
+- VAL kiểm đủ 16 ký tự ASCII hoa/số: site 3 ký tự; kind C/M/P; line `[A-Z][0-9]`; year 1 digit;
+  day 001–366; shift A/B/C; sequence 00001–99999. Không giới hạn site vào NV1/DE1 trong validator,
+  không suy ra ngày lịch từ year digit. Chỉ parse khoảng số sau khi khung ký tự hợp lệ.
+- Retrieve `NvmShared.ProductionUnits`, XPath `[SerialNumber = $ScanContext/SerialInput]`, Range First.
+  Không ghép URL từ input hoặc retrieve toàn bộ list.
+- Sai format: **Serial không đúng định dạng 16 ký tự. Kiểm tra lại mã quét.** Không gọi POM.
+- Retrieve thành công, object rỗng: **Không tìm thấy serial trong site hiện tại.** Serial ngoài site
+  nhận cùng thông báo, không tiết lộ sự tồn tại ở nơi khác.
+- Retrieve ném lỗi: nhánh custom error riêng, kết quả rỗng và thông báo **Không thể tra cứu lúc này.
+  Kiểm tra kết nối hoặc đăng nhập lại rồi thử lại.** Không hiện stack trace hoặc câu đã lưu draft.
+  Custom without rollback giữ việc xoá kết quả cũ; refresh context trên mọi nhánh. Call từ UI có
+  blocking progress, tránh hai lượt tra cứu chồng nhau.
+- Timeout POM 10 giây theo §3.5. Scanner dùng **On enter key press**, không phải On enter (focus).
+  Không gán tra cứu đồng thời vào On change, tránh gọi thêm khi rời ô.
+
+Nguồn cơ chế: [External Entities](https://docs.mendix.com/refguide/external-entities/),
+[Data Grid 2](https://docs.mendix.com/appstore/modules/data-grid-2/),
+[Text Filter](https://docs.mendix.com/appstore/modules/datagrid-text-filter/),
+[Text Box](https://docs.mendix.com/refguide/text-box/),
+[Consumed OData Service](https://docs.mendix.com/refguide/consumed-odata-service/).
+Tên/property cuối cùng được đối chiếu trên Studio Pro 11.12.3 khi dựng. Association local → external
+do local entity sở hữu, không thêm navigation vào POM. Chưa ghi nhận UI đã kiểm chỉ từ tài liệu web.
+
+#### Checklist thực hiện và nghiệm thu
+
+- [x] C04-1: Dispatch_List có datasource/cột/filter/paging và page access; runtime NV1 đã kiểm ngày 2026-09-12.
+- [x] C04-2: ScanContext có reference kết quả và entity access; SerialInput ReadWrite xác nhận qua MCP sau F5 ngày 2026-09-12.
+- [x] C04-3: VAL/SUB/ACT có nhánh không tìm thấy và nhánh error riêng; MCP 0 errors và runtime đạt ngày 2026-09-12.
+- [x] C04-4: Scan_Station hiển thị context/state/lý do; nối nút/Enter và mở từ dòng Dispatch; runtime NV1 đã kiểm.
+- [x] C04-5: thêm điều hướng Dispatch/Scan; home page Operator/LineLeader chuyển sang Dispatch_List,
+  giữ đường quản trị hiện có; Save All, Check now và chạy app.
+- [x] C04-6: kiểm bảng dưới ở runtime, ghi bằng chứng vào benchmarks.
+- [x] Owner yêu cầu commit C04 ở cả hai repo sau khi nhận bằng chứng kiểm thử.
+  Page p95 và lab draft vẫn ở C09; không hoãn kiểm chức năng C04 tới C09.
+
+| Case | Kỳ vọng cần nhìn thấy / đo được |
+|---|---|
+| Operator và LineLeader mở hai page | Mở được trong site mình; không thay bằng thử tài khoản admin |
+| Dispatch NV1, Line=P1, Resource=EOL-01 | Chỉ việc EOL/P1 NV1; fixture có 150 unit. Trang kế không lặp dòng; server nhận filter và giới hạn trang |
+| Mở dòng Dispatch | Scan hiện đúng serial, work order, operation run và resource đã chọn |
+| NV1 `NV1PP16250A00001`, DE1 `DE1PP16250A00001` | Tìm thấy ở đúng site; Running/Pending/AtStation; ba state riêng |
+| NV1 `NV1PP16250A00007` | Held kèm lý do giữ; không có release/override |
+| NV1 `NV1PP16250A99999` | Đúng format, chưa seed → không tìm thấy |
+| NV1 quét serial DE1 và ngược lại | Không tìm thấy; không lộ dữ liệu ngoài site |
+| Chữ thường; 15/17 ký tự; kind X; day 000/367; sequence 00000 | Sai format, không gửi lookup. Day 366 hợp lệ về format dù chưa có fixture |
+| Quét thành công rồi gây lỗi kết nối POM và tra lại | Lỗi tra cứu; không giữ unit cũ, không báo không tồn tại/đã ghi tạm. Kết nối trở lại thì retry được |
+| Bỏ filter UI, gọi POM ngoài site | Backend vẫn ép site; dùng lại test C03 cho contract API, kiểm request UI mới và thao tác NV1/DE1 ở C04 |
+
+**Trạng thái:** Dispatch_List đã dựng, có menu Dispatch và owner đã cấu hình role-based home pages,
+báo 0 errors. Browser automation ngày 2026-09-12 kiểm phiên NV1: 1.000 dòng ban đầu; lọc P1/EOL-01
+còn 150; trang đầu/kế/cuối có 20/20/10 dòng đúng serial, không trùng giữa ba trang đã đọc; filter
+Line/Resource khớp chính xác. Số đo và giới hạn kiểm chứng ở `docs/benchmarks.md` mục M4/C04.
+ScanContext và Scan_Station đã dựng; sáu VAL/SUB/ACT cùng hai page qua kiểm tra MCP không lỗi.
+Lookup có nhánh lỗi riêng; nút Tra cứu/Enter dùng ACT_Search; Dispatch có nút Mở trên từng dòng;
+menu Quét serial gọi ACT_Open. Sau owner F5 ngày 2026-09-12, mx check 11.12.3 kiểm bản trên đĩa
+trả exit 0, toàn app 0 errors; MCP xác nhận SerialInput ReadWrite, Message/reference ReadOnly.
+POM timeout 10 giây đã xác nhận bằng mx dump-mpr chỉ lọc ConsumedODataService.
+Runtime NV1 đã kiểm mở từ Dispatch, Enter/nút Tra cứu, unit hợp lệ/Held, 7 ca sai format,
+không tồn tại, serial DE1 và day 366. Dừng riêng Execution: hiện lỗi kết nối sau 132 ms,
+xoá kết quả cũ, giữ input; bật lại healthy và retry thành công. Bằng chứng trong benchmarks.
+Runtime op.de1 cũng đã kiểm mở từ Dispatch, tra cứu unit DE1 và Enter với serial NV1:
+không tìm thấy, kết quả cũ rỗng. Phiên ll.nv1 xác nhận role LineLeader, mở Dispatch/Scan,
+hiện lý do Held và không tìm thấy serial DE1; không có release/override.
+Quan sát request tại Execution xác nhận filter Line/Resource, $top=20, $skip=20 và
+lookup SerialNumber với $top=1. Ca chữ thường không phát request POM trong cửa sổ quan sát;
+ca hợp lệ kế tiếp có request làm đối chứng. Chi tiết và giới hạn nằm trong benchmarks.
+C02/C03 dùng lại bằng chứng owner đã nghiệm thu, không chạy lại bộ test cũ.
 
 ## 5. Kiểm chứng và lab
 
@@ -348,7 +462,7 @@ với một DoD hoặc ràng buộc hiện hành.
 
 ## 7. Checklist bàn giao và teach-back
 
-- [x] C01 đã chốt tài liệu; C02 đã chứng minh connector và có ADR-013. C03–C09 chưa nghiệm thu.
+- [x] C01 đã chốt tài liệu; C02 có PoC/ADR-013; C03 đã có backend và import schema, commit cả hai repo. C04 hoàn tất; C05 đang làm; C05–C09 chưa nghiệm thu.
 - [ ] D1–D8 và lab có bằng chứng; số chưa đo không được ghi như kết quả.
 - [ ] Backend đúng image/code đang chạy, base URL đúng; Mendix build/check consistency không lỗi,
   Security Production và quyền được kiểm bằng tài khoản thật.

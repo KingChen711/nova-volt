@@ -353,6 +353,14 @@ thì không.** Người dùng muốn tự tay thao tác để học Mendix bằn
 
 Chi tiết đầy đủ ở skill [`mendix-manual`](.claude/skills/mendix-manual/SKILL.md).
 
+**Đăng nhập khi kiểm thử:** Quy tắc người dùng tự bấm trong Studio Pro không áp dụng cho
+đăng nhập ứng dụng hoặc SSO bằng browser automation. Khi kiểm thử đã được giao cho agent,
+agent tự đăng nhập bằng tài khoản/mật khẩu người dùng đã cung cấp hoặc nguồn credential
+được phép dùng, kể cả đăng nhập lại sau F5. Không yêu cầu người dùng tự nhập chỉ vì trường
+đó là mật khẩu. Chỉ nhờ người dùng khi thiếu credential, cần MFA/CAPTCHA hoặc công cụ thật
+sự không thao tác được. Không in mật khẩu/token vào output hay ghi vào file được commit;
+ẩn output của công cụ có thể echo thao tác nhập mật khẩu trước khi trả kết quả.
+
 #### 5.6.1 Bố cục bắt buộc khi hướng dẫn thao tác Mendix
 
 Người dùng đã nêu rõ: **trộn thao tác với giải thích làm các bước rất khó đọc.** Người đang

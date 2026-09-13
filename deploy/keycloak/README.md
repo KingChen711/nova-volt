@@ -93,6 +93,13 @@ Secret là `dev-only-not-a-secret` — cố ý đặt tên như vậy để khô
 `op.de1` tồn tại riêng để kiểm **cross-site isolation** ở M10: user thuộc NV1 không được
 thấy bất kỳ dòng dữ liệu DE1 nào, ở mọi endpoint.
 
+Tài khoản `ll.nv1` có role `LineLeader`, `site_id=NV1`, dùng kiểm Dispatch/Scan M4/C04.
+Realm JSON khai báo danh tính và role, không chứa credential của tài khoản này.
+Mật khẩu đã được cấp riêng trên realm local đang chạy; khi import vào môi trường mới,
+cấp lại mật khẩu qua Admin Console hoặc Admin API từ nguồn credential được phép dùng.
+Trong M4, LineLeader cùng quyền thao tác trong site với Operator, chưa có chức năng đặt hold,
+release hay override trên hai màn hình này.
+
 ---
 
 ## `mendix_roles` — vì sao `realm_access.roles` không dùng được

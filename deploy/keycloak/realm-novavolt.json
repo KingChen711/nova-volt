@@ -148,6 +148,16 @@
   ],
   "users": [
     {
+      "username": "ll.nv1",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "ll.nv1@novavolt.local",
+      "firstName": "NV1",
+      "lastName": "LineLeader",
+      "attributes": { "site_id": ["NV1"] },
+      "realmRoles": ["LineLeader"]
+    },
+    {
       "username": "op.nv1",
       "enabled": true,
       "emailVerified": true,

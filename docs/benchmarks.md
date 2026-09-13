@@ -681,3 +681,89 @@ Phép kiểm HTTP thật dùng `$count=true&$orderby=Id&$top=2`, trang kế `$sk
 `SiteId eq '<site còn lại>'`, lookup key EOL của site còn lại và request không Authorization.
 Kết quả thô local tại `artifacts/m4-c02/runtime-2026-09-09.json` chỉ có status/count/site, không token.
 Execution container tạo lúc `2026-09-09T12:53:34.884172595Z`, UID 1654, chỉ nối `novavolt-mes_it-net`.
+
+## M4/C04 — Dispatch List: kiểm UI ngày 2026-09-12
+
+Backend HEAD `da9b08c`; Mendix HEAD `d1bb804` + working copy C04 chưa commit, Studio Pro 11.12.3.
+Owner chạy F5, báo 0 errors và đăng nhập SSO vào browser Playwright riêng theo hướng dẫn dùng
+`op.nv1`. Agent quan sát trực tiếp trang `Mendix - Dispatch List` tại localhost:8080; không đọc token.
+
+| Phép kiểm UI | Kết quả quan sát |
+|---|---|
+| Trang sau đăng nhập, chưa lọc | Dispatch List; hiển thị 1–20/1.000 |
+| Line=`P1`, Resource=`EOL-01` | Tổng 150; 20/20 dòng trang đầu có đúng Line/Resource |
+| Trang đầu | 20 serial `NV1PP16250A00001`–`NV1PP16250A00020` |
+| Trang kế | 20 serial `NV1PP16250A00021`–`NV1PP16250A00040`; không lặp trang đầu |
+| Trang cuối | 10 serial `NV1PP16250A00141`–`NV1PP16250A00150`; 10/10 đúng Line/Resource |
+| Line=`P`, Resource=`EOL-01` | 0 dòng: Line không lọc kiểu Contains |
+| Line=`P1`, Resource=`EOL` | 0 dòng: Resource không lọc kiểu Contains |
+| Khôi phục P1/EOL-01 | Trở về 1–20/150 |
+
+Snapshot local ở `artifacts/m4-c04/dispatch-page1.txt`, `dispatch-page2.txt`, `dispatch-page8.txt`,
+`dispatch-line-partial.txt`, `dispatch-resource-partial.txt`, `dispatch-final.txt`.
+Các trang 3–7 chưa đọc hết. Request OData, phiên LineLeader/DE1 và Scan Station được kiểm bên dưới.
+Page p95 chưa đo; không chạy lại C02/C03 hoặc full CI trong lượt kiểm UI này.
+
+### Scan Station — runtime NV1 ngày 2026-09-12
+
+Sau owner Save/F5, `mx.exe check` 11.12.3 trên app NvmShopFloor-main trả exit 0,
+toàn app 0 errors. Owner đăng nhập lại phiên browser kiểm thử bằng tài khoản NV1.
+
+| Phép kiểm | Kết quả quan sát |
+|---|---|
+| Menu Quét serial | Mở trang trống, nhập được Serial |
+| Tra cứu `NV1PP16250A00001` bằng nút | WO-2026-0005, OPRUN-NV1-EOL-0001, P1/EOL-01, Running/Pending/AtStation |
+| Enter với `NV1PP16250A00007` | Held, AtRack-HOLD, QUALITY_HOLD và lý do tiếng Việt |
+| `NV1PP16250A99999`, `DE1PP16250A00001` | Cùng thông báo không tìm thấy trong site hiện tại |
+| Chữ thường, 15/17 ký tự, kind X, day 000/367, sequence 00000 | Cả 7 ca báo sai định dạng |
+| Day 366, sequence 99999 | Qua kiểm format, báo không tìm thấy |
+| Kết quả sau 10 ca không tìm thấy/sai format | Vùng kết quả chỉ còn khoảng trắng; không giữ unit trước |
+| Về danh sách → Mở dòng đầu | NV1CL16220A00001, WO-2026-0002, OPRUN-NV1-FORM-0001, F1/FORM-01 khớp dòng chọn |
+
+Bằng chứng local: `artifacts/m4-c04/scan-validation-runtime.txt`,
+`scan-open-dispatch-runtime.txt`. Quan sát request phía server được ghi riêng bên dưới;
+không suy ra số request chỉ từ giao diện. Page p95 thuộc C09, chưa đo.
+
+Phiên `op.de1` đăng nhập bằng browser automation: Dispatch mở đúng
+DE1MM16230A00001/M1/MLOAD-01 và OPRUN-DE1-MLOAD-0001. Tra cứu DE1PP16250A00001
+trả WO-2026-0008, OPRUN-DE1-EOL-0001, Running/Pending/AtStation.
+Nhập NV1PP16250A00001 rồi Enter trả cùng thông báo không tìm thấy trong site hiện tại,
+kết quả cũ rỗng. Bằng chứng: `de1-dispatch-runtime.txt`, `de1-scan-runtime.txt`.
+
+Phép thử mất kết nối: owner dự đoán unit cũ vẫn còn. Sau tra cứu thành công NV1PP16250A00001,
+agent dừng riêng `nvm-execution`, bấm Tra cứu: sau 132 ms hiện đúng thông báo lỗi kết nối,
+12 trường kết quả chỉ còn khoảng trắng, input giữ nguyên. Đây là thời gian lỗi connection refused,
+không phải phép đo hết timeout. Container được bật lại trong `finally`, trạng thái running/healthy;
+retry trả lại đúng unit và xoá thông báo lỗi. Bằng chứng ở
+`scan-connection-failure-runtime.txt` và `scan-recovery-runtime.txt` trong cùng thư mục artifacts.
+`mx dump-mpr` chỉ lọc ConsumedODataService xác nhận `timeoutExpression="10"` trên bản đã lưu;
+không xuất các giá trị cấu hình khác. Không có draft hay thao tác ghi nghiệp vụ trong phép thử này.
+
+### LineLeader và request POM — runtime ngày 2026-09-12
+
+Realm đang chạy chưa có user LineLeader. Theo yêu cầu owner, agent tạo `ll.nv1`,
+`site_id=NV1`, realm role LineLeader; mật khẩu chỉ cấp trên môi trường local.
+Phiên browser riêng đăng nhập tài khoản này, Home hiển thị Site NV1 và hai app role
+User/LineLeader. Dispatch mở 1.000 dòng; Mở dòng đầu trả đúng NV1CL16220A00001.
+Enter NV1PP16250A00007 trả Held/QUALITY_HOLD và lý do giữ; không có nút release/override.
+Tra DE1PP16250A00001 báo không tìm thấy trong site hiện tại và xoá kết quả cũ.
+Bằng chứng local: `artifacts/m4-c04/lineleader-runtime.txt`, `lineleader-identity.txt`.
+
+Quan sát traffic GET `/pom/v1/` tại network namespace của `nvm-execution` bằng container
+tcpdump tạm, chỉ xuất request target qua bộ lọc; không lưu packet, header hay token.
+Đối chiếu với thao tác browser NV1:
+
+| Thao tác | Request query quan sát tại server |
+|---|---|
+| Dispatch ban đầu | `$count=true&$top=20&$orderby=Line asc,Resource asc,Id asc` |
+| Lọc Line=P1 | `$filter=Line eq 'P1'` |
+| Thêm Resource=EOL-01 | `$filter=(Line eq 'P1') and (Resource eq 'EOL-01')` |
+| Trang kế | Giữ filter và `$top=20`, thêm `$skip=20`; UI 20 dòng, bắt đầu NV1PP16250A00021 |
+| Scan chữ thường `nv1pp16250a00001` | UI báo sai định dạng; không thấy GET POM trong cửa sổ quan sát, gồm 5 giây chờ trước đối chứng |
+| Scan hợp lệ kế tiếp `NV1PP16250A00001` | `$filter=SerialNumber eq 'NV1PP16250A00001'&$top=1&$orderby=Id asc`; sau đó GET theo Id NV1-U000851 để refresh |
+
+Capture dùng `-i any` hiển thị mỗi target hai lần; không tính đây là hai HTTP request.
+Chỉ ca chữ thường được đo trực tiếp việc không gọi POM; sáu ca sai format còn lại kiểm
+thông báo/clear UI và đọc nhánh validator trong model. Container quan sát tự xoá khi kết thúc,
+Execution đã running/healthy sau phép thử lỗi. C04 hoàn thành kiểm chức năng, chờ owner review/commit;
+không dùng kết quả này để tuyên bố đạt p95, lab draft C09 hay toàn bộ M4.

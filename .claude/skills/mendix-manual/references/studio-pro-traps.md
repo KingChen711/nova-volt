@@ -506,7 +506,8 @@ http://localhost:8081/realms/novavolt/protocol/openid-connect/auth
 | `redirect_uri` khớp `redirectUris` của realm | So bằng mắt với realm JSON |
 
 **KHÔNG chứng minh được**: JIT provisioning, attribute mapping (`site_id`), ánh xạ role. Ba
-thứ đó chỉ chạy **sau** khi người thật đăng nhập xong.
+thứ đó chỉ chạy **sau** khi tài khoản thật đăng nhập thành công; agent có thể thực hiện
+đăng nhập bằng browser automation với credential đã được phép dùng.
 
 Hơn hẳn cách ở §0.14 (mở console trên trang Keycloak đọc `location.href`): cách này không cần
 trình duyệt hiển thị, nên dùng được cả khi agent chạy không có người ngồi trước máy.
@@ -627,6 +628,27 @@ Nguồn: https://docs.mendix.com/refguide/view-menu/ và https://docs.mendix.com
 
 ---
 
+### 0.28 Retrieve XPath: chuyển sang XPath expression trước khi nhập biến
+
+Ảnh owner ngày 2026-09-12 xác nhận **Retrieve → XPath constraint → Edit…** mở hộp
+**Edit XPath Constraint**, có hai chế độ **Builder** và **XPath expression**. Trong phiên này,
+nhập `$ScanContext/SerialInput` vào ô giá trị của Builder tạo constraint chứa
+`'$ScanContext/SerialInput'` (literal), không phải giá trị thuộc tính của biến.
+
+Khi hướng dẫn dán XPath có biến, phải chỉ rõ chọn **XPath expression** trước, rồi dán
+`[SerialNumber = $ScanContext/SerialInput]`. Không hướng dẫn dán biểu thức vào ô giá trị Builder.
+Ảnh sau khi chuyển chế độ và xác nhận cho thấy Retrieve hiển thị đúng
+`[SerialNumber = $ScanContext/SerialInput]`, không còn dấu nháy quanh biến. Cách nhập đã xác nhận
+trong Studio Pro; lookup runtime chưa kiểm.
+
+### 0.29 Không nối nhiều nhánh trực tiếp vào cùng End event
+
+Ảnh owner ngày 2026-09-12: nối thêm hai Change object (tìm thấy/không tìm thấy) vào End đã có
+đường vào từ nhánh serial không hợp lệ gây hai lỗi `CE0709`: `Sequence flow is not accepted by
+origin or destination.` Hai đường thêm hiện màu đỏ. Hướng dẫn dùng chung End trực tiếp là sai.
+Hướng sửa: mỗi nhánh dùng End riêng; không nối thêm trực tiếp vào End đã có đường vào.
+Owner xác nhận 0 lỗi sau khi xoá hai đường nối lỗi và cho hai nhánh dùng End riêng.
+
 ## Ledger kế thừa từ CGVibe
 
 > [!warning] Điểm chung của gần hết danh sách này
@@ -643,6 +665,22 @@ Không hướng dẫn người dùng tìm nút chưa được thêm vào page/la
 tài khoản đang đăng nhập. GET mới tới `http://localhost:8080/oauth/v2/login` đã trả HTTP 302
 tới endpoint authorization của realm `novavolt` trên port 8081. Có thể hướng dẫn mở URL đó
 trong cửa sổ InPrivate riêng để bắt đầu SSO; đăng nhập và grid trong phiên này còn đang kiểm.
+
+### 0.30 MCP C04 — giới hạn đã tái lập ngày 2026-09-12
+
+- MCP trên `localhost:7910/mcp` trả JSON-RPC hợp lệ sau khi owner đổi cổng.
+- Pagegen mapping tới ACT_Search bằng `variable.widget=scanContextView` gây CE0115.
+  Thay bằng `expression='$ScanContext'` ở mapping cho nút và Enter thì MCP kiểm không lỗi.
+- MCP thêm nhiều objects/flows không giữ thứ tự payload. Phải đọc lại collection trước khi
+  dùng index; nhánh lỗi vừa thêm có End ở index 13, Change ở 14, ngược thứ tự gửi.
+- MemberAccess của SerialInput đang ReadOnly. Set accessRights=ReadWrite bị từ chối với
+  “Cannot set element-valued property”; remove MemberAccess cũng bị từ chối. Chưa sửa được;
+  dùng UI Access rules. Không diễn giải 0 errors thành quyền nhập liệu đúng.
+- `Rest$ConsumedODataService` xuất hiện trong list folder nhưng read document báo
+  “Unknown document type”. Timeout POM phải cấu hình qua Studio Pro.
+- Pagegen tạo Scan_Station tại module root. Chuyển folder bằng UI; không sửa mxunit.
+- MCP live báo 0 errors trong khi mx check bản trên đĩa còn CE0106/CE0115 đã sửa ở live model.
+  Cần Save All rồi chạy lại mx check; chưa có bằng chứng Save All ở lượt này.
 
 ## 1. Khi kiểm tra lỗi
 

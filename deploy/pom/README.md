@@ -110,14 +110,12 @@ Owner đã xác nhận mở đúng app. Chưa sửa model Mendix bằng agent.
 Snapshot Equipment C02 đã import vào Consumed OData Service `NvmShared.POM_v1`. Tài liệu Mendix mô tả
 menu `Add other > Consumed OData Service` và cách import file tại
 [Importing from a File](https://docs.mendix.com/catalog/register/data-sources-without-mendix-cloud/).
-Grid, phân trang và SSO đã kiểm ở C02. C03 cần owner mở service này, bấm **Update**, chọn snapshot
-`Pom.metadata.xml`, rồi kéo hai entity type `ProductionUnit` và `WipBoardRow` (entity set tương ứng
-`ProductionUnits` và `WipBoard`) từ Integration vào Domain model của
-`NvmShared`. Cấp ReadOnly cho `NvmShared.User`, quyền thuộc tính mới None, không Create/Delete.
-Giữ URL constant và hai binding headers/error handling. Ngày 2026-09-11, owner đã update POM_v1 từ
-`Pom.metadata.xml` C03: entity `ProductionUnits` (16 attr) và `WipBoard` (7 attr) đã thêm vào domain model
-`NvmShared`, ReadOnly cho `NvmShared.User`, default None, 0 errors model. Chưa kiểm runtime hai entity mới;
-commit Mendix C03 chưa tạo.
+Grid, phân trang và SSO đã kiểm ở C02. Ngày 2026-09-11, owner đã update POM_v1 từ
+`Pom.metadata.xml` C03: tên entity local là `NvmShared.ProductionUnits` (16 attr) và
+`NvmShared.WipBoard` (7 attr), quyền `NvmShared.User` ReadOnly, default None, không Create/Delete,
+0 errors model. URL constant và hai binding headers/error handling giữ nguyên.
+C03 đã commit ở .NET `da9b08c` và Mendix `d1bb804`. Runtime hai entity mới được kiểm qua màn hình
+Dispatch/Scan ở C04 và WIP board ở C08; C03 chỉ xác nhận import và quyền trong model.
 
 Studio Pro 11.12 dùng `Headers microflow` trả list `System.HttpHeader`; URL lấy từ constant.
 Owner đã dựng `NvmShared.SUB_Pom_CreateHeaders` trong folder `Sso`; MCP xác nhận parameter

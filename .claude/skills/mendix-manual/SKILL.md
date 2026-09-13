@@ -28,9 +28,17 @@ Hệ quả bắt buộc:
 | Giải thích vì sao | Agent |
 | Đọc log, chẩn đoán lỗi, đối chiếu tài liệu | Agent |
 | Chạy `mx check`, đọc `deployment/model`, grep file | Agent (chỉ đọc) |
+| Đăng nhập ứng dụng/SSO và thao tác browser khi đã được giao kiểm thử | Agent, dùng credential đã được cung cấp hoặc được phép dùng |
 
 Agent vẫn được **đọc** file trong thư mục app (`.mpr` là nhị phân, nhưng
 `deployment/`, `javasource/`, `theme/`, `widgets/` đọc được) để chẩn đoán.
+
+Chế độ tự bấm ở đây áp dụng cho học thao tác **Studio Pro**, không buộc người dùng tự
+đăng nhập trong trình duyệt. Agent được giao kiểm thử phải tự đăng nhập và đăng nhập lại
+bằng credential đã được cung cấp hoặc được phép dùng; không dừng chỉ vì có trường mật khẩu.
+Chỉ nhờ người dùng khi thiếu credential, gặp MFA/CAPTCHA hoặc giới hạn công cụ thực tế.
+Không in/lưu mật khẩu, token vào output hay file được commit. Với CLI tự echo thao tác fill,
+chặn output đó trước khi đưa kết quả về hội thoại; chỉ báo đăng nhập thành công/thất bại.
 
 ### 0.1 Studio Pro MCP — ba tầng, không phải bật/tắt
 

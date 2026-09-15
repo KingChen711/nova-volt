@@ -94,11 +94,10 @@ public static class IdempotencyClaim
 /// duy nhất, nơi một test có thể chỉnh nó (AGENTS.md K1).
 /// </para>
 /// <para>
-/// <b>Điều vẫn còn thiếu, và không hề nhỏ.</b> Phiên bản thực sự đáng tin cậy phải claim khoá và ghi
-/// event mà nó bảo vệ <b>trong cùng một transaction</b>. Cho tới lúc đó, claim chỉ bền (durable) trong
-/// suốt vòng đời của process, và một claim được ghi ngoài transaction có thể được đánh dấu xong trong
-/// khi hiệu lực của nó đã bị rollback. Phiên bản đó cần một database và một hiệu lực đáng để commit,
-/// nên nó thuộc về milestone giới thiệu cả hai điều này (docs/adr/ADR-023).
+/// Store SQL C05 giữ claim, effect của handler và outcome <b>trong cùng một transaction</b>.
+/// Store RAM chỉ dùng cho command Development có effect trong RAM. Đây là ranh giới của implementation,
+/// không phải lời hứa mọi store đều tồn tại qua restart. Publish broker vẫn ngoài SQL transaction;
+/// xem docs/adr/ADR-022 và ADR-023.
 /// </para>
 /// </remarks>
 public interface IIdempotencyStore

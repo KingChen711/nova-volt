@@ -91,9 +91,9 @@ public static class KernelServiceCollectionExtensions
     /// không có gì xảy ra. Validation phải luôn ở ngoài cùng, nếu không đó là cái plant sẽ nhận.
     /// </para>
     /// <para>
-    /// Một stage thứ tư thuộc về giữa idempotency và audit một khi có database: transaction cho phép
-    /// bản ghi idempotency commit cùng với event mà nó bảo vệ. Nó còn thiếu vì viết một cái rỗng ngay
-    /// bây giờ sẽ là dead code, không phải vì thứ tự còn dư chỗ.
+    /// C05 mở SQL transaction ngay trong Claim và commit trong Complete; handler dùng cùng scoped
+    /// session. Không đặt transaction bên trong idempotency: như vậy claim sẽ nằm ngoài transaction.
+    /// Audit hiện ghi kết quả chạy handler, không phải bằng chứng SQL đã commit.
     /// </para>
     /// <para>
     /// Đăng ký dưới dạng open generic — <c>typeof(ValidationBehavior&lt;,&gt;)</c> — để một lần đăng ký

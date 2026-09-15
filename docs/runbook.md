@@ -550,7 +550,7 @@ thay đổi realm đã import. Áp dụng mapper vào runtime và đăng nhập 
 
 ### POM C03 trả 503 sau khi thêm ProductionUnits/WipBoard
 
-Readiness kiểm SELECT trên cả ba bảng, nên migrate schema và cấp quyền trước khi chạy image mới.
+Phần POM của readiness kiểm SELECT trên cả ba bảng, nên migrate schema và cấp quyền trước khi chạy image mới.
 Trong môi trường học Development, chạy `make execution-prepare-operator-fixture`, rồi
 `make execution-up`. Job dùng credential migration; runtime `nvm_pom` chỉ cần SELECT.
 Không thêm credential migration vào cấu hình web hoặc kết nối Mendix trực tiếp tới PostgreSQL.
@@ -563,3 +563,20 @@ bản ghi hoặc dùng DB test riêng, không dùng `down -v` hay xoá toàn b�
 Mendix chưa nhìn thấy hai entity mới: mở `NvmShared.POM_v1` → **Update**, import
 `deploy/pom/Pom.metadata.xml`, rồi thêm external entities qua Integration. Giữ headers/error
 microflow và URL constant hiện có. UI cũ chỉ import Equipment không tự có schema C03 sau rebuild backend.
+
+### Execution C05 không ready hoặc từ chối khởi động Production
+
+Readiness của Execution kiểm thêm SQL command store. `/health/live` trả 200 nhưng
+`/health/ready` trả 503 có thể do thiếu schema/quyền SQL, kể cả khi POM vẫn đọc được.
+Kiểm kết nối `NVM_COMMANDS__ConnectionString` bằng principal runtime; không in giá trị ra log.
+Runtime cần SELECT/INSERT/UPDATE `command_store.CommandOutcomes` và SELECT `execution.UnitContext`.
+
+Local Development: chạy job migration/fixture theo [hướng dẫn command store](../deploy/commands/README.md),
+rồi recreate riêng Execution và kiểm lại readiness. Seed chạy lại không ghi đè context đã có.
+Production dùng migration credential riêng, không dùng job fixture Development; thiếu cấu hình SQL
+hoặc đăng ký store RAM thì startup guard của cả Execution và Host.All chủ động chặn khởi động.
+Sửa cấu hình/đăng ký SQL, không tắt guard hay chuyển environment sang Development để né lỗi.
+
+Nếu command bị timeout hoặc mất phản hồi, retry phải giữ key và payload của cùng submission.
+Không xoá outcome để “gỡ kẹt”: SQL có thể đã commit và lần gửi lại cần đọc kết quả đó.
+Handler nghiệp vụ/HTTP và giao diện retry được bổ sung ở C06–C09; C05 mới cung cấp contract lưu bền vững.

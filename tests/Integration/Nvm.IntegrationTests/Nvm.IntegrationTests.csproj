@@ -11,16 +11,20 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.TestHost" />
+    <PackageReference Include="Microsoft.Data.SqlClient" />
     <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
     <PackageReference Include="Npgsql" />
     <PackageReference Include="Shouldly" />
     <PackageReference Include="Testcontainers.Minio" />
+    <PackageReference Include="Testcontainers.MsSql" />
     <PackageReference Include="Testcontainers.PostgreSql" />
     <PackageReference Include="xunit.v3" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="../../../src/Apps/Nvm.App.Execution/Nvm.App.Execution.csproj" />
+    <ProjectReference Include="../../TestAssets/Nvm.CommandStoreProbe/Nvm.CommandStoreProbe.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../../../src/Apps/Nvm.Host.All/Nvm.Host.All.csproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="../../../src/Platform/Nvm.PublicObjectModel/Nvm.PublicObjectModel.csproj" />
     <ProjectReference Include="../../../src/Platform/Nvm.Sparkplug/Nvm.Sparkplug.csproj" />
     <ProjectReference Include="../../../src/Workers/Nvm.EdgeGateway/Nvm.EdgeGateway.csproj" />

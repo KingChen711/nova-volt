@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Reflection;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Nvm.Bus;
+using Nvm.CommandStore;
 using Nvm.FactoryModel;
 using Nvm.FactoryModel.Commands;
 using Nvm.Host.Infrastructure;
@@ -47,6 +48,8 @@ try
     }
 
     builder.Configuration.AddEnvironmentVariables();
+    builder.Services.AddNvmKernel(typeof(ActivateFactoryModelRevisionCommand).Assembly);
+    builder.Services.AddNvmCommandStore(builder.Configuration, builder.Environment);
     builder.Services.AddNvmPublicObjectModel(builder.Configuration, builder.Environment);
 
     // Đồng hồ duy nhất được chấp nhận trong codebase. AGENTS.md K1 cấm DateTime.UtcNow
@@ -72,7 +75,6 @@ try
     // Command pipeline cộng với Functional Block đầu tiên. Kernel được cho biết chính xác những
     // assembly nào cần scan, thay vì scan mọi thứ đã load: một Functional Block chưa từng tự công bố
     // mình thì không nên được wire up chỉ vì tình cờ nằm trong output directory.
-    builder.Services.AddNvmKernel(typeof(ActivateFactoryModelRevisionCommand).Assembly);
     builder.Services.AddNvmFactoryModel(SeedDirectoryLocator.Locate(builder.Environment.ContentRootPath));
 
     // Production calendar, đọc time zone của từng plant từ model ở trên thay vì từ một bảng tra cứu
@@ -81,6 +83,7 @@ try
     builder.Services.AddNvmProductionCalendar();
 
     builder.Services.AddDependencyHealthChecks();
+    builder.Services.AddHealthChecks().AddCheck<CommandStoreHealthCheck>("command-store", tags: [HealthTags.Ready]);
 
     var app = builder.Build();
 

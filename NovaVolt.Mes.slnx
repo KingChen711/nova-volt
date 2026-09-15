@@ -8,6 +8,7 @@
     <Project Path="src/FunctionalBlocks/FactoryModel/Nvm.FactoryModel.csproj" />
   </Folder>
   <Folder Name="/src/Platform/">
+    <Project Path="src/Platform/Nvm.CommandStore/Nvm.CommandStore.csproj" />
     <Project Path="src/Platform/Nvm.PublicObjectModel/Nvm.PublicObjectModel.csproj" />
     <Project Path="src/Platform/Nvm.Bus/Nvm.Bus.csproj" />
     <Project Path="src/Platform/Nvm.Contracts/Nvm.Contracts.csproj" />
@@ -29,6 +30,9 @@
     <Project Path="tools/telemetry/Nvm.TelemetryBackfill/Nvm.TelemetryBackfill.csproj" />
   </Folder>
   <Folder Name="/tests/" />
+  <Folder Name="/tests/TestAssets/">
+    <Project Path="tests/TestAssets/Nvm.CommandStoreProbe/Nvm.CommandStoreProbe.csproj" />
+  </Folder>
   <Folder Name="/tests/Analyzers/">
     <Project Path="tests/Analyzers/Nvm.AnalyzerTests/Nvm.AnalyzerTests.csproj" />
   </Folder>

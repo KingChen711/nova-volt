@@ -33,11 +33,10 @@ namespace Nvm.Kernel.Commands.Idempotency;
 /// Xem <see cref="KernelServiceCollectionExtensions.AddNvmKernel"/>.
 /// </para>
 /// <para>
-/// <b>Vẫn còn thiếu, và không phải thiếu nhỏ.</b> Claim chỉ sống được lâu bằng process. Qua một lần
-/// restart, hoặc giữa hai instance, không có gì được chia sẻ và duplicate lọt qua. Để khắc phục cần
-/// store là một database và claim phải commit trong cùng transaction với event mà nó bảo vệ
-/// (docs/adr/ADR-023). Cho tới lúc đó, K7 chỉ đúng trong phạm vi một process chứ không hơn — đó là
-/// điều đúng sự thật và cũng là điều mà test khẳng định.
+/// Với store RAM, claim chỉ sống trong process; dùng cho command Development có effect trong RAM.
+/// Với store SQL C05, Claim mở transaction dùng chung với handler, Complete lưu outcome rồi commit;
+/// lỗi handler/Complete đi qua Abandon để giải phóng transaction chưa commit. Publish vẫn phải nằm
+/// sau khi pipeline trả về; transaction SQL không bao broker (ADR-022/023).
 /// </para>
 /// </remarks>
 public sealed class IdempotencyBehavior<TCommand, TResult>(IIdempotencyStore store, TimeProvider clock)
@@ -67,7 +66,12 @@ public sealed class IdempotencyBehavior<TCommand, TResult>(IIdempotencyStore sto
         ArgumentNullException.ThrowIfNull(continuation);
 
         var key = command.IdempotencyKey;
-        var commandType = typeof(TCommand).Name;
+        var commandType = command is IDurableCommand durable ? durable.CommandType : typeof(TCommand).Name;
+
+        if (_store is IContextualIdempotencyStore contextual)
+        {
+            contextual.Prepare(command);
+        }
 
         var claim = await _store
             .ClaimAsync<TResult>(key, commandType, cancellationToken)
@@ -84,12 +88,14 @@ public sealed class IdempotencyBehavior<TCommand, TResult>(IIdempotencyStore sto
         try
         {
             result = await continuation().ConfigureAwait(false);
+            await _store
+                .CompleteAsync(key, result, _clock.GetUtcNow(), CancellationToken.None)
+                .ConfigureAwait(false);
         }
         catch
         {
-            // Mọi đường lỗi, kể cả cancellation. Một handler ném lỗi coi như chưa từng chạy, nên khoá
-            // của nó phải trở lại trạng thái chưa từng thấy — nếu không một lần retry của lỗi tạm thời
-            // sẽ bị nhầm thành duplicate và công việc bị mất vĩnh viễn.
+            // Lỗi handler hoặc Complete: Abandon giải phóng phần chưa commit. Store SQL không DELETE
+            // claim đã commit khi lỗi phản hồi commit khiến caller không biết kết quả cuối cùng.
             //
             // CancellationToken.None có chủ đích: token đưa ta tới đây có thể chính là token vừa bị
             // cancel, và một claim bị bỏ lửng — không hoàn tất cũng không abandon — sẽ chặn mọi
@@ -98,13 +104,6 @@ public sealed class IdempotencyBehavior<TCommand, TResult>(IIdempotencyStore sto
 
             throw;
         }
-
-        // Cũng dùng None. Ghi lại kết quả chính là điều giải phóng các caller đang chờ trên claim này;
-        // abandon họ chỉ vì token bị cancel sau khi công việc đã xong sẽ khiến họ phải làm lại việc đã
-        // thành công.
-        await _store
-            .CompleteAsync(key, result, _clock.GetUtcNow(), CancellationToken.None)
-            .ConfigureAwait(false);
 
         return result;
     }

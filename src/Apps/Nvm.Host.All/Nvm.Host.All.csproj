@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../../Platform/Nvm.Bus/Nvm.Bus.csproj" />
+    <ProjectReference Include="../../Platform/Nvm.CommandStore/Nvm.CommandStore.csproj" />
     <ProjectReference Include="../../Platform/Nvm.Hosting/Nvm.Hosting.csproj" />
     <ProjectReference Include="../../Platform/Nvm.PublicObjectModel/Nvm.PublicObjectModel.csproj" />
     <ProjectReference Include="../../FunctionalBlocks/FactoryModel/Nvm.FactoryModel.csproj" />

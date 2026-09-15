@@ -69,6 +69,7 @@ services:
       NVM_POM__Authority: "http://localhost:${NVM_PORT_KEYCLOAK}/realms/novavolt"
       NVM_POM__MetadataAddress: "http://keycloak:8080/realms/novavolt/.well-known/openid-configuration"
       NVM_POM__Audience: nvm-api
+      NVM_COMMANDS__ConnectionString: "Server=mssql;Database=NovaVolt;User Id=nvm_app;Password=${NVM_MSSQL_APP_PASSWORD};Encrypt=True;TrustServerCertificate=True;Connect Timeout=3;Application Name=Nvm.Commands"
     ports:
       - "127.0.0.1:${NVM_PORT_EXECUTION:-5081}:8080"
     networks: [it-net]
@@ -94,6 +95,20 @@ services:
       NVM_POM__FactoryModelPath: /app/seed/factory-model.r3.json
     networks: [it-net]
     command: ["--prepare-poc"]
+
+  execution-prepare-commands:
+    profiles: [execution]
+    image: novavolt/nvm-execution:dev
+    restart: "no"
+    mem_limit: 256m
+    depends_on:
+      mssql:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      NVM_COMMANDS__MigrationConnectionString: "Server=mssql;Database=NovaVolt;User Id=sa;Password=${NVM_MSSQL_SA_PASSWORD};Encrypt=True;TrustServerCertificate=True"
+    networks: [it-net]
+    command: ["--prepare-command-fixture"]
 
   # ─────────────────────────────────────────────────────────
   # PostgreSQL + TimescaleDB — telemetry và read model

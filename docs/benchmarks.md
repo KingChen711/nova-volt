@@ -765,5 +765,41 @@ tcpdump tạm, chỉ xuất request target qua bộ lọc; không lưu packet, h
 Capture dùng `-i any` hiển thị mỗi target hai lần; không tính đây là hai HTTP request.
 Chỉ ca chữ thường được đo trực tiếp việc không gọi POM; sáu ca sai format còn lại kiểm
 thông báo/clear UI và đọc nhánh validator trong model. Container quan sát tự xoá khi kết thúc,
-Execution đã running/healthy sau phép thử lỗi. C04 hoàn thành kiểm chức năng, chờ owner review/commit;
+Execution đã running/healthy sau phép thử lỗi. C04 hoàn thành kiểm chức năng và đã commit theo yêu cầu owner:
+.NET `43e4b05`, Mendix `1e445d9`;
 không dùng kết quả này để tuyên bố đạt p95, lab draft C09 hay toàn bộ M4.
+
+## M4/C05 — Command store SQL: kiểm ngày 2026-09-13
+
+Working copy trên .NET `43e4b05`, chưa commit C05. SQL Server test dùng container riêng
+`2022-CU26-ubuntu-22.04`; test không xoá dữ liệu ứng dụng đang chạy.
+
+| Phép kiểm | Kết quả đo | Bằng chứng local |
+|---|---|---|
+| Test C05 với SQL thật, DI và process host | **36/36 xanh**, 0 bỏ qua; 40,880 giây | `artifacts/c05/sql-tests-final.log` |
+| Test kernel command cũ | **33/33 xanh**; 3,320 giây | `artifacts/c05/kernel-tests-final.log` |
+| Test kiến trúc | **23/23 xanh**; 2,195 giây | `artifacts/c05/architecture-tests.log` |
+| Toàn solution Release trong CI | **781/781 xanh**, 0 lỗi, 0 bỏ qua; build 0 warning, 0 error; format đạt | `artifacts/c05/ci-final.log` |
+| Gate `make ci` hoàn chỉnh | **exit 0**; rotation preflight **45/45**; buffer crash **200/200 vòng**, **0 vòng đỏ**, mỗi vòng SIGKILL và mở lại bằng process mới | `artifacts/c05/ci-final.log` |
+| Hai process khác PID, cùng submission và DB | Process đầu chạy handler, process sau replay; **1 effect, 1 outcome** | `SqlCommandProcessTests`, trong log C05 |
+| Kill process sau ghi effect, trước Complete/commit | Sau kill: **0 effect, 0 outcome**; retry hoàn tất đúng một lần | `SqlCommandProcessTests`, trong log C05 |
+| Oracle restart trên kernel C04 export từ `43e4b05` | **ĐỎ, exit 1**: kỳ vọng 1 effect, quan sát **2** sau hai process | `artifacts/c05/parent-red.log`; cách tái lập ở `deploy/commands/README.md` |
+| Context fixture | So JSON của **2.000/2.000** row với cùng nguồn C03; seed lại thêm **0** row, không ghi đè context | `SqlCommandStoreTests`, trong log C05 |
+| Runtime SQL local | **NV1: 1.000**, **DE1: 1.000** context; runtime được INSERT outcome, bị chặn DELETE outcome và UPDATE context | Query SQL sau migration/seed ngày 2026-09-13 |
+| Ranh giới OT/IT sau đổi compose | **9/9 đạt** | `make net-check`, `artifacts/c05/net-check.log` |
+| Execution sau build/recreate C05 | **running, healthy**, `/health/ready` trả **200** | `artifacts/c05/docker-build-final.log`, `runtime-start-final.log`; Docker inspect và HTTP local |
+
+Image Execution cuối đã kiểm: `sha256:e4151c7fff68bcf580495f04712676a7dc3018706dc5fed5a2e59b7a4f756920`.
+
+Test SQL còn kiểm outcome từ chối, hai scope cạnh tranh, actor/payload/result-type conflict,
+natural key sai, đổi tên CLR nhưng giữ command type, rollback khi handler hoặc ghi outcome lỗi,
+huỷ waiter không ảnh hưởng owner, timeout SQL cấu hình 1 giây và cách ly context theo site.
+Test host chạy process Production thật cho cả Execution và Host.All khi thiếu cấu hình SQL;
+test DI kiểm cả trường hợp đăng ký RAM đè sau SQL.
+
+Giới hạn: effect trong test là bảng SQL tối thiểu, chưa phải handler nghiệp vụ C06.
+Chưa đo mất ACK đúng cửa sổ SQL đã commit, chưa đo p95 hoặc tải command, chưa chứng nhận
+D3–D5 qua HTTP/RabbitMQ và chưa chạy lab draft C09. Những trường hợp đó vẫn ở C06–C09.
+Browser smoke bổ sung sau C05 chưa chạy được: Playwright mở `http://localhost:8080`
+nhận `ERR_CONNECTION_REFUSED` vì runtime Mendix không phục vụ ở cổng đó. Kết quả browser C04
+ở trên là lần đo trước, không phải phép kiểm lại trên backend C05.

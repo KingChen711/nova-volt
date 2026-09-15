@@ -338,6 +338,24 @@ Chủ repo đã nói rõ: **hỏi dồn nhiều câu thì phiền**. Nguyên t�
 - Gom câu hỏi vào một lần, đầu milestone. Không rải rác.
 - Mỗi câu hỏi phải kèm: *nếu chọn A thì sao, chọn B thì sao*.
 
+### 5.5.1 Phân công với Claude CLI — chỉ dẫn của owner ngày 2026-09-13
+
+Áp dụng suốt session đang làm M4, kể cả sau khi compact context:
+
+- Codex ưu tiên chia việc và giao **Claude CLI thực hiện các task cụ thể**, sau đó đọc diff,
+  review và tự kiểm chứng kết quả. Hạn chế tự làm toàn bộ phần implementation.
+- Khi gọi Claude CLI, **luôn chỉ định Opus 4.8** (`--model claude-opus-4-8`); effort do Codex chọn.
+  Không dùng alias `opus`/`latest`, không tự nâng lên Opus 5.0 dù có bản mới hơn, không bật fallback
+  sang model khác nếu model này không dùng được.
+- Claude không chỉ dành cho phản biện hay đạt consensus. Cách giới hạn đó là suy diễn sai
+  của agent, không phải yêu cầu owner. Có thể giao implementation, tests và các task độc lập khác.
+- Giao phạm vi/file rõ ràng, tránh hai bên sửa trùng; Codex chịu trách nhiệm tích hợp và kết luận.
+  Việc giao task không tự cấp quyền commit/push hay nới các ràng buộc khác trong tài liệu này.
+- Khi compact context, giữ nguyên chỉ dẫn này cùng task đã giao, model, session/process đang chạy,
+  đường dẫn kết quả và phần review còn lại; không quay về tự implement mọi thứ sau compact.
+- Owner cho phép Codex tự sửa và hoàn tất C05 khi Claude hết quota (2026-09-13); không đổi model
+  để vượt giới hạn. Đây là ngoại lệ cho công việc đang dang dở, không xoá ưu tiên phân công phía trên.
+
 ### 5.6 Mendix — người dùng tự thao tác, agent hướng dẫn
 
 Ở dự án CGVibe trước đây, agent làm phần lớn việc Mendix qua Studio Pro MCP. **Dự án này

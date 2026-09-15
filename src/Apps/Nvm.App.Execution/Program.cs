@@ -2,7 +2,9 @@ using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Nvm.App.Execution;
+using Nvm.CommandStore;
 using Nvm.Hosting;
+using Nvm.Kernel;
 using Nvm.PublicObjectModel;
 
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
@@ -30,6 +32,24 @@ if (builder.Environment.IsDevelopment())
 }
 
 builder.Configuration.AddEnvironmentVariables();
+if (args.Contains("--migrate-commands", StringComparer.Ordinal))
+{
+    await CommandSchemaMigrator.UpgradeAsync(builder.Configuration["NVM_COMMANDS:MigrationConnectionString"]
+        ?? throw new InvalidOperationException("NVM_COMMANDS:MigrationConnectionString is required."));
+    return;
+}
+
+if (args.Contains("--prepare-command-fixture", StringComparer.Ordinal))
+{
+    if (!builder.Environment.IsDevelopment())
+    {
+        throw new InvalidOperationException("The command fixture is only allowed in Development.");
+    }
+
+    await CommandContextFixtureSeed.PrepareAsync(builder.Configuration["NVM_COMMANDS:MigrationConnectionString"]
+        ?? throw new InvalidOperationException("NVM_COMMANDS:MigrationConnectionString is required."));
+    return;
+}
 if (args.Contains("--prepare-poc", StringComparer.Ordinal))
 {
     if (!builder.Environment.IsDevelopment())
@@ -60,13 +80,15 @@ if (args.Contains("--migrate", StringComparer.Ordinal))
 }
 
 builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddNvmKernel();
+builder.Services.AddNvmCommandStore(builder.Configuration, builder.Environment);
 builder.Services.AddNvmPublicObjectModel(builder.Configuration, builder.Environment);
 var app = builder.Build();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapNvmPublicObjectModel();
 app.MapGet("/health/live", () => Results.Ok(new { Status = "Healthy" }));
-app.MapGet("/health/ready", async (PomReadDbContext database, CancellationToken cancellationToken) =>
+app.MapGet("/health/ready", async (PomReadDbContext database, SqlCommandStoreOptions commands, CancellationToken cancellationToken) =>
 {
     try
     {
@@ -74,6 +96,10 @@ app.MapGet("/health/ready", async (PomReadDbContext database, CancellationToken 
         _ = await database.Equipment.AnyAsync(cancellationToken);
         _ = await database.ProductionUnits.AnyAsync(cancellationToken);
         _ = await database.WipBoard.AnyAsync(cancellationToken);
+        if (!await CommandStoreReadiness.CheckAsync(commands, cancellationToken))
+        {
+            return Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
+        }
         return Results.Ok(new { Status = "Healthy" });
     }
     catch (NpgsqlException)

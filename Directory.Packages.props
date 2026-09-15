@@ -1,4 +1,8 @@
 <Project>
+  <ItemGroup Label="SQL command outcomes — M4/C05">
+    <PackageVersion Include="Microsoft.Data.SqlClient" Version="7.0.3" />
+    <PackageVersion Include="Testcontainers.MsSql" Version="4.14.0" />
+  </ItemGroup>
 
   <!--
     Central Package Management.

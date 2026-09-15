@@ -3,6 +3,7 @@
     <RootNamespace>Nvm.App.Execution</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../../Platform/Nvm.CommandStore/Nvm.CommandStore.csproj" />
     <ProjectReference Include="../../Platform/Nvm.Hosting/Nvm.Hosting.csproj" />
     <ProjectReference Include="../../Platform/Nvm.Kernel/Nvm.Kernel.csproj" />
     <ProjectReference Include="../../Platform/Nvm.PublicObjectModel/Nvm.PublicObjectModel.csproj" />

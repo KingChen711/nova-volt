@@ -11,15 +11,19 @@ public static class ProjectionSchemaMigrator
     public static async Task UpgradeAsync(NpgsqlDataSource dataSource, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(dataSource);
-        using var resource = typeof(ProjectionSchemaMigrator).Assembly.GetManifestResourceStream(
-            "Nvm.Projections.Migrations.001-unit-current.sql")
-            ?? throw new InvalidOperationException("Projection migration resource is missing.");
-        using var reader = new StreamReader(resource);
-        var sql = await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
         await using var connection = await dataSource.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
-        await using var command = new NpgsqlCommand(sql, connection, transaction);
-        await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        var assembly = typeof(ProjectionSchemaMigrator).Assembly;
+        foreach (var name in assembly.GetManifestResourceNames()
+            .Where(name => name.Contains(".Migrations.", StringComparison.Ordinal)).Order(StringComparer.Ordinal))
+        {
+            using var resource = assembly.GetManifestResourceStream(name)
+                ?? throw new InvalidOperationException("Projection migration resource is missing.");
+            using var reader = new StreamReader(resource);
+            var sql = await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
+            await using var command = new NpgsqlCommand(sql, connection, transaction);
+            await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        }
         await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
     }
 }

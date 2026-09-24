@@ -141,8 +141,22 @@ public sealed class SqlEventStore : IEventStore
     public async Task<EventStream?> ReadStreamAsync(string siteId, string streamId, CancellationToken cancellationToken)
     {
         ValidateIdentity(siteId, streamId);
-        await using var connection = await OpenReadAsync(cancellationToken).ConfigureAwait(false);
-        using var command = new SqlCommand("""
+        if (_session.HasActiveTransaction)
+        {
+            if (!string.Equals(_session.SiteId, siteId, StringComparison.Ordinal))
+            { throw new InvalidOperationException("Event site does not match the active command transaction."); }
+            // Read-modify-append giữ một update lock từ đầu, tránh hai command cùng giữ shared
+            // lock rồi cùng nâng lên write lock. Cũng đọc được fact vừa append trong transaction.
+            using var head = Command("""
+                SELECT Version FROM es.Streams WITH (UPDLOCK, HOLDLOCK)
+                WHERE SiteId = @site AND StreamId = @stream;
+                """);
+            AddIdentity(head, siteId, streamId);
+            await head.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
+        }
+        await using var connection = _session.HasActiveTransaction ? null
+            : await OpenReadAsync(cancellationToken).ConfigureAwait(false);
+        const string readSql = """
             SELECT s.StreamType, s.Version,
                    e.GlobalSequence, e.Version, e.SourceEventId, e.EventType, e.SchemaVersion,
                    e.PayloadJson, e.MetadataJson, e.OccurredAt, e.RecordedAt, e.CloudEventJson
@@ -150,7 +164,9 @@ public sealed class SqlEventStore : IEventStore
             LEFT JOIN es.Events AS e ON e.SiteId = s.SiteId AND e.StreamId = s.StreamId
             WHERE s.SiteId = @site AND s.StreamId = @stream
             ORDER BY e.Version;
-            """, connection) { CommandTimeout = _options.CommandTimeoutSeconds };
+            """;
+        using var command = _session.HasActiveTransaction ? Command(readSql)
+            : new SqlCommand(readSql, connection) { CommandTimeout = _options.CommandTimeoutSeconds };
         AddIdentity(command, siteId, streamId);
         using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
         var found = false;

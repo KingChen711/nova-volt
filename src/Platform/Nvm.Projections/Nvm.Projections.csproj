@@ -9,5 +9,6 @@
     <ProjectReference Include="../Nvm.Bus/Nvm.Bus.csproj" />
     <ProjectReference Include="../Nvm.Kernel/Nvm.Kernel.csproj" />
     <EmbeddedResource Include="Migrations/*.sql" />
+    <EmbeddedResource Include="Deployment/*.sql" />
   </ItemGroup>
 </Project>

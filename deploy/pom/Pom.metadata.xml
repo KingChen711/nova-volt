@@ -23,11 +23,11 @@
         <Property Name="SerialNumber" Type="Edm.String" Nullable="false" MaxLength="16" />
         <Property Name="UnitKind" Type="Edm.String" Nullable="false" MaxLength="8" />
         <Property Name="Line" Type="Edm.String" Nullable="false" MaxLength="2" />
-        <Property Name="Resource" Type="Edm.String" Nullable="false" MaxLength="32" />
+        <Property Name="Resource" Type="Edm.String" Nullable="false" MaxLength="200" />
         <Property Name="EquipmentPath" Type="Edm.String" Nullable="false" MaxLength="256" />
-        <Property Name="WorkOrderId" Type="Edm.String" Nullable="false" MaxLength="32" />
-        <Property Name="OperationRunId" Type="Edm.String" Nullable="false" MaxLength="32" />
-        <Property Name="StepCode" Type="Edm.String" Nullable="false" MaxLength="8" />
+        <Property Name="WorkOrderId" Type="Edm.String" Nullable="false" MaxLength="100" />
+        <Property Name="OperationRunId" Type="Edm.String" Nullable="false" MaxLength="100" />
+        <Property Name="StepCode" Type="Edm.String" Nullable="false" MaxLength="20" />
         <Property Name="ExecutionState" Type="Edm.String" Nullable="false" MaxLength="16" />
         <Property Name="QualityState" Type="Edm.String" Nullable="false" MaxLength="16" />
         <Property Name="LocationState" Type="Edm.String" Nullable="false" MaxLength="24" />
@@ -42,7 +42,7 @@
         <Property Name="Id" Type="Edm.String" Nullable="false" MaxLength="48" />
         <Property Name="SiteId" Type="Edm.String" Nullable="false" MaxLength="3" />
         <Property Name="Line" Type="Edm.String" Nullable="false" MaxLength="2" />
-        <Property Name="StepCode" Type="Edm.String" Nullable="false" MaxLength="8" />
+        <Property Name="StepCode" Type="Edm.String" Nullable="false" MaxLength="20" />
         <Property Name="QualityState" Type="Edm.String" Nullable="false" MaxLength="16" />
         <Property Name="UnitCount" Type="Edm.Int32" Nullable="false" />
         <Property Name="Revision" Type="Edm.Int32" Nullable="false" />

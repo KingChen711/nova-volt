@@ -68,7 +68,7 @@ dưới đây; tám DoD và K1–K13 giữ nguyên. Các ADR Accepted chốt thi
 
 | Hạng mục | Contract M4 | Quyết định |
 |---|---|---|
-| Nguồn dữ liệu | Fixture M4 1.000 unit/site, cùng nguồn cho context SQL Server và read model PostgreSQL; chưa có projection/live WIP | [ADR-038](../adr/ADR-038-data-collection-thu-cong-o-m4.md) |
+| Nguồn dữ liệu | POM ProductionUnits/WipBoard đọc projection lifecycle từ SQL event → Rabbit → PostgreSQL; command kiểm context authoritative trong SQL transaction. Fixture cũ còn cho draft PoC chưa gửi khi serial chưa có unit thật | [ADR-043](../adr/ADR-043-authoritative-unit-context-for-manual-collection.md) |
 | Phép đo / command | Điện áp pack tại `EOL`, `PackVoltage`, `V`; `RecordDataCollection` → `DataCollectionRecorded` v1, không đổi ba loại state | ADR-038 |
 | Draft / quyền | Draft bền vững trong DB Mendix trước POST; retry thủ công. Operator/LineLeader cùng quyền thao tác trong site, chỉ truy cập draft chính mình; không override/release | [ADR-014](../adr/ADR-014-mendix-ui-va-draft-ben-vung.md) |
 | Serial | Dùng parser 16 ký tự hiện có; không tự sửa mã hoặc tạo allocator ở M4 | [ADR-007](../adr/ADR-007-dinh-dang-serial-number.md) |
@@ -122,9 +122,10 @@ Dùng công đoạn phù hợp từng site,
 không seed formation cho DE1. Seed chạy tường minh, có thể lặp, không chạy trong startup Production,
 không sửa/xoá kết quả người dùng hoặc dữ liệu telemetry M3.
 
-POM M4 đọc snapshot fixture. Auto-refresh WIP đọc lại nguồn đó; gửi kết quả đo **không làm unit chuyển
-bước**. M5/M6 thay nguồn fixture bằng write model/projection thật, giữ contract POM nếu được.
-Không dựng projection worker để làm số đếm chạy cho đẹp; các bản ghi đã nhận phải được giữ khi chuyển nguồn.
+POM ProductionUnits/WipBoard đã chuyển sang projection lifecycle thật; gửi kết quả đo **không làm
+unit chuyển bước**. Metadata giữ entity/key, mở rộng độ dài sáu thuộc tính. Fixture và bản ghi đã nhận
+được giữ; fixture không trộn vào danh sách unit thật. Guard SQL của command luôn ưu tiên unit thật,
+không dùng projection trễ để quyết định quyền ghi. Quality release/location movement còn mở.
 
 ### 3.2 POM và phép thử Mendix sớm
 
@@ -453,7 +454,7 @@ trong lượt riêng; không tự spawn sub-agent trái lựa chọn của owner
 | ID | Trạng thái / hệ quả phải nói rõ | Đóng ở đâu |
 |---|---|---|
 | N-M4-1 | Đã nối command vào SQL event store/outbox cùng transaction; build 0 warning/error. 48/48 HTTP + SQL outbox tests qua; gồm broker outage + process restart, rollback, replay, lease khi publisher chậm và header đúng envelope đã lưu | Review độc lập không còn finding trong các bản sửa này; còn xác nhận image demo và audit tổng thể N3 |
-| N-M4-2 | Fixture theo ADR-038: Dispatch/WIP chưa phản ánh vòng đời sản xuất thật; auto-refresh không biến fixture thành projection | M5 write model, M6 projection; chuyển nguồn và giữ dữ liệu đã nhận |
+| N-M4-2 | Dispatch/WIP đã nối projection lifecycle; quality release/location movement và UI auto-refresh/status chưa nghiệm thu. Fixture context còn cho draft PoC cũ chưa gửi | M5/M6, ADR-043; kiểm runtime Mendix và đối soát draft trước khi bỏ fallback |
 
 Không đưa event store/stream/replay engine (M5), outbox/projection framework (M6), channel → unit (M7),
 grading/matching (M8), Quality workflow/override (M9), ERP (M11), offline sync toàn app hoặc k3d/Helm

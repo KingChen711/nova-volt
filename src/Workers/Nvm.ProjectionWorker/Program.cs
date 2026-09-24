@@ -26,6 +26,12 @@ var builder = WebApplication.CreateBuilder(args);
 string Required(string key) => builder.Configuration[key] is { Length: > 0 } value
     ? value : throw new InvalidOperationException($"{key} is required.");
 
+if (args.Contains("--connect-pom", StringComparer.Ordinal))
+{
+    await using var dataSource = NpgsqlDataSource.Create(Required("NVM_PROJECTIONS:MigrationConnectionString"));
+    await ProjectionPomConnector.ConnectAsync(dataSource);
+    return;
+}
 if (args.Contains("--migrate", StringComparer.Ordinal))
 {
     await ProjectionStorageSetup.PrepareAsync(

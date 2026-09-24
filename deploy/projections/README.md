@@ -38,8 +38,32 @@ administrative rebuild; runtime intentionally has no DELETE grant, so a destruct
 not exposed through this worker.
 
 This slice projects serialization, start/completion and accepted measurements to `rm.unit_current`.
-It does not yet replace the fixture-backed POM/WIP pages, project quality/location transitions,
-or implement genealogy/trace queries. These remain open in the project completion tracker.
+Duplicate-serial incidents project a separate quality hold, including incidents delivered before
+the original serialization. New units retain their domain defaults Pending/AtStation; later quality
+release, movement and genealogy features remain open.
+
+After the Execution POM migration and projection migration, switch POM query views explicitly:
+
+```sh
+docker compose --profile execution run --rm --no-deps execution-prepare-poc --migrate
+docker compose --profile projection run --rm --no-deps projection-migrate --connect-pom
+```
+
+The API then returns only event-derived units and WIP groups, not an overlay of demonstration rows.
+Fixture tables remain untouched. Reconciliation loads historical events before cutover. Each
+projection transaction increments a site read revision, so a late low-sequence incident also changes
+ETags. POM string limits for step/run/work-order/resource now cover command limits;
+refresh consumed OData metadata in Mendix before exercising longer values. Keep WIP key `Id`
+at its original maximum length 48: Mendix rejects an in-place length change of an existing
+external key during runtime synchronization, even when model checks pass. Its bounded components
+(site 3, line 2, step 20, quality 16, three separators) require at most 44 characters.
+
+Manual data collection reads authoritative SQL unit state through a Contracts query hosted by
+Traceability in the same command transaction (ADR-043). It does not authorize writes from these
+PostgreSQL views. Legacy fixture context is used only if that site/serial has no real unit;
+this preserves existing unsent PoC drafts. The explicit Development command fixture preparation
+also adds an EOL-only `NV-PACK-DEMO/r1` route at NV1 and DE1, without replacing existing routes.
+
 Existing credential rotation scripts cover the original infrastructure accounts; they do not
 rotate these two new role passwords. Rotate them explicitly in the databases before updating
 `.env` and recreating this worker; rerunning migration is not password rotation.

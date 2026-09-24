@@ -318,7 +318,7 @@ Chủ repo đã nói rõ: **hỏi dồn nhiều câu thì phiền**. Nguyên t�
 
 ### 5.5.1 Phân công nhiều agent
 
-Khi công cụ hỗ trợ và công việc có ranh giới độc lập, giao subagent phạm vi file/contract rõ, tránh sửa trùng. Codex chịu trách nhiệm tích hợp, kiểm chứng và kết luận; reviewer độc lập chỉ đọc. Ưu tiên Sol-6 ở mức medium/high cho phần triển khai và Astra cho review khó khi phù hợp. Không còn yêu cầu dùng Claude CLI hay pin model Claude cũ. Agent chính điều phối commit/push để tránh xung đột; phân công không nới DoD.
+Khi công cụ hỗ trợ và công việc có ranh giới độc lập, giao subagent phạm vi file/contract rõ, tránh sửa trùng, đồng thời tuân theo giới hạn phân công người dùng đang áp dụng trong phiên. Codex chịu trách nhiệm tích hợp, kiểm chứng và kết luận; reviewer độc lập chỉ đọc. Khi dùng Sol, chọn **Sol 5.6**, không dùng Sol 6 (người dùng chốt 2026-09-24); không dùng Terra/Luna. Effort do agent chọn theo việc; Astra dành cho phần phù hợp. Không còn yêu cầu dùng Claude CLI hay pin model Claude cũ. Agent chính điều phối commit/push để tránh xung đột; phân công không nới DoD.
 
 ### 5.6 Mendix — agent hoàn thiện model bằng công cụ được hỗ trợ
 

@@ -1,8 +1,8 @@
 # Studio Pro MCP — khi agent làm hộ
 
-File này chỉ dùng cho **tầng ghi** ở [SKILL.md](../SKILL.md) §0.1: người dùng nói rõ trong lượt
-hiện tại rằng *"làm hộ tôi phần này"*. Mặc định của dự án vẫn là người dùng tự bấm và agent viết
-các bước — file này không thay đổi điều đó.
+File này hướng dẫn **tầng ghi** ở [SKILL.md](../SKILL.md) §0.1. Chủ repo đã giao toàn bộ triển khai
+cho agent; quyền sửa model trong phạm vi dự án tiếp tục qua các lượt. Chỉ nhờ người dùng thao tác
+Studio Pro chưa có công cụ hỗ trợ, không áp dụng gate học tập hay xin lại quyền mỗi lượt.
 
 Tầng đọc (`list_modules`, `ped_read_document`, `pg_read_page`, `ped_check_errors`, `read_file`,
 `glob`) luôn được dùng, kể cả khi người dùng tự thao tác. Phần lớn nội dung dưới đây phục vụ
@@ -164,8 +164,8 @@ tham chiếu tới nó (entity trước association).
   loạt; dựng lại element/document từ đầu; tái cấu trúc flow/layout; hoàn tác thay đổi của người
   dùng; **bất kỳ thay đổi nào mà bạn không chắc giữ đúng ý người dùng**.
 
-Luật này chồng lên chứ không thay thế `AGENTS.md` §1.1 và §5.6: "làm hộ tôi phần này" cho phép
-đúng phần đó, không suy rộng sang lượt sau.
+Luật này bổ sung quy trình model, không thay thế phạm vi đã giao trong `AGENTS.md` §0.2/§1.1.
+Sửa lỗi thuộc dự án được thực hiện trong quyền hiện có; không suy ra quyền xóa dữ liệu ngoài nhiệm vụ.
 
 ## Error protocol — luật một-lần-sửa
 

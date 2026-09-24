@@ -4,7 +4,7 @@ namespace Nvm.PublicObjectModel;
 
 /// <summary>
 /// Read DTO phẳng của một production unit cho Operator Station: đủ ngữ cảnh để chọn việc, quét serial
-/// và nhìn ba loại state tách biệt. Đây là snapshot fixture của M4 (ADR-038), không phải write model.
+/// và nhìn ba loại state tách biệt. Query views được chuyển từ fixture sang projection khi deploy.
 /// </summary>
 /// <remarks>
 /// Ba state là ba trục độc lập (glossary §7): execution thuộc thao tác, quality độc lập vị trí vật lý,
@@ -30,19 +30,19 @@ public sealed class ProductionUnit
     [MaxLength(2)]
     public required string Line { get; init; }
 
-    [MaxLength(32)]
+    [MaxLength(200)]
     public required string Resource { get; init; }
 
     [MaxLength(256)]
     public required string EquipmentPath { get; init; }
 
-    [MaxLength(32)]
+    [MaxLength(100)]
     public required string WorkOrderId { get; init; }
 
-    [MaxLength(32)]
+    [MaxLength(100)]
     public required string OperationRunId { get; init; }
 
-    [MaxLength(8)]
+    [MaxLength(20)]
     public required string StepCode { get; init; }
 
     // Execution state của operation run: Scheduled / Running / Completed / Aborted.

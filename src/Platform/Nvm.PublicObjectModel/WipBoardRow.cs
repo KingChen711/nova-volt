@@ -3,13 +3,12 @@ using System.ComponentModel.DataAnnotations;
 namespace Nvm.PublicObjectModel;
 
 /// <summary>
-/// Một dòng WIP board: số unit nhóm theo (site, line, step, quality state) trong snapshot fixture.
+/// Một dòng WIP board: số unit nhóm theo (site, line, step, quality state).
 /// </summary>
 /// <remarks>
 /// <para>
-/// Đây là bảng snapshot đã gộp sẵn trong PostgreSQL, không phải projection tự cập nhật và không phải
-/// một câu GROUP BY chạy trên toàn bảng lúc request. Gửi một kết quả đo không làm unit chuyển bước nên
-/// số đếm không đổi giữa các lần đọc (ADR-038); M5/M6 mới thay bằng projection thật.
+/// Query view đọc fixture trước khi cutover; sau cutover nó nhóm trạng thái sản phẩm từ projection.
+/// Kết quả đo không tự chuyển bước; event start/complete và quality hold mới đổi nhóm tương ứng.
 /// </para>
 /// <para>
 /// Nhóm theo <b>quality state</b> chứ không phải execution state vì màn hình WIP hỏi "bao nhiêu hàng
@@ -20,6 +19,8 @@ namespace Nvm.PublicObjectModel;
 /// </remarks>
 public sealed class WipBoardRow
 {
+    // Preserve the imported external-key contract: Mendix cannot migrate its length in place.
+    // Site (3) + line (2) + step (20) + quality (16) + separators (3) fit within 48.
     [Key, MaxLength(48)]
     public required string Id { get; init; }
 
@@ -29,7 +30,7 @@ public sealed class WipBoardRow
     [MaxLength(2)]
     public required string Line { get; init; }
 
-    [MaxLength(8)]
+    [MaxLength(20)]
     public required string StepCode { get; init; }
 
     [MaxLength(16)]

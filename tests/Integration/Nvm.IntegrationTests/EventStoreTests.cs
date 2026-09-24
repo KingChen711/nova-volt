@@ -33,6 +33,8 @@ public sealed class EventStoreTests : IClassFixture<SqlCommandStoreFixture>
         {
             var store = Store(session);
             (await store.AppendAsync("NV1", stream, "ProductionUnit", 0, events, Ct)).ShouldBe(2);
+            (await store.ReadStreamAsync("NV1", stream, Ct))!.Version.ShouldBe(2);
+            await Should.ThrowAsync<InvalidOperationException>(() => store.ReadStreamAsync("DE1", stream, Ct));
             return new CollectionOutcome(true, "OK");
         }, cancellationToken: Ct);
 

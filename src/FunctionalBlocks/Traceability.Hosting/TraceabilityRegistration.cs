@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Nvm.CommandStore;
+using Nvm.Contracts.Queries;
 using Nvm.EventStore;
 using Nvm.Kernel.Commands;
 using Nvm.Kernel.Commands.Validation;
@@ -36,6 +37,7 @@ public static class TraceabilityRegistration
         services.TryAddSingleton(provider => new EventUpcasterChain(provider.GetServices<IEventUpcaster>()));
         services.TryAddScoped<IEventStore, SqlEventStore>();
         services.AddScoped<SqlTraceabilityAdapters>();
+        services.AddScoped<IUnitExecutionContextReader, SqlUnitExecutionContextReader>();
         services.AddScoped<IRoutingDirectory>(provider => provider.GetRequiredService<SqlTraceabilityAdapters>());
         services.AddScoped<IUnitGuard>(provider => provider.GetRequiredService<SqlTraceabilityAdapters>());
         services.AddScoped<ISerialReservation>(provider => provider.GetRequiredService<SqlTraceabilityAdapters>());

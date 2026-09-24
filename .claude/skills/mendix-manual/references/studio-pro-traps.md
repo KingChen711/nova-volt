@@ -7,6 +7,25 @@ thừa từ dự án CGVibe. Cả hai đều là thứ **đã tái lập đượ
 
 ## 0. Kiểm chứng trong NovaVolt MES — Studio Pro 11.12.3
 
+### Không đổi độ dài khóa external entity đang có dữ liệu (Codex, 2026-09-24)
+
+Agent tăng WipBoard._Id từ48 lên128 cùng metadata; MCP/mx check0errors và Java build thành công,
+nhưng F5 (kể cả sau reboot) bị RemotePrimaryKeyAnalyzer từ chối: "Change of data type or length
+for key attribute '_Id' is not supported". Giả thuyết port/process cũ không giải thích được thông báo
+đồng bộ schema cụ thể này. Sửa tối thiểu: giữ key48 ở DTO, metadata và imported attribute;
+không xóa entity/database. Site3+line2+step20+quality16+3 dấu phân cách tối đa44 ký tự.
+Model check không chứng minh migration runtime thành công; phải kiểm F5 với database hiện có.
+Đã xác minh: user Update consumed metadata/SaveAll/F5 chạy được; MCP/mx check0errors, HTTP8080 trả200.
+
+### Consumed OData: schema có nhưng document API không đọc được (Codex, 2026-09-24)
+
+`ped_list_folder` trả `NvmShared.POM_v1` loại `Rest$ConsumedODataService` và
+`ped_get_schema` trả schema đầy đủ, nhưng `ped_read_document` cùng loại/tên trả
+`Unknown document type 'Rest$ConsumedODataService'`. Có schema không chứng minh công cụ hỗ trợ
+đọc/sửa document. Không viết thẳng model. Nhờ cập nhật metadata qua Studio Pro; hướng dẫn
+chính thức Consumed OData Service ghi **Update → Import from: File → Browse**. Tên nút
+xác nhận cuối hộp thoại chưa quan sát trực tiếp trong lượt này.
+
 > Bản Studio Pro thực tế là **11.12.3**. Plan M0 từng ghi 11.12.1; đã sửa ngày 2026-08-27 ở R5, nên
 > plan và thực tế giờ khớp — đừng dựa vào ghi chú cũ nói rằng chúng lệch nhau.
 > App `NvmShopFloor` dùng **Git**, không phải SVN. `mx.exe` cho `mx check` phải đúng 11.12.3.

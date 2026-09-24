@@ -33,7 +33,7 @@ public sealed class PomReadDbContext(
         equipment.HasQueryFilter(row => row.SiteId == CurrentSiteId);
 
         var unit = modelBuilder.Entity<ProductionUnit>();
-        unit.ToTable("production_units", "pom");
+        unit.ToView("production_units_read", "pom");
         unit.HasKey(row => row.Id);
         unit.Property(row => row.Id).HasColumnName("id");
         unit.Property(row => row.SiteId).HasColumnName("site_id");
@@ -54,7 +54,7 @@ public sealed class PomReadDbContext(
         unit.HasQueryFilter(row => row.SiteId == CurrentSiteId);
 
         var wip = modelBuilder.Entity<WipBoardRow>();
-        wip.ToTable("wip_board", "pom");
+        wip.ToView("wip_board_read", "pom");
         wip.HasKey(row => row.Id);
         wip.Property(row => row.Id).HasColumnName("id");
         wip.Property(row => row.SiteId).HasColumnName("site_id");

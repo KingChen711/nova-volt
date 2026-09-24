@@ -319,6 +319,25 @@ public sealed class ExecutionCommandHttpFixture : IAsyncLifetime
         }
         return result.ToArray();
     }
+
+    public async Task<string> DeliveryStateAsync(CollectionRequest request)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        await connection.OpenAsync(Ct);
+        using var command = new SqlCommand("""
+            SELECT Attempt, ClaimId, NextAttemptAt, DispatchedAt FROM es.Outbox
+            WHERE SiteId = @site AND EventId = @event;
+            """, connection);
+        command.Parameters.AddWithValue("site", request.SiteId);
+        command.Parameters.AddWithValue("event", request.IdempotencyKey);
+        using var reader = await command.ExecuteReaderAsync(Ct);
+        if (!await reader.ReadAsync(Ct))
+        { return "outbox absent"; }
+        var retry = reader.GetDateTimeOffset(2) - TimeProvider.System.GetUtcNow();
+        var claimed = !await reader.IsDBNullAsync(1, Ct);
+        var dispatched = !await reader.IsDBNullAsync(3, Ct);
+        return $"attempt={reader.GetInt32(0)}, claimed={claimed}, dispatched={dispatched}, dueIn={retry.TotalSeconds:F1}s";
+    }
     public async Task StartBrokerAsync()
     {
         await _rabbit.StartAsync(Ct);

@@ -7,6 +7,7 @@ namespace Nvm.Traceability.Hosting;
 public static class TraceabilityFixtureSeed
 {
     public const string ProductCode = "NV-CELL-DEMO";
+    public const string PackProductCode = "NV-PACK-DEMO";
     public const string RoutingVersion = "r1";
 
     /// <summary>Insert missing demo routes without changing a route already used by serialized units.</summary>
@@ -22,7 +23,9 @@ public static class TraceabilityFixtureSeed
         var inserted = 0;
         foreach (var site in new[] { "NV1", "DE1" })
         {
-            using var command = new SqlCommand("""
+            foreach (var product in new[] { ProductCode, PackProductCode })
+            {
+                using var command = new SqlCommand("""
                 INSERT INTO traceability.Routes
                     (SiteId, ProductCode, RoutingVersion, StepsJson, TransitionsJson)
                 SELECT @site, @product, @version, @steps, @transitions
@@ -30,18 +33,20 @@ public static class TraceabilityFixtureSeed
                     SELECT 1 FROM traceability.Routes WITH (UPDLOCK, HOLDLOCK)
                     WHERE SiteId = @site AND ProductCode = @product AND RoutingVersion = @version);
                 """, connection, transaction);
-            command.Parameters.Add("@site", SqlDbType.VarChar, 3).Value = site;
-            command.Parameters.Add("@product", SqlDbType.NVarChar, 100).Value = ProductCode;
-            command.Parameters.Add("@version", SqlDbType.NVarChar, 50).Value = RoutingVersion;
-            command.Parameters.Add("@steps", SqlDbType.NVarChar, -1).Value = """
+                command.Parameters.Add("@site", SqlDbType.VarChar, 3).Value = site;
+                command.Parameters.Add("@product", SqlDbType.NVarChar, 100).Value = product;
+                command.Parameters.Add("@version", SqlDbType.NVarChar, 50).Value = RoutingVersion;
+                command.Parameters.Add("@steps", SqlDbType.NVarChar, -1).Value = product == PackProductCode
+                    ? """[{"code":"EOL"}]""" : """
                 [{"code":"STACK"},{"code":"TABWELD"},{"code":"FORMATION"},{"code":"GRADING"}]
                 """;
-            command.Parameters.Add("@transitions", SqlDbType.NVarChar, -1).Value = """
+                command.Parameters.Add("@transitions", SqlDbType.NVarChar, -1).Value = """
                 [{"action":"StartStep","from":0,"to":1},
                  {"action":"CompleteStep","from":1,"to":2},
                  {"action":"StartStep","from":2,"to":1}]
                 """;
-            inserted += await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+                inserted += await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+            }
         }
         await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
         return inserted;

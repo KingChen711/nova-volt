@@ -13,6 +13,9 @@ public sealed class SqlCommandSession : IAsyncDisposable
     /// <summary>Site của command đang giữ transaction, đã được server xác thực.</summary>
     public string SiteId { get; private set; } = "";
 
+    /// <summary>Cho phép reader tham gia transaction hiện tại thay vì tự mở connection khác.</summary>
+    public bool HasActiveTransaction => _transaction is not null;
+
     /// <summary>Chỉ có transaction khi caller đang giữ claim mới.</summary>
     internal SqlTransaction Transaction => _transaction ?? throw new InvalidOperationException("No active command transaction.");
 

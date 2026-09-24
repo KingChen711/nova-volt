@@ -1,67 +1,30 @@
 ---
 name: mendix-manual
 description: >-
-  Hướng dẫn người dùng TỰ TAY thao tác Mendix Studio Pro cho dự án NovaVolt MES:
-  tạo app, domain model, page, microflow, workflow, security, OIDC, consume OData/REST,
-  Team Server, mx check, chạy local. Dùng skill này bất cứ khi nào công việc chạm tới
-  Mendix — kể cả khi người dùng chỉ nói "làm màn hình operator", "gọi API từ Mendix",
-  "app không chạy", "commit lên Team Server", mà không nhắc tên Mendix.
-  Studio Pro MCP: tầng đọc luôn được dùng; tầng ghi CHỈ khi người dùng yêu cầu rõ
-  trong lượt hiện tại. Mặc định là người dùng tự bấm, agent viết các bước.
+  Triển khai và kiểm chứng Mendix NovaVolt MES bằng Studio Pro MCP, CLI và browser.
+  Chỉ giao người dùng thao tác Studio Pro không có công cụ hỗ trợ. Không dùng gate học tập.
 ---
 
-# Mendix — chế độ người dùng tự thao tác
+# Mendix — triển khai do agent phụ trách
 
-## 0. Điều khác biệt lớn nhất của dự án này
+## 0. Phạm vi được giao
 
-Ở dự án CGVibe trước đây, agent làm phần lớn công việc Mendix qua Studio Pro MCP.
-**Dự án này thì không.** Người dùng muốn **tự tay thao tác** để học Mendix bằng cơ bắp,
-không phải bằng cách đọc lại diff của agent.
+Theo quyết định chủ repo 2026-09-23 và AGENTS.md §0.2/§5.6, agent sở hữu phần việc còn lại,
+được sửa model qua MCP trong phạm vi dự án, được commit/push theo quy tắc repo.
+Không xin lại quyền mỗi lượt; không yêu cầu người dùng tự bấm để học. Nhờ người dùng đúng
+thao tác Studio Pro không có công cụ hỗ trợ hoặc quyền truy cập còn thiếu.
 
-Hệ quả bắt buộc:
+Agent tự đọc working copy, log, model, tự đăng nhập và kiểm browser bằng credential được phép
+sử dụng. Không in/lưu mật khẩu, token vào output hoặc file commit. Chỉ nhờ khi thiếu credential,
+gặp MFA/CAPTCHA hoặc giới hạn công cụ thật. Không chỉnh `.mpr`/`.mxunit` trực tiếp.
 
-| Việc | Ai làm |
-|---|---|
-| Mọi thao tác trong Studio Pro | **Người dùng** |
-| Quyết định thiết kế, đặt tên, chọn pattern | Agent đề xuất → người dùng chốt |
-| Viết ra các bước bấm | Agent |
-| Giải thích vì sao | Agent |
-| Đọc log, chẩn đoán lỗi, đối chiếu tài liệu | Agent |
-| Chạy `mx check`, đọc `deployment/model`, grep file | Agent (chỉ đọc) |
-| Đăng nhập ứng dụng/SSO và thao tác browser khi đã được giao kiểm thử | Agent, dùng credential đã được cung cấp hoặc được phép dùng |
+### 0.1 Studio Pro MCP
 
-Agent vẫn được **đọc** file trong thư mục app (`.mpr` là nhị phân, nhưng
-`deployment/`, `javasource/`, `theme/`, `widgets/` đọc được) để chẩn đoán.
-
-Chế độ tự bấm ở đây áp dụng cho học thao tác **Studio Pro**, không buộc người dùng tự
-đăng nhập trong trình duyệt. Agent được giao kiểm thử phải tự đăng nhập và đăng nhập lại
-bằng credential đã được cung cấp hoặc được phép dùng; không dừng chỉ vì có trường mật khẩu.
-Chỉ nhờ người dùng khi thiếu credential, gặp MFA/CAPTCHA hoặc giới hạn công cụ thực tế.
-Không in/lưu mật khẩu, token vào output hay file được commit. Với CLI tự echo thao tác fill,
-chặn output đó trước khi đưa kết quả về hội thoại; chỉ báo đăng nhập thành công/thất bại.
-
-### 0.1 Studio Pro MCP — ba tầng, không phải bật/tắt
-
-| Tầng | Ví dụ tool | Được dùng khi nào |
-|---|---|---|
-| **Đọc** | `ped_read_document`, `ped_check_errors`, `list_modules`, `pg_read_page`, `read_file` | **Luôn được.** Không cần hỏi |
-| **Ghi** | `ped_create_document`, `ped_update_document`, `pg_patch_page`, `ped_create_module`, `install_marketplace_module`, `write_file` | **Chỉ khi người dùng nói rõ trong lượt hiện tại** |
-| **Mặc định** | — | Người dùng tự bấm, agent viết các bước |
-
-**Tầng đọc luôn mở** vì nó không lấy đi cơ hội học của ai, mà lại làm hướng dẫn chính xác hơn.
-Thay vì hỏi *"Security level đang là gì?"* rồi chờ, agent tự đọc model và biết ngay. Ít vòng
-hỏi-đáp hơn, ít đoán sai hơn.
-
-**Tầng ghi cần cho phép từng lần.** Cùng nguyên tắc với `AGENTS.md` §1.1 về commit: người dùng
-nói *"làm hộ tôi phần này"* thì làm **đúng phần đó**, không suy rộng sang lượt sau. Mặc định
-vẫn quay về người dùng tự bấm.
-
-**Sau khi ghi bằng MCP, luôn nói rõ đã tạo/sửa document nào và vì sao** — người dùng vẫn phải
-hiểu model của mình, chỉ là không phải tự click.
-
-> **Trước khi ghi bất cứ thứ gì bằng MCP, đọc [mcp-model-work.md](references/mcp-model-work.md).**
-> Nó chứa quy trình bắt buộc, hệ thống schema, error protocol và các giới hạn đã biết. Ghi model
-> mà không đọc file đó là cách nhanh nhất để tạo lỗi dây chuyền trong app của người dùng.
+Đọc [mcp-model-work.md](references/mcp-model-work.md) trước model mutation; đọc skill/schema
+trực tiếp từ server. Kiểm đúng app/branch, giữ thay đổi hiện có. Tầng đọc và tầng ghi đều được
+phép trong phạm vi đã giao; hỗ trợ từ người dùng không thay thế phần agent có thể tự làm.
+Sau mutation nêu document đã sửa, mục đích và mức kiểm chứng. Dùng check/runtime/E2E phù hợp;
+0 lỗi document không đồng nghĩa toàn bộ app đã hoàn thành.
 
 ### 0.2 MCP kiểm chứng được gì, và KHÔNG kiểm chứng được gì
 

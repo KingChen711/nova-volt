@@ -5,6 +5,7 @@ using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -23,6 +24,50 @@ public sealed class TraceabilityCommandTests(SqlCommandStoreFixture fixture) : I
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
     private const string Serial = "NV1CL16238A54321";
     private static readonly DateTimeOffset At = new(2026, 8, 25, 3, 15, 42, TimeSpan.Zero);
+
+    [Fact]
+    public async Task CommandContext_LocksExecutionAndQuality_UntilCallerCommits()
+    {
+        await EventSchemaMigrator.UpgradeAsync(fixture.ConnectionString, Ct);
+        await TraceabilitySchemaMigrator.UpgradeAsync(fixture.ConnectionString, Ct);
+        await fixture.ExecuteAsync("""
+            INSERT INTO traceability.Routes (SiteId, ProductCode, RoutingVersion, StepsJson, TransitionsJson)
+            VALUES ('NV1', 'LOCK-PRODUCT', 'r1', '[{"code":"STACK"}]',
+                '[{"action":"StartStep","from":0,"to":1}]');
+            """, _ => { }, Ct);
+        const string serial = "NV1CL16238A54323";
+        var born = new SerializeUnitCommand("NV1", "operator", "locked-birth", serial, At,
+            "LOCK-PRODUCT", "WO-LOCK", "r1");
+        (await RunAsync(born, (processor, command) => processor.SerializeAsync(command, Ct))).Accepted.ShouldBeTrue();
+        var claim = SqlCommandStoreFixture.NewCommand("NV1", "operator", "context-lock", "context-lock");
+        await fixture.SubmitAsync(claim, async session =>
+        {
+            var context = await new SqlUnitExecutionContextReader(session, Store(session)).ReadForCommandAsync(serial, Ct);
+            context.ShouldNotBeNull();
+            context.ExecutionState.ShouldBe("Scheduled");
+            context.QualityState.ShouldBe("Pending");
+            (await new SqlUnitExecutionContextReader(session, Store(session)).ReadForCommandAsync("DE1CL16238A54323", Ct)).ShouldBeNull();
+            await using var competitor = new SqlConnection(fixture.ConnectionString);
+            await competitor.OpenAsync(Ct);
+            using var change = new SqlCommand("""
+                UPDATE es.Streams WITH (NOWAIT) SET Version = Version
+                WHERE SiteId = 'NV1' AND StreamId = 'NV1CL16238A54323';
+                """, competitor);
+            (await Should.ThrowAsync<SqlException>(() => change.ExecuteNonQueryAsync(Ct))).Number.ShouldBe(1222);
+            change.CommandText = """
+                UPDATE traceability.SerialReservations WITH (NOWAIT) SET QualityState = QualityState
+                WHERE SiteId = 'NV1' AND SerialNumber = 'NV1CL16238A54323';
+                """;
+            (await Should.ThrowAsync<SqlException>(() => change.ExecuteNonQueryAsync(Ct))).Number.ShouldBe(1222);
+            return new CollectionOutcome(true, "locked");
+        }, cancellationToken: Ct);
+        await fixture.ExecuteAsync("""
+            UPDATE es.Streams WITH (NOWAIT) SET Version = Version
+            WHERE SiteId = 'NV1' AND StreamId = 'NV1CL16238A54323';
+            UPDATE traceability.SerialReservations WITH (NOWAIT) SET QualityState = QualityState
+            WHERE SiteId = 'NV1' AND SerialNumber = 'NV1CL16238A54323';
+            """, _ => { }, Ct);
+    }
 
     [Fact]
     public async Task DuplicateSerialization_CommitsIncidentHoldAndOutcomeTogether()
@@ -102,7 +147,7 @@ public sealed class TraceabilityCommandTests(SqlCommandStoreFixture fixture) : I
     public async Task DemoRoute_SeedsIdempotently_AndRunsSerializedStepWithMeasurement()
     {
         await EventSchemaMigrator.UpgradeAsync(fixture.ConnectionString, Ct);
-        (await TraceabilityFixtureSeed.PrepareAsync(fixture.ConnectionString, Ct)).ShouldBe(2);
+        (await TraceabilityFixtureSeed.PrepareAsync(fixture.ConnectionString, Ct)).ShouldBe(4);
         (await TraceabilityFixtureSeed.PrepareAsync(fixture.ConnectionString, Ct)).ShouldBe(0);
         const string serial = "NV1CL16238A54322";
         var born = new SerializeUnitCommand("NV1", "operator", "demo-birth", serial, At,

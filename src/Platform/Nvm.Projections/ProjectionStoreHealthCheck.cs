@@ -19,7 +19,8 @@ public sealed class ProjectionStoreHealthCheck(NpgsqlDataSource dataSource) : IH
                     ('rm.unit_current', 'SELECT'), ('rm.unit_current', 'INSERT'), ('rm.unit_current', 'UPDATE'),
                     ('rm.projection_checkpoint', 'SELECT'), ('rm.projection_checkpoint', 'INSERT'),
                     ('rm.projection_checkpoint', 'UPDATE'), ('rm.unit_projection_inbox', 'SELECT'),
-                    ('rm.unit_projection_inbox', 'INSERT')) AS required(table_name, privilege);
+                    ('rm.unit_projection_inbox', 'INSERT'), ('rm.unit_duplicate_hold', 'SELECT'),
+                    ('rm.unit_duplicate_hold', 'INSERT')) AS required(table_name, privilege);
                 """);
             return await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false) is true
                 ? HealthCheckResult.Healthy()

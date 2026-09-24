@@ -8,7 +8,7 @@ using Nvm.App.Execution;
 
 namespace Nvm.IntegrationTests;
 
-public sealed class ExecutionCommandHttpTests(ExecutionCommandHttpFixture fixture) : IClassFixture<ExecutionCommandHttpFixture>
+public sealed class ExecutionCommandHttpTests(ExecutionCommandHttpFixture fixture, ITestOutputHelper output) : IClassFixture<ExecutionCommandHttpFixture>
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
@@ -113,7 +113,10 @@ public sealed class ExecutionCommandHttpTests(ExecutionCommandHttpFixture fixtur
         replay.StatusCode.ShouldBe(HttpStatusCode.OK);
         (await replay.Content.ReadAsStringAsync(Ct)).ShouldBe(original);
         (await fixture.OutcomeCountAsync(request)).ShouldBe(1);
-        (await fixture.EventsForAsync(request)).Length.ShouldBe(1);
+        output.WriteLine(await fixture.DeliveryStateAsync(request));
+        // Kill có thể xảy ra giữa claim outbox và publish. Phục hồi phải chờ lease 120s;
+        // đây là kiểm durability sau crash, không phải latency publish trong điều kiện bình thường.
+        (await fixture.EventsForAsync(request, timeoutSeconds: 150)).Length.ShouldBe(1);
     }
 
     [Fact]
@@ -200,7 +203,8 @@ public sealed class ExecutionCommandHttpTests(ExecutionCommandHttpFixture fixtur
         (await replay.Content.ReadAsStringAsync(Ct)).ShouldBe(expected);
         (await fixture.OutcomeCountAsync(request)).ShouldBe(1);
         (await fixture.StoredRecordAsync(request)).ShouldNotBeNull();
-        (await fixture.EventsForAsync(request)).Length.ShouldBe(1);
+        output.WriteLine(await fixture.DeliveryStateAsync(request));
+        (await fixture.EventsForAsync(request, timeoutSeconds: 150)).Length.ShouldBe(1);
     }
 
     [Fact]
@@ -217,7 +221,8 @@ public sealed class ExecutionCommandHttpTests(ExecutionCommandHttpFixture fixtur
         replay.StatusCode.ShouldBe(HttpStatusCode.OK);
         (await replay.Content.ReadAsStringAsync(Ct)).ShouldBe(expected);
         (await fixture.OutcomeCountAsync(request)).ShouldBe(1);
-        (await fixture.EventsForAsync(request)).Length.ShouldBe(1);
+        output.WriteLine(await fixture.DeliveryStateAsync(request));
+        (await fixture.EventsForAsync(request, timeoutSeconds: 150)).Length.ShouldBe(1);
     }
 
     [Fact]

@@ -67,6 +67,7 @@ public static class PomFixtureSeed
         await using (var grant = new NpgsqlCommand("""
             GRANT USAGE ON SCHEMA pom TO nvm_pom;
             GRANT SELECT ON pom.equipment, pom.production_units, pom.wip_board TO nvm_pom;
+            GRANT SELECT ON pom.production_units_read, pom.wip_board_read TO nvm_pom;
             """, connection, transaction))
         {
             await grant.ExecuteNonQueryAsync();

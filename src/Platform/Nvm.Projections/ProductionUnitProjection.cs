@@ -82,7 +82,7 @@ public sealed class ProductionUnitProjection(NpgsqlDataSource dataSource, IGloba
 
         await using (var checkpoint = new NpgsqlCommand("""
             UPDATE rm.projection_checkpoint
-            SET last_global_seq = GREATEST(last_global_seq, @last)
+            SET last_global_seq = GREATEST(last_global_seq, @last), read_revision = read_revision + 1
             WHERE site_id = @site AND projection_name = @name;
             """, connection, transaction))
         {
@@ -102,14 +102,14 @@ public sealed class ProductionUnitProjection(NpgsqlDataSource dataSource, IGloba
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
         await LockCheckpointAsync(connection, transaction, siteId, cancellationToken).ConfigureAwait(false);
         await using (var clear = new NpgsqlCommand(
-            "DELETE FROM rm.unit_current WHERE site_id = @site;", connection, transaction))
+            "DELETE FROM rm.unit_current WHERE site_id = @site; DELETE FROM rm.unit_duplicate_hold WHERE site_id = @site;", connection, transaction))
         {
             clear.Parameters.AddWithValue("site", siteId);
             await clear.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
         }
         await using (var reset = new NpgsqlCommand("""
             UPDATE rm.projection_checkpoint
-            SET last_global_seq = 0, generation = generation + 1
+            SET last_global_seq = 0, generation = generation + 1, read_revision = read_revision + 1
             WHERE site_id = @site AND projection_name = @name;
             """, connection, transaction))
         {
@@ -213,7 +213,21 @@ public sealed class ProductionUnitProjection(NpgsqlDataSource dataSource, IGloba
                     break;
                 }
             case DuplicateSerial:
-                break;
+                {
+                    var duplicate = Read<DuplicateSerialDetected>(fact);
+                    if (duplicate.SiteId != fact.SiteId || SerialNumber.Parse(duplicate.SerialNumber).SiteCode != fact.SiteId)
+                    { throw new InvalidDataException("Duplicate incident belongs to another site."); }
+                    await using var hold = new NpgsqlCommand("""
+                        INSERT INTO rm.unit_duplicate_hold(site_id, serial_number, incident_event_id, global_sequence)
+                        VALUES (@site, @serial, @event, @sequence) ON CONFLICT DO NOTHING;
+                        """, connection, transaction);
+                    hold.Parameters.AddWithValue("site", fact.SiteId);
+                    hold.Parameters.AddWithValue("serial", duplicate.SerialNumber);
+                    hold.Parameters.AddWithValue("event", fact.SourceEventId);
+                    hold.Parameters.AddWithValue("sequence", fact.GlobalSequence);
+                    await hold.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+                    break;
+                }
             default:
                 if (fact.EventType.StartsWith("com.novavolt.traceability.", StringComparison.Ordinal))
                 { throw new InvalidDataException($"Unsupported traceability event: {fact.EventType}."); }

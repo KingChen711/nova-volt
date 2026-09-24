@@ -5,10 +5,16 @@
     <Project Path="src/Apps/Nvm.Host.All/Nvm.Host.All.csproj" />
   </Folder>
   <Folder Name="/src/FunctionalBlocks/">
+    <Project Path="src/FunctionalBlocks/Traceability/Nvm.Traceability.csproj" />
+    <Project Path="src/FunctionalBlocks/Traceability.Hosting/Nvm.Traceability.Hosting.csproj" />
     <Project Path="src/FunctionalBlocks/FactoryModel/Nvm.FactoryModel.csproj" />
+    <Project Path="src/FunctionalBlocks/ProductionExecution/Nvm.ProductionExecution.csproj" />
+    <Project Path="src/FunctionalBlocks/ProductionExecution.Hosting/Nvm.ProductionExecution.Hosting.csproj" />
   </Folder>
   <Folder Name="/src/Platform/">
+    <Project Path="src/Platform/Nvm.EventStore/Nvm.EventStore.csproj" />
     <Project Path="src/Platform/Nvm.CommandStore/Nvm.CommandStore.csproj" />
+    <Project Path="src/Platform/Nvm.Projections/Nvm.Projections.csproj" />
     <Project Path="src/Platform/Nvm.PublicObjectModel/Nvm.PublicObjectModel.csproj" />
     <Project Path="src/Platform/Nvm.Bus/Nvm.Bus.csproj" />
     <Project Path="src/Platform/Nvm.Contracts/Nvm.Contracts.csproj" />
@@ -20,6 +26,7 @@
   <Folder Name="/src/Workers/">
     <Project Path="src/Workers/Nvm.EdgeGateway/Nvm.EdgeGateway.csproj" />
     <Project Path="src/Workers/Nvm.Ingestion/Nvm.Ingestion.csproj" />
+    <Project Path="src/Workers/Nvm.ProjectionWorker/Nvm.ProjectionWorker.csproj" />
     <Project Path="src/Workers/Nvm.Simulator/Nvm.Simulator.csproj" />
   </Folder>
   <Folder Name="/tools/">
@@ -48,4 +55,5 @@
   <Folder Name="/tests/Unit/">
     <Project Path="tests/Unit/Nvm.UnitTests/Nvm.UnitTests.csproj" />
   </Folder>
+  <Folder Name="/tools/analyzers/" />
 </Solution>

@@ -70,6 +70,12 @@ internal sealed class CloudEventsSendFilter<TEvent>(string applicationName)
     {
         var message = context.Message;
 
+        if (context.TryGetPayload<StoredCloudEventHeaders>(out var stored))
+        {
+            stored.Apply(context);
+            return;
+        }
+
         context.Headers.Set(CloudEventHeaders.SpecVersion, CloudEventEnvelope<TEvent>.SpecVersionValue);
 
         // Lấy thẳng từ payload, không tạo ra ở đây. Giá trị này là thứ mà cả deduplication ở ingestion
@@ -87,4 +93,5 @@ internal sealed class CloudEventsSendFilter<TEvent>(string applicationName)
 
         context.Headers.Set(CloudEventHeaders.DataContentType, CloudEventEnvelope<TEvent>.JsonContentType);
     }
+
 }

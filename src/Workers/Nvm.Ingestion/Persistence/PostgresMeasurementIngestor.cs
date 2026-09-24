@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Npgsql;
 using NpgsqlTypes;
 using Nvm.Contracts.Events.Quality;
@@ -62,6 +63,12 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
         FROM incoming;
         """;
 
+    private const string StoreOutboxSql = """
+        INSERT INTO ingest.measurement_outbox
+            (event_id, site_id, payload, created_at, next_attempt_at)
+        VALUES (@event_id, @site_id, @payload::jsonb, @created_at, @created_at);
+        """;
+
     private const string MissingChunkRangesSql = """
         WITH incoming AS (
             SELECT *
@@ -115,6 +122,7 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
     private readonly TimeSpan _clockDriftThreshold;
     private readonly int _writerParallelism;
     private readonly int _minRowsPerWriter;
+    private readonly bool _useTransactionalOutbox;
 
     /// <summary>Tạo transaction boundary dùng chung cho cả HTTP lẫn file drop.</summary>
     /// <param name="dataSource">Nguồn connection cho một transaction trên mỗi batch.</param>
@@ -132,6 +140,7 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
     /// single-transaction.
     /// </param>
     /// <param name="minRowsPerWriter">Số dòng mỗi writer thêm vào phải có để đáng mở ra.</param>
+    /// <param name="useTransactionalOutbox">Ghi durable publish intent cùng transaction với telemetry.</param>
     public PostgresMeasurementIngestor(
         NpgsqlDataSource dataSource,
         TimeProvider timeProvider,
@@ -141,7 +150,8 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
         PublishedSignals? publishedSignals = null,
         TimeSpan? clockDriftThreshold = null,
         int writerParallelism = 1,
-        int minRowsPerWriter = 256)
+        int minRowsPerWriter = 256,
+        bool useTransactionalOutbox = false)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(writerParallelism);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(minRowsPerWriter);
@@ -155,6 +165,7 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
         _clockDriftThreshold = clockDriftThreshold ?? ClockQualityClassifier.DefaultThreshold;
         _writerParallelism = writerParallelism;
         _minRowsPerWriter = minRowsPerWriter;
+        _useTransactionalOutbox = useTransactionalOutbox;
     }
 
     /// <inheritdoc />
@@ -254,6 +265,13 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
             drifted,
             RetentionRisk: RecordRetentionRisk(claimedRows));
         _metrics.RecordCommitted(result);
+
+        if (_useTransactionalOutbox)
+        {
+            // Mỗi writer đã commit telemetry và ý định phát trong cùng một transaction. Dispatcher
+            // sẽ gửi cả khi một writer khác hỏng làm Task.WhenAll ném, hoặc process chết ngay đây.
+            return result;
+        }
 
         // Sau khi commit, và ở ngoài nó. Một publish thất bại phải để các dòng nguyên tại chỗ: đây là
         // dual-write mà ADR-022 đã đo được ở mức 18/200, và M2 đếm nó thay vì giả vờ rằng outbox
@@ -384,6 +402,19 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
         if (claimedRows.Length > 0)
         {
             await StoreAsync(connection, transaction, claimedRows, cancellationToken);
+
+            if (_useTransactionalOutbox)
+            {
+                foreach (var measurement in Announce(claimedRows))
+                {
+                    await using var command = new NpgsqlCommand(StoreOutboxSql, connection, transaction);
+                    command.Parameters.AddWithValue("event_id", NpgsqlDbType.Uuid, measurement.EventId);
+                    command.Parameters.AddWithValue("site_id", NpgsqlDbType.Text, measurement.SiteId);
+                    command.Parameters.AddWithValue("payload", NpgsqlDbType.Text, JsonSerializer.Serialize(measurement));
+                    command.Parameters.AddWithValue("created_at", NpgsqlDbType.TimestampTz, measurement.OccurredAt);
+                    await command.ExecuteNonQueryAsync(cancellationToken);
+                }
+            }
         }
 
         await transaction.CommitAsync(cancellationToken);

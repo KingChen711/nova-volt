@@ -1,0 +1,24 @@
+{
+  "specversion": "1.0",
+  "id": "48a81115-183c-5de6-8703-8bac5f74ee2b",
+  "type": "com.novavolt.traceability.unit-serialized.v1",
+  "source": "urn:novavolt:nv1:app-execution",
+  "subject": "urn:trace-unit:cell:NV1CL16267A70485",
+  "time": "2026-09-24T06:00:00+00:00",
+  "datacontenttype": "application/json",
+  "correlationid": "48a81115-183c-5de6-8703-8bac5f74ee2b",
+  "causationid": "48a81115-183c-5de6-8703-8bac5f74ee2b",
+  "partitionkey": "NV1:NV1CL16267A70485",
+  "data": {
+    "eventId": "48a81115-183c-5de6-8703-8bac5f74ee2b",
+    "occurredAt": "2026-09-24T06:00:00+00:00",
+    "recordedAt": "2026-09-24T06:00:01+00:00",
+    "siteId": "NV1",
+    "serialNumber": "NV1CL16267A70485",
+    "unitKind": "Cell",
+    "productCode": "NV-CELL-DEMO",
+    "workOrderId": "WO-PROJECTION-SMOKE",
+    "routingVersion": "r1",
+    "actorId": "op.nv1"
+  }
+}

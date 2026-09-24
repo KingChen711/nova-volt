@@ -59,11 +59,11 @@ tags: [mes, traceability, ddd, event-sourcing, cqrs, dotnet, opcenter, mendix, l
 1. Đọc §1–§5 một lần để nắm bối cảnh, ràng buộc và kiến trúc. Đây là "hợp đồng" — mọi quyết định kỹ thuật sau này phải giải thích được bằng một dòng trong các phần này.
 2. Trước mỗi milestone ở §9, đọc lại phần domain (§6) và contract (§7) tương ứng.
 3. **Mọi quyết định lệch khỏi tài liệu này phải ghi thành ADR** trong `docs/adr/`. Sau 3 tháng bạn sẽ quên vì sao mình chọn khác — ADR là thứ nhắc lại.
-4. Mỗi milestone có mục **Lab phá hoại** — một thí nghiệm cố tình làm hỏng hệ thống. Đừng bỏ qua; đó chính là chỗ tách "biết tên pattern" khỏi "hiểu vì sao có pattern".
+4. Mỗi milestone có mục **Lab phá hoại** — một phép kiểm lỗi và khả năng phục hồi trong môi trường thử nghiệm. Ghi kết quả đo thật; không chờ dự đoán của người học.
 5. Mỗi milestone có **Definition of Done đo được**. Không có "cảm thấy xong". Có số, hoặc có test đỏ → xanh.
 
 > [!important] Nguyên tắc xuyên suốt
-> Với mỗi pattern (Event Sourcing, CQRS, Outbox, Saga), lộ trình luôn là: **làm cách ngây thơ trước → đo cho nó gãy → mới refactor sang pattern**. Nếu nhảy thẳng vào pattern, bạn học được cú pháp chứ không học được phán đoán. Phán đoán mới là thứ phỏng vấn Solution Architect hỏi.
+> Với mỗi pattern (Event Sourcing, CQRS, Outbox, Saga), giữ phép thử có khả năng bác bỏ thiết kế và số đo trước/sau khi thay đổi. Một lab học tập không thay cho bằng chứng chức năng hoặc hiệu năng.
 
 > [!tip] Ba kịch bản dự án — thiết kế này phục vụ cả ba
 > Bạn chưa rõ dự án sắp tới ở FPT là Opcenter-based, .NET custom, hay Mendix low-code. Scope này được xây để **cả ba kịch bản đều dùng được**:
@@ -79,7 +79,7 @@ tags: [mes, traceability, ddd, event-sourcing, cqrs, dotnet, opcenter, mendix, l
 
 ### 1.1 Mục tiêu nghiệp vụ (domain)
 
-Sau dự án, bạn phải trả lời được các câu sau mà không cần tra cứu:
+Các câu hỏi sau định hướng mô hình nghiệp vụ và tài liệu giải thích; khả năng trả lời của người học không là điều kiện nghiệm thu dự án:
 
 | # | Câu hỏi | Milestone chứng minh |
 |---|---|---|
@@ -144,6 +144,9 @@ Dự án hoàn thành khi **tất cả** mệnh đề sau đúng:
 - [ ] Có ≥ 18 ADR ghi lại quyết định kiến trúc.
 - [ ] Có README cho phép một dev lạ chạy được trong 15 phút.
 - [ ] Có một trang `docs/oef-mapping.md` ánh xạ từng khái niệm Opcenter sang thành phần trong repo.
+- [ ] Toàn bộ M0–M13, gồm M11 và M12, đạt DoD kỹ thuật tương ứng; các phép đo N1/N2 ở M9/M13 và soak 24 giờ ở M13 có bằng chứng thực chạy.
+
+Trạng thái thực hiện và blocker nằm ở [tracker hoàn thành](plans/project-completion.md). Không dùng teach-back, dự đoán trước phép đo hoặc việc chủ repo tự thao tác UI làm gate. Chưa chạy hoặc không có bằng chứng thì để mở; không coi một miễn trừ học tập là hoàn thành chức năng.
 
 ---
 
@@ -975,8 +978,8 @@ Tên event dùng **thì quá khứ**, theo **ngôn ngữ nhà máy** chứ khôn
 | `ProductionUnitSerialized` | Traceability | **Cell được cấp SN** — điểm khai sinh serial |
 | `SerialEngravingVerified` | Quality | Vision đọc lại mã khắc thành công |
 | `DuplicateSerialDetected` | Traceability | Trùng mã — luồng ngoại lệ có thật |
-| `ProcessStepStarted` | ProductionExecution | Bắt đầu một bước |
-| `ProcessStepCompleted` | ProductionExecution | Kết thúc, kèm actual |
+| `ProcessStepStarted` | Traceability ([ADR-042](adr/ADR-042-unit-event-ownership.md)) | Bắt đầu một bước |
+| `ProcessStepCompleted` | Traceability ([ADR-042](adr/ADR-042-unit-event-ownership.md)) | Kết thúc, kèm actual |
 | `DataCollectionRecorded` | ProductionExecution | Kết quả đo do người vận hành nhập đã được ghi nhận; không hoàn tất bước hay kết luận chất lượng (M4, ADR-038) |
 | `MeasurementRecorded` | Quality | OCV, ACIR, torque, áp suất hàn… **đã được đánh giá**; không phải telemetry/đường cong thô |
 | `FormationRunStarted` | ProductionExecution | Vào máy formation, gắn tray/channel |
@@ -1490,7 +1493,8 @@ sequenceDiagram
 
 Backend kiểm lại quyền/context khi nhận command; việc POM vừa cho phép không thay kiểm tra này.
 Draft và các trường hợp rejection/timeout theo [ADR-014](adr/ADR-014-mendix-ui-va-draft-ben-vung.md);
-commit SQL và publish vẫn có cửa sổ mất event tới outbox M6 theo ADR-022/023.
+Command ghi business record, outcome và event/outbox trong cùng transaction SQL. Worker gửi lại
+từ outbox sau lỗi hoặc restart; delivery là at-least-once nên consumer vẫn phải chống trùng theo event ID.
 
 > [!warning] Mendix không được gọi thẳng vào database của .NET
 > Nghe hiển nhiên nhưng đây là cám dỗ thật khi deadline gấp: mở một connection string PostgreSQL trong Mendix để "lấy nhanh". Làm vậy là phá vỡ bounded context, và mọi thay đổi schema sẽ làm vỡ UI mà không ai biết. **Chỉ đi qua POM và Command API.** Ép bằng: user DB của Mendix không tồn tại.
@@ -1836,7 +1840,7 @@ SELECT add_continuous_aggregate_policy('ts.process_signal_1m',
 
 **Tổng: 26 tuần part-time** (~10–12 giờ/tuần). Mỗi milestone tự chạy được và tự demo được.
 
-| # | Milestone | Tuần | Trọng tâm | Có thể bỏ nếu gấp? |
+| # | Milestone | Tuần ước lượng ban đầu | Trọng tâm | Phạm vi hiện tại |
 |---|---|---|---|---|
 | M0 | Bootstrap & Walking Skeleton | 1,0 | Hạ tầng, CI, ADR đầu tiên | Không |
 | M1 | Factory Model & Manufacturing Service Bus | 1,5 | OEF: bus-centric | Không |
@@ -1848,13 +1852,12 @@ SELECT add_continuous_aggregate_policy('ts.process_signal_1m',
 | M7 | Formation & Aging Saga | 2,0 | Process manager, virtual clock | Không |
 | M8 | Grading & Matching | 2,0 | Rule engine, CP-SAT | Không |
 | M9 | Quality — NCR, MRB, Hold cascade | 2,5 | Mendix Workflow, e-signature | Không |
-| M10 | Recipe, Material, Equipment & Multiplant | 1,5 | Versioning, shelf life, OEE | Rút gọn được |
-| M11 | ERP B2MML & Master Data Reconciliation | 1,5 | Integration bẩn | **Có** |
-| M12 | Digital Battery Passport | 1,5 | Authz đa bên, snapshot | **Có** |
+| M10 | Recipe, Material, Equipment & Multiplant | 1,5 | Versioning, shelf life, OEE | Bắt buộc |
+| M11 | ERP B2MML & Master Data Reconciliation | 1,5 | Integration bẩn | Bắt buộc |
+| M12 | Digital Battery Passport | 1,5 | Authz đa bên, snapshot | Bắt buộc |
 | M13 | Hardening — Observability, Chaos, CI/CD | 2,0 | Production readiness | Không |
 
-> [!tip] Nếu chỉ có 3 tháng
-> Làm M0 → M8, bỏ M11 và M12, rút gọn M13 còn observability cơ bản. Bạn vẫn chạm được: event sourcing, CQRS, outbox, saga, thuật toán tối ưu, Mendix, và lớp ánh xạ OEF. Đó đã là một project mạnh.
+Thời lượng trong bảng là ước lượng lúc lập scope, không giới hạn phạm vi đã được chủ repo yêu cầu hoàn thiện ngày 2026-09-23 ([ADR-039](adr/ADR-039-delivery-without-learning-gates.md)).
 
 ---
 
@@ -2036,7 +2039,7 @@ SELECT add_continuous_aggregate_policy('ts.process_signal_1m',
       **< 2 điểm phần trăm**. Cả bốn phép đo dùng đúng code đường cong của simulator và **cùng điều
       kiện dữ liệu** (chu kỳ mẫu, tỉ lệ lệch đồng hồ, site, `segmentby`, đường ghi `COPY`).
       Phép đo (b) đã chốt: **40 kênh × 7 ngày** so với **40 kênh × 28 ngày**, kèm preflight dung lượng
-      đĩa và cửa sổ ngày. Owner **dự đoán tỉ số và độ lệch trước khi đo** (`AGENTS.md` §5.8.4).
+      đĩa và cửa sổ ngày. Phép đo đã ghi trong `benchmarks.md`; không cần dự đoán của owner.
       *Ngưỡng "≈ 86 triệu điểm" đã bỏ khỏi M3: tỉ số nén là tính chất của **hình dạng** dữ liệu. Câu
       hỏi sức chứa không mất — nó thành **hard capacity/soak test 24 giờ ở M13** (§9/M13), tách khỏi
       N1/N2 (qualification M9, requalification M13 — `ADR-031`). `ADR-034`, owner duyệt 2026-08-31.*
@@ -2318,7 +2321,7 @@ không được hiển thị câu đã ghi tạm (ADR-014).
 
 ---
 
-### M11 — ERP B2MML & Master Data Reconciliation · 1,5 tuần *(bỏ được nếu gấp)*
+### M11 — ERP B2MML & Master Data Reconciliation · 1,5 tuần
 
 **Mục tiêu**: nếm mùi integration với hệ thống bẩn — hạng mục ngốn 20–30% thời gian dự án thật.
 
@@ -2343,7 +2346,7 @@ không được hiển thị câu đã ghi tạm (ADR-014).
 
 ---
 
-### M12 — Digital Battery Passport · 1,5 tuần *(bỏ được nếu gấp)*
+### M12 — Digital Battery Passport · 1,5 tuần
 
 **Mục tiêu**: authorization đa bên và dữ liệu sống lâu hơn hệ thống.
 
@@ -3002,8 +3005,8 @@ Câu bám theo, nếu không khí đang mở: *"Thế phần nào hay trục tr�
 |---|---|---|---|---|---|---|---|---|
 | M0 | Bootstrap & Walking Skeleton | 1,0 | 2026-08-25 | 2026-08-26 | ☑ | ☑ | ☑ | 16 commit. Cả 5 DoD đạt. 4 ADR |
 | M1 | Factory Model & Service Bus | 1,5 | 2026-08-26 | 2026-08-30 | ☑ | ☑ | ☑ | **ĐÓNG.** Cả 5 DoD đạt. ★D1: một publish → hai queue độc lập cùng nhận, consumer thứ hai chậm hơn **1 ms**; D2: **5** lần thử rồi vào `_error`, queue chính còn 0; D4: **18/200** event mất khi broker chết 30 s — con số đầu vào của outbox ở M6; D5: 6 dòng OEF đúng trạng thái **và** chủ repo giải thích được (hỏi 2026-08-30, câu N15/K12 phải bổ sung vế *dây chuyền dừng* trước khi tick). **K7 đầy đủ KHÔNG phải nợ của M1**: nó đóng ở M4 (`ADR-023`; mốc đổi từ M5 sang M4 ngày 2026-08-30 vì effect của M4 là bền vững). 8 ADR: 004, 008, 010, 021, 022, 023, 024, 025. 328 test (`make ci`: 282 unit + 23 analyzer + 17 architecture + 6 contract). ★ Lab phá hoại: **18/200 event mất** khi broker chết 30 s |
-| M2 | Simulator, Ingestion & Idempotency | 2,5 | 2026-08-28 | *(chưa)* | ☐ | ☑ | — | **đang làm**. **Cả năm DoD đã đạt**: ★D1 (3.600 giây thật: **3.540 = 3.540, lệch 0**, đo lại trên oracle cuối `f60ba15` — trùng từng con số), D2 vế M2 (**2.361.174** message exact trên **1.000 kênh**, EMQX dropped 0), ★D3 (**16.288 = 16.288**, drain **37 s** trên ngân sách strict < 180, `abandonedMeasurements` 0), D4, D5. N1/N2 đã rời sang **M9/M13** (`ADR-031`). Còn lại **một** điều kiện đóng: chủ repo trả lời được các câu *vì sao* mà không mở tài liệu. 6 ADR: 026, 027, 028, 029, 030, 031. **585 test**, buffer-crash **0/200**. ★ Lượt D2 đầu từng lộ nút thắt **936 msg/s** và EMQX drop **80 %**; sau remediation, tính đúng đắn đạt exact nhưng qualification hiệu năng vẫn chưa đạt: **3.933,2 msg/s**, p95 **99,525 s** trên 1.000 kênh. ★ Lab: bỏ dedup **+24,5 %** row thừa · bỏ `device_timestamp` khỏi khoá **99,93 %** row bị nuốt, cả hai **không ném lỗi nào** |
-| M3 | Telemetry & Production Calendar | 1,0 | 2026-08-30 | *(chưa)* | ☐ | ☑ | — | **ĐANG LÀM**: D1–D5 có bằng chứng kỹ thuật; teach-back hard DoD chưa thực hiện. [Plan M3](plans/M3-telemetry-timescaledb-production-calendar.md) giữ DoD và nợ M6/M7/M13; số đo, phạm vi và các bước chưa kiểm lại nằm trong [benchmarks](benchmarks.md). Data Collection trong `oef-mapping.md` giữ `đang làm` |
+| M2 | Simulator, Ingestion & Idempotency | 2,5 | 2026-08-28 | *(chưa xác nhận lại)* | ☐ | ☑ | — | **Bằng chứng lịch sử cho 5 DoD kỹ thuật**: ★D1 **3.540 = 3.540** trong 3.600 giây, D2 vế M2 **2.361.174** message exact trên 1.000 kênh, ★D3 **16.288 = 16.288** và drain **37 s**, D4, D5. Không còn gate teach-back; cần audit bằng chứng và trạng thái runtime trước khi đánh dấu đóng. N1/N2 vẫn phải nghiệm thu M9 và đo lại M13 (`ADR-031`); số lịch sử **3.933,2 msg/s**, p95 **99,525 s** chưa đạt ngưỡng. Chi tiết ở [plan M2](plans/M2-simulator-ingestion-idempotency.md) và [benchmarks](benchmarks.md) |
+| M3 | Telemetry & Production Calendar | 1,0 | 2026-08-30 | *(chưa xác nhận lại)* | ☐ | ☑ | — | **Bằng chứng lịch sử cho D1–D5** trong [plan M3](plans/M3-telemetry-timescaledb-production-calendar.md) và [benchmarks](benchmarks.md). Không còn gate teach-back; cần audit bằng chứng và trạng thái runtime trước khi đánh dấu đóng. Nợ chức năng M6/M7/M13 giữ nguyên; Data Collection trong `oef-mapping.md` còn `đang làm` cho đến khi có đối chiếu phù hợp |
 | M4 | Mendix — Operator Station v1 | 2,0 | | | ☐ | ☐ | ☐ | |
 | M5 | Functional Block & Event Store | 3,0 | | | ☐ | ☐ | ☐ | |
 | M6 | Outbox, CQRS & Genealogy Trace | 3,0 | | | ☐ | ☐ | ☐ | |

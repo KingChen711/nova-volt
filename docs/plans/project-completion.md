@@ -1,0 +1,49 @@
+# NovaVolt — tracker hoàn thiện toàn bộ dự án
+
+**Cập nhật 2026-09-24 · Codex.** Mục tiêu là hoàn thiện M0–M13 theo [scope](../scope.md),
+không dùng teach-back, dự đoán hoặc thao tác học tập làm gate ([ADR-039](../adr/ADR-039-delivery-without-learning-gates.md)).
+Mỗi dòng chỉ đổi sang **đạt** sau khi agent ghi code/build đang chạy, test và số đo tương ứng;
+số trong plan/benchmarks cũ được ghi là **bằng chứng lịch sử** cho đến khi audit lại. Agent được tự commit/push phần đã kiểm chứng, không cần plan mới hoặc lượt chờ theo từng commit. Các ngưỡng kỹ thuật và K1–K13 giữ nguyên.
+
+## Điểm xuất phát
+
+| Mốc | Trạng thái kiểm chứng | Việc trước mắt |
+|---|---|---|
+| M0–M1 | Đã đóng theo bằng chứng lịch sử trong scope; chưa audit lại phiên này | Giữ nguyên; kiểm regression khi tích hợp thay đổi mới |
+| M2–M3 | Có bằng chứng lịch sử cho các DoD kỹ thuật; không còn gate học tập; chưa xác nhận lại runtime | Audit code/build đang chạy và bằng chứng, giữ N1/N2 cho M9/M13 và soak 24 giờ cho M13 |
+| Baseline 2026-09-23 | `dotnet test --solution ... --no-restore`: **833/835 pass, 2 fail**. Hai test lỗi là `SimulatorSessionRecoveryTests` (MQTT auth connection closed) và `FileDropTests.AnExportThatKeepsFailing` (file `.tmp` viết hoa thừa); mỗi test chạy riêng lại pass **1/1**. Docker Desktop đã bật; nguyên nhân tương tác chưa xác minh. | Điều tra và sửa flakiness trước khi coi CI xanh. Đây không phải bằng chứng mới cho DoD milestone |
+
+## Các mốc còn mở
+
+| Mốc | Phạm vi còn thiếu | Gate đóng không được miễn | Phụ thuộc / blocker |
+|---|---|---|---|
+| M4 — Operator Station | C06 backend và 42 HTTP integration tests đã qua. C07 đã có draft bền vững, request đóng băng, nút gửi/thử lại, danh sách mở lại draft và quyền User; `mx check` 11.12.3 trên working copy sau Ctrl+S/F4: **0 lỗi**. Runtime đã kiểm đăng nhập NV1, lưu/gửi, reload mở lại và backend down → retry cùng submission, SQL đúng 1 row; mapper đã kiểm accepted/rejected; draft đã kết thúc giữ nguyên qua Stop/F5. Pending DE1 qua Stop/F5 vẫn còn, gửi sau restart đúng 1 SQL row; DE1 không thấy 4 draft NV1 và không lưu được serial NV1. Còn giả mạo request/quyền, mất ACK và các gate khác. C08 đã có Wip_Board refresh5s, MCP 0 lỗi; còn last-success/connectivity/non-overlap và runtime. C09 UI/API, C10 audit còn mở | D1–D8 của [plan M4](M4-mendix-operator-station.md): Keycloak/site, submission/replay sau restart, production guard, page p95 **<1,5 s**, lab backend down và audit độc lập | Backend/Mendix phải cùng contract; cần chạy runtime với Execution/Keycloak và đo thực tế |
+| M5 — Functional Block, Event Store, ProductionUnit | Event store và SQL outbox targeted **10/10** sau khi thêm CloudEvents JSON bất biến vào `es.Events`; upcaster **3/3**. Benchmark trước thay đổi đo p95 **11,484 ms** cho 1.000 append tuần tự cùng transaction, không gồm commit; lượt targeted mới qua ngưỡng 20 ms nhưng chưa lưu p95 chính xác. Traceability và template đã có code; metadata CloudEvents từ nghiệp vụ, lab 96 cell và nghiệm thu tổng thể còn mở | 1.000 event/stream p95 **<20 ms**, concurrency/retry, replay v1→v3, reason code, append-only DB, lab 96 cell | Kết thúc M4 write contract; giữ K3–K9 và dữ liệu đã nhận |
+| M6 — Outbox, CQRS, Genealogy | PostgreSQL ingestion transactional outbox + dispatcher: targeted 3/3, ingestion regression 10/10. SQL Server event-store outbox + dispatcher + bus worker: 48/48 HTTP + SQL outbox tests qua trong 109,354s sau forced rebuild, publisher unit 7/7. M4 command ghi event/outbox cùng transaction; build 0 warning/error. Đã kiểm broker outage/process restart/rollback/replay bằng runtime role, publisher chậm không giữ lease của hàng chờ, header giữ nguyên envelope đã lưu. Review độc lập không còn finding trong hai bản sửa; image demo đã qua Mendix→SQL→Rabbit (DE1 407.25V); bản sửa readiness targeted 5/5, đã deploy image05d37504fc0f. Projection đã có inbox bền, worker tăng dần, role PostgreSQL/SQL riêng và health check. Runtime API→SQL→Rabbit→Postgres: serial NV1CL16267A70485, 4 command/replay, restart worker giữa luồng, SQL/event/outbox/inbox đều đúng 4, unit Completed/version4. Reconciliation là lệnh riêng. Còn nối POM/WIP thật, quality/location state, link/span/closure, trace API và Trace Explorer | Forward p95 **<200 ms**, backward p95 **<150 ms**, rebuild **<10 phút** trên 100k cell, kill/retry không mất/nhân event, partial commit oracle và span ground truth | M5 event store; migration 015 phải chạy trước host ingestion mới |
+| M7 — Formation & Aging | Saga MassTransit, Quartz Postgres job store, tray/rack/channel, OCV drift, Aging warehouse | `FakeTimeProvider` tua 12 ngày **<2 s**, 30.000 cell vẫn nhận telemetry, restart timeout bền, drift **>15 mV** quarantine/NCR, rack query | M6 projection/outbox; giao tiếp Quality qua Contracts/bus, không FB reference trực tiếp |
+| M8 — Grading & Matching | EOL simulator đã defer, Grading rules/version/event/bin inventory, greedy và CP-SAT, Mendix UI | 100.000 cell **<30 s**, CP-SAT tạo nhiều module hơn greedy **≥8%** trên cùng fixture, 10.000 case tolerance **0 lỗi**, grade cũ bất biến | Cần dữ liệu hai site cho ràng buộc cân bằng dù DE1 được bật đầy đủ ở M10; chuẩn bị fixture site sớm hoặc điều chỉnh thứ tự có ADR |
+| M9 — Quality | Coating simulator/SPC đã defer, NCR/MRB/hold cascade worker, e-signature, Mendix parallel Workflow | **Trước cascade:** rig QoS 1 no-op **≥10.000 msg/s**, N1 **≥5.000 msg/s** trong 600 s/1.000 kênh, N2 p95 **<5 s**. Sau đó 3.000 pack **<60 s**, N1 giảm **≤10%**, retry/resume/span/SoD/2 chữ ký/hash/Workflow | Rig lịch sử mới đạt **5.951** preflight; N1/N2 lịch sử **3.933,2 msg/s / 99,5 s**. Cần M6 genealogy, M7 NCR integration |
+| M10 — Recipe, Material, Equipment, Multiplant | Ba FB, recipe version/hash/effectivity, material exposure/override, downtime/OEE, DE1 đầy đủ và UI | DB chặn hai recipe active; lookup version/hash theo thời điểm; lot quá 4h bị chặn với thời lượng chính xác; OEE gộp có ground truth; user NV1 thấy **0** dữ liệu DE1 ở POM/command/trace/dashboard/Mendix; NV1/DE1 calendar và DST | M6 trace, M9 signature; DE1 fixture cần đưa sớm cho M8 |
+| M11 — ERP | NovaERP/SFTP/B2MML gateway, IdentityAlias/reconciliation, backflush, Mendix UI | Bốn mã về một canonical ID; XML sai schema vào rejected + `.error.txt` mà watcher sống; unknown material → PendingMasterData/task; file lặp một work order; UOM sai được cảnh báo | M10 material/product catalog; không miễn milestone này |
+| M12 — Battery Passport | Passport FB, GS1 resolver, approved projection/signed immutable snapshot, Keycloak 5 audience, audit regulator, Mendix viewer | QR đúng passport; **5 test audience riêng**; public không lộ lot/recipe/genealogy; republish tạo version mới; regulator read có audit; sản phẩm B không có passport nhưng có carbon record. **Legal hold chặn mọi retention policy**, rồi mới bật lại raw 400 ngày/rollup 15 năm và test | M6 genealogy, M9 signature, M10 recipe/material; không miễn milestone này |
+| M13 — Hardening | OTel Collector/Tempo/Prometheus/Loki, MQTT trace, business SLO/alert, Toxiproxy, solution-cli hai mode, FB version matrix, CI/SBOM/scan/k3d, Mendix cloud/ALM, runbook | Trace MQTT→domain→projection→OData→Mendix; N1/N2 **đo lại** sau instrumentation trên rig qua preflight; SQL outage 2 phút **0 mất**, phục hồi **<60 s**; Rabbit +500 ms có alert; mutation domain **≥70%**; toàn suite **<10 phút**; solution-cli hai mode; pipeline commit→k3d→smoke; Mendix cloud gọi backend | Toàn bộ chức năng M4–M12; cần rig, tài nguyên chạy 24h, remote/deploy target và quyền Mendix cloud/Team Server khi đến gate |
+
+### Gate sức chứa M13: chạy liên tục 24 giờ
+
+Đây là DoD riêng, không thay bằng load 600 giây hoặc nhiều lượt ngắn. Theo [scope M13](../scope.md#M13--hardening-observability-chaos--cicd--2-tuần) và ADR-034, phải có đủ sáu oracle:
+
+1. Pre-seed **cold tail** trước T0 trên topology 1.000 kênh, raw chunk đầy đủ `range_end < T0 - 7 days`, refresh parent rồi child, ghi baseline nén và counters job.
+2. Chạy **hot head liên tục 24 giờ** trong `[T0,T0+24h]`, 1.000 kênh.
+3. Đối chiếu exact source = decode = fsync = forward = row delta của riêng hot head.
+4. Throughput giờ 24 giảm không quá **10%** so với giờ đầu.
+5. Raw/parent/child đều có cold chunk nén và hot chunk chưa nén; số cold chunk nén và job successes tăng, failures không tăng; D2 qua role scoped trên cold-only, hot-only và mixed, có dữ liệu, p95/EXPLAIN.
+6. Ghi dung lượng đĩa trước/sau và tỉ số nén trên cold tail, đối chiếu M3.
+
+## Cách vận hành tracker
+
+Agent cập nhật bằng chứng, build/commit SHA nếu đã có, trạng thái runtime và giới hạn kiểm chứng sau
+mỗi lát cắt. Finding audit độc lập được sửa trong phạm vi đã giao rồi kiểm lại; reviewer vẫn read-only.
+Không tick gate vì code tồn tại, CI xanh chung, hoặc vì một số đo thuộc fixture/phiên chạy khác.
+Khi thiếu quyền hoặc nguồn lực thật, ghi rõ thao tác đã chuẩn bị và đúng dữ liệu cần chủ repo cung cấp.
+
+**Điểm tiếp quản 2026-09-24:** Root tiếp tục trực tiếp; không spawn thêm sau quota. Full suite **882/882,4m02,165s**, buffer crash200/200, network9/9 và rotation preflight45/45 đạt. Phép đo append1000 chạy trong nonparallel collection, giữ ngưỡng20ms. Sau suite này bổ sung5 golden Traceability và metadata subject/correlation/causation/partition; contract targeted5/5, Traceability integration3/3; final format/build đạt0warning/error, contract21/21. Projection worker đã chạy thật qua API→SQL→Rabbit→Postgres, replay/restart/reconciliation. POM/WIP vẫn fixture-backed; quality/location/facets, genealogy và các mốc còn mở chưa nghiệm thu. Metadata mới chưa deploy lên image demo05d37504fc0f. Quyền commit/push có sẵn; đợt code đã qua kiểm cuối, đang commit/push. Không stage docs/roadmap-m2-m3.md (file có trước ngoài lát cắt).

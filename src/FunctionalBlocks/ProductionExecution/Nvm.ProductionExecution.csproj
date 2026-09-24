@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Functional Block ProductionExecution (M4/C06): lát cắt ghi nhận kết quả đo nhập tay.
+
+    K8: FB không reference FB khác. K9: FB không chạm SqlClient/MassTransit — đó là lý do
+    context/store/publisher ở đây chỉ là PORT (interface), adapter SQL và MassTransit sống ở
+    Nvm.ProductionExecution.Hosting. Chỉ được reference Contracts + Kernel (+ DI Abstractions),
+    đúng allowlist của A3.
+  -->
+
+  <PropertyGroup>
+    <RootNamespace>Nvm.ProductionExecution</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Platform/Nvm.Contracts/Nvm.Contracts.csproj" />
+    <ProjectReference Include="../../Platform/Nvm.Kernel/Nvm.Kernel.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Chỉ Abstractions, đủ cho AddNvmProductionExecution. FB không dựng container. -->
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+  </ItemGroup>
+
+</Project>

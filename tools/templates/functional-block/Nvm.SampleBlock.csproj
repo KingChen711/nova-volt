@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Nvm.SampleBlock</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../Platform/Nvm.Contracts/Nvm.Contracts.csproj" />
+    <ProjectReference Include="../../Platform/Nvm.Kernel/Nvm.Kernel.csproj" />
+  </ItemGroup>
+</Project>

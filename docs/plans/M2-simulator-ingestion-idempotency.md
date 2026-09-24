@@ -2,7 +2,7 @@
 title: "M2 — Simulator, Ingestion & Idempotency"
 milestone: M2
 duration: "2,5 tuần (24 giờ 45 phút ước lượng)"
-status: in_progress   # 5/5 DoD kỹ thuật đã đạt; milestone còn chờ teach-back của chủ repo — xem §7
+status: in_progress   # Bằng chứng kỹ thuật 5/5 là lịch sử; cần audit lại trước khi đánh dấu đóng.
 created: 2026-08-28
 depends_on: [M0, M1]
 unlocks: [M3]
@@ -456,11 +456,8 @@ Hệ quả nếu làm sai: ingestion sập lần hai, gateway thấy lỗi nên 
 
 Đây là **D3**. Nó **không** nằm trong ba lab đánh số của `scope.md` §9/M2 — nó là phép kiểm của chính DoD. Bảng chỉ mục lab ở đầu §5.
 
-> [!important] Đoán trước khi đo (`AGENTS.md` §5.8.4)
-> Trước khi chạy, agent hỏi chủ repo đoán **ba** con số, ghi lại, rồi mới chạy:
-> 1. Bao nhiêu message nằm trên đĩa sau 2 phút tắt?
-> 2. Backlog tiêu hết trong bao lâu sau khi bật lại?
-> 3. Simulator có tự dừng không, và nếu có thì sau bao lâu?
+> [!important] Phép đo D3
+> Ghi backlog trên đĩa, thời gian drain và trạng thái simulator từ cùng một lần chạy có timestamp.
 
 Các bước:
 1. `make sim-up`, chạy ổn định 2 phút, ghi số message đã gửi.
@@ -489,12 +486,9 @@ Lab thứ ba của `scope.md` §9/M2, và là lab **duy nhất** đo được `A
 > **Hệ quả**: lab chạy được **nguyên văn**, không cần nén representation và không cần nâng cap.
 > Đây là `AGENTS.md` §3.2: tiền đề của một finding sai thì sửa finding, không làm theo nó.
 
-> [!important] Đoán trước khi đo (`AGENTS.md` §5.8.4)
-> Ba con số, ghi lại trước khi chạy:
-> 1. 30 phút ở 5.000 msg/s là bao nhiêu message, và bao nhiêu MB trên đĩa? *(đã biết: 9 triệu,
->    ≈ 1,57 GiB — câu hỏi còn lại là hai câu dưới)*
-> 2. Xả **không** rate limit thì ingestion trụ được bao lâu trước khi p95 lag vượt 5 s?
-> 3. Xả **có** rate limit thì tiêu hết backlog mất bao lâu?
+> [!important] Phép đo hai cấu hình
+> Chạy trên cùng một bản sao buffer: ghi số message và dung lượng sau 30 phút, p95 lag/CPU/lỗi
+> `429`/`503` khi không rate limit, rồi thời gian drain khi bật rate limit. Không yêu cầu dự đoán trước.
 
 Các bước:
 1. Chạy simulator ở tốc độ N1. Tắt ingestion **30 phút** — không tắt EMQX, không tắt simulator.
@@ -781,7 +775,7 @@ make bus-fanout && make bus-dlq && make bus-chaos
 | C16 | load harness 5.000 msg/s | ☑ | 2026-08-29 | Harness xong, `load-net-check` 4/4. D2 M2 về **đúng đắn** sau remediation đạt exact **2.361.174** message trên 1.000 kênh. N1/N2 về throughput/lag chưa đạt và đã chuyển điều kiện nghiệm thu sang M9/M13 theo `ADR-031` — xem bảng DoD |
 | C17 | reconciliation 1 giờ | ☑ | 2026-08-29 | **D1 xanh trên 3.600 giây đồng hồ thật: 3.540 = 3.540, lệch 0**, 409 duplicate bị chặn, fault trùng đo được **290 / 2.845 = 10,19 %**. `drain()` fail-closed, nên ngân sách xả không thể bị nuốt |
 | C18 | chuyển bus lab, xoá probe | ☑ | 2026-08-29 | Ba lab chạy lại xanh trên đường thật: fanout 2/2, dlq **6** header `ce_*`, chaos **0 mất** trên 1874 event |
-| C19 | benchmarks + đóng M2 | ☑ | 2026-08-30 | `benchmarks.md` +20 dòng số thật · `ADR-010` §Evidence · `oef-mapping.md` +3 dòng · Phụ lục A. Cả 5 DoD kỹ thuật xanh; M2 chỉ còn chờ teach-back |
+| C19 | benchmarks + bằng chứng M2 | ☑ | 2026-08-30 | `benchmarks.md` +20 dòng số thật · `ADR-010` §Evidence · `oef-mapping.md` +3 dòng · Phụ lục A. Năm DoD kỹ thuật có bằng chứng lịch sử; audit lại trước khi đánh dấu đóng |
 
 **Definition of Done**
 
@@ -804,20 +798,8 @@ make bus-fanout && make bus-dlq && make bus-chaos
 - [x] `docs/event-catalog.md` cập nhật event M2 (`MeasurementRecorded` v1 + ghi chú vì sao có whitelist)
 - [x] `scope.md` §9/M2 sửa câu chữ D3 theo §2.3
 
-> [!important] Câu hỏi "vì sao" cuối M2 (`AGENTS.md` §5.8.4)
-> Trả lời **thành lời, không mở tài liệu**. Tắc câu nào thì phần đó chưa xong.
->
-> 1. Vì sao dedup ở ingestion **không đủ**, và tầng thứ hai nằm ở đâu?
-> 2. `NDEATH` cho biết điều gì mà "không nhận được message trong 5 phút" không cho biết?
-> 3. Vì sao message lệch đồng hồ 2 giờ **vẫn được nhận**, thay vì bị từ chối?
-> 4. Vì sao gateway phải **chậm lại** khi ingestion trả 503, thay vì thử lại nhanh hơn?
-> 5. Vì sao `device_timestamp` phải nằm trong natural key, và chuyện gì xảy ra nếu bỏ nó ra?
-> 6. Một `DDATA` của phiên mới đi **trước** `DBIRTH` thì consumer đọc được gì? Và vì sao *chờ phiên
->    **ngoài** semaphore* lại là điều kiện để chuyện đó không xảy ra?
-> 7. Một row `Formation/Capacity` **có** `UnitId` — làm sao biết nó là kết quả đã đánh giá hay chỉ là
->    một điểm giữa đường cong? Ngày nào thì cách phân biệt cũ hỏng?
-> 8. Đo tốc độ bằng thời lượng **yêu cầu** thay vì thời gian chạy thật thì con số sai theo hướng nào?
->    Nêu một phép đo khác trong M2 đã sai theo đúng kiểu đó.
+Các câu hỏi giải thích nghiệp vụ và cơ chế được xử lý riêng khi chủ repo yêu cầu; chúng không thay
+thế audit bằng chứng, cũng không chặn việc tiếp tục M3–M13.
 
 ---
 

@@ -2,10 +2,17 @@ using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Nvm.App.Execution;
+using Nvm.Bus;
+using Nvm.Bus.Outbox;
 using Nvm.CommandStore;
+using Nvm.EventStore;
 using Nvm.Hosting;
 using Nvm.Kernel;
+using Nvm.ProductionExecution.Commands;
+using Nvm.ProductionExecution.Hosting;
 using Nvm.PublicObjectModel;
+using Nvm.Traceability.Commands;
+using Nvm.Traceability.Hosting;
 
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
 CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
@@ -34,8 +41,11 @@ if (builder.Environment.IsDevelopment())
 builder.Configuration.AddEnvironmentVariables();
 if (args.Contains("--migrate-commands", StringComparer.Ordinal))
 {
-    await CommandSchemaMigrator.UpgradeAsync(builder.Configuration["NVM_COMMANDS:MigrationConnectionString"]
-        ?? throw new InvalidOperationException("NVM_COMMANDS:MigrationConnectionString is required."));
+    var migrationConnectionString = builder.Configuration["NVM_COMMANDS:MigrationConnectionString"]
+        ?? throw new InvalidOperationException("NVM_COMMANDS:MigrationConnectionString is required.");
+    await CommandSchemaMigrator.UpgradeAsync(migrationConnectionString);
+    await TraceabilitySchemaMigrator.UpgradeAsync(migrationConnectionString);
+    await Nvm.EventStore.EventSchemaMigrator.UpgradeAsync(migrationConnectionString);
     return;
 }
 
@@ -46,8 +56,12 @@ if (args.Contains("--prepare-command-fixture", StringComparer.Ordinal))
         throw new InvalidOperationException("The command fixture is only allowed in Development.");
     }
 
-    await CommandContextFixtureSeed.PrepareAsync(builder.Configuration["NVM_COMMANDS:MigrationConnectionString"]
-        ?? throw new InvalidOperationException("NVM_COMMANDS:MigrationConnectionString is required."));
+    var migrationConnectionString = builder.Configuration["NVM_COMMANDS:MigrationConnectionString"]
+        ?? throw new InvalidOperationException("NVM_COMMANDS:MigrationConnectionString is required.");
+    await CommandContextFixtureSeed.PrepareAsync(migrationConnectionString);
+    await TraceabilitySchemaMigrator.UpgradeAsync(migrationConnectionString);
+    await Nvm.EventStore.EventSchemaMigrator.UpgradeAsync(migrationConnectionString);
+    await TraceabilityFixtureSeed.PrepareAsync(migrationConnectionString);
     return;
 }
 if (args.Contains("--prepare-poc", StringComparer.Ordinal))
@@ -80,15 +94,29 @@ if (args.Contains("--migrate", StringComparer.Ordinal))
 }
 
 builder.Services.AddSingleton(TimeProvider.System);
-builder.Services.AddNvmKernel();
+builder.Services.AddNvmKernel(typeof(RecordDataCollectionCommand).Assembly, typeof(SerializeUnitCommand).Assembly);
 builder.Services.AddNvmCommandStore(builder.Configuration, builder.Environment);
+builder.Services.AddNvmTraceability(builder.Configuration);
 builder.Services.AddNvmPublicObjectModel(builder.Configuration, builder.Environment);
+builder.Services.AddNvmProductionExecutionAdapters(builder.Configuration);
+builder.Services.AddNvmBus(bus =>
+{
+    bus.Host = builder.Configuration["NVM_RABBITMQ_HOST"] ?? "localhost";
+    bus.Port = ushort.Parse(DotEnvLoader.Required("NVM_PORT_RABBITMQ"), CultureInfo.InvariantCulture);
+    bus.Username = DotEnvLoader.Required("NVM_RABBITMQ_USER");
+    bus.Password = DotEnvLoader.Required("NVM_RABBITMQ_PASSWORD");
+    bus.ApplicationName = "app-execution";
+});
+builder.Services.AddNvmSqlEventOutbox();
 var app = builder.Build();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapNvmPublicObjectModel();
+app.MapNvmProductionExecution();
+app.MapNvmTraceability();
 app.MapGet("/health/live", () => Results.Ok(new { Status = "Healthy" }));
-app.MapGet("/health/ready", async (PomReadDbContext database, SqlCommandStoreOptions commands, CancellationToken cancellationToken) =>
+app.MapGet("/health/ready", async (PomReadDbContext database, SqlCommandStoreOptions commands,
+    SqlEventStoreOptions events, CancellationToken cancellationToken) =>
 {
     try
     {
@@ -96,7 +124,9 @@ app.MapGet("/health/ready", async (PomReadDbContext database, SqlCommandStoreOpt
         _ = await database.Equipment.AnyAsync(cancellationToken);
         _ = await database.ProductionUnits.AnyAsync(cancellationToken);
         _ = await database.WipBoard.AnyAsync(cancellationToken);
-        if (!await CommandStoreReadiness.CheckAsync(commands, cancellationToken))
+        if (!await CommandStoreReadiness.CheckAsync(commands, cancellationToken)
+            || !await EventStoreReadiness.CheckAsync(events, cancellationToken)
+            || !await TraceabilityStoreHealthCheck.CheckAsync(commands, cancellationToken))
         {
             return Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
         }

@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Nvm.Projections</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Npgsql" />
+    <PackageReference Include="Microsoft.Data.SqlClient" />
+    <ProjectReference Include="../Nvm.Contracts/Nvm.Contracts.csproj" />
+    <ProjectReference Include="../Nvm.Bus/Nvm.Bus.csproj" />
+    <ProjectReference Include="../Nvm.Kernel/Nvm.Kernel.csproj" />
+    <EmbeddedResource Include="Migrations/*.sql" />
+  </ItemGroup>
+</Project>

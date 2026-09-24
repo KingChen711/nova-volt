@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Nvm.EventStore</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.SqlClient" />
+    <ProjectReference Include="../Nvm.Kernel/Nvm.Kernel.csproj" />
+    <ProjectReference Include="../Nvm.CommandStore/Nvm.CommandStore.csproj" />
+    <ProjectReference Include="../Nvm.Contracts/Nvm.Contracts.csproj" />
+    <EmbeddedResource Include="Migrations/*.sql" />
+  </ItemGroup>
+</Project>

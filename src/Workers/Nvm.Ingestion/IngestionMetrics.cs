@@ -69,12 +69,11 @@ public sealed class IngestionMetrics
     /// </remarks>
     public long RetentionRiskCount => Interlocked.Read(ref _retentionRiskCount);
 
-    /// <summary>Event có dòng đã lưu nhưng thông báo của nó không bao giờ tới được broker.</summary>
+    /// <summary>Publish attempt thất bại. Với outbox, intent vẫn còn và sẽ được retry.</summary>
     /// <remarks>
-    /// Cái giá đã đo được của dual write. ADR-022 đặt nó ở mức 18 trên 200 khi broker chết giữa lúc
-    /// publish; transactional outbox của M6 là thứ đóng lỗ hổng này lại. Cho tới lúc đó, con số này
-    /// là phát biểu trung thực về việc bus đang tụt lại sau database bao xa, và một run báo cáo 0 thì
-    /// hoặc là may mắn, hoặc là chưa hề theo dõi.
+    /// Trước M6, một failure trên đường publish trực tiếp có thể mất event (ADR-022). Với outbox,
+    /// counter này đếm attempt thất bại; event vẫn pending và sẽ được retry. Nó không phải số event
+    /// mất hoặc độ sâu outbox.
     /// </remarks>
     public long PublishFailureCount => Interlocked.Read(ref _publishFailureCount);
 
@@ -155,8 +154,8 @@ public sealed class IngestionMetrics
 /// <param name="Duplicates">Các delivery lặp lại bị loại bỏ.</param>
 /// <param name="Drifted">Reading đã lưu mà device clock của nó không khớp với clock của gateway.</param>
 /// <param name="PublishFailures">
-/// Event không thể announce được. Các dòng vẫn được lưu dù thế nào — đó là dual write mà ADR-022 đã
-/// đo, được giữ hiển thị thay vì đóng lại.
+/// Chỉ có nghĩa với đường publish trực tiếp cũ. Khi dùng outbox, kết quả ingestion phản ánh
+/// việc commit intent, còn dispatcher ghi outcome của publish sau đó.
 /// </param>
 /// <param name="RetentionRisk">
 /// Reading đã lưu mà device clock của nó lệch hơn một chunk so với <c>recorded_at</c>, và vì vậy rơi

@@ -673,12 +673,22 @@ public sealed partial class FileDropProcessor
         return true;
     }
 
-    private static void DeleteEmptyClaimDirectory(string directoryPath)
+    private void DeleteEmptyClaimDirectory(string directoryPath)
     {
-        if (Directory.Exists(directoryPath)
-            && !Directory.EnumerateFileSystemEntries(directoryPath).Any())
+        try
         {
-            Directory.Delete(directoryPath);
+            if (Directory.Exists(directoryPath)
+                && !Directory.EnumerateFileSystemEntries(directoryPath).Any())
+            {
+                Directory.Delete(directoryPath);
+            }
+        }
+        catch (IOException exception)
+        {
+            // A file can appear between the emptiness check and removal (observed on Windows
+            // under the full integration suite). Cleanup must not replace the processing result
+            // or the original failure. Leave the directory for startup recovery.
+            _logger.LogWarning(exception, "Claim directory cleanup deferred for {DirectoryPath}", directoryPath);
         }
     }
 

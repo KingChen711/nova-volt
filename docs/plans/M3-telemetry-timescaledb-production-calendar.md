@@ -1,7 +1,7 @@
 ---
 title: "M3 — Telemetry, TimescaleDB & Production Calendar"
 milestone: M3
-status: in_progress # Kỹ thuật có bằng chứng; teach-back ở §7 chỉ owner làm được.
+status: in_progress # Bằng chứng kỹ thuật là lịch sử; audit lại trước khi đánh dấu đóng.
 created: 2026-08-30
 depends_on: [M0, M1, M2]
 unlocks: [M4]
@@ -15,12 +15,12 @@ M3 giữ được dữ liệu tần suất cao, đọc được nhanh và gán �
 
 ## 1. Definition of Done
 
-Chỉ đóng milestone khi cả năm tiêu chí, sản phẩm bắt buộc và teach-back đều hoàn tất.
+Chỉ đóng milestone khi cả năm tiêu chí và sản phẩm bắt buộc có bằng chứng kỹ thuật còn hợp lệ.
 Ngưỡng theo [ADR-034](../adr/ADR-034-dieu-kien-nghiem-thu-m3-sau-audit.md); không đổi để khớp số đo.
 
 | # | Tiêu chí | Phép kiểm và bằng chứng |
 |---|---|---|
-| ★ D1 | Tỉ số `compressed/original` **< 15%** ở mọi phép đo. Hai cardinality cùng số ngày; hai bậc dung lượng **≥ 4× số row tại cùng cardinality**. `max − min` toàn bộ tỉ số **< 2 điểm phần trăm**; cùng điều kiện dữ liệu | `make compression-report`: 8/40 kênh × 5 ngày và 40 kênh × 7/28 ngày. Số đã đo: **8,385723 / 8,140036 / 8,147113 / 8,151416%**, spread **0,245687 pp**, bậc dung lượng **4,001399×**. Preflight đĩa/cửa sổ và owner đoán trước khi đo theo ADR-034 |
+| ★ D1 | Tỉ số `compressed/original` **< 15%** ở mọi phép đo. Hai cardinality cùng số ngày; hai bậc dung lượng **≥ 4× số row tại cùng cardinality**. `max − min` toàn bộ tỉ số **< 2 điểm phần trăm**; cùng điều kiện dữ liệu | `make compression-report`: 8/40 kênh × 5 ngày và 40 kênh × 7/28 ngày. Số lịch sử: **8,385723 / 8,140036 / 8,147113 / 8,151416%**, spread **0,245687 pp**, bậc dung lượng **4,001399×**. Preflight đĩa/cửa sổ; không cần dự đoán của owner |
 | ★ D2 | Nhiệt độ trung bình mỗi phút của `FORM-01` (**100 kênh**) trong **7 ngày**, p95 **< 200 ms**. Kiểm mức kênh và máy, cả cửa sổ riêng một máy và cửa sổ có đủ mười máy, có chunk exclusion và đọc continuous aggregate | `make rollup-bench`: một warmup, mười mẫu đan xen, `percentile_disc(0.95)`, đối chiếu từng bucket và lưu EXPLAIN của query được đo. Hai cửa sổ phải cùng bậc và cùng dưới 200 ms. Cửa sổ thứ hai có **6 ngày hoàn chỉnh**; không thay gate bảy ngày bằng cửa sổ này. Chi tiết §3 |
 | ★ D3 | Ca C ở `DE1` ngày **29/03/2026** thuộc production day **28/03**, dài **7 giờ**; ngày **25/10/2026** thuộc **24/10**, dài **9 giờ**. Test phải phân biệt được implementation sai | `ProductionCalendarDaylightSavingTests`: lịch sử **8/8 xanh**, mutation **8/564 đỏ**. M3 đạt hành vi, **không đạt quy trình TDD**; owner chấp nhận riêng M3. Từ M4, RED phải tái lập trên parent SHA bằng diff chỉ chứa test và đỏ đúng assertion nghiệp vụ (ADR-034) |
 | D4 | `production_day` của **05:59** và **06:01** khác nhau đúng một ngày ở **NV1 và DE1** | `ProductionCalendarTests`, hai site; `NV1` không DST, `DE1` có DST |
@@ -39,7 +39,7 @@ Ngưỡng theo [ADR-034](../adr/ADR-034-dieu-kien-nghiem-thu-m3-sau-audit.md); k
 - Glossary có hypertable, chunk, continuous aggregate/rollup, segmentby, compression/retention
   policy, backfill, watermark, cardinality, DST, object lock, checksum.
 - `event-catalog.md` không thêm domain event cho M3. `oef-mapping.md` giữ **Data Collection = đang làm**
-  đến khi owner hoàn tất teach-back.
+  đến khi đối chiếu xong năng lực tương ứng; không dùng teach-back làm tiêu chí trạng thái.
 
 M3 không làm yield/OEE, projection engine, ánh xạ channel → cell (M7), outbox (M6), màn hình
 Mendix (M4), legal hold (M12), hoặc observability/soak (M13). Rollup phục vụ đọc telemetry;
@@ -150,7 +150,7 @@ Khi targeted sạch, `make ci` là gate cuối; lệnh nào bỏ qua phải ghi 
 | Lịch sản xuất | Unit namespace `Nvm.UnitTests.Time`; mutation cho D3 khi sửa logic lịch |
 | File-drop | `FileDropOptionsTests`, integration `FileDropTests`; kiểm producer chưa publish, archive, recovery, dedup |
 | Bộ đo rollup | Hai target benchmark; đối chứng làm sai bucket/kết quả/nguồn/chunk phải đỏ, không chỉ happy path |
-| SQL/migration/policy | Integration TimescaleDB và phép kiểm D1/D5 liên quan; lab có ghi cần owner đoán trước khi đo |
+| SQL/migration/policy | Integration TimescaleDB và phép kiểm D1/D5 liên quan; ghi số đo thật của lab |
 | Compose/network | `make net-check`, `make grafana-net-check` |
 | Bản chạy thật | Kiểm image/container tạo lúc nào và cấu hình đang có; test source xanh không chứng minh container đã dùng code mới |
 
@@ -177,7 +177,7 @@ ADR-012/benchmarks. Không chạy lại lab phá hoại hoặc sinh hàng triệ
 | C12 | Raw curve WORM archive | `ad3abcb` |
 | C13 | Grafana/scoped access | `81843a0` |
 | C14 | Lab ngày sản xuất | `7474968` |
-| C15 | Bằng chứng kỹ thuật, không thay teach-back | `e1fb656` |
+| C15 | Bằng chứng kỹ thuật lịch sử | `e1fb656` |
 
 ## 6. Nợ còn mở và chỗ nhận
 
@@ -193,20 +193,12 @@ Kiểm cấu trúc cho materialization thứ hai đã có trong runner chung (AD
 `N-M3-2`. Qualification throughput/lag ở **M9**, requalification và capacity/soak 24 giờ ở **M13**
 theo ADR-031/034. Không bỏ hoặc nhập các phép kiểm khác mục đích này thành một con số.
 
-## 7. Teach-back và điều kiện đóng
+## 7. Điều kiện đóng
 
-**Chưa thực hiện; vẫn chặn `status: done`.** Owner tự nói lại, không mở tài liệu. Agent không trả
-lời hộ, không viết đáp án mẫu hoặc gợi ý trước (owner 2026-08-31). Tắc câu nào thì phần đó chưa xong.
-
-1. Vì sao hypertable chia theo `device_timestamp` chứ không theo `recorded_at`; lựa chọn đó tạo rủi
-   ro retention nào, và thiết kế hiện tại chặn rủi ro ấy ở đâu?
-2. Instant `2026-03-29T07:00:00+02:00` ở Leipzig thuộc ca và `production_day` nào? Nếu đổi instant
-   ấy sang UTC rồi trừ cứng 6 giờ thì ra ngày nào, và vì sao hai cách không tương đương?
-3. Metric `compressed/original ≈ 8,14–8,39%` nói gì và không nói gì; con số khoảng 92% phải gọi
-   là gì; vì sao kết quả nén đó vẫn không thay thế file CSV gốc trong WORM archive?
-
-Sau khi owner hoàn tất và các gate kỹ thuật còn hợp lệ: đổi trạng thái plan, checklist scope và
-Data Collection trong `oef-mapping.md` cùng lúc. Không suy diễn từ một CI xanh rằng milestone đã đóng.
+Audit lại bằng chứng D1–D5 và sản phẩm bắt buộc, kiểm hệ thống đang chạy đúng build và ghi giới hạn
+chưa kiểm được. Khi các gate kỹ thuật còn hợp lệ, cập nhật trạng thái plan và checklist scope; đối chiếu
+Data Collection trong `oef-mapping.md` theo năng lực đã chứng minh. CI xanh riêng lẻ không chứng nhận
+toàn bộ milestone. Không yêu cầu chủ repo trả lời câu hỏi hoặc dự đoán phép đo.
 
 ## 8. Bàn giao M4
 

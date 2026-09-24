@@ -1,0 +1,8 @@
+{
+  "accepted": false,
+  "reasonCode": "QUALITY_HOLD",
+  "reasonText": "Pack đang bị giữ chất lượng; không nhận kết quả đo. Điều tra hàng hold thuộc luồng Quality.",
+  "blockingRules": [{"rule": "QualityState", "expected": "not Held", "actual": "Held"}],
+  "allowedNextActions": ["ReturnToDispatch", "SelectAnotherUnit"],
+  "correlationId": "90ada25d-65bd-5e60-8268-f36d389432b0"
+}

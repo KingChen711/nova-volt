@@ -124,6 +124,7 @@ if (options.PublishesToBus)
     });
 
     builder.Services.AddSingleton<IMeasurementEventPublisher, BusMeasurementEventPublisher>();
+    builder.Services.AddHostedService<PostgresMeasurementOutboxDispatcher>();
 }
 else
 {
@@ -139,7 +140,8 @@ builder.Services.AddSingleton<IMeasurementIngestor>(services => new PostgresMeas
     services.GetRequiredService<PublishedSignals>(),
     options.ClockDriftThreshold,
     options.WriterParallelism,
-    options.MinRowsPerWriter));
+    options.MinRowsPerWriter,
+    useTransactionalOutbox: options.PublishesToBus));
 builder.Services.AddIngestionAdmissionControl(options);
 builder.Services
     .AddHealthChecks()

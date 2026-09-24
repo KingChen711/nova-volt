@@ -2,13 +2,18 @@ using System.Globalization;
 using System.Reflection;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Nvm.Bus;
+using Nvm.Bus.Outbox;
 using Nvm.CommandStore;
 using Nvm.FactoryModel;
 using Nvm.FactoryModel.Commands;
 using Nvm.Host.Infrastructure;
 using Nvm.Hosting;
 using Nvm.Kernel;
+using Nvm.ProductionExecution.Commands;
+using Nvm.ProductionExecution.Hosting;
 using Nvm.PublicObjectModel;
+using Nvm.Traceability.Commands;
+using Nvm.Traceability.Hosting;
 using Serilog;
 using Serilog.Events;
 
@@ -48,9 +53,12 @@ try
     }
 
     builder.Configuration.AddEnvironmentVariables();
-    builder.Services.AddNvmKernel(typeof(ActivateFactoryModelRevisionCommand).Assembly);
+    builder.Services.AddNvmKernel(typeof(ActivateFactoryModelRevisionCommand).Assembly, typeof(RecordDataCollectionCommand).Assembly,
+        typeof(SerializeUnitCommand).Assembly);
     builder.Services.AddNvmCommandStore(builder.Configuration, builder.Environment);
+    builder.Services.AddNvmTraceability(builder.Configuration);
     builder.Services.AddNvmPublicObjectModel(builder.Configuration, builder.Environment);
+    builder.Services.AddNvmProductionExecutionAdapters(builder.Configuration);
 
     // Đồng hồ duy nhất được chấp nhận trong codebase. AGENTS.md K1 cấm DateTime.UtcNow
     // để những saga kéo dài cả ngày vẫn test được bằng FakeTimeProvider.
@@ -61,9 +69,7 @@ try
     // Chưa có consumer nào ở đây: host này chỉ publish, còn probe worker mới consume.
     builder.Services.AddNvmBus(bus =>
     {
-        // Host giữ nguyên mặc định là localhost, cùng một giả định mà mọi dependency khác trong
-        // host này đang dùng (xem HealthCheckRegistration). .env là bảng port và credential;
-        // nó không mang theo host name.
+        bus.Host = builder.Configuration["NVM_RABBITMQ_HOST"] ?? "localhost";
         bus.Port = ushort.Parse(DotEnvLoader.Required("NVM_PORT_RABBITMQ"), CultureInfo.InvariantCulture);
         bus.Username = DotEnvLoader.Required("NVM_RABBITMQ_USER");
         bus.Password = DotEnvLoader.Required("NVM_RABBITMQ_PASSWORD");
@@ -71,6 +77,7 @@ try
         // urn:novavolt:nv1:host-all. Chế độ dev chạy mọi App trong cùng một process (scope.md §5.3).
         bus.ApplicationName = "host-all";
     });
+    builder.Services.AddNvmSqlEventOutbox();
 
     // Command pipeline cộng với Functional Block đầu tiên. Kernel được cho biết chính xác những
     // assembly nào cần scan, thay vì scan mọi thứ đã load: một Functional Block chưa từng tự công bố
@@ -84,6 +91,7 @@ try
 
     builder.Services.AddDependencyHealthChecks();
     builder.Services.AddHealthChecks().AddCheck<CommandStoreHealthCheck>("command-store", tags: [HealthTags.Ready]);
+    builder.Services.AddHealthChecks().AddCheck<TraceabilityStoreHealthCheck>("traceability-store", tags: [HealthTags.Ready]);
 
     var app = builder.Build();
 
@@ -136,6 +144,8 @@ try
     app.UseAuthentication();
     app.UseAuthorization();
     app.MapNvmPublicObjectModel();
+    app.MapNvmProductionExecution();
+    app.MapNvmTraceability();
     app.Run();
     return 0;
 }

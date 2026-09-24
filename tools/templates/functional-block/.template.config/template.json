@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "NovaVolt",
+  "classifications": ["NovaVolt", "Functional Block"],
+  "identity": "NovaVolt.FunctionalBlock.CSharp",
+  "name": "NovaVolt Functional Block",
+  "shortName": "nvm-fb",
+  "sourceName": "SampleBlock",
+  "preferNameDirectory": true,
+  "placeholderFilename": ".keep",
+  "tags": {
+    "language": "C#",
+    "type": "project"
+  }
+}

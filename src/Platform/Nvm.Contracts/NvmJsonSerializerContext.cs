@@ -1,7 +1,9 @@
 using System.Text.Json.Serialization;
 using Nvm.Contracts.CloudEvents;
 using Nvm.Contracts.Events.FactoryModel;
+using Nvm.Contracts.Events.ProductionExecution;
 using Nvm.Contracts.Events.Quality;
+using Nvm.Contracts.Events.Traceability;
 
 namespace Nvm.Contracts;
 
@@ -41,4 +43,10 @@ namespace Nvm.Contracts;
     WriteIndented = false)]
 [JsonSerializable(typeof(CloudEventEnvelope<FactoryModelRevisionActivated>))]
 [JsonSerializable(typeof(CloudEventEnvelope<MeasurementRecorded>))]
+[JsonSerializable(typeof(CloudEventEnvelope<DataCollectionRecorded>))]
+[JsonSerializable(typeof(CloudEventEnvelope<ProductionUnitSerialized>))]
+[JsonSerializable(typeof(CloudEventEnvelope<ProcessStepStarted>))]
+[JsonSerializable(typeof(CloudEventEnvelope<ProcessStepCompleted>))]
+[JsonSerializable(typeof(CloudEventEnvelope<UnitMeasurementRecorded>))]
+[JsonSerializable(typeof(CloudEventEnvelope<DuplicateSerialDetected>))]
 public sealed partial class NvmJsonSerializerContext : JsonSerializerContext;

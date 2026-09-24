@@ -3,7 +3,7 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0.300-noble AS build
 WORKDIR /src
 
-COPY global.json Directory.Build.props Directory.Build.targets Directory.Packages.props ./
+COPY global.json Directory.Build.props Directory.Build.targets Directory.Packages.props .editorconfig ./
 COPY tools/ tools/
 COPY src/ src/
 

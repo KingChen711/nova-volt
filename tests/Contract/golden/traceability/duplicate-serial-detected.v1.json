@@ -1,0 +1,22 @@
+{
+  "specversion": "1.0",
+  "id": "f7495aac-a2a0-5977-8d35-f30a0864e1fd",
+  "type": "com.novavolt.traceability.duplicate-serial-detected.v1",
+  "source": "urn:novavolt:nv1:app-execution",
+  "subject": "urn:trace-unit:cell:NV1CL16267A70485",
+  "time": "2026-09-24T06:00:00+00:00",
+  "datacontenttype": "application/json",
+  "correlationid": "f7495aac-a2a0-5977-8d35-f30a0864e1fd",
+  "causationid": "f7495aac-a2a0-5977-8d35-f30a0864e1fd",
+  "partitionkey": "NV1:NV1CL16267A70485",
+  "data": {
+    "eventId": "f7495aac-a2a0-5977-8d35-f30a0864e1fd",
+    "occurredAt": "2026-09-24T06:00:00+00:00",
+    "recordedAt": "2026-09-24T06:00:01+00:00",
+    "siteId": "NV1",
+    "serialNumber": "NV1CL16267A70485",
+    "submissionId": "f5f204db-28a9-4e89-b409-c5d0c6901ea3",
+    "reasonCode": "DUPLICATE_SERIAL",
+    "actorId": "op.nv1"
+  }
+}

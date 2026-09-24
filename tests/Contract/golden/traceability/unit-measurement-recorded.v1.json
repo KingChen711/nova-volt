@@ -1,0 +1,26 @@
+{
+  "specversion": "1.0",
+  "id": "9362521f-0367-5b7a-9254-e58901f14d39",
+  "type": "com.novavolt.traceability.unit-measurement-recorded.v1",
+  "source": "urn:novavolt:nv1:app-execution",
+  "subject": "urn:trace-unit:cell:NV1CL16267A70485",
+  "time": "2026-09-24T06:00:00+00:00",
+  "datacontenttype": "application/json",
+  "correlationid": "9362521f-0367-5b7a-9254-e58901f14d39",
+  "causationid": "9362521f-0367-5b7a-9254-e58901f14d39",
+  "partitionkey": "NV1:NV1CL16267A70485",
+  "data": {
+    "eventId": "9362521f-0367-5b7a-9254-e58901f14d39",
+    "occurredAt": "2026-09-24T06:00:00+00:00",
+    "recordedAt": "2026-09-24T06:00:01+00:00",
+    "siteId": "NV1",
+    "serialNumber": "NV1CL16267A70485",
+    "stepCode": "STACK",
+    "operationRunId": "projection-smoke-run",
+    "equipmentPath": "NOVAVOLT/NV1/CELL/L1/STACK-01",
+    "signalCode": "Voltage",
+    "value": 3.6,
+    "unitOfMeasure": "V",
+    "actorId": "op.nv1"
+  }
+}

@@ -771,7 +771,7 @@ không dùng kết quả này để tuyên bố đạt p95, lab draft C09 hay to
 
 ## M4/C05 — Command store SQL: kiểm ngày 2026-09-13
 
-Working copy trên .NET `43e4b05`, chưa commit C05. SQL Server test dùng container riêng
+Đo trên working copy từ .NET `43e4b05`, sau đó commit C05 tại `8639e75`. SQL Server test dùng container riêng
 `2022-CU26-ubuntu-22.04`; test không xoá dữ liệu ứng dụng đang chạy.
 
 | Phép kiểm | Kết quả đo | Bằng chứng local |
@@ -803,3 +803,102 @@ D3–D5 qua HTTP/RabbitMQ và chưa chạy lab draft C09. Những trường hợ
 Browser smoke bổ sung sau C05 chưa chạy được: Playwright mở `http://localhost:8080`
 nhận `ERR_CONNECTION_REFUSED` vì runtime Mendix không phục vụ ở cổng đó. Kết quả browser C04
 ở trên là lần đo trước, không phải phép kiểm lại trên backend C05.
+
+## M4/C06 — Ghi nhận data collection qua Command API
+
+Parent: `8639e75` (C05), bắt đầu ngày 2026-09-15. Chưa nghiệm thu C06.
+
+| Phép kiểm | Kết quả đã đo | Bằng chứng local |
+|---|---|---|
+| RED trên source parent C05 | **1/1 đỏ đúng assertion HTTP**: kỳ vọng 200, thực tế 404; process ứng dụng đã ready, không phải lỗi build/fixture | `artifacts/c06/parent-source.tar`, `parent-build.log`, `parent-red.log`, source test tại `red-tests/` |
+
+Parent được export bằng `git archive 8639e75` rồi build app Execution. Bộ test gọi
+process đó bằng `NVM_C06_TEST_APP` và filter
+`*AuthenticatedCollection_IsAcceptedOverRealHttp`; HTTP/TCP, JWT có chữ ký, SQL Server,
+PostgreSQL và RabbitMQ đều chạy thật trong môi trường test riêng. Assertion đỏ chỉ chứng minh
+route ghi chưa có trên parent, không dùng nó làm RED cho mọi quy tắc nghiệp vụ của C06.
+
+## M4/C07 — runtime Mendix, lưu bản nháp và gửi lại (2026-09-23, Codex)
+
+Working copy chưa commit; Studio Pro 11.12.3, app `C:\Users\Kingc\Mendix\NvmShopFloor-main\NvmShopFloor.mpr`.
+`mx check` sau Ctrl+S/F4 của owner: 0 lỗi. Runtime localhost:8080, Execution Docker localhost:5081,
+Keycloak localhost:8081; đăng nhập trình duyệt qua `/oauth/v2/login` bằng `op.nv1`.
+
+| Phép kiểm | Kết quả quan sát |
+|---|---|
+| Ghi điện áp EOL 402.75 V cho `NV1PP16250A00001` | Draft `38a96885-0534-4b72-bc13-8732c996f120`; UI báo đã ghi nhận, SQL có đúng 1 row và value 402.75 |
+| Reload trình duyệt rồi mở danh sách draft | Cùng submission, value và trạng thái Đã ghi nhận |
+| Lưu draft 403.125 V, dừng `nvm-execution`, bấm gửi | Draft `f2ac5411-266b-49c5-bccc-2ee6580f3a63`; UI báo hệ thống không phản hồi và giữ dữ liệu |
+| Start backend, reload, mở lại draft | Cùng submission và value, trạng thái Chờ xác nhận, thông báo lỗi cũ còn lưu |
+| Gửi lại, sau đó bấm gửi thêm lần nữa | UI báo đã ghi nhận; SQL nhóm theo đúng submission cho 1 row, value 403.125 |
+| API gửi lại cùng request sau restart backend | Outcome JSON giống nhau; correlation `885d20e8-443c-5de0-8dcf-62c8a97e4a83`, đúng 1 row SQL |
+| RabbitMQ queue quorum tạm gắn exchange `nvm.production-execution` | Nhận routing key `nvm.NV1.production-execution.data-collection-recorded.v1`; ce_id `90ada25d-65bd-5e60-8268-f36d389432b0` trùng command correlation; ce_type `com.novavolt.production-execution.data-collection-recorded.v1`, ce_source `urn:novavolt:nv1:app-execution`; đã xóa queue tạm |
+
+Snapshot browser ở `.playwright-cli/page-2026-09-23T12-27-20-113Z.yml` (saved),
+`12-29-32-603Z.yml` (backend down), `12-30-11-453Z.yml` (pending sau reload),
+`12-30-42-372Z.yml` (accepted sau retry), cùng tiền tố `page-2026-09-23T`.
+SQL được đọc trực tiếp bằng sqlcmd trong `nvm-mssql`, không suy số row từ UI.
+
+Giới hạn: hai lần bấm UI sau Accepted được guard phía Mendix nên không tự chứng minh backend
+nhận hai request; phép replay API riêng ở trên kiểm phần backend. Chưa kiểm mất ACK sau commit,
+restart runtime Mendix, role/site âm qua draft, response mapper đầy đủ hoặc p95 trang. Các gate đó còn mở.
+
+### 2026-09-23 — C07 JSON mapping runtime (Codex)
+
+Sau khi sửa `forceSingleOccurrence=false`, gửi lại draft `f890e540-0823-4175-910e-d3700832eb3e` hiển thị `Operation run không thuộc pack này.`; danh sách draft ghi Bị từ chối. Draft mới `3ac6b0a1-7f98-42ea-86a3-0333263fcb74`, pack `NV1PP16250A00001`, operation `OPRUN-NV1-EOL-0001`, 405.375V hiển thị thông báo đã ghi nhận và danh sách draft ghi Đã ghi nhận. Bằng chứng browser thực 21:22–21:24 + MCP check 0 lỗi. SQL execution.DataCollection: draft mới 1 row, draft rejected 0 row. Sau owner Stop/F5, browser reload và OIDC login lại: danh sách đủ 4 draft, nguyên ID/số đo/trạng thái (3 accepted, 1 rejected). Chỉ chứng minh giữ draft đã kết thúc qua restart; chưa đo Pending qua restart.
+
+### 2026-09-23 — Production command SQL outbox integration (Codex)
+
+Handler RecordDataCollection đã ghi event + outbox bằng IEventStore trong transaction claim/collection/outcome; endpoint không còn publish trực tiếp. Build toàn solution 0 warning/error. Lượt HTTP đầu phát hiện event đã commit nhưng worker không claim được. Phép kiểm SQL cùng bảng, cùng tài khoản `nvm_app`, trong transaction rollback: `UPDATE pending` trên CTE đầy đủ cột trả lỗi quyền UPDATE; đổi sang CTE chỉ chọn EventId rồi UPDATE bảng gốc bằng JOIN chạy được, không mở rộng quyền runtime. Bài học: test dispatcher bằng tài khoản quản trị chưa chứng minh deploy với quyền tối thiểu chạy được. Đã sửa SQL. Lượt chạy lại hoàn tất 47/47 tests, 0 failed/skipped, 106,483s (ExecutionCommandHttpTests + SqlEventOutboxTests), log `D:\Downloads\novavolt-production-outbox-tests-fixed.log`; đọc kết quả ngày 2026-09-24. Bộ HTTP dùng nvm_app: event/outbox tồn tại khi broker dừng, process bị kill trước broker phục hồi, process mới chuyển event ra broker; command replay trả cùng outcome. Inject lỗi Complete rollback cả collection/event/outbox. Đây là bằng chứng cho lát cắt này, không nghiệm thu toàn M6/N3.
+
+### 2026-09-24 — C07 DE1 và draft Pending qua restart (Codex)
+
+Browser đăng nhập `op.de1`: danh sách draft 0 row dù NV1 có 4 row; nhập serial/trạm NV1 bị chặn lưu với thông báo lỗi. Tạo draft DE1 `d7585761-7f2a-4645-9a0a-cfd90c9d0ccd`, serial `DE1PP16250A00001`, operation `OPRUN-DE1-EOL-0001`, trạm `NOVAVOLT/DE1/PACK/P1/EOL-01`, 406.125V. Owner Stop/F5; đăng nhập lại OIDC, danh sách còn đúng draft với trạng thái Chờ xác nhận. Mở và gửi: UI báo đã ghi nhận; SQL `execution.DataCollection` có đúng 1 row SiteId=DE1, cùng submission và value. Không có thay đổi model trong phép kiểm này; backend Docker vẫn là build trước tích hợp outbox mới. Chưa kiểm giả mạo GUID/microflow request hoặc mất response ngay sau commit trên UI.
+
+## 2026-09-24 — Production command/outbox: forced rebuild và review
+
+Codex: `dotnet build NovaVolt.Mes.slnx --no-restore -t:Rebuild -v quiet`: 0 warning/error (13,56s). Rebuilt DLL chạy `SqlEventOutboxTests` + `ExecutionCommandHttpTests`: **48/48, 109,354s**, log `D:\Downloads\novavolt-outbox-rebuilt-tests.log`. Publisher unit **7/7**, log `novavolt-envelope-unit-fixed.log`. Review độc lập read-only không còn finding trong hai bản sửa lease và stored CloudEvents headers; reviewer không tự chạy test.
+
+Controlled RED: chỉ thay thuật toán dispatch bằng claim cả batch, giữ query/envelope như bản cuối; `SlowPublisher_DoesNotLeaseWaitingBatch_AndTimesOutBeforeLeaseExpires` fail vì peer claim được 0 thay vì 1. Log `novavolt-lease-red.log`. GREEN: bản cuối claim từng row + giới hạn publish bằng nửa lease, qua cùng test trong suite 48/48. Đây là phép thử trong Testcontainers; không dùng thời gian Codex disconnect làm bằng chứng runtime.
+
+Lưu ý phép đo: restore source bằng Copy-Item giữ timestamp cũ khiến incremental build tiếp tục dùng DLL của RED. Lượt `novavolt-outbox-final-tests.log` 46/48 không chứng minh bản cuối sai; forced Rebuild ở trên mới xác nhận đúng source. Không sửa test để che lỗi. Image demo chưa được cập nhật ở thời điểm phép đo này.
+
+### 2026-09-24 — C07 trên image outbox mới và readiness
+
+Docker Execution được build và migrate bằng `--migrate-commands` (không reseed), container Created `2026-09-24T02:34:33.884788198Z`, image `sha256:f2e8801a87329d4db79557cc3515f1e59406e43ed0caeb0dc59bbb21af068c9f`. Browser op.de1 lưu/gửi draft `cca2f776-ba69-4a10-aa25-dd39e22e23c6`, 407.25V: SQL có một DataCollection, event `2c80ff53-0086-5e32-971c-2db8f1b8316c`, outbox Attempt=1, DispatchedAt `2026-09-24T02:37:50.6284205Z`. Queue bằng chứng bind trước submit nhận đúng submission, routing `nvm.DE1.production-execution.data-collection-recorded.v1`, ce_source `urn:novavolt:de1:app-execution`, ce_id/correlationid/causationid trùng event ID, subject/partitionkey đúng serial/site. Queue riêng đã xoá sau khi kiểm; không lấy message từ queue nghiệp vụ.
+
+Review tiếp phát hiện readiness cũ bỏ sót quyền es/traceability. Đã thêm probe theo runtime principal cho cả hai host. Targeted HTTP `MissingRuntimeGrant_IsNotReady_AndRecoversWhenRestored`: **5/5, 24,958s** (thu hồi lần lượt es.Events INSERT, es.Streams UPDATE Version, es.Outbox UPDATE DispatchedAt, Routes SELECT, DuplicateSerialIncidents INSERT; mỗi ca 200→503→200). Log `D:\Downloads\novavolt-readiness-tests.log`. Bản sửa readiness này chưa nằm trong image demo nêu trên.
+
+Agent projection để lại library + 4 integration test đã báo pass; parent đã đọc lại code. Chưa wire runtime. CatchUp hiện quét lại full feed để không bỏ event có GlobalSequence thấp commit muộn; cần chuyển sang inbox tăng dần trước dùng làm worker liên tục. Agent WIP để lại page Wip_Board dùng POM, refresh5s và đường mở draft; MCP check 0 errors sau khi parent tiếp quản. Timestamp/connectivity/non-overlap và runtime WIP chưa kiểm. Các agent dừng vì quota; file trên đĩa vẫn còn.
+
+### 2026-09-24 — C07 request giả mạo và test isolation
+
+Hai browser session thật: op.nv1 đọc danh sách chỉ thấy 4 draft NV1; op.de1 chỉ thấy 2 DE1. op.nv1 retrieve bằng GUID DE1 `30117822508078754` trả không có object. op.de1 gọi ACT_DataCollection_OpenDraft trực tiếp với GUID NV1 `30117822508040362`: callback hoàn tất nhưng page không có dữ liệu, báo Không tìm thấy bản nháp và disable Gửi.
+
+Tạo draft Pending NV1 `144c883e-4de3-40a5-a3c9-de1cb00d0211`, GUID `30117822508078923`, 408.5V. op.de1 gọi ACT_DataCollection_Submit trực tiếp với GUID đó: owner đọc lại vẫn Pending/ReasonCode rỗng, SQL count theo SubmissionId=0. op.nv1 thử set Value=999 rồi mx.data.commit: runtime từ chối Internal server error; object trong client cache tạm là999, nhưng reload hoàn toàn rồi đọc lại trả đúng408.5/Pending. Chưa kiểm user khác cùng site (ll.nv1 dùng credential riêng không có trong realm export); không thay mật khẩu người dùng. Draft NV1 trên đang được giữ Pending để tiếp tục kiểm quyền.
+
+Full CI đầu 877/879 (3m45,138s), hai lỗi SqlEventOutboxTests. Lỗi append-only test để lại row trong queue dùng chung giữa các test, nên thứ tự chạy làm test slow publisher nhận thêm event; đây khác controlled RED cũ. Sửa mỗi test dùng database riêng trên cùng container, không xoá event store để reset queue và không tăng timeout/nới assertion. Targeted **5/5,21,927s**, log `novavolt-outbox-isolation-tests.log`; full CI đang chạy lại. `make net-check` **9/9**, log `novavolt-network-check.log`.
+
+### 2026-09-24 — Projection inbox, worker và runtime thật
+
+Codex trực tiếp: inbox/consumer targeted6/6 (67,069s), test SQL-source→consumer riêng1/1 (35,941s). Thêm worker/role test: lần đầu lỗi do fixture lấy ConnectionString từ NpgsqlDataSource đã mở và bị lược password; sửa fixture lấy credential gốc Testcontainers, không nới quyền. Targeted worker restart + quyền cập nhật duy nhất cột applied + revoke INSERT làm readiness fail: **1/1,8,226s**. Runtime role không sửa/xoá fact trong inbox.
+
+Full suite trước worker: **880/881,4m00,717s**, một lỗi Append1000 p95 **23,608ms**, max184,686ms; buffer-crash đang chạy đồng thời. Không kết luận nguyên nhân từ tương quan. Sau lab, cùng test không đổi chạy riêng **1/1,24,529s** (dưới20ms; runner không in output test xanh nên không ghi p95 cụ thể). Full suite có worker đang chạy lại, giữ ngưỡng nguyên vẹn.
+
+`make buffer-crash`: **200/200 vòng,0 đỏ**; mỗi vòng SIGKILL rồi reopen bằng process mới, không mất record đã xác nhận. Log novavolt-buffer-crash-final.log. Dockerfile Simulator/Ingestion/Gateway/LoadHarness đã thêm COPY .editorconfig để Docker dùng cùng quy tắc analyzer với local; không hạ severity để chữa build.
+
+Demo projection Created2026-09-24T03:23:57.259578681Z, imagef96949e6a5536a144959cab7afa3b7c0807c4a3f5434d393e4ac4a40031d9d80. Execution Created2026-09-24T06:41:21.590554272Z, image05d37504fc0fca5974b810a0847504fdfe44d41ea6cbce5c91032288f9f5a3c7 (đã có readiness mới). Hai container healthy. Explicit migration tạo role nvm_projection riêng trên mỗi DB; runtime không có admin credential.
+
+API có token op.nv1 (client nvm-mendix có audience nvm-api) cấp serial **NV1CL16267A70485**, start STACK, record3.6V, complete. Dừng nvm-projection sau start; gửi measurement/complete và replay cả4 request khi worker đang dừng; start lại. SQL:4event,maxversion4; outbox4/4dispatched. PostgreSQL: đúng1unit Completed/version4; inbox4/4applied. Event IDs lần lượt48a81115-183c-5de6-8703-8bac5f74ee2b,ea15f614-4409-5070-9b25-0322c7c65e46,9362521f-0367-5b7a-9254-e58901f14d39,8bfdeb3b-fe48-58f3-8fcd-2631ac3e3cde. Log novavolt-projection-smoke.log. Chưa nối projection vào POM, không dùng kết quả này đóng M6.
+
+Reconciliation explicite sau smoke chạy thành công, unit vẫn version4/count1. Rotation preflight45/45, secret-check đạt, staged diff không chứa giá trị secret từ .env. Full suite có worker tiếp tục trượt p95 **52,486ms**, max1187,265ms dù crash lab đã kết thúc: dữ liệu bác việc coi riêng lab crash là nguyên nhân. Đặt EventStoreTests vào xUnit collection DisableParallelization để phép đo latency không tranh chấp với các collection khởi tạo SQL/Postgres/DDL; số event và ngưỡng20ms giữ nguyên. Đây là thay đổi điều kiện đo, không phải tuyên bố tối ưu runtime; cần full suite mới xác minh.
+
+Suite worker kết thúc881/882,4m28,009s, chỉ lỗi p95 trên. Bản nonparallel collection đang build/test lại; log novavolt-isolated-latency-suite.log. Chưa commit/push đợt code này trước khi gate sạch.
+
+### 2026-09-24 — Gate sau khi tách phép đo latency
+
+Full solution **882/882,0skip,4m02,165s**; integration3m59,553s. Log novavolt-isolated-latency-suite.log. Collection hiệu năng chạy không song song với các collection khác; assertion1000event/p95<20ms không đổi. Điều này xác nhận gate ở điều kiện đo mới, không chứng minh SLO dưới tải dây chuyền hay nguồn gốc duy nhất của mọi lần fail trước.
+
+Sau gate: thêm source-generated serializer +5 golden v1 (fixture mới, không đổi golden cũ); targeted contract5/5,2,320s. Bổ sung metadata bất biến cho event Traceability mới; lifecycle integration3/3,23,838s kiểm subject/correlation/causation/partition trong envelope SQL. Event cũ giữ nguyên metadata thiếu optional attribute; chưa redeploy image cho thay đổi metadata này. Ownership mâu thuẫn giữa bảng event và scope M5 được chốt bằng ADR-042, không đổi tên v1 đã lưu.
+
+Final format thành công; Release build0warning/error8,98s; toàn bộ contract21/21,1,907s (novavolt-contract-final.log).

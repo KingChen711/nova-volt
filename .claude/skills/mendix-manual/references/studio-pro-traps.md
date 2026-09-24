@@ -11,6 +11,10 @@ thừa từ dự án CGVibe. Cả hai đều là thứ **đã tái lập đượ
 > plan và thực tế giờ khớp — đừng dựa vào ghi chú cũ nói rằng chúng lệch nhau.
 > App `NvmShopFloor` dùng **Git**, không phải SVN. `mx.exe` cho `mx check` phải đúng 11.12.3.
 
+### Import JSON và forceSingleOccurrence — đã kiểm runtime (Codex, 2026-09-23)
+
+MCP/mx check có thể 0 lỗi nhưng import vẫn lỗi runtime. Với JS_CommandResponse có root `(Object)`, cấu hình import do agent tạo `forceSingleOccurrence=true` gây `MappingCache.storeValueMappingElement: key not found: Path(QName(None,),None,)`. Bytecode runtime 11.12.3 xác nhận cờ này gọi `dropLeft` trên đường dẫn, kể cả root; không được dùng cờ này chỉ vì muốn nhận một object từ JSON Structure. Đã đổi false qua MCP, check 0 lỗi; runtime kiểm lại cùng submission đọc được lý do từ chối, submission mới đọc được phản hồi accepted (2026-09-23). XmlPath rỗng cũng xuất hiện trong các JSON mapping OIDC, không đủ bằng chứng kết luận mapping hỏng.
+
 ### 0.1 Tên menu đã xác nhận
 
 | Việc | Đường dẫn đúng |

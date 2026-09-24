@@ -1,0 +1,22 @@
+{
+  "specversion": "1.0",
+  "id": "8bfdeb3b-fe48-58f3-8fcd-2631ac3e3cde",
+  "type": "com.novavolt.traceability.process-step-completed.v1",
+  "source": "urn:novavolt:nv1:app-execution",
+  "subject": "urn:trace-unit:cell:NV1CL16267A70485",
+  "time": "2026-09-24T06:00:00+00:00",
+  "datacontenttype": "application/json",
+  "correlationid": "8bfdeb3b-fe48-58f3-8fcd-2631ac3e3cde",
+  "causationid": "8bfdeb3b-fe48-58f3-8fcd-2631ac3e3cde",
+  "partitionkey": "NV1:NV1CL16267A70485",
+  "data": {
+    "eventId": "8bfdeb3b-fe48-58f3-8fcd-2631ac3e3cde",
+    "occurredAt": "2026-09-24T06:00:00+00:00",
+    "recordedAt": "2026-09-24T06:00:01+00:00",
+    "siteId": "NV1",
+    "serialNumber": "NV1CL16267A70485",
+    "stepCode": "STACK",
+    "operationRunId": "projection-smoke-run",
+    "actorId": "op.nv1"
+  }
+}

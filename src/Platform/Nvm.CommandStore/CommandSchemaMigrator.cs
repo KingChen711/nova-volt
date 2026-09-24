@@ -15,11 +15,14 @@ public static class CommandSchemaMigrator
         await using var connection = new SqlConnection(connectionString);
         await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
         await using var transaction = (SqlTransaction)await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
-        using var stream = typeof(CommandSchemaMigrator).Assembly.GetManifestResourceStream("Nvm.CommandStore.Migrations.001-command-store.sql")!;
-        using var reader = new StreamReader(stream);
-        var sql = await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
-        using var command = new SqlCommand(sql, connection, transaction);
-        await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        foreach (var migration in new[] { "001-command-store.sql", "002-data-collection.sql" })
+        {
+            using var stream = typeof(CommandSchemaMigrator).Assembly.GetManifestResourceStream("Nvm.CommandStore.Migrations." + migration)!;
+            using var reader = new StreamReader(stream);
+            var sql = await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
+            using var command = new SqlCommand(sql, connection, transaction);
+            await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        }
         await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
     }
 }

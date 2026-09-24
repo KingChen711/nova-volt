@@ -73,6 +73,9 @@ việc khác.
 | [036](ADR-036-file-drop-bat-buoc-publish.md) | File-drop bắt buộc publish, bỏ fallback theo mtime | **Accepted** 2026-09-06 | M3 · thay ngoại lệ Decision §4 của ADR-035 |
 | [037](ADR-037-benchmark-rollup-chi-doc.md) | Benchmark rollup chỉ đọc, kiểm contract bằng metadata công khai | **Accepted** 2026-09-06 | M3 · giữ DoD của ADR-034 |
 | [038](ADR-038-data-collection-thu-cong-o-m4.md) | M4 ghi nhận kết quả đo thủ công trên context fixture; submission có key/outcome bền vững | **Accepted** 2026-09-07 | M4 · C01 |
+| [039](ADR-039-delivery-without-learning-gates.md) | Hoàn thiện các milestone theo gate kỹ thuật, bỏ gate học tập và teach-back | **Accepted** 2026-09-23 | Toàn dự án |
+| [040](ADR-040-postgres-ingestion-outbox.md) | PostgreSQL outbox cho ingestion, một intent bền vững và delivery at-least-once | **Accepted** 2026-09-23 | M6 |
+| [041](ADR-041-server-derived-manual-submission-key.md) | Backend suy UUIDv5 cho submission nhập tay; client có thể bỏ key | **Accepted** 2026-09-23 | M4 · C07 |
 
 Cột **Ra ở** là milestone dự kiến, không phải cam kết. Quyết định đến sớm hơn thì viết sớm hơn.
 
@@ -96,3 +99,5 @@ ADR-001 và ADR-002 là **một cặp**, đọc riêng sẽ hiểu sai. ADR-001 
 Opcenter; chính lựa chọn đó lấy đi `numrange` và `EXCLUDE` constraint, và đó là lý do ADR-002 tồn
 tại. Polyglot persistence ở dự án này **không** phải một quyết định độc lập — nó là hệ quả bắt
 buộc của ADR-001.
+
+- [ADR-042](ADR-042-unit-event-ownership.md): Unit lifecycle facts belong to Traceability; v1 names and stored history remain unchanged (Accepted, 2026-09-24).

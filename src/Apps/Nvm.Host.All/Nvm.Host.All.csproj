@@ -19,6 +19,8 @@
     <ProjectReference Include="../../Platform/Nvm.Hosting/Nvm.Hosting.csproj" />
     <ProjectReference Include="../../Platform/Nvm.PublicObjectModel/Nvm.PublicObjectModel.csproj" />
     <ProjectReference Include="../../FunctionalBlocks/FactoryModel/Nvm.FactoryModel.csproj" />
+    <ProjectReference Include="../../FunctionalBlocks/ProductionExecution.Hosting/Nvm.ProductionExecution.Hosting.csproj" />
+    <ProjectReference Include="../../FunctionalBlocks/Traceability.Hosting/Nvm.Traceability.Hosting.csproj" />
   </ItemGroup>
 
 </Project>

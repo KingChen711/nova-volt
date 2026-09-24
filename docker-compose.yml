@@ -48,6 +48,51 @@ volumes:
   miniodata:
 
 services:
+  projection:
+    profiles: [projection]
+    build:
+      context: .
+      dockerfile: src/Workers/Nvm.ProjectionWorker/Dockerfile
+    image: novavolt/nvm-projection:dev
+    container_name: nvm-projection
+    restart: unless-stopped
+    mem_limit: 256m
+    depends_on:
+      timescale:
+        condition: service_healthy
+      mssql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      NVM_PROJECTIONS__ConnectionString: "Host=timescale;Database=${NVM_POSTGRES_DB};Username=nvm_projection;Password=${NVM_PROJECTION_PG_PASSWORD};GSS Encryption Mode=Disable"
+      NVM_PROJECTIONS__SqlConnectionString: "Server=mssql;Database=NovaVolt;User Id=nvm_projection;Password=${NVM_PROJECTION_SQL_PASSWORD};Encrypt=True;TrustServerCertificate=True;Connect Timeout=3"
+      NVM_PROJECTIONS__Sites: NV1,DE1
+      NVM_RABBITMQ_HOST: rabbitmq
+      NVM_PORT_RABBITMQ: "5672"
+      NVM_RABBITMQ_USER: ${NVM_RABBITMQ_USER}
+      NVM_RABBITMQ_PASSWORD: ${NVM_RABBITMQ_PASSWORD}
+    networks: [it-net]
+    healthcheck:
+      test: ["CMD", "dotnet", "Nvm.ProjectionWorker.dll", "--health-probe"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+
+  projection-migrate:
+    profiles: [projection]
+    image: novavolt/nvm-projection:dev
+    restart: "no"
+    mem_limit: 256m
+    environment:
+      NVM_PROJECTIONS__MigrationConnectionString: "Host=timescale;Database=${NVM_POSTGRES_DB};Username=${NVM_POSTGRES_USER};Password=${NVM_POSTGRES_PASSWORD};GSS Encryption Mode=Disable"
+      NVM_PROJECTIONS__SqlMigrationConnectionString: "Server=mssql;Database=NovaVolt;User Id=sa;Password=${NVM_MSSQL_SA_PASSWORD};Encrypt=True;TrustServerCertificate=True"
+      NVM_PROJECTION_PG_PASSWORD: ${NVM_PROJECTION_PG_PASSWORD}
+      NVM_PROJECTION_SQL_PASSWORD: ${NVM_PROJECTION_SQL_PASSWORD}
+    networks: [it-net]
+    command: ["--migrate"]
+
   execution:
     profiles: [execution]
     build:
@@ -62,6 +107,10 @@ services:
         condition: service_healthy
       keycloak:
         condition: service_healthy
+      mssql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       # Lab xác thực password; không thử Kerberos khi image không cài GSSAPI.
@@ -70,6 +119,10 @@ services:
       NVM_POM__MetadataAddress: "http://keycloak:8080/realms/novavolt/.well-known/openid-configuration"
       NVM_POM__Audience: nvm-api
       NVM_COMMANDS__ConnectionString: "Server=mssql;Database=NovaVolt;User Id=nvm_app;Password=${NVM_MSSQL_APP_PASSWORD};Encrypt=True;TrustServerCertificate=True;Connect Timeout=3;Application Name=Nvm.Commands"
+      NVM_RABBITMQ_HOST: rabbitmq
+      NVM_PORT_RABBITMQ: "5672"
+      NVM_RABBITMQ_USER: ${NVM_RABBITMQ_USER}
+      NVM_RABBITMQ_PASSWORD: ${NVM_RABBITMQ_PASSWORD}
     ports:
       - "127.0.0.1:${NVM_PORT_EXECUTION:-5081}:8080"
     networks: [it-net]

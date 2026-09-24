@@ -57,12 +57,12 @@ thành đúng cái TSDB nằm cạnh nó.
 | `SlurryBatchProduced` | ProductionExecution | Trộn xong một mẻ | — | ☐ | ☐ | M5 |
 | `RollCoated` | ProductionExecution | Phủ xong, kèm segment map | — | ☐ | ☐ | M5 |
 | `RollSplit` | Traceability | Slitting: mother → daughter + ánh xạ toạ độ | — | ☐ | ☐ | M6 |
-| `ProductionUnitSerialized` | Traceability | **Cell được cấp SN** — điểm khai sinh serial | — | ☐ | ☐ | M5 |
+| `ProductionUnitSerialized` | Traceability | **Cell được cấp SN** — điểm khai sinh serial | v1 | ✅ | ✅ | M5 |
 | `SerialEngravingVerified` | Quality | Vision đọc lại mã khắc thành công | — | ☐ | ☐ | M9 |
-| `DuplicateSerialDetected` | Traceability | Trùng mã — luồng ngoại lệ có thật | — | ☐ | ☐ | M5 |
-| `ProcessStepStarted` | ProductionExecution | Bắt đầu một bước | — | ☐ | ☐ | M5 |
-| `ProcessStepCompleted` | ProductionExecution | Kết thúc, kèm actual | — | ☐ | ☐ | M5 |
-| `DataCollectionRecorded` | ProductionExecution | Kết quả do người vận hành nhập đã được ghi nhận; không kết luận hoàn tất bước hay đạt chất lượng ([ADR-038](adr/ADR-038-data-collection-thu-cong-o-m4.md)) | — | ☐ | ☐ | M4 · C06 |
+| `DuplicateSerialDetected` | Traceability | Trùng mã — quarantine + audit | v1 | ✅ | ✅ | M5 |
+| `ProcessStepStarted` | Traceability ([ADR-042](adr/ADR-042-unit-event-ownership.md)) | Bắt đầu một bước | v1 | ✅ | ✅ | M5 |
+| `ProcessStepCompleted` | Traceability ([ADR-042](adr/ADR-042-unit-event-ownership.md)) | Kết thúc operation run đã ghi nhận actual riêng | v1 | ✅ | ✅ | M5 |
+| `DataCollectionRecorded` | ProductionExecution | Kết quả do người vận hành nhập đã được ghi nhận; không kết luận hoàn tất bước hay đạt chất lượng ([ADR-038](adr/ADR-038-data-collection-thu-cong-o-m4.md)) | v1 | ✅ | ✅ | M4 · C06 |
 | **`MeasurementRecorded`** | **Quality** | **OCV, ACIR, torque, áp suất hàn… — giá trị ĐÃ ĐÁNH GIÁ, không phải đường cong thô** | **v1** | **✅** | **✅** | **M2** ¹ |
 | `FormationRunStarted` | ProductionExecution | Vào máy formation, gắn tray/channel | — | ☐ | ☐ | M7 |
 | `FormationRunCompleted` | ProductionExecution | Xong, kèm summary + URI đường cong | — | ☐ | ☐ | M7 |
@@ -106,5 +106,11 @@ một sự kiện nghiệp vụ mới.
 > sự kiện thật: một work cell bị gỡ trong khi vẫn còn WIP có thể dẫn tới hold ở M9. `scope.md` §6.5
 > nay đã liệt kê event này thay vì để catalog và scope trôi khỏi nhau.
 
-`DataCollectionRecorded` được chốt contract v1 ở M4/C01, cài đặt và golden file ở C06.
+`DataCollectionRecorded` v1 đã cài đặt ở C06, golden tại `tests/Contract/golden/production-execution/`.
+Event ID bằng key suy ra từ submission; `occurredAt` từ lần xác nhận nhập, `recordedAt` từ server.
+`value` là JSON number, giữ đủ độ chính xác decimal. Event/outbox commit cùng business record;
+worker publish sau commit và retry với cùng ID. Command replay/rejection không tạo publish intent mới.
+Delivery vẫn at-least-once; consumer chống trùng theo event ID.
 Viết ADR không làm tăng số event đã cài đặt; các ô chỉ được đánh dấu khi có code và bằng chứng tương ứng.
+
+UnitMeasurementRecorded (Traceability, v1): kết quả process được chấp nhận; không suy ra quality hay hoàn tất bước. Đã có contract và golden trong tests/Contract/golden/traceability. Năm golden Traceability là fixture contract cố định, không phải bản chụp nguyên văn của phiên runtime. Ownership theo ADR-042.

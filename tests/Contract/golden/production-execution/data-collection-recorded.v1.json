@@ -1,0 +1,26 @@
+{
+  "specversion": "1.0",
+  "id": "e2a083f7-28f0-50c3-93f9-6977165c2339",
+  "type": "com.novavolt.production-execution.data-collection-recorded.v1",
+  "source": "urn:novavolt:nv1:app-execution",
+  "subject": "urn:trace-unit:pack:NV1PP16250A00001",
+  "time": "2026-09-15T08:12:30.512+00:00",
+  "datacontenttype": "application/json",
+  "correlationid": "e2a083f7-28f0-50c3-93f9-6977165c2339",
+  "partitionkey": "NV1",
+  "data": {
+    "eventId": "e2a083f7-28f0-50c3-93f9-6977165c2339",
+    "occurredAt": "2026-09-15T08:12:30.512+00:00",
+    "recordedAt": "2026-09-15T08:12:31.742+00:00",
+    "siteId": "NV1",
+    "submissionId": "b7e2f0a1-3c4d-4e5f-a6b7-c8d9e0f1a2b3",
+    "serialNumber": "NV1PP16250A00001",
+    "operationRunId": "OPRUN-NV1-EOL-0001",
+    "stepCode": "EOL",
+    "equipmentPath": "NOVAVOLT/NV1/PACK/P1/EOL-01",
+    "signalCode": "PackVoltage",
+    "value": 401.25,
+    "unitOfMeasure": "V",
+    "actorId": "op.nv1"
+  }
+}

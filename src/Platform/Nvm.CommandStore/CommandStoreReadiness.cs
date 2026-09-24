@@ -21,7 +21,9 @@ public static class CommandStoreReadiness
                     HAS_PERMS_BY_NAME('command_store.CommandOutcomes','OBJECT','SELECT')=1 AND
                     HAS_PERMS_BY_NAME('command_store.CommandOutcomes','OBJECT','INSERT')=1 AND
                     HAS_PERMS_BY_NAME('command_store.CommandOutcomes','OBJECT','UPDATE')=1 AND
-                    HAS_PERMS_BY_NAME('execution.UnitContext','OBJECT','SELECT')=1
+                    HAS_PERMS_BY_NAME('execution.UnitContext','OBJECT','SELECT')=1 AND
+                    HAS_PERMS_BY_NAME('execution.DataCollection','OBJECT','SELECT')=1 AND
+                    HAS_PERMS_BY_NAME('execution.DataCollection','OBJECT','INSERT')=1
                     THEN 1 ELSE 0 END;
                 """, connection) { CommandTimeout = 3 };
             return (int)(await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false))! == 1;

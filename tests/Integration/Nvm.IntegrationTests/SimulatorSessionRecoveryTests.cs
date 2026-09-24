@@ -1,6 +1,5 @@
 using System.Buffers;
 using System.Collections.Concurrent;
-using System.Net.Sockets;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -276,27 +275,36 @@ public sealed class SimulatorSessionRecoveryTests : IAsyncLifetime
         throw new TimeoutException(whatWentWrong);
     }
 
-    // Mosquitto lắng nghe trong một giây, nhưng "container đã chạy" và "port trả lời" không là cùng
-    // một event; connect vào khoảng hở sẽ làm test fail vì lý do sai.
+    // TCP accept can succeed before Mosquitto is ready to complete an MQTT CONNECT handshake.
+    // Probe the same protocol the observer uses, especially when the full suite starts many
+    // containers at once. A failed probe never replaces the business assertion below.
     private async Task WaitForBrokerAsync(CancellationToken cancellationToken)
     {
         var port = _broker.GetMappedPublicPort(1883);
+        Exception? lastFailure = null;
 
         for (var attempt = 0; attempt < 60; attempt++)
         {
+            using var probe = new MqttClientFactory().CreateMqttClient();
             try
             {
-                using var probe = new TcpClient();
-                await probe.ConnectAsync(_broker.Hostname, port, cancellationToken);
+                await probe.ConnectAsync(
+                    new MqttClientOptionsBuilder()
+                        .WithTcpServer(_broker.Hostname, port)
+                        .WithClientId($"nvm-test-ready-{Guid.NewGuid():N}")
+                        .Build(),
+                    cancellationToken);
+                await probe.DisconnectAsync(cancellationToken: cancellationToken);
                 return;
             }
-            catch (SocketException)
+            catch (Exception exception) when (exception is not OperationCanceledException)
             {
+                lastFailure = exception;
                 await Task.Delay(250, cancellationToken);
             }
         }
 
-        throw new TimeoutException("The mosquitto container never accepted a connection.");
+        throw new TimeoutException("The mosquitto container never completed an MQTT CONNECT handshake.", lastFailure);
     }
 
     private static async Task<IAsyncDisposable> ObserveAsync(

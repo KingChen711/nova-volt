@@ -2,14 +2,14 @@
 
 Hệ thống MES / Traceability mô phỏng cho nhà máy sản xuất pin xe điện.
 
-Đây là **learning project**. Mục tiêu là hiểu sâu ba thứ cùng lúc: nghiệp vụ sản xuất pin, kiến trúc backend .NET sát production, và mô hình phát triển của Siemens Opcenter Execution Foundation.
+Đây là dự án MES giả lập được hoàn thiện và kiểm chứng kỹ thuật trước khi đối chiếu với Opcenter và quy ước công ty. Tài liệu học tập vẫn hữu ích, nhưng không chặn triển khai chức năng.
 
 | | |
 |---|---|
 | **Backend** | .NET 10 LTS · SQL Server (event store, write model) · PostgreSQL + TimescaleDB (telemetry, read model) |
 | **Messaging** | RabbitMQ (Manufacturing Service Bus) · EMQX (MQTT Sparkplug B) |
 | **UI** | Mendix (toàn bộ) |
-| **Trạng thái** | **M0, M1 đã đóng** · **M2 và M3 đang chờ teach-back** dù các DoD kỹ thuật đã đạt · M3 được mở lại sau audit 2026-09-02 vì câu *"bỏ qua các câu hỏi"* không phải phê duyệt thay hard DoD · [lộ trình 14 milestone](docs/scope.md#9-lộ-trình-milestone) |
+| **Trạng thái** | **M0, M1 đã đóng theo bằng chứng lịch sử** · M2/M3 có số đo kỹ thuật lịch sử, cần audit lại trước khi đổi trạng thái · M4 đang triển khai · M5–M13 còn mở. Xem [tracker hoàn thành](docs/plans/project-completion.md) và [scope M0–M13](docs/scope.md#9-lộ-trình-milestone) |
 
 ---
 
@@ -160,7 +160,7 @@ novavolt-mes/
 |---|---|
 | Hiểu nguyên tắc làm việc trong repo | [`AGENTS.md`](AGENTS.md) |
 | Hiểu nghiệp vụ và kiến trúc | [`docs/scope.md`](docs/scope.md) |
-| Biết việc tiếp theo phải làm gì | [`docs/plans/M3-telemetry-timescaledb-production-calendar.md`](docs/plans/M3-telemetry-timescaledb-production-calendar.md) |
+| Biết việc tiếp theo phải làm gì | [`docs/plans/project-completion.md`](docs/plans/project-completion.md) |
 | Biết vì sao chọn công nghệ X | [`docs/adr/`](docs/adr/) |
 
 ---
@@ -169,7 +169,7 @@ novavolt-mes/
 
 Chi tiết ở [`AGENTS.md`](AGENTS.md). Ba điều dễ quên nhất:
 
-1. **Không ai tự commit thay bạn.** Agent chuẩn bị thay đổi rồi dừng lại; bạn đọc `git diff` rồi tự commit.
+1. **Agent được tự commit/push.** Agent kiểm diff, secret và test trước khi commit; tiếp tục các mốc đã giao mà không chờ theo từng commit.
 2. **Docs là bản đồ, không phải đường ray.** Được phép làm trái nếu có lý do — nhưng phải nói ra và cập nhật docs.
 3. **Cấm `DateTime.UtcNow`.** Dùng `TimeProvider`. Lý do: saga chạy nhiều ngày phải test được trong vài giây.
 

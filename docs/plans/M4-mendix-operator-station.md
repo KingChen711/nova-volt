@@ -2,7 +2,7 @@
 title: "M4 — Mendix nhập môn: Operator Station v1"
 milestone: M4
 duration: "2 tuần theo scope; ước lượng lại sau C02 nếu connector không tương thích"
-status: in_progress # C01–C04 đã commit; C05 đã kiểm chứng, chưa commit; C06–C09 chưa hoàn tất.
+status: in_progress # C01–C05 đã commit; C06 backend qua integration; C07 runtime qua save/retry/restart và hai site; C08–C10 còn mở.
 created: 2026-09-07
 depends_on: [M0, M1, M2, M3]
 unlocks: [M5]
@@ -11,7 +11,7 @@ unlocks: [M5]
 # M4 — Mendix nhập môn: Operator Station v1
 
 M4 dựng vòng **đăng nhập → đọc công việc → quét serial → gửi kết quả đo** bằng Mendix.
-Chủ repo tự dựng màn hình; agent triển khai backend và hướng dẫn từng phần có thể kiểm chứng.
+Agent triển khai màn hình và backend; chủ repo chỉ hỗ trợ thao tác Studio Pro mà MCP không thực hiện được.
 Một kết quả đo được ghi nhận chưa đồng nghĩa với hoàn tất công đoạn hay release sản phẩm.
 
 Đọc [AGENTS.md](../../AGENTS.md) §4/§5.6/§5.8, [scope.md](../scope.md)
@@ -24,7 +24,7 @@ Một kết quả đo được ghi nhận chưa đồng nghĩa với hoàn tất
 ## 1. Definition of Done
 
 Giữ đủ tám tiêu chí của scope. Các con số dưới đây là **ngưỡng/phép kiểm dự kiến**, chưa phải kết quả.
-Chỉ đóng M4 khi có bằng chứng chạy thật, lab và teach-back hoàn tất.
+Chỉ đóng M4 khi có bằng chứng chạy thật cho D1–D8, lab và sản phẩm kèm theo.
 
 | # | Tiêu chí | Phép kiểm và bằng chứng |
 |---|---|---|
@@ -44,7 +44,7 @@ backend trở lại thì người dùng gửi lại cùng khoá và chỉ có m�
 **Sản phẩm kèm theo:** test có khả năng bắt lỗi thực; `make ci` xanh ở gate cuối;
 ADR-007/014/038 ở C01, ADR-013 ở C02 sau PoC; event v1 có golden file; số đo trong
 [benchmarks.md](../benchmarks.md); hướng dẫn sự cố trong [runbook.md](../runbook.md);
-[oef-mapping.md](../oef-mapping.md) cập nhật đúng mức hiểu của owner.
+[oef-mapping.md](../oef-mapping.md) cập nhật theo năng lực đã triển khai và kiểm chứng.
 
 ## 2. Điểm xuất phát và các quyết định trước khi code
 
@@ -58,7 +58,7 @@ ADR-007/014/038 ở C01, ADR-013 ở C02 sau PoC; event v1 có golden file; số
 | Mendix | App local `C:\Users\Kingc\Mendix\NvmShopFloor-main\NvmShopFloor.mpr`; Team Server repo riêng, checkout sạch tại `cc8c9db` lúc lập plan | Tiếp tục app hiện có; không tạo lại app hoặc đặt bản sao `.mpr` vào repo .NET |
 | Auth | Studio Pro 11.12.3, OIDC 4.7.0; `NvmShared.NvmAccount.SiteId`, `DS_NvmAccount_Current`, `CustomATP_KeycloakRealmRoles` đã có | Kiểm lại claims/roles và luồng access token tới backend; không làm lại toàn bộ walking skeleton M0 |
 
-M3 code đã commit tại `be05e43`. Trạng thái teach-back M2/M3 còn mở trong plan tương ứng;
+M3 code đã commit tại `be05e43`. Bằng chứng M2/M3 là lịch sử, cần audit lại trước khi đánh dấu đóng;
 việc viết plan M4 không tự đóng hai milestone đó. Trước triển khai, kiểm lại checkout/runtime hiện tại.
 
 ### 2.2 C01 — quyết định hiện hành
@@ -203,8 +203,9 @@ Xác thực + kiểm hình dạng request
   không để DI tạo hai connection/transaction độc lập. SQL implementation ở infrastructure, không kéo
   SqlClient/EF vào domain/kernel. Không đăng ký SQL store scoped sau một behavior giữ singleton state.
 - Khoá theo ADR-010: UUIDv5 từ namespace hiện có và tuple `(site, commandType, submissionId)` mã hoá
-  như helper kernel. Mendix tạo submission ID **một lần**, giữ trong draft, suy ra cùng key khi retry;
-  nếu cần Java action nhỏ thì kiểm vector chéo với .NET, không thêm dịch vụ cấp key.
+  như helper kernel. Theo [ADR-041](../adr/ADR-041-server-derived-manual-submission-key.md), Mendix tạo
+  submission ID **một lần**, giữ trong draft và có thể bỏ `idempotencyKey` ở request; backend luôn suy
+  cùng key khi retry. Nếu client gửi key, backend kiểm vector chéo với .NET và từ chối key lệch.
 - Lưu `SiteId`, actor, command type, fingerprint payload và outcome. Cùng key nhưng payload/actor
   khác bị từ chối, không trả dữ liệu người khác. Mọi query claim/outcome kèm site đã xác thực;
   backend kiểm key khớp natural key của request. Không đưa field đổi khi retry vào natural key.
@@ -220,14 +221,16 @@ Xác thực + kiểm hình dạng request
   FactoryModel vẫn chỉ ở Development; không dùng durable claim che một effect activation còn in-memory.
 
 Event `DataCollectionRecorded` có `[EventVersion(1)]`, golden file và CloudEvents theo contract hiện có;
-`EventId = ce_id = idempotencyKey` cho một event từ command. **Publish nằm sau SQL commit**, theo
-ADR-022/023. Broker lỗi phải log/đếm; không nói rollback nghiệp vụ khi DB đã nhận. Replay không tự
-publish lần nữa. Cửa sổ commit xong nhưng chưa publish vẫn tồn tại tới outbox M6 (N-M4-1), không tuyên bố N3.
+`EventId = ce_id = idempotencyKey` cho một event từ command. Handler ghi `es.Events` và `es.Outbox`
+cùng transaction với kết quả đo và outcome. Worker publish sau commit, retry từ SQL qua lỗi broker/process;
+replay command không tạo thêm event/outbox. Stream `data-collection:<SubmissionId>` chứa đúng một fact,
+không giả định kết quả đo làm đổi trạng thái ProductionUnit. Transport là at-least-once: consumer vẫn phải dedup EventId.
+Bản tích hợp qua 48/48 HTTP + SQL outbox tests (109,354s) sau forced rebuild; review độc lập không còn finding trong hai bản sửa lease và envelope. Chưa nghiệm thu toàn bộ N3.
 
 ### 3.5 Draft và bốn màn hình
 
 `NvmShopFloor.DataCollectionDraft` nằm trong **DB của Mendix**, giữ dữ liệu chờ backend xác nhận. Có owner, `SiteId`,
-submission ID, payload, thời điểm, idempotency key và trạng thái `Editing`, `Pending`, `Accepted`, `Rejected`
+submission ID, payload, thời điểm, idempotency key nếu đã biết và trạng thái `Editing`, `Pending`, `Accepted`, `Rejected`
 theo ADR-014; chỉ draft `Editing` được sửa, `Pending` retry giữ nguyên request.
 Không phải bản sao write model hay một business event đã được backend chấp nhận.
 
@@ -251,11 +254,12 @@ M4 không làm offline khi Mendix server mất kết nối, background sync, ser
 Connector có timeout cấu hình tường minh, khởi đầu 10 giây rồi ghi thời gian thật trong lab;
 đây là giới hạn chờ lỗi, không thay ngưỡng page load 1,5 giây.
 
-## 4. Kế hoạch theo commit
+## 4. Kế hoạch theo lát cắt triển khai
 
-Mỗi dòng là một đơn vị review rồi owner tự commit; không tự chạy tiếp qua các đơn vị.
+Mỗi dòng là một lát cắt có thể review và kiểm chứng. Agent tiếp tục qua các dòng trong phạm vi dự án,
+không chờ owner commit hoặc làm bài học. Agent được tự commit/push phần đã kiểm chứng.
 Thay đổi .NET và Mendix ở hai repo: khi một bước cần cả hai, ghi **cặp SHA** đã kiểm trong bằng chứng.
-Agent không sửa model Mendix; hướng dẫn theo skill, mỗi khối tối đa bảy thao tác, tách phần giải thích.
+Agent sửa model Mendix qua công cụ được hỗ trợ; chỉ nhờ owner thao tác UI mà agent không thực hiện được.
 
 | Commit | Mục tiêu / nơi sửa chính | Kiểm chứng trước khi giao |
 |---|---|---|
@@ -263,12 +267,12 @@ Agent không sửa model Mendix; hướng dẫn theo skill, mỗi khối tối �
 | C02 · `feat(pom): prove authenticated Mendix OData reads` · **xong** | Đã có Execution/POM, Host.All registration, PG migration/fixture 6 Equipment, JWT policy, package pin và metadata snapshot; hướng dẫn/bằng chứng ở [deploy/pom](../../deploy/pom/README.md). Owner đã import `NvmShared.POM_v1`, gán URL constant và hai microflow headers/error handling; hai microflow 0 lỗi model, dump xác nhận URL/OData4 và binding. External entity Equipment có quyền ReadOnly cho NvmShared.User. Grid `NvmShopFloor.Equipment_PoC` có 7 cột, page size 2; app role Operator/LineLeader đã gán module role và role-based home page | 21 test POM + 23 architecture xanh; `make ci` xanh. Execution/Host.All đã đọc bằng token Keycloak thật ở cả hai site: trang 2+1 row, cross-site filter 0, key 404, anonymous 401; metadata runtime khớp snapshot. Port cũ hoạt động và audience mapper đã áp dụng. Mendix runtime: grid hiện đúng dữ liệu site, phân trang 2+1, cross-site isolation đúng, SSO login/role-based home page hoạt động. [ADR-013](../adr/ADR-013-odata-cho-public-object-model.md) chốt connector pattern |
 | C03 · `feat(pom): expose operator read models` · **xong** | Backend có ba entity set §3.2, fixture 1.000 unit/site, site filters/ETag/paging. Owner đã import `Pom.metadata.xml` vào POM_v1: entity `ProductionUnits` (16 attr) và `WipBoard` (7 attr), ReadOnly cho `NvmShared.User`, default None, 0 errors model. URL constant, headers/error microflow giữ nguyên | .NET `da9b08c`, Mendix `d1bb804`; owner xác nhận đã hoàn thành và commit cả hai repo. 25 test mới/thay đổi pass qua các lượt targeted; Docker đã seed, readiness 200. Import schema xong; runtime hai entity mới được kiểm khi dựng màn hình C04/C08 |
 | C04 · `feat(shopfloor): add dispatch and scan pages` · **xong** | Dispatch/Scan, quyền truy cập, VAL/SUB/ACT và nhánh lỗi đã dựng; agent hoàn thiện qua MCP theo yêu cầu owner. Phạm vi và checklist ở §4.1 | .NET `43e4b05`, Mendix `1e445d9`. Toàn app 0 errors; browser Operator NV1/DE1 và LineLeader đạt; filter/paging xác nhận tại POM, cách ly hai chiều, lỗi kết nối xoá kết quả cũ và retry được. Bằng chứng ở benchmarks |
-| C05 · `feat(kernel): persist command outcomes in SQL transactions` · **đã kiểm chứng, chưa commit** | SQL store giữ claim/effect/outcome trong cùng scoped session; migration riêng, context từ 2.000 unit của fixture C03, runtime có quyền tối thiểu. Hai host có guard Production. Command RAM cũ chỉ dùng Development | `make ci` exit 0: 781/781 test, buffer 200/200 vòng; net-check 9/9. Trong đó có 36 test C05: hai process thật replay một effect; kill trước commit rollback cả claim/effect. Oracle chạy source C04 phát hiện 2 effect thay vì 1. Execution mới healthy/readiness 200. Hướng dẫn ở `deploy/commands/README.md`; số đo và giới hạn kiểm chứng ở benchmarks. Chưa mở command nghiệp vụ mới ra HTTP |
+| C05 · `feat(kernel): persist command outcomes in SQL transactions` · **xong** | SQL store giữ claim/effect/outcome trong cùng scoped session; migration riêng, context từ 2.000 unit của fixture C03, runtime có quyền tối thiểu. Hai host có guard Production. Command RAM cũ chỉ dùng Development | Commit `8639e75`. `make ci` exit 0: 781/781 test, buffer 200/200 vòng; net-check 9/9. Trong đó có 36 test C05: hai process thật replay một effect; kill trước commit rollback cả claim/effect. Oracle chạy source C04 phát hiện 2 effect thay vì 1. Execution mới healthy/readiness 200. Hướng dẫn ở `deploy/commands/README.md`; số đo và giới hạn kiểm chứng ở benchmarks. Chưa mở command nghiệp vụ mới ra HTTP |
 | C06 · `feat(execution): record operator data collection` | Agent tạo lát cắt `src/FunctionalBlocks/ProductionExecution/`, command/HTTP mapper, event trong Contracts, golden file và cập nhật event-catalog | D3/D4/D5 qua HTTP thật, actor/site/đơn vị/context hợp lệ, blocked case không ghi; quan sát queue trước publish; publish lỗi được báo đúng với trạng thái DB |
-| C07 · `feat(shopfloor): persist submissions before sending commands` | Owner tạo persistent draft, UUIDv5 helper nếu cần, Command API connector, response mapper và form | Save request kết thúc trước POST; reload giữ draft; vector key khớp .NET; retry dùng key/payload cũ; người khác/site khác không đọc draft |
-| C08 · `feat(shopfloor): add the WIP board and recovery actions` | Owner dựng WIP board, auto-refresh, thông báo lỗi và đường mở/gửi lại draft | Đếm đúng theo fixture, không chồng request; form không mất input; operator đi hết happy path mà không gặp exception kỹ thuật |
-| C09 · `test(m4): verify isolation restart recovery and page latency` | Agent chuẩn bị script kiểm có phạm vi và evidence; owner chạy/kiểm UI, đoán trước lab; sửa đúng chỗ nếu phát hiện lỗi | Toàn bộ §5, số đo thật ghi benchmarks/runbook; đọc diff và targeted tests sạch rồi mới `make ci` |
-| C10 · `docs(m4): record verification and learning outcomes` | Hoàn thiện plan, ADR index, event-catalog, runbook, oef-mapping; owner teach-back; audit tuần tự theo AGENTS | §6 sạch, §7 được owner trả lời. Không nâng `status` khi còn DoD/teach-back chưa đạt |
+| C07 · `feat(shopfloor): persist submissions before sending commands` · **runtime happy path, retry và mapper đã kiểm** | Persistent draft có owner/read-only access, form lưu riêng request, `SubmissionId` sinh một lần, backend suy UUIDv5 theo ADR-041. `SUB_DataCollection_Send` POST request đóng băng; nút gửi/thử lại giữ draft Pending nếu không có response; trang danh sách mở lại draft sau reload. `mx check` 11.12.3 sau Studio Pro Ctrl+S/F4: 0 lỗi | Runtime 2026-09-23: login NV1, lưu/gửi, reload mở lại; backend down giữ Pending, start/reload/retry cùng submission ghi đúng 1 row SQL. Còn bản nháp Pending qua restart, auth/site âm và mất ACK; đã nối IM_CommandResponse để đọc Accepted/ReasonCode/ReasonText/CorrelationId, lỗi parse giữ Pending; MCP/mx check 0 lỗi. Runtime mới 2026-09-23: submission f890e540-0823-4175-910e-d3700832eb3e đi vào nhánh không xác nhận khi thử sai operation run; Console xác nhận NoSuchElementException tại MappingCache.storeValueMappingElement với Path rỗng. Codex 2026-09-23 đối chiếu bytecode runtime 11.12.3: forceSingleOccurrence=true gọi dropLeft trên mọi path, bỏ root (Object). Đã sửa cấu hình do agent tạo thành false qua MCP, đọc lại xác nhận và check 0 lỗi. Runtime sau Ctrl+S/F5: gửi lại cùng submission đã hiện đúng lý do và trạng thái Bị từ chối; submission mới 3ac6b0a1-7f98-42ea-86a3-0333263fcb74, 405.375V, được Đã ghi nhận. Danh sách draft xác nhận cả hai trạng thái. Owner đã Stop/F5; agent đăng nhập lại qua OIDC và kiểm danh sách: cả 4 draft giữ nguyên ID, số đo và trạng thái (3 accepted, 1 rejected). SQL draft mới đúng 1 row; draft rejected 0 row. Ngày 2026-09-24: draft DE1 d7585761-7f2a-4645-9a0a-cfd90c9d0ccd giữ nguyên Pending qua Stop/F5, gửi sau restart thành công đúng 1 SQL row; DE1 không thấy draft NV1 và bị chặn lưu serial NV1. SQL outcome có OPERATION_RUN_MISMATCH với key 74031ee9-fee8-5a9f-bbe8-71ba0ead1e05 (đã tính UUIDv5 từ đúng submission), 0 DataCollection row |
+| C08 · `feat(shopfloor): add the WIP board and recovery actions` | Agent dựng WIP board, auto-refresh, thông báo lỗi và đường mở/gửi lại draft | Đếm đúng theo fixture, không chồng request; form không mất input; operator đi hết happy path mà không gặp exception kỹ thuật |
+| C09 · `test(m4): verify isolation restart recovery and page latency` | Agent chạy phép kiểm UI/API và lab khi công cụ hỗ trợ; nhờ owner phần UI không thể tự thao tác | Toàn bộ §5, số đo thật ghi benchmarks/runbook; đọc diff và targeted tests sạch rồi mới `make ci` |
+| C10 · `docs(m4): record verification outcomes` | Hoàn thiện plan, ADR index, event-catalog, runbook, oef-mapping; audit độc lập theo AGENTS | §6 sạch, §7 có bằng chứng kỹ thuật. Không nâng `status` khi còn DoD chưa đạt |
 
 **TDD từ M4:** với phép kiểm yêu cầu RED, lưu parent SHA, diff chỉ chứa test, lệnh và assertion đỏ,
 rồi GREEN của implementation theo [ADR-034](../adr/ADR-034-dieu-kien-nghiem-thu-m3-sau-audit.md).
@@ -428,9 +432,8 @@ dedup của business record; RabbitMQ vẫn là at-least-once.
 
 ### 5.3 Lab backend ngừng hoạt động
 
-**Owner đoán trước khi chạy:** sau tắt backend, reload và gửi lại, còn bao nhiêu draft và bao nhiêu
-bản ghi nghiệp vụ? Nếu backend đã commit nhưng browser chưa nhận response thì con số khác thế nào?
-Chưa có dự đoán của owner thì chưa chạy lab phá hoại.
+Trước khi chạy, ghi số draft và bản ghi nghiệp vụ làm baseline. Sau fault, đối chiếu cùng các ID và
+timestamp; không yêu cầu dự đoán của owner.
 
 1. Xác nhận Mendix đang trỏ tới process `Nvm.App.Execution` đúng build; giữ Mendix/SQL/PostgreSQL/broker chạy.
 2. Nhập và lưu một draft; chờ request lưu hoàn tất, kiểm draft tồn tại sau reload.
@@ -449,7 +452,7 @@ trong lượt riêng; không tự spawn sub-agent trái lựa chọn của owner
 
 | ID | Trạng thái / hệ quả phải nói rõ | Đóng ở đâu |
 |---|---|---|
-| N-M4-1 | Nợ đã được ADR-022/023 chấp nhận: commit SQL và publish không atomic. Có thể nhận dữ liệu nhưng thiếu event khi process/broker lỗi; log/counter giúp nhận biết, không tự cứu được mọi crash | M6 outbox; không tuyên bố bảo đảm không mất event ở M4 |
+| N-M4-1 | Đã nối command vào SQL event store/outbox cùng transaction; build 0 warning/error. 48/48 HTTP + SQL outbox tests qua; gồm broker outage + process restart, rollback, replay, lease khi publisher chậm và header đúng envelope đã lưu | Review độc lập không còn finding trong các bản sửa này; còn xác nhận image demo và audit tổng thể N3 |
 | N-M4-2 | Fixture theo ADR-038: Dispatch/WIP chưa phản ánh vòng đời sản xuất thật; auto-refresh không biến fixture thành projection | M5 write model, M6 projection; chuyển nguồn và giữ dữ liệu đã nhận |
 
 Không đưa event store/stream/replay engine (M5), outbox/projection framework (M6), channel → unit (M7),
@@ -460,9 +463,9 @@ Thời lượng hai tuần là dự kiến trong scope. OData PoC hoặc durable
 báo lại bằng việc còn lại và bằng chứng; không bỏ DoD để giữ lịch. Hạng mục mới chỉ thêm khi gắn được
 với một DoD hoặc ràng buộc hiện hành.
 
-## 7. Checklist bàn giao và teach-back
+## 7. Checklist nghiệm thu
 
-- [x] C01 đã chốt tài liệu; C02 có PoC/ADR-013; C03 đã có backend và import schema, commit cả hai repo. C04 đã commit cả hai repo; C05 đã kiểm chứng và chưa commit. C06–C09 chưa nghiệm thu; M4 còn mở.
+- [x] C01 đã chốt tài liệu; C02 có PoC/ADR-013; C03 đã có backend và import schema, commit cả hai repo. C04 đã commit cả hai repo; C05 commit `8639e75`. C06–C10 chưa nghiệm thu; M4 còn mở.
 - [ ] D1–D8 và lab có bằng chứng; số chưa đo không được ghi như kết quả.
 - [ ] Backend đúng image/code đang chạy, base URL đúng; Mendix build/check consistency không lỗi,
   Security Production và quyền được kiểm bằng tài khoản thật.
@@ -470,12 +473,7 @@ với một DoD hoặc ràng buộc hiện hành.
 - [ ] ADR-007/014/038 đã có; ADR-013 có bằng chứng C02; catalog/golden file/glossary/runbook đồng bộ với code cuối M4.
 - [ ] Các việc còn nợ chỉ nằm trong bảng §6; nếu có file audit tạm được owner cho phép, chuyển kết luận
   vào docs chính và xoá file cùng mọi tham chiếu khi đóng findings.
-- [ ] Giao danh sách file, kết quả kiểm chứng và commit message; owner đọc diff rồi tự commit cả hai repo.
-- [ ] Owner trả lời ba câu dưới đây **không đọc lại tài liệu**; oef-mapping và status phản ánh kết quả.
+- [ ] Ghi danh sách file/model document, kết quả kiểm chứng và giới hạn chưa kiểm được; agent commit/push backend sau kiểm tra, nhờ owner Commit and Push Mendix khi công cụ chưa hỗ trợ.
 
-1. Một kết quả đo đã được nhận có cho phép sản phẩm đi tiếp không? Ai quyết định, và UI biết lý do bị chặn từ đâu?
-2. Vì sao retry sau restart không tạo record thứ hai, nhưng M4 vẫn có thể thiếu event trên bus?
-   Khi nào UI được phép nói đã ghi tạm, và timeout có đủ để kết luận backend chưa nhận không?
-3. Nếu người dùng sửa `SiteId` hoặc bỏ filter của grid, những lớp nào ngăn dữ liệu nhà máy khác bị lộ?
-
-Tắc câu nào thì giữ M4 ở trạng thái đang làm và quay lại phần đó. Agent không viết câu trả lời thay owner.
+Chỉ đổi trạng thái M4 sau khi các gate kỹ thuật ở trên có bằng chứng. Các câu hỏi giải thích nghiệp vụ
+được trả lời khi chủ repo yêu cầu, không ảnh hưởng nghiệm thu.

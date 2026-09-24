@@ -1,4 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../../../src/Platform/Nvm.EventStore/Nvm.EventStore.csproj" />
+    <ProjectReference Include="../../../src/FunctionalBlocks/Traceability/Nvm.Traceability.csproj" />
+    <Content Include="EventSourcing/Fixtures/*.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 
   <PropertyGroup>
     <!-- xunit v3 test projects are executables; the runner is compiled into the assembly. -->
@@ -7,6 +12,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../../../src/FunctionalBlocks/ProductionExecution/Nvm.ProductionExecution.csproj" />
+    <ProjectReference Include="../../../src/FunctionalBlocks/ProductionExecution.Hosting/Nvm.ProductionExecution.Hosting.csproj" />
     <!--
       Chỉ cần xunit.v3: nó đã nhúng sẵn Microsoft.Testing.Platform runner.
       KHÔNG thêm Microsoft.NET.Test.Sdk hay xunit.runner.visualstudio — đó là hạ tầng

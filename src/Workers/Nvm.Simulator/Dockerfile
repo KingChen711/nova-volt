@@ -14,7 +14,7 @@ WORKDIR /src
 
 # Manifest trước, mã nguồn sau. Đổi một dòng code thì layer restore vẫn dùng lại được,
 # và restore là bước duy nhất trong Dockerfile này cần mạng.
-COPY global.json Directory.Build.props Directory.Build.targets Directory.Packages.props ./
+COPY global.json Directory.Build.props Directory.Build.targets Directory.Packages.props .editorconfig ./
 COPY tools/ tools/
 COPY src/ src/
 

@@ -921,3 +921,5 @@ Execution metadata image216b338c0b4823f2bac5baaf140c1a415b12862560f519b7de3c523a
 
 - Full bounded suite: **891/891,0skip,8m48.157s**, integration8m47.244s (novavolt-live-bounded-suite.log). MaxThreads2 tránh startup hàng loạt trên rig; giữ toàn bộ assertions và race bên trong test. Đạt ngưỡng suite<10phút ở lượt này, không thay các DoD tải/soak.
 - Mendix live unit: op.nv1 Dispatch hiển thị3unit; mở NV1PP16267A95137 thấy đúng workorder dài và run41ký tự. Draft1fd08f97-c589-443c-b22d-b34fab7e89f6 ghi410.125V từ form; UI xác nhận đã ghi nhận, SQL đúng1row với cùng submission/run. WIP page chưa được gán quyền mở; đã thêm menu, chờ user Allowed roles=User/SaveAll/F5.
+
+- Browser DE1 sau recovery: op.de1 Dispatch chỉ1row DE1PP16267A80388, Running/EOL/P1, workorder dài đầy đủ; NV1 phiên riêng3row. Commitc13a6d92f348a7a531af71be00961680dbbc9302 đã pushmain, ls-remote khớp. Full pre-commit format đạt. Mendix model chưa commit; WIP đang chờ page access UI.

@@ -8,6 +8,8 @@ using Nvm.CommandStore;
 using Nvm.EventStore;
 using Nvm.Hosting;
 using Nvm.Kernel;
+using Nvm.Material.Commands;
+using Nvm.Material.Hosting;
 using Nvm.ProductionExecution.Commands;
 using Nvm.ProductionExecution.Hosting;
 using Nvm.PublicObjectModel;
@@ -97,10 +99,12 @@ if (args.Contains("--migrate", StringComparer.Ordinal))
 }
 
 builder.Services.AddSingleton(TimeProvider.System);
-builder.Services.AddNvmKernel(typeof(RecordDataCollectionCommand).Assembly, typeof(SerializeUnitCommand).Assembly);
+builder.Services.AddNvmKernel(typeof(RecordDataCollectionCommand).Assembly, typeof(SerializeUnitCommand).Assembly,
+    typeof(ConsumeMaterialCommand).Assembly);
 builder.Services.AddNvmCommandStore(builder.Configuration, builder.Environment);
 builder.Services.AddNvmTraceability(builder.Configuration);
 builder.Services.AddNvmQuality();
+builder.Services.AddNvmMaterial();
 builder.Services.AddNvmPublicObjectModel(builder.Configuration, builder.Environment);
 builder.Services.AddNvmProductionExecutionAdapters(builder.Configuration);
 builder.Services.AddNvmBus(bus =>
@@ -118,6 +122,7 @@ app.UseAuthorization();
 app.MapNvmPublicObjectModel();
 app.MapNvmProductionExecution();
 app.MapNvmTraceability();
+app.MapNvmMaterial();
 app.MapGet("/health/live", () => Results.Ok(new { Status = "Healthy" }));
 app.MapGet("/health/ready", async (PomReadDbContext database, SqlCommandStoreOptions commands,
     SqlEventStoreOptions events, CancellationToken cancellationToken) =>

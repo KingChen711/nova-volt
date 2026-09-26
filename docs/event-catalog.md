@@ -52,10 +52,10 @@ thành đúng cái TSDB nằm cạnh nó.
 | **`FactoryModelRevisionActivated`** | **FactoryModel** | **Một revision của cây ISA-95 vào hiệu lực tại một nhà máy** | **v1** | **✅** | **✅** | **M1** |
 | `MaterialLotReceived` | Material | Nhận lot từ nhà cung cấp | — | ☐ | ☐ | M10 |
 | `MaterialLotReleased` | Quality | Lab đạt → cho phép dùng | — | ☐ | ☐ | M9 |
-| `MaterialLotConsumed` | Material | Tiêu hao trong một operation | — | ☐ | ☐ | M10 |
+| `MaterialLotConsumed` | Material | Tiêu hao lot hoặc đoạn cuộn [from, to) vào một unit (cạnh TRANSFORMATION); stream `consumption:{serial}` | v1 | ✅ | ✅ | M6 |
 | `MaterialLotExpired` | Material | Hết shelf life hoặc quá exposure | — | ☐ | ☐ | M10 |
 | `SlurryBatchProduced` | ProductionExecution | Trộn xong một mẻ | — | ☐ | ☐ | M5 |
-| `RollCoated` | ProductionExecution | Phủ xong, kèm segment map | — | ☐ | ☐ | M5 |
+| `RollCoated` | ProductionExecution | Phủ xong, kèm segment map; stream `roll:{rollId}` | v1 | ✅ | ✅ | M6 |
 | `RollSplit` | Traceability | Slitting: mother → daughter + ánh xạ toạ độ | — | ☐ | ☐ | M6 |
 | `ProductionUnitSerialized` | Traceability | **Cell được cấp SN** — điểm khai sinh serial | v1 | ✅ | ✅ | M5 |
 | `SerialEngravingVerified` | Quality | Vision đọc lại mã khắc thành công | — | ☐ | ☐ | M9 |
@@ -68,8 +68,8 @@ thành đúng cái TSDB nằm cạnh nó.
 | `FormationRunCompleted` | ProductionExecution | Xong, kèm summary + URI đường cong | — | ☐ | ☐ | M7 |
 | `AgingPeriodElapsed` | ProductionExecution | Saga timeout — đủ ngày aging | — | ☐ | ☐ | M7 |
 | `UnitGraded` | Grading | Gán bin sau grading | — | ☐ | ☐ | M8 |
-| `UnitAssembledInto` | Traceability | cell → module, module → pack | — | ☐ | ☐ | M6 |
-| `UnitRemovedFrom` | Traceability | Rework: tháo ra | — | ☐ | ☐ | M6 |
+| `UnitAssembledInto` | Traceability | cell → module, module → pack; stream `membership:{con}` | v1 | ✅ | ✅ | M6 |
+| `UnitRemovedFrom` | Traceability | Rework: tháo ra | v1 | ✅ | ✅ | M6 |
 | `UnitQuarantined` | Quality | Bị giữ; M5 facet: serial trùng giữ unit trong cùng transaction | v1 | ✅ | ✅ | M9 |
 | `UnitReleasedFromQuarantine` | Quality | Được thả, kèm 2 chữ ký | — | ☐ | ☐ | M9 |
 | `UnitScrapped` | Quality | Loại bỏ | — | ☐ | ☐ | M9 |
@@ -84,7 +84,7 @@ thành đúng cái TSDB nằm cạnh nó.
 | `WorkOrderReleased` | ProductionExecution | ERP đẩy xuống | — | ☐ | ☐ | M11 |
 | `ProductionEolTestPassed` | Quality | Test cuối chuyền đạt | — | ☐ | ☐ | M9 |
 | `PassportPublished` | Passport | DPP được công bố | — | ☐ | ☐ | M12 |
-| `GenealogyCorrectionRecorded` | Traceability | Bút toán bù trừ | — | ☐ | ☐ | M6 |
+| `GenealogyCorrectionRecorded` | Traceability | Bút toán bù trừ: thay cha đã ghi sai (cạnh CORRECTION) | v1 | ✅ | ✅ | M6 |
 
 ---
 

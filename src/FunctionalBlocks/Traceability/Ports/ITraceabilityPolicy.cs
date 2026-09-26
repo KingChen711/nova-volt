@@ -44,3 +44,9 @@ public interface IDuplicateSerialQuarantine
     Task RecordAsync(string siteId, string serialNumber, string submissionId, Guid eventId,
         string actorId, DateTimeOffset occurredAt, CancellationToken cancellationToken);
 }
+
+/// <summary>Unit đã được serialize trong site chưa; khoá chia sẻ, không khoá stream của unit.</summary>
+public interface IUnitRegistry
+{
+    Task<bool> ExistsAsync(string siteId, string serialNumber, CancellationToken cancellationToken);
+}

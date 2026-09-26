@@ -1,0 +1,23 @@
+{
+  "specversion": "1.0",
+  "id": "4d2a7c3b-9f1a-5c9e-8b72-2f3e4d5c6b71",
+  "type": "com.novavolt.traceability.unit-removed-from.v1",
+  "source": "urn:novavolt:nv1:app-execution",
+  "subject": "urn:trace-unit:cell:NV1CL16269A00001",
+  "time": "2026-09-26T03:00:00+00:00",
+  "datacontenttype": "application/json",
+  "correlationid": "4d2a7c3b-9f1a-5c9e-8b72-2f3e4d5c6b71",
+  "causationid": "4d2a7c3b-9f1a-5c9e-8b72-2f3e4d5c6b71",
+  "partitionkey": "NV1:NV1CL16269A00001",
+  "data": {
+    "eventId": "4d2a7c3b-9f1a-5c9e-8b72-2f3e4d5c6b71",
+    "occurredAt": "2026-09-26T03:00:00+00:00",
+    "recordedAt": "2026-09-26T03:00:01+00:00",
+    "siteId": "NV1",
+    "childSerialNumber": "NV1CL16269A00001",
+    "parentSerialNumber": "NV1MM16269A00001",
+    "reasonCode": "REWORK",
+    "operationRunId": "OPRUN-NV1-RWK-0001",
+    "actorId": "op.nv1"
+  }
+}

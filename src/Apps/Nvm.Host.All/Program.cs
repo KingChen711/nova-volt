@@ -9,6 +9,8 @@ using Nvm.FactoryModel.Commands;
 using Nvm.Host.Infrastructure;
 using Nvm.Hosting;
 using Nvm.Kernel;
+using Nvm.Material.Commands;
+using Nvm.Material.Hosting;
 using Nvm.ProductionExecution.Commands;
 using Nvm.ProductionExecution.Hosting;
 using Nvm.PublicObjectModel;
@@ -55,10 +57,11 @@ try
 
     builder.Configuration.AddEnvironmentVariables();
     builder.Services.AddNvmKernel(typeof(ActivateFactoryModelRevisionCommand).Assembly, typeof(RecordDataCollectionCommand).Assembly,
-        typeof(SerializeUnitCommand).Assembly);
+        typeof(SerializeUnitCommand).Assembly, typeof(ConsumeMaterialCommand).Assembly);
     builder.Services.AddNvmCommandStore(builder.Configuration, builder.Environment);
     builder.Services.AddNvmTraceability(builder.Configuration);
     builder.Services.AddNvmQuality();
+    builder.Services.AddNvmMaterial();
     builder.Services.AddNvmPublicObjectModel(builder.Configuration, builder.Environment);
     builder.Services.AddNvmProductionExecutionAdapters(builder.Configuration);
 
@@ -148,6 +151,7 @@ try
     app.MapNvmPublicObjectModel();
     app.MapNvmProductionExecution();
     app.MapNvmTraceability();
+    app.MapNvmMaterial();
     app.Run();
     return 0;
 }

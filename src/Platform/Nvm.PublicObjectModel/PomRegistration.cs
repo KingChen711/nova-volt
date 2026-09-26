@@ -34,6 +34,8 @@ public static class PomRegistration
         }
 
         services.AddHttpContextAccessor();
+        // Trace API đọc bảng genealogy bằng cùng role/connection read-only của POM.
+        services.AddSingleton(_ => new TraceQueries(NpgsqlDataSource.Create(connectionString)));
         services.AddDbContext<PomReadDbContext>(options =>
             options.UseNpgsql(connectionString).UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking));
 
@@ -87,6 +89,7 @@ public static class PomRegistration
         ArgumentNullException.ThrowIfNull(endpoints);
         // Bao gồm metadata/service document do OData cung cấp, không chỉ controller Equipment.
         endpoints.MapControllers().RequireAuthorization(ReadPolicy);
+        endpoints.MapNvmTrace();
         return endpoints;
     }
 

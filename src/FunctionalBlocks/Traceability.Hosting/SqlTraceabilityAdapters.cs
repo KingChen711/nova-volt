@@ -11,7 +11,7 @@ namespace Nvm.Traceability.Hosting;
 
 /// <summary>All operations use the command claim's SQL connection and transaction.</summary>
 public sealed class SqlTraceabilityAdapters(SqlCommandSession session, IUnitQualityFacet quality) :
-    IRoutingDirectory, IUnitGuard, ISerialReservation, IDuplicateSerialQuarantine
+    IRoutingDirectory, IUnitGuard, ISerialReservation, IDuplicateSerialQuarantine, IUnitRegistry
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
@@ -111,6 +111,19 @@ public sealed class SqlTraceabilityAdapters(SqlCommandSession session, IUnitQual
         incident.Parameters.Add("@actor", SqlDbType.NVarChar, 200).Value = actorId;
         incident.Parameters.Add("@occurred", SqlDbType.DateTimeOffset).Value = occurredAt;
         await incident.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<bool> ExistsAsync(string siteId, string serialNumber, CancellationToken cancellationToken)
+    {
+        RequireSite(siteId);
+        // Khoá chia sẻ tới commit: unit không thể "biến mất" giữa kiểm tra và ghi, mà vẫn không chặn
+        // command khác chỉ đọc cùng unit (ví dụ nhiều con cùng kiểm một cha).
+        using var command = session.CreateCommand("""
+            SELECT 1 FROM traceability.SerialReservations WITH (HOLDLOCK)
+            WHERE SiteId = @site AND SerialNumber = @serial;
+            """);
+        AddIdentity(command, siteId, serialNumber);
+        return await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false) is not null;
     }
 
     private void RequireSite(string siteId)

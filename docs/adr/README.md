@@ -39,11 +39,11 @@ việc khác.
 | [002](ADR-002-postgresql-timescaledb-read-model.md) | PostgreSQL + TimescaleDB cho telemetry và read model | **Accepted** 2026-08-26 | M0 · C14 |
 | 003 | Hand-rolled event store thay vì Marten | Chưa viết | M5 |
 | [004](ADR-004-rabbitmq-not-kafka.md) | RabbitMQ làm Manufacturing Service Bus, không dùng Kafka | **Accepted** 2026-08-26 | M1 · C09 |
-| 005 | Genealogy là DAG có thời gian | Chưa viết | M5 |
-| 006 | Closure table thay vì recursive CTE | Chưa viết | M6 |
+| [005](ADR-005-genealogy-la-dag-co-thoi-gian.md) | Genealogy là DAG có thời gian, cạnh append-only | **Accepted** 2026-09-26 | M6 |
+| [006](ADR-006-closure-table-cho-forward-trace.md) | Closure table có đếm đường đi cho forward trace (lab 100k) | **Accepted** 2026-09-26 | M6 |
 | [007](ADR-007-dinh-dang-serial-number.md) | Giữ serial 16 ký tự và kiểm format tại backend | **Accepted** 2026-09-07 | M4 · C01 |
 | [008](ADR-008-cloudevents-envelope.md) | CloudEvents đi ở transport header, không thay envelope MassTransit | **Accepted** 2026-08-26 | M1 · C12 |
-| 009 | Ngữ nghĩa EPCIS cho genealogy edge | Chưa viết | M5 |
+| [009](ADR-009-ngu-nghia-epcis-cho-canh-genealogy.md) | Ngữ nghĩa EPCIS cho cạnh genealogy, chiều cạnh theo dòng vật liệu | **Accepted** 2026-09-26 | M6 |
 | [010](ADR-010-idempotency-key-uuid-v5.md) | Idempotency key = UUIDv5 từ natural key | **Accepted** 2026-08-26 | M1 · C04 |
 | [011](ADR-011-device-timestamp-la-truc-phan-manh.md) | `device_timestamp` là trục phân mảnh của telemetry | **Accepted** 2026-08-30 | M3 · C05 |
 | [012](ADR-012-production-day-va-ca-tinh-trong-gio-local.md) | `production_day` và ca kíp tính trong giờ local của site | **Accepted** 2026-08-30 | M3 · C03 |

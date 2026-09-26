@@ -2,7 +2,10 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Nvm.Contracts;
 using Nvm.Contracts.CloudEvents;
+using Nvm.Contracts.Events.Material;
+using Nvm.Contracts.Events.ProductionExecution;
 using Nvm.Contracts.Events.Quality;
+using Nvm.Contracts.Events.Traceability;
 
 namespace Nvm.ContractTests;
 
@@ -15,6 +18,11 @@ public sealed class DomainEventGoldenTests
     public static TheoryData<string, Type> Goldens => new()
     {
         { "quality/unit-quarantined.v1.json", typeof(CloudEventEnvelope<UnitQuarantined>) },
+        { "traceability/unit-assembled-into.v1.json", typeof(CloudEventEnvelope<UnitAssembledInto>) },
+        { "traceability/unit-removed-from.v1.json", typeof(CloudEventEnvelope<UnitRemovedFrom>) },
+        { "traceability/genealogy-correction-recorded.v1.json", typeof(CloudEventEnvelope<GenealogyCorrectionRecorded>) },
+        { "material/material-lot-consumed.v1.json", typeof(CloudEventEnvelope<MaterialLotConsumed>) },
+        { "production-execution/roll-coated.v1.json", typeof(CloudEventEnvelope<RollCoated>) },
     };
 
     [Theory]

@@ -48,17 +48,37 @@ if (args.Contains("--reconcile", StringComparer.Ordinal))
 {
     await using var store = NpgsqlDataSource.Create(postgresConnection);
     var projection = new ProductionUnitProjection(store, new SqlGlobalEventFeed(sqlConnection));
+    var genealogy = new GenealogyProjection(store, new SqlGlobalEventFeed(sqlConnection));
     foreach (var site in sites)
-    { await projection.CatchUpAsync(site); }
+    {
+        await projection.CatchUpAsync(site);
+        await genealogy.CatchUpAsync(site);
+    }
+    return;
+}
+if (args.Contains("--rebuild-genealogy", StringComparer.Ordinal))
+{
+    // Xoá read model cần quyền chủ schema; runtime role không có quyền DELETE trên bảng cạnh.
+    await using var owner = NpgsqlDataSource.Create(Required("NVM_PROJECTIONS:MigrationConnectionString"));
+    var genealogy = new GenealogyProjection(owner, new SqlGlobalEventFeed(sqlConnection));
+    foreach (var site in sites)
+    {
+        var report = await genealogy.RebuildAsync(site);
+        Console.WriteLine($"GENEALOGY_REBUILD site={report.SiteId} facts={report.FactsApplied} seconds={report.Elapsed.TotalSeconds:F1}");
+    }
     return;
 }
 builder.Services.AddSingleton(_ => NpgsqlDataSource.Create(postgresConnection));
 builder.Services.AddSingleton(new SqlGlobalEventFeed(sqlConnection));
 builder.Services.AddSingleton<ProductionUnitProjectionInbox>();
+builder.Services.AddSingleton<GenealogyProjectionInbox>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddHostedService(service => new ProductionUnitProjectionWorker(
     service.GetRequiredService<ProductionUnitProjectionInbox>(), sites,
     service.GetRequiredService<TimeProvider>(), service.GetRequiredService<ILogger<ProductionUnitProjectionWorker>>()));
+builder.Services.AddHostedService(service => new GenealogyProjectionWorker(
+    service.GetRequiredService<GenealogyProjectionInbox>(), sites,
+    service.GetRequiredService<TimeProvider>(), service.GetRequiredService<ILogger<GenealogyProjectionWorker>>()));
 builder.Services.AddNvmBus(bus =>
 {
     bus.Host = Required("NVM_RABBITMQ_HOST");
@@ -66,7 +86,11 @@ builder.Services.AddNvmBus(bus =>
     bus.Username = Required("NVM_RABBITMQ_USER");
     bus.Password = Required("NVM_RABBITMQ_PASSWORD");
     bus.ApplicationName = "unit-projection";
-}, consumers => consumers.AddNvmConsumer<ProductionUnitProjectionConsumer>());
+}, consumers =>
+{
+    consumers.AddNvmConsumer<ProductionUnitProjectionConsumer>();
+    consumers.AddNvmConsumer<GenealogyProjectionConsumer>();
+});
 builder.Services.AddHealthChecks()
     .AddCheck<ProjectionStoreHealthCheck>("projection-store", tags: [HealthTags.Ready])
     .AddAsyncCheck("event-source", async cancellationToken =>

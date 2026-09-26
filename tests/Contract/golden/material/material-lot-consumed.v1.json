@@ -1,0 +1,28 @@
+{
+  "specversion": "1.0",
+  "id": "6f4c9e5d-b13c-5eb0-8d94-4b5a6f7e8d93",
+  "type": "com.novavolt.material.material-lot-consumed.v1",
+  "source": "urn:novavolt:nv1:app-execution",
+  "subject": "urn:material-lot:ROL-NV1-260825-CT1-004",
+  "time": "2026-09-26T03:00:00+00:00",
+  "datacontenttype": "application/json",
+  "correlationid": "6f4c9e5d-b13c-5eb0-8d94-4b5a6f7e8d93",
+  "causationid": "6f4c9e5d-b13c-5eb0-8d94-4b5a6f7e8d93",
+  "partitionkey": "NV1:NV1CL16269A00001",
+  "data": {
+    "eventId": "6f4c9e5d-b13c-5eb0-8d94-4b5a6f7e8d93",
+    "occurredAt": "2026-09-26T03:00:00+00:00",
+    "recordedAt": "2026-09-26T03:00:01+00:00",
+    "siteId": "NV1",
+    "lotId": "ROL-NV1-260825-CT1-004",
+    "lotKind": "Roll",
+    "materialCode": "ANODE-ROLL",
+    "consumerSerialNumber": "NV1CL16269A00001",
+    "quantity": 0.82,
+    "unitOfMeasure": "m",
+    "spanFromMeter": 1250.0,
+    "spanToMeter": 1250.82,
+    "operationRunId": "OPRUN-NV1-STK-0001",
+    "actorId": "op.nv1"
+  }
+}

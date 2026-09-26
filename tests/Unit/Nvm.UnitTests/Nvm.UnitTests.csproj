@@ -2,6 +2,8 @@
   <ItemGroup>
     <ProjectReference Include="../../../src/Platform/Nvm.EventStore/Nvm.EventStore.csproj" />
     <ProjectReference Include="../../../src/FunctionalBlocks/Traceability/Nvm.Traceability.csproj" />
+    <ProjectReference Include="../../../src/FunctionalBlocks/Material/Nvm.Material.csproj" />
+    <ProjectReference Include="../../../src/FunctionalBlocks/Quality/Nvm.Quality.csproj" />
     <Content Include="EventSourcing/Fixtures/*.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

@@ -1,0 +1,40 @@
+{
+  "specversion": "1.0",
+  "id": "7a5d0f6e-c24d-5fc1-9ea5-5c6b7a8f9ea4",
+  "type": "com.novavolt.production-execution.roll-coated.v1",
+  "source": "urn:novavolt:nv1:app-execution",
+  "subject": "urn:electrode-roll:ROL-NV1-260825-CT1-004",
+  "time": "2026-09-26T03:00:00+00:00",
+  "datacontenttype": "application/json",
+  "correlationid": "7a5d0f6e-c24d-5fc1-9ea5-5c6b7a8f9ea4",
+  "causationid": "7a5d0f6e-c24d-5fc1-9ea5-5c6b7a8f9ea4",
+  "partitionkey": "NV1:ROL-NV1-260825-CT1-004",
+  "data": {
+    "eventId": "7a5d0f6e-c24d-5fc1-9ea5-5c6b7a8f9ea4",
+    "occurredAt": "2026-09-26T03:00:00+00:00",
+    "recordedAt": "2026-09-26T03:00:01+00:00",
+    "siteId": "NV1",
+    "rollId": "ROL-NV1-260825-CT1-004",
+    "segments": [
+      {
+        "webSide": "A",
+        "fromMeter": 0,
+        "toMeter": 1250,
+        "slurryBatchId": "SLR-NV1-0101",
+        "foilLotId": "FOIL-CU-0042",
+        "recipeVersionId": "RCP-COAT-A-v7",
+        "equipmentId": "COAT-01"
+      },
+      {
+        "webSide": "A",
+        "fromMeter": 1250,
+        "toMeter": 1430,
+        "slurryBatchId": "SLR-NV1-0102",
+        "foilLotId": "FOIL-CU-0042",
+        "recipeVersionId": "RCP-COAT-A-v7",
+        "equipmentId": "COAT-01"
+      }
+    ],
+    "actorId": "op.nv1"
+  }
+}

@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Nvm.Material.Hosting</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.Data.SqlClient" />
+    <ProjectReference Include="../Material/Nvm.Material.csproj" />
+    <ProjectReference Include="../../Platform/Nvm.CommandStore/Nvm.CommandStore.csproj" />
+    <ProjectReference Include="../../Platform/Nvm.EventStore/Nvm.EventStore.csproj" />
+  </ItemGroup>
+</Project>

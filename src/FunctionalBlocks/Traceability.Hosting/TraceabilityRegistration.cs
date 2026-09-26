@@ -42,7 +42,15 @@ public static class TraceabilityRegistration
         services.AddScoped<IUnitGuard>(provider => provider.GetRequiredService<SqlTraceabilityAdapters>());
         services.AddScoped<ISerialReservation>(provider => provider.GetRequiredService<SqlTraceabilityAdapters>());
         services.AddScoped<IDuplicateSerialQuarantine>(provider => provider.GetRequiredService<SqlTraceabilityAdapters>());
+        services.AddScoped<IUnitRegistry>(provider => provider.GetRequiredService<SqlTraceabilityAdapters>());
         services.AddScoped<TraceabilityCommandProcessor>();
+        services.AddScoped<GenealogyCommandProcessor>();
+        services.TryAddScoped<ICommandHandler<AssembleUnitCommand, UnitCommandResult>, AssembleUnitHandler>();
+        services.TryAddScoped<ICommandHandler<RemoveUnitCommand, UnitCommandResult>, RemoveUnitHandler>();
+        services.TryAddScoped<ICommandHandler<CorrectGenealogyCommand, UnitCommandResult>, CorrectGenealogyHandler>();
+        services.TryAddScoped<ICommandValidator<AssembleUnitCommand>, AssembleUnitValidator>();
+        services.TryAddScoped<ICommandValidator<RemoveUnitCommand>, RemoveUnitValidator>();
+        services.TryAddScoped<ICommandValidator<CorrectGenealogyCommand>, CorrectGenealogyValidator>();
         services.TryAddScoped<ICommandHandler<SerializeUnitCommand, UnitCommandResult>, SerializeUnitHandler>();
         services.TryAddScoped<ICommandHandler<StartStepCommand, UnitCommandResult>, StartStepHandler>();
         services.TryAddScoped<ICommandHandler<CompleteStepCommand, UnitCommandResult>, CompleteStepHandler>();

@@ -32,6 +32,17 @@ public sealed record RecordUnitMeasurementPayload([property: JsonRequired] strin
     [property: JsonRequired] string SignalCode,
     [property: JsonRequired] decimal Value, [property: JsonRequired] string UnitOfMeasure);
 
+public sealed record AssembleUnitPayload([property: JsonRequired] string SubmissionId,
+    [property: JsonRequired] string SerialNumber, [property: JsonRequired] string ParentSerialNumber,
+    [property: JsonRequired] string Position, [property: JsonRequired] string OperationRunId);
+public sealed record RemoveUnitPayload([property: JsonRequired] string SubmissionId,
+    [property: JsonRequired] string SerialNumber, [property: JsonRequired] string ParentSerialNumber,
+    [property: JsonRequired] string ReasonCode, [property: JsonRequired] string OperationRunId);
+public sealed record CorrectGenealogyPayload([property: JsonRequired] string SubmissionId,
+    [property: JsonRequired] string SerialNumber, [property: JsonRequired] string WrongParentSerialNumber,
+    [property: JsonRequired] string CorrectParentSerialNumber, [property: JsonRequired] string Position,
+    [property: JsonRequired] string ReasonText);
+
 public static class TraceabilityEndpoints
 {
     private const string Policy = "TraceabilityWrite";
@@ -61,6 +72,12 @@ public static class TraceabilityEndpoints
         endpoints.MapPost("/api/v1/commands/production/complete-step", CompleteAsync)
             .RequireAuthorization(Policy);
         endpoints.MapPost("/api/v1/commands/traceability/record-measurement", RecordMeasurementAsync)
+            .RequireAuthorization(Policy);
+        endpoints.MapPost("/api/v1/commands/traceability/assemble-unit", AssembleAsync)
+            .RequireAuthorization(Policy);
+        endpoints.MapPost("/api/v1/commands/traceability/remove-unit", RemoveAsync)
+            .RequireAuthorization(Policy);
+        endpoints.MapPost("/api/v1/commands/traceability/correct-genealogy", CorrectAsync)
             .RequireAuthorization(Policy);
         return endpoints;
     }
@@ -93,6 +110,27 @@ public static class TraceabilityEndpoints
                 input.Payload.SerialNumber, input.OccurredAt, input.Payload.StepCode,
                 input.Payload.OperationRunId, input.Payload.EquipmentPath, input.Payload.SignalCode,
                 input.Payload.Value, input.Payload.UnitOfMeasure), ct);
+
+    private static Task<IResult> AssembleAsync(TraceabilityRequest<AssembleUnitPayload>? request,
+        HttpContext context, ICommandDispatcher dispatcher, ILoggerFactory logs, CancellationToken ct) =>
+        ExecuteAsync(request, context, dispatcher, logs,
+            (site, actor, input) => new AssembleUnitCommand(site, actor, input.Payload.SubmissionId,
+                input.Payload.SerialNumber, input.OccurredAt, input.Payload.ParentSerialNumber,
+                input.Payload.Position, input.Payload.OperationRunId), ct);
+
+    private static Task<IResult> RemoveAsync(TraceabilityRequest<RemoveUnitPayload>? request,
+        HttpContext context, ICommandDispatcher dispatcher, ILoggerFactory logs, CancellationToken ct) =>
+        ExecuteAsync(request, context, dispatcher, logs,
+            (site, actor, input) => new RemoveUnitCommand(site, actor, input.Payload.SubmissionId,
+                input.Payload.SerialNumber, input.OccurredAt, input.Payload.ParentSerialNumber,
+                input.Payload.ReasonCode, input.Payload.OperationRunId), ct);
+
+    private static Task<IResult> CorrectAsync(TraceabilityRequest<CorrectGenealogyPayload>? request,
+        HttpContext context, ICommandDispatcher dispatcher, ILoggerFactory logs, CancellationToken ct) =>
+        ExecuteAsync(request, context, dispatcher, logs,
+            (site, actor, input) => new CorrectGenealogyCommand(site, actor, input.Payload.SubmissionId,
+                input.Payload.SerialNumber, input.OccurredAt, input.Payload.WrongParentSerialNumber,
+                input.Payload.CorrectParentSerialNumber, input.Payload.Position, input.Payload.ReasonText), ct);
 
     private static async Task<IResult> ExecuteAsync<TPayload>(TraceabilityRequest<TPayload>? request,
         HttpContext context, ICommandDispatcher dispatcher, ILoggerFactory logs,
@@ -144,7 +182,9 @@ public static class TraceabilityEndpoints
     {
         UnitReasonCodes.InvalidInput or UnitReasonCodes.InvalidSerial => 400,
         UnitReasonCodes.SiteMismatch or UnitReasonCodes.UnauthorizedTransition => 403,
-        UnitReasonCodes.UnitNotFound or UnitReasonCodes.RoutingNotFound => 404,
+        UnitReasonCodes.UnitNotFound or UnitReasonCodes.RoutingNotFound
+            or GenealogyReasonCodes.ParentNotFound => 404,
+        GenealogyReasonCodes.InvalidHierarchy => 400,
         _ => 409
     };
 
@@ -161,6 +201,12 @@ public static class TraceabilityEndpoints
             item.OperationRunId),
         RecordUnitMeasurementPayload item => Has(item.SubmissionId, item.SerialNumber,
             item.StepCode, item.OperationRunId, item.EquipmentPath, item.SignalCode, item.UnitOfMeasure),
+        AssembleUnitPayload item => Has(item.SubmissionId, item.SerialNumber, item.ParentSerialNumber,
+            item.Position, item.OperationRunId),
+        RemoveUnitPayload item => Has(item.SubmissionId, item.SerialNumber, item.ParentSerialNumber,
+            item.ReasonCode, item.OperationRunId),
+        CorrectGenealogyPayload item => Has(item.SubmissionId, item.SerialNumber, item.WrongParentSerialNumber,
+            item.CorrectParentSerialNumber, item.Position, item.ReasonText),
         _ => false
     };
 

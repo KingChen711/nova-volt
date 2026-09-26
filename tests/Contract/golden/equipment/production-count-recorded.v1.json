@@ -1,0 +1,27 @@
+{
+  "specversion": "1.0",
+  "id": "d3e2f3a4-b5c6-5d71-8e92-f3a4b5c6d703",
+  "type": "com.novavolt.equipment.production-count-recorded.v1",
+  "source": "urn:novavolt:nv1:app-execution",
+  "subject": "urn:equipment:NOVAVOLT/NV1/CELL/L1/STACK-01",
+  "time": "2026-03-12T04:00:00+00:00",
+  "datacontenttype": "application/json",
+  "correlationid": "d3e2f3a4-b5c6-5d71-8e92-f3a4b5c6d703",
+  "causationid": "d3e2f3a4-b5c6-5d71-8e92-f3a4b5c6d703",
+  "partitionkey": "NV1:equipment:NOVAVOLT/NV1/CELL/L1/STACK-01",
+  "data": {
+    "eventId": "d3e2f3a4-b5c6-5d71-8e92-f3a4b5c6d703",
+    "occurredAt": "2026-03-12T04:00:00+00:00",
+    "recordedAt": "2026-03-12T03:30:01+00:00",
+    "siteId": "NV1",
+    "equipmentPath": "NOVAVOLT/NV1/CELL/L1/STACK-01",
+    "productCode": "NV-P120-NMC",
+    "windowFrom": "2026-03-12T00:00:00+00:00",
+    "windowTo": "2026-03-12T04:00:00+00:00",
+    "totalCount": 10000,
+    "goodCount": 9500,
+    "idealCycleMilliseconds": 1000,
+    "idealCycleVersion": 1,
+    "actorId": "plc.nv1"
+  }
+}

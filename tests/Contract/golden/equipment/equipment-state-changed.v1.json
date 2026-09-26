@@ -1,0 +1,23 @@
+{
+  "specversion": "1.0",
+  "id": "d1e2f3a4-b5c6-5d71-8e92-f3a4b5c6d701",
+  "type": "com.novavolt.equipment.equipment-state-changed.v1",
+  "source": "urn:novavolt:nv1:app-execution",
+  "subject": "urn:equipment:NOVAVOLT/NV1/CELL/L1/STACK-01",
+  "time": "2026-03-12T03:30:00+00:00",
+  "datacontenttype": "application/json",
+  "correlationid": "d1e2f3a4-b5c6-5d71-8e92-f3a4b5c6d701",
+  "causationid": "d1e2f3a4-b5c6-5d71-8e92-f3a4b5c6d701",
+  "partitionkey": "NV1:equipment:NOVAVOLT/NV1/CELL/L1/STACK-01",
+  "data": {
+    "eventId": "d1e2f3a4-b5c6-5d71-8e92-f3a4b5c6d701",
+    "occurredAt": "2026-03-12T03:30:00+00:00",
+    "recordedAt": "2026-03-12T03:30:01+00:00",
+    "siteId": "NV1",
+    "equipmentPath": "NOVAVOLT/NV1/CELL/L1/STACK-01",
+    "previousState": "Running",
+    "state": "Stopped",
+    "reasonCode": "MECH_BREAKDOWN",
+    "actorId": "plc.nv1"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "specversion": "1.0",
+  "id": "b4c2d3e4-f5a6-5b71-8c92-d3e4f5a6b704",
+  "type": "com.novavolt.material.material-override-granted.v1",
+  "source": "urn:novavolt:nv1:app-execution",
+  "subject": "urn:material-lot:ELY-NV1-260312-001",
+  "time": "2026-03-12T00:00:00+00:00",
+  "datacontenttype": "application/json",
+  "correlationid": "b4c2d3e4-f5a6-5b71-8c92-d3e4f5a6b704",
+  "causationid": "b4c2d3e4-f5a6-5b71-8c92-d3e4f5a6b704",
+  "partitionkey": "NV1:lot:ELY-NV1-260312-001",
+  "data": {
+    "eventId": "b4c2d3e4-f5a6-5b71-8c92-d3e4f5a6b704",
+    "occurredAt": "2026-03-12T00:00:00+00:00",
+    "recordedAt": "2026-03-12T00:00:01+00:00",
+    "siteId": "NV1",
+    "overrideId": "OVR-B4C2D3E4F5A6",
+    "lotId": "ELY-NV1-260312-001",
+    "rule": "EXPOSURE_EXCEEDED",
+    "justification": "Mẻ khẩn, đo ẩm đạt",
+    "signatureIds": [
+      "SIG-1111222233334444"
+    ],
+    "validUntil": "2026-03-12T08:00:00+00:00",
+    "actorId": "line.lead"
+  }
+}

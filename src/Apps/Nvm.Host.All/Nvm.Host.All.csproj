@@ -24,6 +24,8 @@
     <ProjectReference Include="../../FunctionalBlocks/Quality.Hosting/Nvm.Quality.Hosting.csproj" />
     <ProjectReference Include="../../FunctionalBlocks/Material.Hosting/Nvm.Material.Hosting.csproj" />
     <ProjectReference Include="../../FunctionalBlocks/Grading.Hosting/Nvm.Grading.Hosting.csproj" />
+    <ProjectReference Include="../../FunctionalBlocks/Recipe.Hosting/Nvm.Recipe.Hosting.csproj" />
+    <ProjectReference Include="../../FunctionalBlocks/Equipment.Hosting/Nvm.Equipment.Hosting.csproj" />
   </ItemGroup>
 
 </Project>

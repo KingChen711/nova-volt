@@ -43,8 +43,8 @@ public static class GradingRegistration
     {
         ArgumentNullException.ThrowIfNull(services);
         services.TryAddScoped<IGradingRuleSetStore, SqlGradingRuleSetStore>();
-        services.AddSiteWritePolicy(WritePolicy, "Operator", "LineLeader", "QualityEngineer");
-        services.AddSiteWritePolicy(ApprovePolicy, "LineLeader", "QualityEngineer");
+        services.AddSiteWritePolicy(WritePolicy, "Operator", "LineLeader", "QaEngineer");
+        services.AddSiteWritePolicy(ApprovePolicy, "LineLeader", "QaEngineer");
         return services;
     }
 

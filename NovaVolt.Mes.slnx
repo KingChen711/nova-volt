@@ -13,6 +13,10 @@
     <Project Path="src/FunctionalBlocks/Material.Hosting/Nvm.Material.Hosting.csproj" />
     <Project Path="src/FunctionalBlocks/Grading/Nvm.Grading.csproj" />
     <Project Path="src/FunctionalBlocks/Grading.Hosting/Nvm.Grading.Hosting.csproj" />
+    <Project Path="src/FunctionalBlocks/Recipe/Nvm.Recipe.csproj" />
+    <Project Path="src/FunctionalBlocks/Recipe.Hosting/Nvm.Recipe.Hosting.csproj" />
+    <Project Path="src/FunctionalBlocks/Equipment/Nvm.Equipment.csproj" />
+    <Project Path="src/FunctionalBlocks/Equipment.Hosting/Nvm.Equipment.Hosting.csproj" />
     <Project Path="src/FunctionalBlocks/FactoryModel/Nvm.FactoryModel.csproj" />
     <Project Path="src/FunctionalBlocks/ProductionExecution/Nvm.ProductionExecution.csproj" />
     <Project Path="src/FunctionalBlocks/ProductionExecution.Hosting/Nvm.ProductionExecution.Hosting.csproj" />

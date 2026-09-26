@@ -1,0 +1,25 @@
+{
+  "specversion": "1.0",
+  "id": "a3b2c3d4-e5f6-5a71-9b82-c3d4e5f6a703",
+  "type": "com.novavolt.quality.units-held-by-cascade.v1",
+  "source": "urn:novavolt:nv1:app-execution",
+  "subject": "urn:quality:cascade:HOLD-A1B2C3D4E5F6",
+  "time": "2026-09-20T00:00:00+00:00",
+  "datacontenttype": "application/json",
+  "correlationid": "a3b2c3d4-e5f6-5a71-9b82-c3d4e5f6a703",
+  "causationid": "a3b2c3d4-e5f6-5a71-9b82-c3d4e5f6a703",
+  "partitionkey": "NV1:cascade:HOLD-A1B2C3D4E5F6",
+  "data": {
+    "eventId": "a3b2c3d4-e5f6-5a71-9b82-c3d4e5f6a703",
+    "occurredAt": "2026-09-20T00:00:00+00:00",
+    "recordedAt": "2026-09-20T00:00:01+00:00",
+    "siteId": "NV1",
+    "holdId": "HOLD-A1B2C3D4E5F6",
+    "jobId": "HOLD-A1B2C3D4E5F6",
+    "chunkIndex": 0,
+    "serialNumbers": [
+      "NV1CL16263A04001",
+      "NV1MM16263A04001"
+    ]
+  }
+}

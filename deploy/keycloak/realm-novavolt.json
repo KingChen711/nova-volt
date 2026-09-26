@@ -36,6 +36,10 @@
       {
         "name": "Admin",
         "description": "Quan tri he thong"
+      },
+      {
+        "name": "CustomerRepresentative",
+        "description": "Đại diện khách hàng ký duyệt concession (MRB)"
       }
     ]
   },
@@ -144,6 +148,18 @@
           }
         }
       ]
+    },
+    {
+      "clientId": "nvm-esign",
+      "name": "NovaVolt e-signature re-authentication",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "fullScopeAllowed": false
     }
   ],
   "users": [
@@ -154,8 +170,14 @@
       "email": "ll.nv1@novavolt.local",
       "firstName": "NV1",
       "lastName": "LineLeader",
-      "attributes": { "site_id": ["NV1"] },
-      "realmRoles": ["LineLeader"]
+      "attributes": {
+        "site_id": [
+          "NV1"
+        ]
+      },
+      "realmRoles": [
+        "LineLeader"
+      ]
     },
     {
       "username": "op.nv1",
@@ -224,6 +246,52 @@
       ],
       "realmRoles": [
         "Operator"
+      ]
+    },
+    {
+      "username": "qm.nv1",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "qm.nv1@novavolt.example",
+      "firstName": "QA Manager",
+      "lastName": "NV1",
+      "attributes": {
+        "site_id": [
+          "NV1"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "QaManager"
+      ]
+    },
+    {
+      "username": "pm.nv1",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "pm.nv1@novavolt.example",
+      "firstName": "Production Manager",
+      "lastName": "NV1",
+      "attributes": {
+        "site_id": [
+          "NV1"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "ProductionManager"
       ]
     }
   ]

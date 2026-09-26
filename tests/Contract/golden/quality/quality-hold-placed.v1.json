@@ -1,0 +1,26 @@
+{
+  "specversion": "1.0",
+  "id": "a1b2c3d4-e5f6-5a71-9b82-c3d4e5f6a701",
+  "type": "com.novavolt.quality.quality-hold-placed.v1",
+  "source": "urn:novavolt:nv1:app-execution",
+  "subject": "urn:quality:hold:HOLD-A1B2C3D4E5F6",
+  "time": "2026-09-20T00:00:00+00:00",
+  "datacontenttype": "application/json",
+  "correlationid": "a1b2c3d4-e5f6-5a71-9b82-c3d4e5f6a701",
+  "causationid": "a1b2c3d4-e5f6-5a71-9b82-c3d4e5f6a701",
+  "partitionkey": "NV1:hold:HOLD-A1B2C3D4E5F6",
+  "data": {
+    "eventId": "a1b2c3d4-e5f6-5a71-9b82-c3d4e5f6a701",
+    "occurredAt": "2026-09-20T00:00:00+00:00",
+    "recordedAt": "2026-09-20T00:00:01+00:00",
+    "siteId": "NV1",
+    "holdId": "HOLD-A1B2C3D4E5F6",
+    "targetKind": "Roll",
+    "targetId": "ROL-NV1-260825-CT1-004",
+    "spanFromMeter": 1250.0,
+    "spanToMeter": 1430.0,
+    "reasonCode": "COATING_DEFECT",
+    "ncrId": "NCR-0001",
+    "heldBy": "qa.eng"
+  }
+}

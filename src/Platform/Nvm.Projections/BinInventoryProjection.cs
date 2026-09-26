@@ -4,6 +4,7 @@ using Npgsql;
 using Nvm.Bus.Topology;
 using Nvm.Contracts.Events;
 using Nvm.Contracts.Events.Grading;
+using Nvm.Contracts.Events.Quality;
 using Nvm.Contracts.Events.Traceability;
 using Nvm.Kernel.EventSourcing;
 using Nvm.Kernel.Identity;
@@ -119,10 +120,14 @@ public sealed class BinInventoryProjection : IOrderedProjection
 [BusEndpoint("grading", "ordered-projections")]
 public sealed class OrderedProjectionsConsumer(SqlGlobalEventFeed source, OrderedProjectionRunner runner)
     : OrderedProjectionConsumer(source, runner), IConsumer<UnitGraded>, IConsumer<UnitAssembledInto>,
-        IConsumer<UnitRemovedFrom>, IConsumer<GenealogyCorrectionRecorded>
+        IConsumer<UnitRemovedFrom>, IConsumer<GenealogyCorrectionRecorded>, IConsumer<QualityHoldPlaced>,
+        IConsumer<UnitsHeldByCascade>, IConsumer<QualityHoldReleased>
 {
     public Task Consume(ConsumeContext<UnitGraded> context) => CaptureAsync(context);
     public Task Consume(ConsumeContext<UnitAssembledInto> context) => CaptureAsync(context);
     public Task Consume(ConsumeContext<UnitRemovedFrom> context) => CaptureAsync(context);
     public Task Consume(ConsumeContext<GenealogyCorrectionRecorded> context) => CaptureAsync(context);
+    public Task Consume(ConsumeContext<QualityHoldPlaced> context) => CaptureAsync(context);
+    public Task Consume(ConsumeContext<UnitsHeldByCascade> context) => CaptureAsync(context);
+    public Task Consume(ConsumeContext<QualityHoldReleased> context) => CaptureAsync(context);
 }

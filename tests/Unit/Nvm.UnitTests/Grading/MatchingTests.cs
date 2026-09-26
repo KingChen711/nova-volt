@@ -35,7 +35,7 @@ public sealed class MatchingTests(ITestOutputHelper output)
             string.Create(CultureInfo.InvariantCulture, $"NV1CL16244A{i:D5}"), "A4", 120m, 3650m, 0.9m, "ROLL-1",
             now.AddDays(-i))).ToList();
         var result = new GreedyMatcher().Match(cells, new MatchingSpec { ReservedPerBin = 6 }, now);
-        result.TooOld.Count().ShouldBe(0);
+        result.TooOld.ShouldBeEmpty();
         result.Reserved.ShouldBe(cells.Take(6).Select(c => c.SerialNumber));
         result.Modules.Length.ShouldBe(2);
         var old = cells.Append(cells[0] with { SerialNumber = "NV1CL16244A09999", GradedAt = now.AddDays(-31) }).ToList();

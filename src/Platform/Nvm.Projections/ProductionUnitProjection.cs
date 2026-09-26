@@ -19,6 +19,8 @@ public sealed class ProductionUnitProjection(NpgsqlDataSource dataSource, IGloba
     private const string Measurement = "com.novavolt.traceability.unit-measurement-recorded.v1";
     private const string DuplicateSerial = "com.novavolt.traceability.duplicate-serial-detected.v1";
     private const string Quarantined = "com.novavolt.quality.unit-quarantined.v1";
+    private const string Scrapped = "com.novavolt.quality.unit-scrapped.v1";
+    private const string ReleasedFromQuarantine = "com.novavolt.quality.unit-released-from-quarantine.v1";
     internal const string QualityStreamPrefix = "quality:";
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
@@ -241,12 +243,35 @@ public sealed class ProductionUnitProjection(NpgsqlDataSource dataSource, IGloba
                         held.ReasonCode, cancellationToken).ConfigureAwait(false);
                     break;
                 }
+            case Scrapped:
+                {
+                    var scrapped = Read<UnitScrapped>(fact);
+                    EnsureQuality(fact, scrapped.SiteId, scrapped.SerialNumber);
+                    await ApplyQualityAsync(connection, transaction, fact, scrapped.SerialNumber, "Scrapped",
+                        scrapped.ReasonCode, cancellationToken).ConfigureAwait(false);
+                    break;
+                }
+            case ReleasedFromQuarantine:
+                {
+                    var released = Read<UnitReleasedFromQuarantine>(fact);
+                    EnsureQuality(fact, released.SiteId, released.SerialNumber);
+                    await ApplyQualityAsync(connection, transaction, fact, released.SerialNumber, released.NewState,
+                        released.ReasonCode, cancellationToken).ConfigureAwait(false);
+                    break;
+                }
             default:
                 if (fact.EventType.StartsWith("com.novavolt.traceability.", StringComparison.Ordinal) ||
                     fact.EventType.StartsWith("com.novavolt.quality.unit-", StringComparison.Ordinal))
                 { throw new InvalidDataException($"Unsupported traceability event: {fact.EventType}."); }
                 break;
         }
+    }
+
+    private static void EnsureQuality(StoredStreamEvent fact, string siteId, string serialNumber)
+    {
+        if (siteId != fact.SiteId || fact.StreamId != QualityStreamPrefix + serialNumber ||
+            SerialNumber.Parse(serialNumber).SiteCode != fact.SiteId)
+        { throw new InvalidDataException("Quality event belongs to another site or stream."); }
     }
 
     /// <summary>Facet stream của Quality có version riêng; bỏ qua bản đã áp dụng, chặn khoảng trống.</summary>

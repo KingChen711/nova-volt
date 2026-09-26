@@ -2,10 +2,12 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Nvm.Contracts;
 using Nvm.Contracts.CloudEvents;
+using Nvm.Contracts.Events.Equipment;
 using Nvm.Contracts.Events.Grading;
 using Nvm.Contracts.Events.Material;
 using Nvm.Contracts.Events.ProductionExecution;
 using Nvm.Contracts.Events.Quality;
+using Nvm.Contracts.Events.Recipe;
 using Nvm.Contracts.Events.Traceability;
 
 namespace Nvm.ContractTests;
@@ -33,6 +35,24 @@ public sealed class DomainEventGoldenTests
         { "quality/non-conformance-raised.v1.json", typeof(CloudEventEnvelope<NonConformanceRaised>) },
         { "grading/grading-rule-set-approved.v1.json", typeof(CloudEventEnvelope<GradingRuleSetApproved>) },
         { "grading/unit-graded.v1.json", typeof(CloudEventEnvelope<UnitGraded>) },
+        { "quality/quality-hold-placed.v1.json", typeof(CloudEventEnvelope<QualityHoldPlaced>) },
+        { "quality/hold-cascade-started.v1.json", typeof(CloudEventEnvelope<HoldCascadeStarted>) },
+        { "quality/units-held-by-cascade.v1.json", typeof(CloudEventEnvelope<UnitsHeldByCascade>) },
+        { "quality/hold-cascade-completed.v1.json", typeof(CloudEventEnvelope<HoldCascadeCompleted>) },
+        { "quality/quality-hold-released.v1.json", typeof(CloudEventEnvelope<QualityHoldReleased>) },
+        { "quality/electronic-signature-recorded.v1.json", typeof(CloudEventEnvelope<ElectronicSignatureRecorded>) },
+        { "quality/disposition-applied.v1.json", typeof(CloudEventEnvelope<DispositionApplied>) },
+        { "quality/unit-scrapped.v1.json", typeof(CloudEventEnvelope<UnitScrapped>) },
+        { "quality/unit-released-from-quarantine.v1.json", typeof(CloudEventEnvelope<UnitReleasedFromQuarantine>) },
+        { "material/material-lot-received.v1.json", typeof(CloudEventEnvelope<MaterialLotReceived>) },
+        { "material/material-lot-released.v1.json", typeof(CloudEventEnvelope<MaterialLotReleased>) },
+        { "material/material-lot-opened.v1.json", typeof(CloudEventEnvelope<MaterialLotOpened>) },
+        { "material/material-override-granted.v1.json", typeof(CloudEventEnvelope<MaterialOverrideGranted>) },
+        { "recipe/recipe-version-approved.v1.json", typeof(CloudEventEnvelope<RecipeVersionApproved>) },
+        { "recipe/recipe-version-applied.v1.json", typeof(CloudEventEnvelope<RecipeVersionApplied>) },
+        { "equipment/equipment-state-changed.v1.json", typeof(CloudEventEnvelope<EquipmentStateChanged>) },
+        { "equipment/equipment-downtime-recorded.v1.json", typeof(CloudEventEnvelope<EquipmentDowntimeRecorded>) },
+        { "equipment/production-count-recorded.v1.json", typeof(CloudEventEnvelope<ProductionCountRecorded>) },
     };
 
     [Theory]

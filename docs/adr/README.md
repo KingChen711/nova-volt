@@ -51,7 +51,7 @@ việc khác.
 | [014](ADR-014-mendix-ui-va-draft-ben-vung.md) | Mendix sở hữu UI/draft, backend sở hữu quyết định nghiệp vụ | **Accepted** 2026-09-07 | M4 · C01 |
 | [015](ADR-015-saga-formation-aging-timeout-ben-trong-sql.md) | Saga formation/aging: process manager, timeout bền trong SQL, TimeProvider | **Accepted** 2026-09-26 | M7 |
 | [016](ADR-016-cp-sat-cho-matching.md) | CP-SAT theo cửa sổ cho matching (+57 % so greedy-ocv, 21 s/100k) | **Accepted** 2026-09-26 | M8 |
-| 017 | Hold cascade là job có checkpoint | Chưa viết | M9 |
+| [017](ADR-017-hold-cascade-la-job-co-checkpoint.md) | Hold cascade là job có checkpoint, mỗi chunk 1.000 unit là một durable command (315k unit 35 s) | **Accepted** 2026-09-26 | M9 |
 | 018 | Package versioning theo Functional Block | Chưa viết | M12 |
 | [019](ADR-019-dotnet-10-lts.md) | Dùng .NET 10 LTS thay vì .NET 9 | **Accepted** 2026-08-26 | M0 · C14 |
 | [020](ADR-020-no-invariant-globalization.md) | Không bật `InvariantGlobalization` | **Accepted** 2026-08-26 | M0 · C14 |
@@ -77,6 +77,7 @@ việc khác.
 | [040](ADR-040-postgres-ingestion-outbox.md) | PostgreSQL outbox cho ingestion, một intent bền vững và delivery at-least-once | **Accepted** 2026-09-23 | M6 |
 | [041](ADR-041-server-derived-manual-submission-key.md) | Backend suy UUIDv5 cho submission nhập tay; client có thể bỏ key | **Accepted** 2026-09-23 | M4 · C07 |
 | [044](ADR-044-mot-aggregate-cho-moi-unit.md) | Mỗi cell/module/pack một aggregate; quan hệ là GenealogyLink (lab 96 cell) | **Accepted** 2026-09-26 | M5 |
+| [045](ADR-045-recipe-material-equipment-m10.md) | Recipe một Active chặn ở DB; luật lot có lý do cụ thể; OEE gộp bằng base | **Accepted** 2026-09-26 | M10 |
 
 Cột **Ra ở** là milestone dự kiến, không phải cam kết. Quyết định đến sớm hơn thì viết sớm hơn.
 

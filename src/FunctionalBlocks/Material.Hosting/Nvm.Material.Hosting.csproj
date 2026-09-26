@@ -8,5 +8,6 @@
     <ProjectReference Include="../Material/Nvm.Material.csproj" />
     <ProjectReference Include="../../Platform/Nvm.CommandStore/Nvm.CommandStore.csproj" />
     <ProjectReference Include="../../Platform/Nvm.EventStore/Nvm.EventStore.csproj" />
+    <EmbeddedResource Include="Migrations/*.sql" />
   </ItemGroup>
 </Project>

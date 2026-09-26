@@ -1,0 +1,47 @@
+{
+  "specversion": "1.0",
+  "id": "c1d2e3f4-a5b6-5c71-9d82-e3f4a5b6c701",
+  "type": "com.novavolt.recipe.recipe-version-approved.v1",
+  "source": "urn:novavolt:nv1:app-execution",
+  "subject": "urn:recipe:recipe:RCP-COAT:v2",
+  "time": "2026-03-12T00:00:00+00:00",
+  "datacontenttype": "application/json",
+  "correlationid": "c1d2e3f4-a5b6-5c71-9d82-e3f4a5b6c701",
+  "causationid": "c1d2e3f4-a5b6-5c71-9d82-e3f4a5b6c701",
+  "partitionkey": "NV1:recipe:RCP-COAT:v2",
+  "data": {
+    "eventId": "c1d2e3f4-a5b6-5c71-9d82-e3f4a5b6c701",
+    "occurredAt": "2026-03-12T00:00:00+00:00",
+    "recordedAt": "2026-03-12T00:00:01+00:00",
+    "siteId": "NV1",
+    "recipeId": "RCP-COAT",
+    "version": 2,
+    "productCode": "NV-P120-NMC",
+    "stepCode": "COAT",
+    "equipmentClass": "COATER",
+    "parameters": [
+      {
+        "name": "WetThickness",
+        "target": 121.0,
+        "min": 119.0,
+        "max": 123.0,
+        "unitOfMeasure": "um"
+      },
+      {
+        "name": "OvenTemperature",
+        "target": 130.0,
+        "min": 125.0,
+        "max": 135.0,
+        "unitOfMeasure": "degC"
+      }
+    ],
+    "effectiveFrom": "2026-03-14T00:00:00+00:00",
+    "contentSha256": "9f2b6c1d0e4a7b3c5d8e1f2a4b6c8d0e2f4a6b8c0d2e4f6a8b0c2d4e6f8a0b2c",
+    "signatureIds": [
+      "SIG-1111222233334444",
+      "SIG-5555666677778888"
+    ],
+    "supersededVersion": 1,
+    "approvedBy": "qa.manager"
+  }
+}

@@ -977,3 +977,10 @@ Kết luận ở [ADR-044](adr/ADR-044-mot-aggregate-cho-moi-unit.md).
 
 `MatchingTests` (NVM_RUN_LABS=1), 16 CPU, dữ liệu tổng hợp `MatchingDataset` (97.371 cell trong bin). greedy 1.546 module 0,65 s; greedy-ocv 4.776 module 0,35 s; cp-sat 7.498 module (7,59 % tồn dư) 21,17 s. Property test 10.000 ca: 0 vi phạm. Lab bỏ MaxDistinctLots (20.000 cell): lot tối đa/module 3 → 8, module/lot TB 98,4 → 102,8. Kết luận ở [ADR-016](adr/ADR-016-cp-sat-cho-matching.md).
 
+## M9 — Hold cascade 3.000 pack (2026-09-26, Claude)
+
+`QualityCascadeScaleLabTests` (NVM_RUN_LABS=1), SQL Server 2022 + PostgreSQL 17 Testcontainers, 16 CPU, một lần chạy mỗi phiên bản. 315.000 unit (3.000 pack), 315 chunk × 1.000. Phiên bản đọc lại stream mỗi chunk: 63,92 s (trượt N9). Phiên bản giữ version trong `CascadeJobs`: **35,35 s** (8.911 unit/s); chạy lại 0 chunk. Seed 306,8 s, ngoài phép đo. **Chưa đo** phần "ingestion không giảm quá 10 %" của N9: cần N1 đã nghiệm thu, rig còn trượt preflight. Kết luận ở [ADR-017](adr/ADR-017-hold-cascade-la-job-co-checkpoint.md).
+
+## M10 — OEE ground truth và cô lập site (2026-09-26, Claude)
+
+Không phải benchmark hiệu năng. `EquipmentOeeTests`: hai line, OEE gộp 0,8003 = 25.930/32.400, trung bình cộng 0,8582. `CrossSiteIsolationHttpTests` + lab bỏ filter site: phát hiện ở aging/due và 7 test POM. Chi tiết ở [ADR-045](adr/ADR-045-recipe-material-equipment-m10.md).

@@ -1,20 +1,15 @@
 using System.Diagnostics;
 using System.Globalization;
 using Microsoft.Data.SqlClient;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
-using Nvm.CommandStore;
 using Nvm.Contracts.Events.ProductionExecution;
 using Nvm.EventStore;
-using Nvm.Kernel;
 using Nvm.Kernel.Commands;
 using Nvm.Kernel.EventSourcing;
-using Nvm.Material.Commands;
-using Nvm.ProductionExecution.Commands;
 using Nvm.ProductionExecution.Hosting;
 using Nvm.ProductionExecution.Ports;
 using Nvm.Quality.Hosting;
@@ -142,25 +137,7 @@ public sealed class FormationAgingScaleLabTests(SqlCommandStoreFixture sql, ITes
     private static BulkStreamEvent Event(string stream, Nvm.Contracts.Events.IDomainEvent value) =>
         new(stream, "formation-aging", DomainEventRecord.Create(value, "urn:lab", "NV1:" + stream, T0));
 
-    private ServiceProvider Build(TimeProvider clock)
-    {
-        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
-        {
-            ["NVM_COMMANDS:ConnectionString"] = sql.ConnectionString,
-            ["NVM_FORMATION:TimeoutWorker"] = "false",
-        }).Build();
-        var services = new ServiceCollection();
-        services.AddLogging();
-        services.AddRouting();
-        services.AddSingleton(clock);
-        services.AddNvmKernel(typeof(RecordRollCoatedCommand).Assembly, typeof(SerializeUnitCommand).Assembly,
-            typeof(ConsumeMaterialCommand).Assembly);
-        services.AddNvmCommandStore(configuration, new LabEnvironment());
-        services.AddNvmTraceability(configuration);
-        services.AddNvmQuality();
-        services.AddNvmProductionExecutionAdapters(configuration);
-        return services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
-    }
+    private ServiceProvider Build(TimeProvider clock) => TestCommandHost.Build(sql.ConnectionString, clock);
 
     private sealed class LabEnvironment : IHostEnvironment
     {

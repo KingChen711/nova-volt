@@ -13,7 +13,7 @@ namespace Nvm.Projections;
 public sealed class ProductionUnitProjectionConsumer(SqlGlobalEventFeed source, ProductionUnitProjectionInbox inbox)
     : IConsumer<ProductionUnitSerialized>, IConsumer<ProcessStepStarted>,
         IConsumer<ProcessStepCompleted>, IConsumer<UnitMeasurementRecorded>, IConsumer<DuplicateSerialDetected>,
-        IConsumer<UnitQuarantined>
+        IConsumer<UnitQuarantined>, IConsumer<UnitScrapped>, IConsumer<UnitReleasedFromQuarantine>
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
@@ -23,6 +23,8 @@ public sealed class ProductionUnitProjectionConsumer(SqlGlobalEventFeed source, 
     public Task Consume(ConsumeContext<UnitMeasurementRecorded> context) => CaptureAsync(context);
     public Task Consume(ConsumeContext<DuplicateSerialDetected> context) => CaptureAsync(context);
     public Task Consume(ConsumeContext<UnitQuarantined> context) => CaptureAsync(context);
+    public Task Consume(ConsumeContext<UnitScrapped> context) => CaptureAsync(context);
+    public Task Consume(ConsumeContext<UnitReleasedFromQuarantine> context) => CaptureAsync(context);
 
     private async Task CaptureAsync<T>(ConsumeContext<T> context) where T : class, IDomainEvent
     {

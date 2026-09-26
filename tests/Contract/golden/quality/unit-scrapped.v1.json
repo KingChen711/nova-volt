@@ -1,0 +1,22 @@
+{
+  "specversion": "1.0",
+  "id": "a8b2c3d4-e5f6-5a71-9b82-c3d4e5f6a708",
+  "type": "com.novavolt.quality.unit-scrapped.v1",
+  "source": "urn:novavolt:nv1:app-execution",
+  "subject": "urn:trace-unit:cell:NV1CL16263A04001",
+  "time": "2026-09-20T00:00:00+00:00",
+  "datacontenttype": "application/json",
+  "correlationid": "a8b2c3d4-e5f6-5a71-9b82-c3d4e5f6a708",
+  "causationid": "a7b2c3d4-e5f6-5a71-9b82-c3d4e5f6a707",
+  "partitionkey": "NV1:NV1CL16263A04001",
+  "data": {
+    "eventId": "a8b2c3d4-e5f6-5a71-9b82-c3d4e5f6a708",
+    "occurredAt": "2026-09-20T00:00:00+00:00",
+    "recordedAt": "2026-09-20T00:00:01+00:00",
+    "siteId": "NV1",
+    "serialNumber": "NV1CL16263A04001",
+    "reasonCode": "MRB_SCRAP",
+    "causeEventId": "a7b2c3d4-e5f6-5a71-9b82-c3d4e5f6a707",
+    "actorId": "qa.manager"
+  }
+}

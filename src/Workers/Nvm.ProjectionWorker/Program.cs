@@ -49,7 +49,7 @@ if (args.Contains("--reconcile", StringComparer.Ordinal))
     await using var store = NpgsqlDataSource.Create(postgresConnection);
     var projection = new ProductionUnitProjection(store, new SqlGlobalEventFeed(sqlConnection));
     var genealogy = new GenealogyProjection(store, new SqlGlobalEventFeed(sqlConnection));
-    var ordered = new OrderedProjectionRunner(store, new SqlGlobalEventFeed(sqlConnection), [new BinInventoryProjection()]);
+    var ordered = new OrderedProjectionRunner(store, new SqlGlobalEventFeed(sqlConnection), [new BinInventoryProjection(), new UnitHoldProjection()]);
     foreach (var site in sites)
     {
         await projection.CatchUpAsync(site);
@@ -75,6 +75,7 @@ builder.Services.AddSingleton(new SqlGlobalEventFeed(sqlConnection));
 builder.Services.AddSingleton<ProductionUnitProjectionInbox>();
 builder.Services.AddSingleton<GenealogyProjectionInbox>();
 builder.Services.AddSingleton<IOrderedProjection, BinInventoryProjection>();
+builder.Services.AddSingleton<IOrderedProjection, UnitHoldProjection>();
 builder.Services.AddSingleton<IGlobalEventFeed>(service => service.GetRequiredService<SqlGlobalEventFeed>());
 builder.Services.AddSingleton<OrderedProjectionRunner>();
 builder.Services.AddHostedService(service => new OrderedProjectionWorker(

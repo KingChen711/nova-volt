@@ -1,6 +1,5 @@
 using System.Collections.Immutable;
 using System.Text.Json;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
@@ -12,11 +11,8 @@ using Nvm.EventStore;
 using Nvm.Grading.Commands;
 using Nvm.Grading.Handlers;
 using Nvm.Grading.Hosting;
-using Nvm.Kernel;
 using Nvm.Kernel.Commands;
 using Nvm.Material.Commands;
-using Nvm.Material.Hosting;
-using Nvm.ProductionExecution.Commands;
 using Nvm.ProductionExecution.Hosting;
 using Nvm.Projections;
 using Nvm.PublicObjectModel;
@@ -134,27 +130,7 @@ public sealed class GradingTests(SqlCommandStoreFixture sql) : IClassFixture<Sql
     private SqlEventStore ReadStore() =>
         new(new SqlCommandSession(), new SqlEventStoreOptions { ConnectionString = sql.ConnectionString }, new EventUpcasterChain([]));
 
-    private ServiceProvider Build(TimeProvider clock)
-    {
-        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
-        {
-            ["NVM_COMMANDS:ConnectionString"] = sql.ConnectionString,
-            ["NVM_FORMATION:TimeoutWorker"] = "false",
-        }).Build();
-        var services = new ServiceCollection();
-        services.AddLogging();
-        services.AddRouting();
-        services.AddSingleton(clock);
-        services.AddNvmKernel(typeof(RecordRollCoatedCommand).Assembly, typeof(SerializeUnitCommand).Assembly,
-            typeof(ConsumeMaterialCommand).Assembly, typeof(GradeUnitCommand).Assembly);
-        services.AddNvmCommandStore(configuration, new TestEnvironment());
-        services.AddNvmTraceability(configuration);
-        services.AddNvmQuality();
-        services.AddNvmMaterial();
-        services.AddNvmGrading();
-        services.AddNvmProductionExecutionAdapters(configuration);
-        return services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
-    }
+    private ServiceProvider Build(TimeProvider clock) => TestCommandHost.Build(sql.ConnectionString, clock);
 
     private static async Task<TResult> Dispatch<TResult>(ServiceProvider provider, ICommand<TResult> command)
     {

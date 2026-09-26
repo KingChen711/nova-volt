@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Nvm.Bus;
 using Nvm.Bus.Outbox;
 using Nvm.CommandStore;
+using Nvm.Equipment.Commands;
+using Nvm.Equipment.Hosting;
 using Nvm.FactoryModel;
 using Nvm.FactoryModel.Commands;
 using Nvm.Grading.Commands;
@@ -16,7 +18,10 @@ using Nvm.Material.Hosting;
 using Nvm.ProductionExecution.Commands;
 using Nvm.ProductionExecution.Hosting;
 using Nvm.PublicObjectModel;
+using Nvm.Quality.Commands;
 using Nvm.Quality.Hosting;
+using Nvm.Recipe.Commands;
+using Nvm.Recipe.Hosting;
 using Nvm.Traceability.Commands;
 using Nvm.Traceability.Hosting;
 using Serilog;
@@ -59,12 +64,16 @@ try
 
     builder.Configuration.AddEnvironmentVariables();
     builder.Services.AddNvmKernel(typeof(ActivateFactoryModelRevisionCommand).Assembly, typeof(RecordDataCollectionCommand).Assembly,
-        typeof(SerializeUnitCommand).Assembly, typeof(ConsumeMaterialCommand).Assembly, typeof(GradeUnitCommand).Assembly);
+        typeof(SerializeUnitCommand).Assembly, typeof(ConsumeMaterialCommand).Assembly, typeof(GradeUnitCommand).Assembly,
+        typeof(PlaceHoldCommand).Assembly, typeof(ApplyRecipeCommand).Assembly,
+        typeof(RegisterEquipmentCommand).Assembly);
     builder.Services.AddNvmCommandStore(builder.Configuration, builder.Environment);
     builder.Services.AddNvmTraceability(builder.Configuration);
-    builder.Services.AddNvmQuality();
+    builder.Services.AddNvmQuality(builder.Configuration);
     builder.Services.AddNvmMaterial();
     builder.Services.AddNvmGrading();
+    builder.Services.AddNvmRecipe();
+    builder.Services.AddNvmEquipment();
     builder.Services.AddNvmPublicObjectModel(builder.Configuration, builder.Environment);
     builder.Services.AddNvmProductionExecutionAdapters(builder.Configuration);
 
@@ -156,6 +165,9 @@ try
     app.MapNvmTraceability();
     app.MapNvmMaterial();
     app.MapNvmGrading();
+    app.MapNvmQuality();
+    app.MapNvmRecipe();
+    app.MapNvmEquipment();
     app.Run();
     return 0;
 }

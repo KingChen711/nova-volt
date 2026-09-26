@@ -1,10 +1,12 @@
 using System.Text.Json.Serialization;
 using Nvm.Contracts.CloudEvents;
+using Nvm.Contracts.Events.Equipment;
 using Nvm.Contracts.Events.FactoryModel;
 using Nvm.Contracts.Events.Grading;
 using Nvm.Contracts.Events.Material;
 using Nvm.Contracts.Events.ProductionExecution;
 using Nvm.Contracts.Events.Quality;
+using Nvm.Contracts.Events.Recipe;
 using Nvm.Contracts.Events.Traceability;
 
 namespace Nvm.Contracts;
@@ -66,4 +68,22 @@ namespace Nvm.Contracts;
 [JsonSerializable(typeof(CloudEventEnvelope<NonConformanceRaised>))]
 [JsonSerializable(typeof(CloudEventEnvelope<GradingRuleSetApproved>))]
 [JsonSerializable(typeof(CloudEventEnvelope<UnitGraded>))]
+[JsonSerializable(typeof(CloudEventEnvelope<QualityHoldPlaced>))]
+[JsonSerializable(typeof(CloudEventEnvelope<HoldCascadeStarted>))]
+[JsonSerializable(typeof(CloudEventEnvelope<UnitsHeldByCascade>))]
+[JsonSerializable(typeof(CloudEventEnvelope<HoldCascadeCompleted>))]
+[JsonSerializable(typeof(CloudEventEnvelope<QualityHoldReleased>))]
+[JsonSerializable(typeof(CloudEventEnvelope<ElectronicSignatureRecorded>))]
+[JsonSerializable(typeof(CloudEventEnvelope<DispositionApplied>))]
+[JsonSerializable(typeof(CloudEventEnvelope<UnitScrapped>))]
+[JsonSerializable(typeof(CloudEventEnvelope<UnitReleasedFromQuarantine>))]
+[JsonSerializable(typeof(CloudEventEnvelope<MaterialLotReceived>))]
+[JsonSerializable(typeof(CloudEventEnvelope<MaterialLotReleased>))]
+[JsonSerializable(typeof(CloudEventEnvelope<MaterialLotOpened>))]
+[JsonSerializable(typeof(CloudEventEnvelope<MaterialOverrideGranted>))]
+[JsonSerializable(typeof(CloudEventEnvelope<RecipeVersionApproved>))]
+[JsonSerializable(typeof(CloudEventEnvelope<RecipeVersionApplied>))]
+[JsonSerializable(typeof(CloudEventEnvelope<EquipmentStateChanged>))]
+[JsonSerializable(typeof(CloudEventEnvelope<EquipmentDowntimeRecorded>))]
+[JsonSerializable(typeof(CloudEventEnvelope<ProductionCountRecorded>))]
 public sealed partial class NvmJsonSerializerContext : JsonSerializerContext;

@@ -10,6 +10,7 @@ public static class MaterialReasonCodes
     public const string InvalidSpan = "INVALID_SPAN";
     public const string QualityHold = "QUALITY_HOLD";
     public const string Scrapped = "SCRAPPED";
+    public const string LotOnHold = "LOT_ON_HOLD";
 }
 
 /// <summary>Lot vật liệu hoặc đoạn cuộn điện cực đi vào một unit (cạnh TRANSFORMATION).</summary>

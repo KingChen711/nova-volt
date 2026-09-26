@@ -1,0 +1,27 @@
+{
+  "specversion": "1.0",
+  "id": "a6b2c3d4-e5f6-5a71-9b82-c3d4e5f6a706",
+  "type": "com.novavolt.quality.electronic-signature-recorded.v1",
+  "source": "urn:novavolt:nv1:app-execution",
+  "subject": "urn:quality:signature:SIG-1111222233334444",
+  "time": "2026-09-20T00:00:00+00:00",
+  "datacontenttype": "application/json",
+  "correlationid": "a6b2c3d4-e5f6-5a71-9b82-c3d4e5f6a706",
+  "causationid": "a6b2c3d4-e5f6-5a71-9b82-c3d4e5f6a706",
+  "partitionkey": "NV1:signature:SIG-1111222233334444",
+  "data": {
+    "eventId": "a6b2c3d4-e5f6-5a71-9b82-c3d4e5f6a706",
+    "occurredAt": "2026-09-20T00:00:00+00:00",
+    "recordedAt": "2026-09-20T00:00:01+00:00",
+    "siteId": "NV1",
+    "signatureId": "SIG-1111222233334444",
+    "subjectType": "QualityHold",
+    "subjectId": "HOLD-A1B2C3D4E5F6",
+    "signerId": "qa.manager",
+    "signerRole": "QualityManager",
+    "meaning": "Approved",
+    "contentSha256": "9b6f1b1a3e2c5d7f8091a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d5e6f7",
+    "previousHash": "0000000000000000000000000000000000000000000000000000000000000000",
+    "hash": "4e1f0c2b3a495867768594a3b2c1d0e0f1a2b3c4d5e6f708192a3b4c5d6e7f80"
+  }
+}

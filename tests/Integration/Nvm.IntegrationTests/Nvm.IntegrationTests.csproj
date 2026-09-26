@@ -27,6 +27,8 @@
     <ProjectReference Include="../../../src/FunctionalBlocks/Traceability.Hosting/Nvm.Traceability.Hosting.csproj" />
     <ProjectReference Include="../../../src/FunctionalBlocks/Quality.Hosting/Nvm.Quality.Hosting.csproj" />
     <ProjectReference Include="../../../src/FunctionalBlocks/Grading.Hosting/Nvm.Grading.Hosting.csproj" />
+    <ProjectReference Include="../../../src/FunctionalBlocks/Recipe.Hosting/Nvm.Recipe.Hosting.csproj" />
+    <ProjectReference Include="../../../src/FunctionalBlocks/Equipment.Hosting/Nvm.Equipment.Hosting.csproj" />
     <ProjectReference Include="../../../src/FunctionalBlocks/Material.Hosting/Nvm.Material.Hosting.csproj" />
     <ProjectReference Include="../../../src/Apps/Nvm.App.Execution/Nvm.App.Execution.csproj" />
     <ProjectReference Include="../../TestAssets/Nvm.CommandStoreProbe/Nvm.CommandStoreProbe.csproj" ReferenceOutputAssembly="false" />

@@ -1,15 +1,11 @@
 using System.Diagnostics;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
-using Nvm.CommandStore;
 using Nvm.EventStore;
-using Nvm.Kernel;
 using Nvm.Kernel.Commands;
-using Nvm.Material.Commands;
 using Nvm.ProductionExecution.Commands;
 using Nvm.ProductionExecution.Hosting;
 using Nvm.Quality.Hosting;
@@ -149,25 +145,7 @@ public sealed class FormationAgingProcessTests(SqlCommandStoreFixture sql, ITest
         await TraceabilityFixtureSeed.PrepareAsync(sql.ConnectionString, Ct);
     }
 
-    private ServiceProvider Build(TimeProvider clock)
-    {
-        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
-        {
-            ["NVM_COMMANDS:ConnectionString"] = sql.ConnectionString,
-            ["NVM_FORMATION:TimeoutWorker"] = "false",
-        }).Build();
-        var services = new ServiceCollection();
-        services.AddLogging();
-        services.AddRouting();
-        services.AddSingleton(clock);
-        services.AddNvmKernel(typeof(RecordRollCoatedCommand).Assembly, typeof(SerializeUnitCommand).Assembly,
-            typeof(ConsumeMaterialCommand).Assembly);
-        services.AddNvmCommandStore(configuration, new Environment());
-        services.AddNvmTraceability(configuration);
-        services.AddNvmQuality();
-        services.AddNvmProductionExecutionAdapters(configuration);
-        return services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
-    }
+    private ServiceProvider Build(TimeProvider clock) => TestCommandHost.Build(sql.ConnectionString, clock);
 
     private static FormationTimeoutWorker Worker(ServiceProvider provider) =>
         new(provider.GetRequiredService<IServiceScopeFactory>(), provider.GetRequiredService<Nvm.ProductionExecution.Ports.IDueTimeoutSource>(),

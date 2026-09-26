@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.Json;
 using Npgsql;
 using Nvm.PublicObjectModel;
+using PomEquipment = Nvm.PublicObjectModel.Equipment;
 
 namespace Nvm.App.Execution;
 
@@ -96,10 +97,10 @@ public static class PomFixtureSeed
             $"POM fixture prepared; inserted {count} equipment, {added.Units} units, {added.Wip} WIP rows. Existing rows and credentials preserved."));
     }
 
-    private static List<Equipment> ReadEquipment(JsonElement source, HashSet<string> requiredPaths)
+    private static List<PomEquipment> ReadEquipment(JsonElement source, HashSet<string> requiredPaths)
     {
         var enterprise = source.GetProperty("enterprise");
-        var result = new List<Equipment>();
+        var result = new List<PomEquipment>();
         foreach (var site in enterprise.GetProperty("children").EnumerateArray())
         {
             var siteId = site.GetProperty("code").GetString()!;
@@ -125,7 +126,7 @@ public static class PomFixtureSeed
                         // Giữ sáu resource C02 và chỉ thêm resource thực sự có unit tham chiếu.
                         if (area.GetProperty("code").GetString() is "PACK" or "MODULE" || requiredPaths.Contains(path))
                         {
-                            result.Add(new Equipment
+                            result.Add(new PomEquipment
                             {
                                 Id = path.Replace('/', '-'),
                                 SiteId = siteId,

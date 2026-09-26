@@ -39,6 +39,7 @@ public sealed class ExecutionCommandHttpFixture : IAsyncLifetime
     private int _appPort;
     public HttpClient Client { get; private set; } = null!;
     public string ConnectionString => _sql.GetConnectionString();
+    public string PostgresConnectionString => _postgres.GetConnectionString();
     public int ProcessId => _process!.Id;
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
@@ -65,6 +66,10 @@ public sealed class ExecutionCommandHttpFixture : IAsyncLifetime
         await Nvm.EventStore.EventSchemaMigrator.UpgradeAsync(ConnectionString, Ct);
         await Nvm.ProductionExecution.Hosting.ProductionExecutionSchemaMigrator.UpgradeAsync(ConnectionString, Ct);
         await Nvm.Quality.Hosting.QualitySchemaMigrator.UpgradeAsync(ConnectionString, Ct);
+        await Nvm.Grading.Hosting.GradingSchemaMigrator.UpgradeAsync(ConnectionString, Ct);
+        await Nvm.Material.Hosting.MaterialSchemaMigrator.UpgradeAsync(ConnectionString, Ct);
+        await Nvm.Recipe.Hosting.RecipeSchemaMigrator.UpgradeAsync(ConnectionString, Ct);
+        await Nvm.Equipment.Hosting.EquipmentSchemaMigrator.UpgradeAsync(ConnectionString, Ct);
         await Nvm.Traceability.Hosting.TraceabilitySchemaMigrator.UpgradeAsync(ConnectionString, Ct);
         PomSchemaMigrator.Upgrade(_postgres.GetConnectionString());
 

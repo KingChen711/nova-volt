@@ -1,0 +1,28 @@
+{
+  "specversion": "1.0",
+  "id": "c2d2e3f4-a5b6-5c71-9d82-e3f4a5b6c702",
+  "type": "com.novavolt.recipe.recipe-version-applied.v1",
+  "source": "urn:novavolt:nv1:app-execution",
+  "subject": "urn:recipe:equipment-recipe:NOVAVOLT/NV1/ELECTRODE/C1/COAT-01",
+  "time": "2026-03-12T00:00:00+00:00",
+  "datacontenttype": "application/json",
+  "correlationid": "c2d2e3f4-a5b6-5c71-9d82-e3f4a5b6c702",
+  "causationid": "c2d2e3f4-a5b6-5c71-9d82-e3f4a5b6c702",
+  "partitionkey": "NV1:equipment-recipe:NOVAVOLT/NV1/ELECTRODE/C1/COAT-01",
+  "data": {
+    "eventId": "c2d2e3f4-a5b6-5c71-9d82-e3f4a5b6c702",
+    "occurredAt": "2026-03-12T00:00:00+00:00",
+    "recordedAt": "2026-03-12T00:00:01+00:00",
+    "siteId": "NV1",
+    "equipmentPath": "NOVAVOLT/NV1/ELECTRODE/C1/COAT-01",
+    "equipmentClass": "COATER",
+    "productCode": "NV-P120-NMC",
+    "stepCode": "COAT",
+    "recipeId": "RCP-COAT",
+    "version": 2,
+    "contentSha256": "9f2b6c1d0e4a7b3c5d8e1f2a4b6c8d0e2f4a6b8c0d2e4f6a8b0c2d4e6f8a0b2c",
+    "operationRunId": "OPRUN-NV1-COAT-0042",
+    "lotId": "ROL-NV1-260314-CT1-001",
+    "actorId": "op.nv1"
+  }
+}

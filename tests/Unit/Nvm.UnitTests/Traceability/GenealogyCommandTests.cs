@@ -84,7 +84,7 @@ public sealed class GenealogyCommandTests
     {
         var events = new MemoryEventStore();
         var units = new Units();
-        var handler = new ConsumeMaterialHandler(events, units, TimeProvider.System);
+        var handler = new ConsumeMaterialHandler(events, units, new Lots(), new NoHolds(), TimeProvider.System);
         (await handler.HandleAsync(Consume("roll-no-span", "Roll", null, null), Ct)).ReasonCode
             .ShouldBe(MaterialReasonCodes.InvalidSpan);
         (await handler.HandleAsync(Consume("lot-with-span", "Lot", 1m, 2m), Ct)).ReasonCode
@@ -143,6 +143,40 @@ public sealed class GenealogyCommandTests
         public Task QuarantineForIncidentAsync(string siteId, string serialNumber, Guid incidentEventId,
             string reasonCode, string actorId, DateTimeOffset occurredAt, CancellationToken cancellationToken) =>
             Task.CompletedTask;
+    }
+
+    private sealed class NoHolds : Nvm.Contracts.Ports.IMaterialHoldCheck
+    {
+        public Task<string?> ActiveHoldAsync(string siteId, string lotKind, string lotId, decimal? spanFromMeter,
+            decimal? spanToMeter, CancellationToken cancellationToken) => Task.FromResult<string?>(null);
+    }
+
+    /// <summary>Kho lot trong RAM: LOT-1 đã release, còn nhiều hàng.</summary>
+    private sealed class Lots : IMaterialLotStore
+    {
+        private Nvm.Material.Entities.MaterialLot _lot = new("LOT-1", "ANODE", 1000m, "m", At.AddDays(-1), null, null, null,
+            Nvm.Material.Entities.LotQuality.Released, 1);
+
+        public Task<Nvm.Material.Entities.MaterialLot?> LoadForUpdateAsync(string siteId, string lotId, CancellationToken cancellationToken) =>
+            Task.FromResult<Nvm.Material.Entities.MaterialLot?>(lotId == _lot.LotId ? _lot : null);
+
+        public Task CreateAsync(string siteId, Nvm.Material.Entities.MaterialLot lot, DateTimeOffset at, CancellationToken cancellationToken) =>
+            Task.CompletedTask;
+
+        public Task UpdateAsync(string siteId, Nvm.Material.Entities.MaterialLot lot, DateTimeOffset at, CancellationToken cancellationToken)
+        {
+            _lot = lot;
+            return Task.CompletedTask;
+        }
+
+        public Task<Nvm.Material.Entities.MaterialLot?> OlderAvailableAsync(string siteId, Nvm.Material.Entities.MaterialLot lot,
+            DateTimeOffset now, CancellationToken cancellationToken) => Task.FromResult<Nvm.Material.Entities.MaterialLot?>(null);
+
+        public Task<IReadOnlyList<Nvm.Material.Entities.MaterialOverride>> OverridesAsync(string siteId, string lotId,
+            CancellationToken cancellationToken) => Task.FromResult<IReadOnlyList<Nvm.Material.Entities.MaterialOverride>>([]);
+
+        public Task AddOverrideAsync(string siteId, Nvm.Material.Entities.MaterialOverride grant, string actorId, DateTimeOffset at,
+            CancellationToken cancellationToken) => Task.CompletedTask;
     }
 
     private sealed class Units : IUnitExecutionContextReader

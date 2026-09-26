@@ -50,10 +50,12 @@ thành đúng cái TSDB nằm cạnh nó.
 | Event | FB phát ra | Ý nghĩa | Version | Đã cài đặt | Golden file | Dự kiến |
 |---|---|---|---|---|---|---|
 | **`FactoryModelRevisionActivated`** | **FactoryModel** | **Một revision của cây ISA-95 vào hiệu lực tại một nhà máy** | **v1** | **✅** | **✅** | **M1** |
-| `MaterialLotReceived` | Material | Nhận lot từ nhà cung cấp | — | ☐ | ☐ | M10 |
-| `MaterialLotReleased` | Quality | Lab đạt → cho phép dùng | — | ☐ | ☐ | M9 |
+| `MaterialLotReceived` | Material | Nhận lot từ nhà cung cấp: số lượng, hạn dùng, giới hạn tiếp xúc; stream `lot:{lotId}` | v1 | ✅ | ✅ | M10 |
+| `MaterialLotReleased` | Material | Lab đạt → cho phép dùng (quyền QaEngineer/QaManager); stream `lot:{lotId}` | v1 | ✅ | ✅ | M10 |
+| `MaterialLotOpened` | Material | Mở bao: đồng hồ tiếp xúc bắt đầu chạy | v1 | ✅ | ✅ | M10 |
+| `MaterialOverrideGranted` | Material | Cho dùng lot vượt một luật (hết hạn, tiếp xúc, FIFO) tới hạn, kèm chữ ký QaManager | v1 | ✅ | ✅ | M10 |
 | `MaterialLotConsumed` | Material | Tiêu hao lot hoặc đoạn cuộn [from, to) vào một unit (cạnh TRANSFORMATION); stream `consumption:{serial}` | v1 | ✅ | ✅ | M6 |
-| `MaterialLotExpired` | Material | Hết shelf life hoặc quá exposure | — | ☐ | ☐ | M10 |
+| ~~`MaterialLotExpired`~~ | Material | Bỏ ở M10: hết hạn/quá tiếp xúc là luật tính lúc tiêu hao từ `ExpiresAt`/`OpenedAt`, không phải một fact xảy ra | — | — | — | M10 |
 | `SlurryBatchProduced` | ProductionExecution | Trộn xong một mẻ | — | ☐ | ☐ | M5 |
 | `RollCoated` | ProductionExecution | Phủ xong, kèm segment map; stream `roll:{rollId}` | v1 | ✅ | ✅ | M6 |
 | `RollSplit` | Traceability | Slitting: mother → daughter + ánh xạ toạ độ | — | ☐ | ☐ | M6 |
@@ -75,16 +77,20 @@ thành đúng cái TSDB nằm cạnh nó.
 | `UnitAssembledInto` | Traceability | cell → module, module → pack; stream `membership:{con}` | v1 | ✅ | ✅ | M6 |
 | `UnitRemovedFrom` | Traceability | Rework: tháo ra | v1 | ✅ | ✅ | M6 |
 | `UnitQuarantined` | Quality | Bị giữ; M5 facet: serial trùng giữ unit trong cùng transaction | v1 | ✅ | ✅ | M9 |
-| `UnitReleasedFromQuarantine` | Quality | Được thả, kèm 2 chữ ký | — | ☐ | ☐ | M9 |
-| `UnitScrapped` | Quality | Loại bỏ | — | ☐ | ☐ | M9 |
+| `UnitReleasedFromQuarantine` | Quality | Thả unit theo quyết định MRB (NewState Released/Rework), kèm fact nguồn | v1 | ✅ | ✅ | M9 |
+| `UnitScrapped` | Quality | MRB loại bỏ; trạng thái cuối | v1 | ✅ | ✅ | M9 |
 | `NonConformanceRaised` | Quality | Mở NCR; idempotent theo fact nguồn; stream `ncr:{ncrId}` | v1 | ✅ | ✅ | M7 (mở), M9 (workflow) |
-| `DispositionApplied` | Quality | MRB ra quyết định | — | ☐ | ☐ | M9 |
-| `HoldCascadeStarted` | Quality | Bắt đầu job lan hold hạ nguồn | — | ☐ | ☐ | M9 |
-| `HoldCascadeCompleted` | Quality | Job lan hold xong | — | ☐ | ☐ | M9 |
-| `RecipeVersionApproved` | Recipe | Duyệt, kèm e-signature | — | ☐ | ☐ | M10 |
-| `RecipeVersionApplied` | ProductionExecution | **Ghi lại version nào đã dùng cho lot nào** | — | ☐ | ☐ | M10 |
-| `EquipmentStateChanged` | Equipment | Chạy / dừng / bảo trì | — | ☐ | ☐ | M10 |
-| `EquipmentDowntimeRecorded` | Equipment | Dừng có lý do | — | ☐ | ☐ | M10 |
+| `DispositionApplied` | Quality | MRB ra quyết định cho NCR, kèm chữ ký đủ vai trò | v1 | ✅ | ✅ | M9 |
+| `HoldCascadeStarted` | Quality | Bắt đầu job lan hold hạ nguồn (đã chốt danh sách unit) | v1 | ✅ | ✅ | M9 |
+| `UnitsHeldByCascade` | Quality | Một chunk tối đa 1.000 unit đã bị giữ | v1 | ✅ | ✅ | M9 |
+| `HoldCascadeCompleted` | Quality | Job lan hold xong | v1 | ✅ | ✅ | M9 |
+| `QualityHoldPlaced` / `QualityHoldReleased` | Quality | Hold trên lot/cuộn/đoạn cuộn/unit; thả cần QualityManager + ProductionManager, không ai là người giữ | v1 | ✅ | ✅ | M9 |
+| `ElectronicSignatureRecorded` | Quality | Chữ ký điện tử nối chuỗi hash của site | v1 | ✅ | ✅ | M9 |
+| `RecipeVersionApproved` | Recipe | Duyệt với chữ ký QaManager + ProductionManager (không ai là người soạn), hiệu lực từ EffectiveFrom; stream `recipe:{id}:v{n}` | v1 | ✅ | ✅ | M10 |
+| `RecipeVersionApplied` | Recipe | **Ghi lại version + hash nào đã dùng cho lần chạy nào trên máy nào**; stream `equipment-recipe:{path}` | v1 | ✅ | ✅ | M10 |
+| `EquipmentStateChanged` | Equipment | Chạy / dừng; dừng phải có lý do là lá của cây lý do; stream `equipment:{path}` | v1 | ✅ | ✅ | M10 |
+| `EquipmentDowntimeRecorded` | Equipment | Lần dừng đã kết thúc, phân loại Planned / Unplanned (≥5 phút) / MicroStop (<5 phút) theo §6.10 | v1 | ✅ | ✅ | M10 |
+| `ProductionCountRecorded` | Equipment | Sản lượng tổng/đạt của máy trong một khoảng, chốt ideal cycle + version lúc ghi | v1 | ✅ | ✅ | M10 |
 | `WorkOrderReleased` | ProductionExecution | ERP đẩy xuống | — | ☐ | ☐ | M11 |
 | `ProductionEolTestPassed` | Quality | Test cuối chuyền đạt | — | ☐ | ☐ | M9 |
 | `PassportPublished` | Passport | DPP được công bố | — | ☐ | ☐ | M12 |

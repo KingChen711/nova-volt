@@ -76,6 +76,7 @@ việc khác.
 | [039](ADR-039-delivery-without-learning-gates.md) | Hoàn thiện các milestone theo gate kỹ thuật, bỏ gate học tập và teach-back | **Accepted** 2026-09-23 | Toàn dự án |
 | [040](ADR-040-postgres-ingestion-outbox.md) | PostgreSQL outbox cho ingestion, một intent bền vững và delivery at-least-once | **Accepted** 2026-09-23 | M6 |
 | [041](ADR-041-server-derived-manual-submission-key.md) | Backend suy UUIDv5 cho submission nhập tay; client có thể bỏ key | **Accepted** 2026-09-23 | M4 · C07 |
+| [044](ADR-044-mot-aggregate-cho-moi-unit.md) | Mỗi cell/module/pack một aggregate; quan hệ là GenealogyLink (lab 96 cell) | **Accepted** 2026-09-26 | M5 |
 
 Cột **Ra ở** là milestone dự kiến, không phải cam kết. Quyết định đến sớm hơn thì viết sớm hơn.
 

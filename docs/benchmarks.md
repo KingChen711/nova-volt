@@ -952,3 +952,16 @@ UserF4 nạp MPK; root thay Data Grid2 bằng widget và giữ nút mở draft q
 - `npm run wip:failure`: abort riêng SDK request trong browser; Disconnected, giữ nguyên4cột/timestamp, bỏ chặn và Retry → Connected/time mới, exit0.
 - `npm run wip:backend-down -- --capture`: dừng đúng nvm-execution; WIPDisconnected và giữ2nhóm/time cũ, start/healthready rồiRetry → Connected/time mới, exit0. Sau lab dockerinspect xác nhận runninghealthy; không sửa DB/seed/model trong lab.
 - Mỗi context đã gọi logout có xác nhận HTTP200 trước đóng, không tiếp tục lỗi trialsession trong các lượt này. Ảnh QA local tại output/playwright/wip (gitignored). Không dùng các lượt nhỏ này kết luận p95<1,5s hoặc nghiệm thu M4 toàn bộ.
+
+## M5 — Lab ranh giới aggregate, 96 cell đồng thời (2026-09-26, Claude)
+
+Commit `2fffdf2` + test `AggregateBoundaryLabTests` (chạy với `NVM_RUN_LABS=1`). SQL Server 2022 Testcontainers, Docker Desktop 16 CPU / 8 GB. 480 command/biến thể, mỗi command replay stream rồi append qua claim idempotency thật. Một lần chạy.
+
+| Biến thể | Xung đột | p50 ms | p95 ms | p99 ms | Wall s | Event replay |
+|---|---:|---:|---:|---:|---:|---:|
+| Một aggregate pack, đọc có khoá | 0 | 427,7 | 6.977,8 | 8.759,9 | 11,07 | 114.960 |
+| Một aggregate pack, optimistic + retry | 27.520 | 449,1 | 108.397,9 | 143.737,2 | 149,84 | 4.951.982 |
+| Mỗi cell một stream + link riêng | 0 | 37,5 | 1.302,8 | 1.732,5 | 2,00 | 960 |
+
+Kết luận ở [ADR-044](adr/ADR-044-mot-aggregate-cho-moi-unit.md).
+

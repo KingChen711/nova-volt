@@ -27,6 +27,7 @@
   <ItemGroup>
     <PackageReference Include="MassTransit" />
     <PackageReference Include="Microsoft.Data.SqlClient" />
+    <EmbeddedResource Include="Migrations/*.sql" />
   </ItemGroup>
 
 </Project>

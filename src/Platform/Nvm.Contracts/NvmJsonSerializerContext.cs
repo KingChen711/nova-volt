@@ -56,4 +56,11 @@ namespace Nvm.Contracts;
 [JsonSerializable(typeof(CloudEventEnvelope<GenealogyCorrectionRecorded>))]
 [JsonSerializable(typeof(CloudEventEnvelope<MaterialLotConsumed>))]
 [JsonSerializable(typeof(CloudEventEnvelope<RollCoated>))]
+[JsonSerializable(typeof(CloudEventEnvelope<FormationRunStarted>))]
+[JsonSerializable(typeof(CloudEventEnvelope<FormationRunCompleted>))]
+[JsonSerializable(typeof(CloudEventEnvelope<AgingStarted>))]
+[JsonSerializable(typeof(CloudEventEnvelope<AgingPeriodElapsed>))]
+[JsonSerializable(typeof(CloudEventEnvelope<OcvDriftEvaluated>))]
+[JsonSerializable(typeof(CloudEventEnvelope<FormationProcessFaulted>))]
+[JsonSerializable(typeof(CloudEventEnvelope<NonConformanceRaised>))]
 public sealed partial class NvmJsonSerializerContext : JsonSerializerContext;

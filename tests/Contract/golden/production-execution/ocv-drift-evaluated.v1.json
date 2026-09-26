@@ -1,0 +1,25 @@
+{
+  "specversion": "1.0",
+  "id": "85a2b3c4-d5e6-5f70-8a91-b2c3d4e5f605",
+  "type": "com.novavolt.production-execution.ocv-drift-evaluated.v1",
+  "source": "urn:novavolt:nv1:app-execution",
+  "subject": "urn:trace-unit:cell:NV1CL16244A01001",
+  "time": "2026-09-01T06:00:00+00:00",
+  "datacontenttype": "application/json",
+  "correlationid": "85a2b3c4-d5e6-5f70-8a91-b2c3d4e5f605",
+  "causationid": "85a2b3c4-d5e6-5f70-8a91-b2c3d4e5f605",
+  "partitionkey": "NV1:NV1CL16244A01001",
+  "data": {
+    "eventId": "85a2b3c4-d5e6-5f70-8a91-b2c3d4e5f605",
+    "occurredAt": "2026-09-01T06:00:00+00:00",
+    "recordedAt": "2026-09-01T06:00:01+00:00",
+    "siteId": "NV1",
+    "serialNumber": "NV1CL16244A01001",
+    "ocv1Millivolt": 4150.0,
+    "ocv2Millivolt": 4131.0,
+    "driftMillivolt": 19.0,
+    "limitMillivolt": 15,
+    "passed": false,
+    "actorId": "op.nv1"
+  }
+}

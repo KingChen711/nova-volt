@@ -965,3 +965,11 @@ Commit `2fffdf2` + test `AggregateBoundaryLabTests` (chạy với `NVM_RUN_LABS=
 
 Kết luận ở [ADR-044](adr/ADR-044-mot-aggregate-cho-moi-unit.md).
 
+## M6 — Genealogy 100k cell (2026-09-26, Claude)
+
+`GenealogyScaleLabTests` (NVM_RUN_LABS=1), SQL Server 2022 + PostgreSQL 17 Testcontainers. 100.000 cell / 8.000 module / 1.000 pack, 504.200 event, 504.000 cạnh, closure 636.407 dòng (117 MB). Seed 184,6 s; rebuild 65,8 s. 200 mẫu mỗi truy vấn: forward closure p95 2,28 ms (CTE 211,17 ms); backward closure p95 1,62 ms (CTE 3,91 ms); span cuộn p95 2,47 ms. Kết luận ở [ADR-006](adr/ADR-006-closure-table-cho-forward-trace.md).
+
+## M7 — Saga formation/aging (2026-09-26, Claude)
+
+`FormationAgingProcessTests`: 12,04 ngày ảo trong 563–582 ms. `FormationAgingScaleLabTests` (NVM_RUN_LABS=1), 30.000 cell Aging: poll không có hạn p95 0,94 ms; rack/level 100 dòng 67 ms; xả 30.000 timeout tuần tự 54/s (operator p95 28 ms), song song 8 là 301/s trong 99,6 s (operator p95 39,3 ms). Kết luận ở [ADR-015](adr/ADR-015-saga-formation-aging-timeout-ben-trong-sql.md).
+

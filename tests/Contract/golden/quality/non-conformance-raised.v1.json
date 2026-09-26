@@ -1,0 +1,25 @@
+{
+  "specversion": "1.0",
+  "id": "87a2b3c4-d5e6-5f70-8a91-b2c3d4e5f607",
+  "type": "com.novavolt.quality.non-conformance-raised.v1",
+  "source": "urn:novavolt:nv1:app-execution",
+  "subject": "urn:ncr:NCR-84A2B3C4D5E65F708A91B2C3D4E5F604",
+  "time": "2026-09-01T06:00:00+00:00",
+  "datacontenttype": "application/json",
+  "correlationid": "87a2b3c4-d5e6-5f70-8a91-b2c3d4e5f607",
+  "causationid": "85a2b3c4-d5e6-5f70-8a91-b2c3d4e5f605",
+  "partitionkey": "NV1:NCR-84A2B3C4D5E65F708A91B2C3D4E5F604",
+  "data": {
+    "eventId": "87a2b3c4-d5e6-5f70-8a91-b2c3d4e5f607",
+    "occurredAt": "2026-09-01T06:00:00+00:00",
+    "recordedAt": "2026-09-01T06:00:01+00:00",
+    "siteId": "NV1",
+    "ncrId": "NCR-84A2B3C4D5E65F708A91B2C3D4E5F604",
+    "serialNumber": "NV1CL16244A01001",
+    "reasonCode": "OCV_DRIFT",
+    "description": "OCV drift 19 mV > 15 mV sau aging.",
+    "source": "formation-aging",
+    "sourceEventId": "85a2b3c4-d5e6-5f70-8a91-b2c3d4e5f605",
+    "actorId": "op.nv1"
+  }
+}

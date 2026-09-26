@@ -23,6 +23,13 @@ public sealed class DomainEventGoldenTests
         { "traceability/genealogy-correction-recorded.v1.json", typeof(CloudEventEnvelope<GenealogyCorrectionRecorded>) },
         { "material/material-lot-consumed.v1.json", typeof(CloudEventEnvelope<MaterialLotConsumed>) },
         { "production-execution/roll-coated.v1.json", typeof(CloudEventEnvelope<RollCoated>) },
+        { "production-execution/formation-run-started.v1.json", typeof(CloudEventEnvelope<FormationRunStarted>) },
+        { "production-execution/formation-run-completed.v1.json", typeof(CloudEventEnvelope<FormationRunCompleted>) },
+        { "production-execution/aging-started.v1.json", typeof(CloudEventEnvelope<AgingStarted>) },
+        { "production-execution/aging-period-elapsed.v1.json", typeof(CloudEventEnvelope<AgingPeriodElapsed>) },
+        { "production-execution/ocv-drift-evaluated.v1.json", typeof(CloudEventEnvelope<OcvDriftEvaluated>) },
+        { "production-execution/formation-process-faulted.v1.json", typeof(CloudEventEnvelope<FormationProcessFaulted>) },
+        { "quality/non-conformance-raised.v1.json", typeof(CloudEventEnvelope<NonConformanceRaised>) },
     };
 
     [Theory]

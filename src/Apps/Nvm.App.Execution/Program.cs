@@ -47,6 +47,7 @@ if (args.Contains("--migrate-commands", StringComparer.Ordinal))
     var migrationConnectionString = builder.Configuration["NVM_COMMANDS:MigrationConnectionString"]
         ?? throw new InvalidOperationException("NVM_COMMANDS:MigrationConnectionString is required.");
     await CommandSchemaMigrator.UpgradeAsync(migrationConnectionString);
+    await ProductionExecutionSchemaMigrator.UpgradeAsync(migrationConnectionString);
     await QualitySchemaMigrator.UpgradeAsync(migrationConnectionString);
     await TraceabilitySchemaMigrator.UpgradeAsync(migrationConnectionString);
     await Nvm.EventStore.EventSchemaMigrator.UpgradeAsync(migrationConnectionString);
@@ -63,6 +64,7 @@ if (args.Contains("--prepare-command-fixture", StringComparer.Ordinal))
     var migrationConnectionString = builder.Configuration["NVM_COMMANDS:MigrationConnectionString"]
         ?? throw new InvalidOperationException("NVM_COMMANDS:MigrationConnectionString is required.");
     await CommandContextFixtureSeed.PrepareAsync(migrationConnectionString);
+    await ProductionExecutionSchemaMigrator.UpgradeAsync(migrationConnectionString);
     await QualitySchemaMigrator.UpgradeAsync(migrationConnectionString);
     await TraceabilitySchemaMigrator.UpgradeAsync(migrationConnectionString);
     await Nvm.EventStore.EventSchemaMigrator.UpgradeAsync(migrationConnectionString);

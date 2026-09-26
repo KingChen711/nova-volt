@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Nvm.Contracts.Ports;
 using Nvm.Contracts.Queries;
 
 namespace Nvm.Quality.Hosting;
@@ -11,6 +12,7 @@ public static class QualityRegistration
     {
         ArgumentNullException.ThrowIfNull(services);
         services.TryAddScoped<IUnitQualityFacet, SqlUnitQualityFacet>();
+        services.TryAddScoped<IQualityIncidents, SqlQualityIncidents>();
         return services;
     }
 }

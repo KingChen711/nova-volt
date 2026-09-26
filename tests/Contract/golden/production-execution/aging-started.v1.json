@@ -1,0 +1,26 @@
+{
+  "specversion": "1.0",
+  "id": "83a2b3c4-d5e6-5f70-8a91-b2c3d4e5f603",
+  "type": "com.novavolt.production-execution.aging-started.v1",
+  "source": "urn:novavolt:nv1:app-execution",
+  "subject": "urn:trace-unit:cell:NV1CL16244A01001",
+  "time": "2026-09-01T06:00:00+00:00",
+  "datacontenttype": "application/json",
+  "correlationid": "83a2b3c4-d5e6-5f70-8a91-b2c3d4e5f603",
+  "causationid": "83a2b3c4-d5e6-5f70-8a91-b2c3d4e5f603",
+  "partitionkey": "NV1:NV1CL16244A01001",
+  "data": {
+    "eventId": "83a2b3c4-d5e6-5f70-8a91-b2c3d4e5f603",
+    "occurredAt": "2026-09-01T06:00:00+00:00",
+    "recordedAt": "2026-09-01T06:00:01+00:00",
+    "siteId": "NV1",
+    "serialNumber": "NV1CL16244A01001",
+    "ocv1Millivolt": 4150.0,
+    "trayId": "TRAY-0042",
+    "rackId": "A-12",
+    "level": 3,
+    "channel": 7,
+    "agingDueAt": "2026-09-11T06:00:00+00:00",
+    "actorId": "op.nv1"
+  }
+}

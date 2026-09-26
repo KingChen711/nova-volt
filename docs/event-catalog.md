@@ -64,16 +64,19 @@ thành đúng cái TSDB nằm cạnh nó.
 | `ProcessStepCompleted` | Traceability ([ADR-042](adr/ADR-042-unit-event-ownership.md)) | Kết thúc operation run đã ghi nhận actual riêng | v1 | ✅ | ✅ | M5 |
 | `DataCollectionRecorded` | ProductionExecution | Kết quả do người vận hành nhập đã được ghi nhận; không kết luận hoàn tất bước hay đạt chất lượng ([ADR-038](adr/ADR-038-data-collection-thu-cong-o-m4.md)) | v1 | ✅ | ✅ | M4 · C06 |
 | **`MeasurementRecorded`** | **Quality** | **OCV, ACIR, torque, áp suất hàn… — giá trị ĐÃ ĐÁNH GIÁ, không phải đường cong thô** | **v1** | **✅** | **✅** | **M2** ¹ |
-| `FormationRunStarted` | ProductionExecution | Vào máy formation, gắn tray/channel | — | ☐ | ☐ | M7 |
-| `FormationRunCompleted` | ProductionExecution | Xong, kèm summary + URI đường cong | — | ☐ | ☐ | M7 |
-| `AgingPeriodElapsed` | ProductionExecution | Saga timeout — đủ ngày aging | — | ☐ | ☐ | M7 |
+| `FormationRunStarted` | ProductionExecution | Vào máy formation, gắn tray/channel, kèm hạn 36 giờ; stream `formation:{serial}` | v1 | ✅ | ✅ | M7 |
+| `FormationRunCompleted` | ProductionExecution | Xong, kèm dung lượng + URI đường cong | v1 | ✅ | ✅ | M7 |
+| `AgingStarted` | ProductionExecution | Degas xong, OCV lần 1, vị trí rack/level/channel, hạn 10 ngày | v1 | ✅ | ✅ | M7 |
+| `AgingPeriodElapsed` | ProductionExecution | Saga timeout — đủ ngày aging | v1 | ✅ | ✅ | M7 |
+| `OcvDriftEvaluated` | ProductionExecution | So OCV2 với OCV1; drift > 15 mV → Quality giữ cell + NCR | v1 | ✅ | ✅ | M7 |
+| `FormationProcessFaulted` | ProductionExecution | Quá trình dừng lỗi, ví dụ quá hạn formation 36 giờ | v1 | ✅ | ✅ | M7 |
 | `UnitGraded` | Grading | Gán bin sau grading | — | ☐ | ☐ | M8 |
 | `UnitAssembledInto` | Traceability | cell → module, module → pack; stream `membership:{con}` | v1 | ✅ | ✅ | M6 |
 | `UnitRemovedFrom` | Traceability | Rework: tháo ra | v1 | ✅ | ✅ | M6 |
 | `UnitQuarantined` | Quality | Bị giữ; M5 facet: serial trùng giữ unit trong cùng transaction | v1 | ✅ | ✅ | M9 |
 | `UnitReleasedFromQuarantine` | Quality | Được thả, kèm 2 chữ ký | — | ☐ | ☐ | M9 |
 | `UnitScrapped` | Quality | Loại bỏ | — | ☐ | ☐ | M9 |
-| `NonConformanceRaised` | Quality | Mở NCR | — | ☐ | ☐ | M9 |
+| `NonConformanceRaised` | Quality | Mở NCR; idempotent theo fact nguồn; stream `ncr:{ncrId}` | v1 | ✅ | ✅ | M7 (mở), M9 (workflow) |
 | `DispositionApplied` | Quality | MRB ra quyết định | — | ☐ | ☐ | M9 |
 | `HoldCascadeStarted` | Quality | Bắt đầu job lan hold hạ nguồn | — | ☐ | ☐ | M9 |
 | `HoldCascadeCompleted` | Quality | Job lan hold xong | — | ☐ | ☐ | M9 |

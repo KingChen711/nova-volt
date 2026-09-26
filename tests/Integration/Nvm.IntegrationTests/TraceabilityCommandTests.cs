@@ -13,6 +13,7 @@ using Nvm.CommandStore;
 using Nvm.EventStore;
 using Nvm.Kernel.Commands;
 using Nvm.Kernel.Commands.Idempotency;
+using Nvm.Quality.Hosting;
 using Nvm.Traceability.Commands;
 using Nvm.Traceability.Handlers;
 using Nvm.Traceability.Hosting;
@@ -29,6 +30,7 @@ public sealed class TraceabilityCommandTests(SqlCommandStoreFixture fixture) : I
     public async Task CommandContext_LocksExecutionAndQuality_UntilCallerCommits()
     {
         await EventSchemaMigrator.UpgradeAsync(fixture.ConnectionString, Ct);
+        await QualitySchemaMigrator.UpgradeAsync(fixture.ConnectionString, Ct);
         await TraceabilitySchemaMigrator.UpgradeAsync(fixture.ConnectionString, Ct);
         await fixture.ExecuteAsync("""
             INSERT INTO traceability.Routes (SiteId, ProductCode, RoutingVersion, StepsJson, TransitionsJson)
@@ -42,11 +44,11 @@ public sealed class TraceabilityCommandTests(SqlCommandStoreFixture fixture) : I
         var claim = SqlCommandStoreFixture.NewCommand("NV1", "operator", "context-lock", "context-lock");
         await fixture.SubmitAsync(claim, async session =>
         {
-            var context = await new SqlUnitExecutionContextReader(session, Store(session)).ReadForCommandAsync(serial, Ct);
+            var context = await new SqlUnitExecutionContextReader(session, Store(session), Facet(session)).ReadForCommandAsync(serial, Ct);
             context.ShouldNotBeNull();
             context.ExecutionState.ShouldBe("Scheduled");
             context.QualityState.ShouldBe("Pending");
-            (await new SqlUnitExecutionContextReader(session, Store(session)).ReadForCommandAsync("DE1CL16238A54323", Ct)).ShouldBeNull();
+            (await new SqlUnitExecutionContextReader(session, Store(session), Facet(session)).ReadForCommandAsync("DE1CL16238A54323", Ct)).ShouldBeNull();
             await using var competitor = new SqlConnection(fixture.ConnectionString);
             await competitor.OpenAsync(Ct);
             using var change = new SqlCommand("""
@@ -54,9 +56,11 @@ public sealed class TraceabilityCommandTests(SqlCommandStoreFixture fixture) : I
                 WHERE SiteId = 'NV1' AND StreamId = 'NV1CL16238A54323';
                 """, competitor);
             (await Should.ThrowAsync<SqlException>(() => change.ExecuteNonQueryAsync(Ct))).Number.ShouldBe(1222);
+            // Facet chất lượng chưa có dòng (Pending): range lock vẫn chặn một hold chen vào giữa.
             change.CommandText = """
-                UPDATE traceability.SerialReservations WITH (NOWAIT) SET QualityState = QualityState
-                WHERE SiteId = 'NV1' AND SerialNumber = 'NV1CL16238A54323';
+                INSERT INTO quality.UnitQuality WITH (NOWAIT)
+                    (SiteId, SerialNumber, QualityState, ReasonCode, StreamVersion, LastEventId, UpdatedAt)
+                VALUES ('NV1', 'NV1CL16238A54323', 'Held', 'TEST', 0, NEWID(), SYSDATETIMEOFFSET());
                 """;
             (await Should.ThrowAsync<SqlException>(() => change.ExecuteNonQueryAsync(Ct))).Number.ShouldBe(1222);
             return new CollectionOutcome(true, "locked");
@@ -64,7 +68,7 @@ public sealed class TraceabilityCommandTests(SqlCommandStoreFixture fixture) : I
         await fixture.ExecuteAsync("""
             UPDATE es.Streams WITH (NOWAIT) SET Version = Version
             WHERE SiteId = 'NV1' AND StreamId = 'NV1CL16238A54323';
-            UPDATE traceability.SerialReservations WITH (NOWAIT) SET QualityState = QualityState
+            SELECT COUNT(*) FROM quality.UnitQuality WITH (NOWAIT)
             WHERE SiteId = 'NV1' AND SerialNumber = 'NV1CL16238A54323';
             """, _ => { }, Ct);
     }
@@ -73,6 +77,7 @@ public sealed class TraceabilityCommandTests(SqlCommandStoreFixture fixture) : I
     public async Task DuplicateSerialization_CommitsIncidentHoldAndOutcomeTogether()
     {
         await EventSchemaMigrator.UpgradeAsync(fixture.ConnectionString, Ct);
+        await QualitySchemaMigrator.UpgradeAsync(fixture.ConnectionString, Ct);
         await TraceabilitySchemaMigrator.UpgradeAsync(fixture.ConnectionString, Ct);
         await SeedRouteAsync();
         var first = new SerializeUnitCommand("NV1", "operator", "birth", Serial, At,
@@ -95,9 +100,11 @@ public sealed class TraceabilityCommandTests(SqlCommandStoreFixture fixture) : I
         (await ReadStore().ReadStreamAsync("NV1", "duplicate:physical-second", Ct))!.Version.ShouldBe(1);
         (await ReadStore().ReadStreamAsync("DE1", Serial, Ct)).ShouldBeNull();
         (await fixture.ScalarAsync("""
-            SELECT QualityState FROM traceability.SerialReservations
+            SELECT QualityState + ':' + ReasonCode FROM quality.UnitQuality
             WHERE SiteId = 'NV1' AND SerialNumber = 'NV1CL16238A54321';
-            """, _ => { }, Ct)).ShouldBe("Held");
+            """, _ => { }, Ct)).ShouldBe("Held:DUPLICATE_SERIAL");
+        // Facet phát đúng một UnitQuarantined trên stream của Quality, kể cả khi command được replay.
+        (await ReadStore().ReadStreamAsync("NV1", "quality:" + Serial, Ct))!.Version.ShouldBe(1);
         (await fixture.ScalarAsync("""
             SELECT CONVERT(varchar(10), COUNT(*)) FROM traceability.DuplicateSerialIncidents
             WHERE SiteId = 'NV1' AND SerialNumber = 'NV1CL16238A54321';
@@ -147,6 +154,7 @@ public sealed class TraceabilityCommandTests(SqlCommandStoreFixture fixture) : I
     public async Task DemoRoute_SeedsIdempotently_AndRunsSerializedStepWithMeasurement()
     {
         await EventSchemaMigrator.UpgradeAsync(fixture.ConnectionString, Ct);
+        await QualitySchemaMigrator.UpgradeAsync(fixture.ConnectionString, Ct);
         (await TraceabilityFixtureSeed.PrepareAsync(fixture.ConnectionString, Ct)).ShouldBe(4);
         (await TraceabilityFixtureSeed.PrepareAsync(fixture.ConnectionString, Ct)).ShouldBe(0);
         const string serial = "NV1CL16238A54322";
@@ -198,13 +206,16 @@ public sealed class TraceabilityCommandTests(SqlCommandStoreFixture fixture) : I
         var store = new SqlIdempotencyStore(session, fixture.Options(), fixture.SharedInMemory);
         var behavior = new IdempotencyBehavior<TCommand, UnitCommandResult>(store, TimeProvider.System);
         var events = Store(session);
-        var adapters = new SqlTraceabilityAdapters(session);
+        var facet = Facet(session);
+        var adapters = new SqlTraceabilityAdapters(session, facet);
         var processor = new TraceabilityCommandProcessor(events, adapters, adapters, adapters,
-            adapters, TimeProvider.System);
+            adapters, facet, TimeProvider.System);
         return await behavior.HandleAsync(command, () => handle(processor, command), Ct);
     }
 
     private SqlEventStore ReadStore() => Store(new SqlCommandSession());
+
+    private SqlUnitQualityFacet Facet(SqlCommandSession session) => new(session, Store(session), TimeProvider.System);
 
     private SqlEventStore Store(SqlCommandSession session) =>
         new(session, new SqlEventStoreOptions { ConnectionString = fixture.ConnectionString },

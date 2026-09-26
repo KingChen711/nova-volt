@@ -63,6 +63,7 @@ public sealed class ExecutionCommandHttpFixture : IAsyncLifetime
         }
         await CommandContextFixtureSeed.PrepareAsync(ConnectionString, Ct);
         await Nvm.EventStore.EventSchemaMigrator.UpgradeAsync(ConnectionString, Ct);
+        await Nvm.Quality.Hosting.QualitySchemaMigrator.UpgradeAsync(ConnectionString, Ct);
         await Nvm.Traceability.Hosting.TraceabilitySchemaMigrator.UpgradeAsync(ConnectionString, Ct);
         PomSchemaMigrator.Upgrade(_postgres.GetConnectionString());
 

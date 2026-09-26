@@ -30,6 +30,8 @@ Quy tắc báo cáo ở **§5.8**. Nội dung dạy học có thể thực hiệ
 
 Agent nhận toàn bộ phần việc còn lại. Không phải tạo plan riêng cho từng milestone, không chia tiến độ thành lượt chờ theo từng commit. Dùng scope/DoD và plan hiện có làm tham chiếu; giữ tracker ngắn, triển khai và kiểm chứng liên tục. Chỉ nhờ chủ repo thực hiện thao tác Mendix không có công cụ hỗ trợ, hoặc cung cấp quyền truy cập/quyết định contract cứng thật sự thiếu. Agent được tự commit/push theo §1.1.
 
+Bổ sung 2026-09-26: làm theo cách của agent, không theo nhịp người học. Gom việc thành lô lớn, không lập kế hoạch chi tiết theo từng commit, và **không bắt buộc đúng thứ tự milestone**. Ví dụ: hoàn thiện backend M5–M13 trước, dựng màn hình Mendix sau khi contract POM/Command API đã ổn định. DoD, K1–K13 và yêu cầu bằng chứng giữ nguyên.
+
 ## 1. Quy tắc tuyệt đối — không có ngoại lệ
 
 ### 1.1 Agent được tự commit và push

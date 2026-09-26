@@ -54,8 +54,9 @@ public sealed class ProductionUnitProjectionInbox(NpgsqlDataSource dataSource)
             SELECT i.fact::text
             FROM rm.unit_projection_inbox i
             LEFT JOIN rm.unit_current u ON u.site_id = i.site_id AND u.serial_number = i.stream_id
+            LEFT JOIN rm.unit_quality q ON q.site_id = i.site_id AND 'quality:' || q.serial_number = i.stream_id
             WHERE i.site_id = @site AND NOT i.applied
-                AND i.stream_version <= coalesce(u.stream_version, 0) + 1
+                AND i.stream_version <= coalesce(u.stream_version, q.stream_version, 0) + 1
             ORDER BY i.global_sequence LIMIT @limit
             FOR UPDATE OF i;
             """, connection, transaction))

@@ -2,6 +2,7 @@ using System.Text.Json;
 using Npgsql;
 using NpgsqlTypes;
 using Nvm.Contracts.Events;
+using Nvm.Contracts.Events.Quality;
 using Nvm.Contracts.Events.Traceability;
 using Nvm.Kernel.EventSourcing;
 using Nvm.Kernel.Identity;
@@ -17,6 +18,8 @@ public sealed class ProductionUnitProjection(NpgsqlDataSource dataSource, IGloba
     private const string Completed = "com.novavolt.traceability.process-step-completed.v1";
     private const string Measurement = "com.novavolt.traceability.unit-measurement-recorded.v1";
     private const string DuplicateSerial = "com.novavolt.traceability.duplicate-serial-detected.v1";
+    private const string Quarantined = "com.novavolt.quality.unit-quarantined.v1";
+    internal const string QualityStreamPrefix = "quality:";
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
     /// <summary>
@@ -102,7 +105,7 @@ public sealed class ProductionUnitProjection(NpgsqlDataSource dataSource, IGloba
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
         await LockCheckpointAsync(connection, transaction, siteId, cancellationToken).ConfigureAwait(false);
         await using (var clear = new NpgsqlCommand(
-            "DELETE FROM rm.unit_current WHERE site_id = @site; DELETE FROM rm.unit_duplicate_hold WHERE site_id = @site;", connection, transaction))
+            "DELETE FROM rm.unit_current WHERE site_id = @site; DELETE FROM rm.unit_duplicate_hold WHERE site_id = @site; DELETE FROM rm.unit_quality WHERE site_id = @site;", connection, transaction))
         {
             clear.Parameters.AddWithValue("site", siteId);
             await clear.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
@@ -228,11 +231,55 @@ public sealed class ProductionUnitProjection(NpgsqlDataSource dataSource, IGloba
                     await hold.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
                     break;
                 }
+            case Quarantined:
+                {
+                    var held = Read<UnitQuarantined>(fact);
+                    if (held.SiteId != fact.SiteId || fact.StreamId != QualityStreamPrefix + held.SerialNumber ||
+                        SerialNumber.Parse(held.SerialNumber).SiteCode != fact.SiteId)
+                    { throw new InvalidDataException("Quality event belongs to another site or stream."); }
+                    await ApplyQualityAsync(connection, transaction, fact, held.SerialNumber, "Held",
+                        held.ReasonCode, cancellationToken).ConfigureAwait(false);
+                    break;
+                }
             default:
-                if (fact.EventType.StartsWith("com.novavolt.traceability.", StringComparison.Ordinal))
+                if (fact.EventType.StartsWith("com.novavolt.traceability.", StringComparison.Ordinal) ||
+                    fact.EventType.StartsWith("com.novavolt.quality.unit-", StringComparison.Ordinal))
                 { throw new InvalidDataException($"Unsupported traceability event: {fact.EventType}."); }
                 break;
         }
+    }
+
+    /// <summary>Facet stream của Quality có version riêng; bỏ qua bản đã áp dụng, chặn khoảng trống.</summary>
+    private static async Task ApplyQualityAsync(NpgsqlConnection connection, NpgsqlTransaction transaction,
+        StoredStreamEvent fact, string serialNumber, string state, string? reason, CancellationToken cancellationToken)
+    {
+        await using (var current = new NpgsqlCommand("""
+            SELECT stream_version FROM rm.unit_quality
+            WHERE site_id = @site AND serial_number = @serial FOR UPDATE;
+            """, connection, transaction))
+        {
+            current.Parameters.AddWithValue("site", fact.SiteId);
+            current.Parameters.AddWithValue("serial", serialNumber);
+            var version = (long?)await current.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false) ?? 0;
+            if (version >= fact.Version)
+            { return; }
+            if (version != fact.Version - 1)
+            { throw new InvalidDataException("Quality stream version has a gap."); }
+        }
+        await using var upsert = new NpgsqlCommand("""
+            INSERT INTO rm.unit_quality(site_id, serial_number, quality_state, reason_code, stream_version, last_global_seq)
+            VALUES (@site, @serial, @state, @reason, @version, @seq)
+            ON CONFLICT (site_id, serial_number) DO UPDATE SET quality_state = excluded.quality_state,
+                reason_code = excluded.reason_code, stream_version = excluded.stream_version,
+                last_global_seq = excluded.last_global_seq;
+            """, connection, transaction);
+        upsert.Parameters.AddWithValue("site", fact.SiteId);
+        upsert.Parameters.AddWithValue("serial", serialNumber);
+        upsert.Parameters.AddWithValue("state", state);
+        upsert.Parameters.AddWithValue("reason", (object?)reason ?? DBNull.Value);
+        upsert.Parameters.AddWithValue("version", fact.Version);
+        upsert.Parameters.AddWithValue("seq", fact.GlobalSequence);
+        await upsert.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
     }
 
     private static T Read<T>(StoredStreamEvent fact) where T : IDomainEvent

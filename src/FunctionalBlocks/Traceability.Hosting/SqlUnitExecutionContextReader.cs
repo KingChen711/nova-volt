@@ -7,7 +7,8 @@ using Nvm.Traceability.Entities;
 namespace Nvm.Traceability.Hosting;
 
 /// <summary>Replay bằng domain của chủ unit; giữ lock SQL tới commit của command gọi qua Contracts.</summary>
-public sealed class SqlUnitExecutionContextReader(SqlCommandSession session, IEventStore events)
+public sealed class SqlUnitExecutionContextReader(SqlCommandSession session, IEventStore events,
+    IUnitQualityFacet qualityFacet)
     : IUnitExecutionContextReader
 {
     /// <inheritdoc />
@@ -16,12 +17,12 @@ public sealed class SqlUnitExecutionContextReader(SqlCommandSession session, IEv
         // Cùng thứ tự với serialize/duplicate: reservation trước, stream sau. HOLDLOCK giữ cả
         // key chưa tồn tại, nên không rơi về fixture giữa lúc một unit thật đang được tạo.
         using var guard = session.CreateCommand("""
-            SELECT QualityState FROM traceability.SerialReservations WITH (HOLDLOCK)
+            SELECT 1 FROM traceability.SerialReservations WITH (HOLDLOCK)
             WHERE SiteId = @site AND SerialNumber = @serial;
             """);
         guard.Parameters.Add("@site", SqlDbType.VarChar, 3).Value = session.SiteId;
         guard.Parameters.Add("@serial", SqlDbType.VarChar, 16).Value = serialNumber;
-        var quality = await guard.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false) as string;
+        var reserved = await guard.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false) is not null;
 
         using var head = session.CreateCommand("""
             SELECT StreamType FROM es.Streams WITH (UPDLOCK, HOLDLOCK)
@@ -30,9 +31,9 @@ public sealed class SqlUnitExecutionContextReader(SqlCommandSession session, IEv
         head.Parameters.Add("@site", SqlDbType.VarChar, 3).Value = session.SiteId;
         head.Parameters.Add("@serial", SqlDbType.VarChar, 200).Value = serialNumber;
         var streamType = await head.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false) as string;
-        if (quality is null && streamType is null)
+        if (!reserved && streamType is null)
         { return null; }
-        if (quality is null || streamType != "production-unit")
+        if (!reserved || streamType != "production-unit")
         { throw new InvalidDataException("Unit reservation and event stream disagree."); }
 
         // Replay dùng cùng connection/transaction; không mở connection thứ hai có thể phải đợi
@@ -40,8 +41,10 @@ public sealed class SqlUnitExecutionContextReader(SqlCommandSession session, IEv
         var stream = await events.ReadStreamAsync(session.SiteId, serialNumber, cancellationToken).ConfigureAwait(false);
         var unit = ProductionUnit.Replay(stream)
             ?? throw new InvalidDataException("Reserved production unit has no event stream.");
+        var quality = await qualityFacet.ReadForCommandAsync(session.SiteId, serialNumber, cancellationToken)
+            .ConfigureAwait(false);
         return new UnitExecutionContext(unit.SiteId, unit.SerialNumber, unit.Kind.ToString(),
             unit.OperationRunId ?? "", unit.CurrentStep ?? "", unit.EquipmentPath ?? "",
-            unit.Execution.ToString(), quality, unit.WorkOrderId);
+            unit.Execution.ToString(), quality.QualityState, unit.WorkOrderId);
     }
 }

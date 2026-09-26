@@ -3,6 +3,7 @@ using System.Text.Json;
 using Nvm.Contracts.CloudEvents;
 using Nvm.Contracts.Events;
 using Nvm.Contracts.Events.Traceability;
+using Nvm.Contracts.Queries;
 using Nvm.Kernel.EventSourcing;
 using Nvm.Kernel.Identity;
 using Nvm.Traceability.Commands;
@@ -14,7 +15,8 @@ namespace Nvm.Traceability.Handlers;
 /// <summary>All writes join the durable idempotency claim transaction supplied by the host.</summary>
 public sealed class TraceabilityCommandProcessor(
     IEventStore events, IRoutingDirectory routings, IUnitGuard guard,
-    ISerialReservation serials, IDuplicateSerialQuarantine quarantine, TimeProvider clock)
+    ISerialReservation serials, IDuplicateSerialQuarantine quarantine, IUnitQualityFacet quality,
+    TimeProvider clock)
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
@@ -57,9 +59,11 @@ public sealed class TraceabilityCommandProcessor(
                 now, command.SiteId, command.SerialNumber, command.SubmissionId, command.ActorId,
                 UnitReasonCodes.DuplicateSerial);
             // The incident stream preserves each attempted physical serialization separately from the
-            // existing unit. Both the quality hold and audit fact must join this transaction.
+            // existing unit. The audit fact and the quality facet's hold both join this transaction.
             await quarantine.RecordAsync(command.SiteId, command.SerialNumber, command.SubmissionId,
                 incident.EventId, command.ActorId, command.OccurredAt, ct).ConfigureAwait(false);
+            await quality.QuarantineForIncidentAsync(command.SiteId, command.SerialNumber, incident.EventId,
+                UnitReasonCodes.DuplicateSerial, command.ActorId, command.OccurredAt, ct).ConfigureAwait(false);
             var incidentVersion = await AppendAsync(command.SiteId, "duplicate:" + command.SubmissionId,
                 "duplicate-serial", 0, incident, now, ct).ConfigureAwait(false);
             return new UnitCommandResult(true, UnitReasonCodes.DuplicateSerial,
@@ -147,14 +151,9 @@ public sealed class TraceabilityCommandProcessor(
             return Reject(UnitReasonCodes.InvalidInput);
         }
 
-        if (context.Guard!.Quality == QualityState.Scrapped)
+        if (context.Guard!.Quality.BlockingReasonCode is { } blocked)
         {
-            return Reject(UnitReasonCodes.Scrapped);
-        }
-
-        if (context.Guard.Quality == QualityState.Held)
-        {
-            return Reject(UnitReasonCodes.QualityHold);
+            return Reject(blocked);
         }
 
         if (context.Unit!.Execution != ExecutionState.Running ||

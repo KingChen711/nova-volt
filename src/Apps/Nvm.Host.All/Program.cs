@@ -12,6 +12,7 @@ using Nvm.Kernel;
 using Nvm.ProductionExecution.Commands;
 using Nvm.ProductionExecution.Hosting;
 using Nvm.PublicObjectModel;
+using Nvm.Quality.Hosting;
 using Nvm.Traceability.Commands;
 using Nvm.Traceability.Hosting;
 using Serilog;
@@ -57,6 +58,7 @@ try
         typeof(SerializeUnitCommand).Assembly);
     builder.Services.AddNvmCommandStore(builder.Configuration, builder.Environment);
     builder.Services.AddNvmTraceability(builder.Configuration);
+    builder.Services.AddNvmQuality();
     builder.Services.AddNvmPublicObjectModel(builder.Configuration, builder.Environment);
     builder.Services.AddNvmProductionExecutionAdapters(builder.Configuration);
 

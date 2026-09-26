@@ -21,6 +21,7 @@
     <ProjectReference Include="../../FunctionalBlocks/FactoryModel/Nvm.FactoryModel.csproj" />
     <ProjectReference Include="../../FunctionalBlocks/ProductionExecution.Hosting/Nvm.ProductionExecution.Hosting.csproj" />
     <ProjectReference Include="../../FunctionalBlocks/Traceability.Hosting/Nvm.Traceability.Hosting.csproj" />
+    <ProjectReference Include="../../FunctionalBlocks/Quality.Hosting/Nvm.Quality.Hosting.csproj" />
   </ItemGroup>
 
 </Project>

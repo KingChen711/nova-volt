@@ -70,7 +70,7 @@ thành đúng cái TSDB nằm cạnh nó.
 | `UnitGraded` | Grading | Gán bin sau grading | — | ☐ | ☐ | M8 |
 | `UnitAssembledInto` | Traceability | cell → module, module → pack | — | ☐ | ☐ | M6 |
 | `UnitRemovedFrom` | Traceability | Rework: tháo ra | — | ☐ | ☐ | M6 |
-| `UnitQuarantined` | Quality | Bị giữ | — | ☐ | ☐ | M9 |
+| `UnitQuarantined` | Quality | Bị giữ; M5 facet: serial trùng giữ unit trong cùng transaction | v1 | ✅ | ✅ | M9 |
 | `UnitReleasedFromQuarantine` | Quality | Được thả, kèm 2 chữ ký | — | ☐ | ☐ | M9 |
 | `UnitScrapped` | Quality | Loại bỏ | — | ☐ | ☐ | M9 |
 | `NonConformanceRaised` | Quality | Mở NCR | — | ☐ | ☐ | M9 |

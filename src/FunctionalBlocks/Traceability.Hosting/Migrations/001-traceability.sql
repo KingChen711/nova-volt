@@ -17,12 +17,9 @@ CREATE TABLE traceability.SerialReservations (
     SiteId varchar(3) COLLATE Latin1_General_100_BIN2 NOT NULL,
     SerialNumber varchar(16) COLLATE Latin1_General_100_BIN2 NOT NULL,
     SerializedEventId uniqueidentifier NOT NULL,
-    QualityState varchar(20) COLLATE Latin1_General_100_BIN2 NOT NULL
-        CONSTRAINT DF_Traceability_Quality DEFAULT ('Pending'),
     LocationState varchar(20) COLLATE Latin1_General_100_BIN2 NOT NULL
         CONSTRAINT DF_Traceability_Location DEFAULT ('AtStation'),
     CONSTRAINT PK_TraceabilitySerialReservations PRIMARY KEY (SiteId, SerialNumber),
-    CONSTRAINT CK_Traceability_Quality CHECK (QualityState IN ('Pending','Released','Held','Rework','Scrapped')),
     CONSTRAINT CK_Traceability_Location CHECK (LocationState IN ('AtStation','InTransit','AtRack','Shipped'))
 );
 

@@ -3,6 +3,7 @@ using MassTransit;
 using Nvm.Bus.Topology;
 using Nvm.Contracts.CloudEvents;
 using Nvm.Contracts.Events;
+using Nvm.Contracts.Events.Quality;
 using Nvm.Contracts.Events.Traceability;
 
 namespace Nvm.Projections;
@@ -11,7 +12,8 @@ namespace Nvm.Projections;
 [BusEndpoint("traceability", "unit-projection")]
 public sealed class ProductionUnitProjectionConsumer(SqlGlobalEventFeed source, ProductionUnitProjectionInbox inbox)
     : IConsumer<ProductionUnitSerialized>, IConsumer<ProcessStepStarted>,
-        IConsumer<ProcessStepCompleted>, IConsumer<UnitMeasurementRecorded>, IConsumer<DuplicateSerialDetected>
+        IConsumer<ProcessStepCompleted>, IConsumer<UnitMeasurementRecorded>, IConsumer<DuplicateSerialDetected>,
+        IConsumer<UnitQuarantined>
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
@@ -20,6 +22,7 @@ public sealed class ProductionUnitProjectionConsumer(SqlGlobalEventFeed source, 
     public Task Consume(ConsumeContext<ProcessStepCompleted> context) => CaptureAsync(context);
     public Task Consume(ConsumeContext<UnitMeasurementRecorded> context) => CaptureAsync(context);
     public Task Consume(ConsumeContext<DuplicateSerialDetected> context) => CaptureAsync(context);
+    public Task Consume(ConsumeContext<UnitQuarantined> context) => CaptureAsync(context);
 
     private async Task CaptureAsync<T>(ConsumeContext<T> context) where T : class, IDomainEvent
     {

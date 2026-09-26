@@ -49,4 +49,5 @@ namespace Nvm.Contracts;
 [JsonSerializable(typeof(CloudEventEnvelope<ProcessStepCompleted>))]
 [JsonSerializable(typeof(CloudEventEnvelope<UnitMeasurementRecorded>))]
 [JsonSerializable(typeof(CloudEventEnvelope<DuplicateSerialDetected>))]
+[JsonSerializable(typeof(CloudEventEnvelope<UnitQuarantined>))]
 public sealed partial class NvmJsonSerializerContext : JsonSerializerContext;

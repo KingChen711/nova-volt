@@ -13,4 +13,9 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Contracts chỉ có BCL (A1), nên chiều Kernel → Contracts không tạo vòng. -->
+    <ProjectReference Include="../Nvm.Contracts/Nvm.Contracts.csproj" />
+  </ItemGroup>
+
 </Project>

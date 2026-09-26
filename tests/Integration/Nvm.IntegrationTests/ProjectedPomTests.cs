@@ -4,6 +4,7 @@ using System.Xml.Linq;
 using Npgsql;
 using Nvm.Contracts.CloudEvents;
 using Nvm.Contracts.Events;
+using Nvm.Contracts.Events.Quality;
 using Nvm.Contracts.Events.Traceability;
 using Nvm.Kernel.EventSourcing;
 using Nvm.Projections;
@@ -104,6 +105,52 @@ public sealed class ProjectedPomTests
 
             await using var original = database.CreateCommand("SELECT count(*) FROM pom.production_units;");
             (await original.ExecuteScalarAsync(Ct)).ShouldBe(2000L);
+
+            async Task Deliver(long sequence, string stream, long version, IDomainEvent value)
+            {
+                var type = EventTypeName.Of(value.GetType());
+                await inbox.EnqueueAsync(new StoredStreamEvent(sequence, value.SiteId, stream, version,
+                    value.EventId, type.Value, 1, JsonSerializer.Serialize(value, value.GetType(), Json), "{}", Now, Now), Ct);
+                await inbox.DispatchAsync(value.SiteId, cancellationToken: Ct);
+            }
+        }
+        finally { await fixture.DisposeAsync(); }
+    }
+
+    [Fact]
+    public async Task QualityFacet_ContributesQualityState_ToTraceabilityUnit_InAnyDeliveryOrder()
+    {
+        var fixture = new PomOperatorFixture();
+        await fixture.InitializeAsync();
+        try
+        {
+            await using var database = NpgsqlDataSource.Create(fixture.ConnectionString);
+            await ProjectionSchemaMigrator.UpgradeAsync(database, Ct);
+            await ProjectionPomConnector.ConnectAsync(database, Ct);
+            var inbox = new ProductionUnitProjectionInbox(database);
+            const string serial = "NV1CL16267A70486";
+            // Facet của Quality tới trước fact tạo unit; không có DuplicateSerialDetected nào.
+            var held = new UnitQuarantined(Guid.NewGuid(), Now, Now, "NV1", serial, "NCR_OPEN",
+                Guid.NewGuid(), "qa.nv1");
+            await Deliver(2, "quality:" + serial, 1, held);
+            await Deliver(1, serial, 1, new ProductionUnitSerialized(Guid.NewGuid(), Now, Now, "NV1", serial,
+                "Cell", "NV-CELL-DEMO", "WO-FACET", "r1", "operator"));
+            await Deliver(2, "quality:" + serial, 1, held);
+
+            using var response = await fixture.SendAsync($"ProductionUnits('{serial}')", fixture.Token());
+            response.StatusCode.ShouldBe(HttpStatusCode.OK);
+            using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(Ct));
+            json.RootElement.GetProperty("QualityState").GetString().ShouldBe("Held");
+            json.RootElement.GetProperty("BlockingReasonCode").GetString().ShouldBe("NCR_OPEN");
+            json.RootElement.GetProperty("ExecutionState").GetString().ShouldBe("Scheduled");
+            await using (var facet = database.CreateCommand(
+                "SELECT count(*) FROM rm.unit_quality WHERE site_id = 'NV1' AND serial_number = 'NV1CL16267A70486';"))
+            { (await facet.ExecuteScalarAsync(Ct)).ShouldBe(1L); }
+            await using (var unitColumns = database.CreateCommand("""
+                SELECT count(*) FROM information_schema.columns
+                WHERE table_schema = 'rm' AND table_name = 'unit_current' AND column_name LIKE '%quality%';
+                """))
+            { (await unitColumns.ExecuteScalarAsync(Ct)).ShouldBe(0L); }
 
             async Task Deliver(long sequence, string stream, long version, IDomainEvent value)
             {

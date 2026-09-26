@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using Nvm.Contracts.Queries;
 using Nvm.Kernel.EventSourcing;
 using Nvm.Traceability.Commands;
 using Nvm.Traceability.Entities;
@@ -30,7 +31,6 @@ public sealed class ProductionUnitWorkflowTests
         unit.Execution.ShouldBe(ExecutionState.Running);
         unit.CurrentStep.ShouldBe("TABWELD");
         unit.CompletedSteps.ShouldContain("STACK");
-        unit.Quality.ShouldBe(QualityState.Pending);
         unit.Location.ShouldBe(LocationState.AtStation);
     }
 
@@ -49,11 +49,11 @@ public sealed class ProductionUnitWorkflowTests
     }
 
     [Theory]
-    [InlineData(QualityState.Held, UnitReasonCodes.QualityHold)]
-    [InlineData(QualityState.Scrapped, UnitReasonCodes.Scrapped)]
-    public async Task StartStep_WhenQualityBlocks_IsRejected(QualityState quality, string reason)
+    [InlineData("Held", "QUALITY_HOLD")]
+    [InlineData("Scrapped", "SCRAPPED")]
+    public async Task StartStep_WhenQualityFacetBlocks_ReturnsTheFacetReason(string quality, string reason)
     {
-        var fixture = new Fixture { Quality = quality };
+        var fixture = new Fixture { Quality = new UnitQualityFacet(quality, reason) };
         await fixture.Processor.SerializeAsync(Serialize("birth"), CancellationToken.None);
 
         var result = await fixture.Processor.StartAsync(
@@ -75,6 +75,7 @@ public sealed class ProductionUnitWorkflowTests
         second.Quarantined.ShouldBeTrue();
         second.ReasonCode.ShouldBe(UnitReasonCodes.DuplicateSerial);
         fixture.Incidents.ShouldBe(1);
+        fixture.Quarantines.ShouldBe([(Serial, UnitReasonCodes.DuplicateSerial, second.EventId!.Value)]);
         (await fixture.Events.ReadStreamAsync(Site, Serial, CancellationToken.None))!.Version.ShouldBe(1);
         (await fixture.Events.ReadStreamAsync(Site, "duplicate:physical-2", CancellationToken.None))!.Version.ShouldBe(1);
     }
@@ -135,13 +136,25 @@ public sealed class ProductionUnitWorkflowTests
     private static RecordMeasurementCommand Measure(string submission, string step, string run) =>
         new(Site, "operator", submission, Serial, At, step, run, "station-1", "Voltage", 3.72m, "V");
 
-    private sealed class Fixture : IRoutingDirectory, IUnitGuard, ISerialReservation, IDuplicateSerialQuarantine
+    private sealed class Fixture : IRoutingDirectory, IUnitGuard, ISerialReservation, IDuplicateSerialQuarantine,
+        IUnitQualityFacet
     {
         private readonly HashSet<string> _reserved = new(StringComparer.Ordinal);
         public MemoryEvents Events { get; } = new();
         public int Incidents { get; private set; }
-        public QualityState Quality { get; set; } = QualityState.Pending;
-        public TraceabilityCommandProcessor Processor => new(Events, this, this, this, this, TimeProvider.System);
+        public UnitQualityFacet Quality { get; set; } = UnitQualityFacet.Pending;
+        public List<(string Serial, string Reason, Guid Incident)> Quarantines { get; } = [];
+        public TraceabilityCommandProcessor Processor => new(Events, this, this, this, this, this, TimeProvider.System);
+
+        public Task<UnitQualityFacet> ReadForCommandAsync(string siteId, string serialNumber,
+            CancellationToken cancellationToken) => Task.FromResult(Quality);
+
+        public Task QuarantineForIncidentAsync(string siteId, string serialNumber, Guid incidentEventId,
+            string reasonCode, string actorId, DateTimeOffset occurredAt, CancellationToken cancellationToken)
+        {
+            Quarantines.Add((serialNumber, reasonCode, incidentEventId));
+            return Task.CompletedTask;
+        }
 
         public Task<UnitRouting?> FindAsync(string siteId, string productCode, string routingVersion,
             CancellationToken cancellationToken)

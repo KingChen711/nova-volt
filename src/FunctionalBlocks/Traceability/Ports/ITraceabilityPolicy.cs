@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using Nvm.Contracts.Queries;
 using Nvm.Traceability.Entities;
 
 namespace Nvm.Traceability.Ports;
@@ -18,10 +19,10 @@ public interface IRoutingDirectory
         CancellationToken cancellationToken);
 }
 
-public sealed record UnitGuardSnapshot(QualityState Quality, LocationState Location,
+public sealed record UnitGuardSnapshot(UnitQualityFacet Quality, LocationState Location,
     ImmutableHashSet<string> ActorRoles);
 
-/// <summary>Reads current quality, logistics, and authorization facts through a host adapter.</summary>
+/// <summary>Reads the quality facet, logistics, and authorization facts through a host adapter.</summary>
 public interface IUnitGuard
 {
     Task<UnitGuardSnapshot> ReadAsync(string siteId, string serialNumber, string actorId,
@@ -37,7 +38,7 @@ public interface ISerialReservation
         Guid eventId, CancellationToken cancellationToken);
 }
 
-/// <summary>Persist the duplicate incident and quality hold within the command transaction.</summary>
+/// <summary>Persist the duplicate incident within the command transaction; the hold belongs to the quality facet.</summary>
 public interface IDuplicateSerialQuarantine
 {
     Task RecordAsync(string siteId, string serialNumber, string submissionId, Guid eventId,

@@ -11,6 +11,7 @@ using Nvm.Kernel;
 using Nvm.ProductionExecution.Commands;
 using Nvm.ProductionExecution.Hosting;
 using Nvm.PublicObjectModel;
+using Nvm.Quality.Hosting;
 using Nvm.Traceability.Commands;
 using Nvm.Traceability.Hosting;
 
@@ -44,6 +45,7 @@ if (args.Contains("--migrate-commands", StringComparer.Ordinal))
     var migrationConnectionString = builder.Configuration["NVM_COMMANDS:MigrationConnectionString"]
         ?? throw new InvalidOperationException("NVM_COMMANDS:MigrationConnectionString is required.");
     await CommandSchemaMigrator.UpgradeAsync(migrationConnectionString);
+    await QualitySchemaMigrator.UpgradeAsync(migrationConnectionString);
     await TraceabilitySchemaMigrator.UpgradeAsync(migrationConnectionString);
     await Nvm.EventStore.EventSchemaMigrator.UpgradeAsync(migrationConnectionString);
     return;
@@ -59,6 +61,7 @@ if (args.Contains("--prepare-command-fixture", StringComparer.Ordinal))
     var migrationConnectionString = builder.Configuration["NVM_COMMANDS:MigrationConnectionString"]
         ?? throw new InvalidOperationException("NVM_COMMANDS:MigrationConnectionString is required.");
     await CommandContextFixtureSeed.PrepareAsync(migrationConnectionString);
+    await QualitySchemaMigrator.UpgradeAsync(migrationConnectionString);
     await TraceabilitySchemaMigrator.UpgradeAsync(migrationConnectionString);
     await Nvm.EventStore.EventSchemaMigrator.UpgradeAsync(migrationConnectionString);
     await TraceabilityFixtureSeed.PrepareAsync(migrationConnectionString);
@@ -97,6 +100,7 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddNvmKernel(typeof(RecordDataCollectionCommand).Assembly, typeof(SerializeUnitCommand).Assembly);
 builder.Services.AddNvmCommandStore(builder.Configuration, builder.Environment);
 builder.Services.AddNvmTraceability(builder.Configuration);
+builder.Services.AddNvmQuality();
 builder.Services.AddNvmPublicObjectModel(builder.Configuration, builder.Environment);
 builder.Services.AddNvmProductionExecutionAdapters(builder.Configuration);
 builder.Services.AddNvmBus(bus =>

@@ -3,13 +3,14 @@ using System.Data;
 using System.Text.Json;
 using Microsoft.Data.SqlClient;
 using Nvm.CommandStore;
+using Nvm.Contracts.Queries;
 using Nvm.Traceability.Entities;
 using Nvm.Traceability.Ports;
 
 namespace Nvm.Traceability.Hosting;
 
 /// <summary>All operations use the command claim's SQL connection and transaction.</summary>
-public sealed class SqlTraceabilityAdapters(SqlCommandSession session) :
+public sealed class SqlTraceabilityAdapters(SqlCommandSession session, IUnitQualityFacet quality) :
     IRoutingDirectory, IUnitGuard, ISerialReservation, IDuplicateSerialQuarantine
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
@@ -47,16 +48,16 @@ public sealed class SqlTraceabilityAdapters(SqlCommandSession session) :
     {
         RequireSite(siteId);
         using var command = session.CreateCommand("""
-            SELECT QualityState, LocationState FROM traceability.SerialReservations WITH (HOLDLOCK)
+            SELECT LocationState FROM traceability.SerialReservations WITH (HOLDLOCK)
             WHERE SiteId = @site AND SerialNumber = @serial;
             """);
         AddIdentity(command, siteId, serialNumber);
         using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
         if (!await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
         { throw new InvalidDataException("Serialized unit has no serial reservation."); }
-        var quality = Enum.Parse<QualityState>(reader.GetString(0), ignoreCase: false);
-        var location = Enum.Parse<LocationState>(reader.GetString(1), ignoreCase: false);
+        var location = Enum.Parse<LocationState>(reader.GetString(0), ignoreCase: false);
         await reader.DisposeAsync().ConfigureAwait(false);
+        var facet = await quality.ReadForCommandAsync(siteId, serialNumber, cancellationToken).ConfigureAwait(false);
 
         using var rolesCommand = session.CreateCommand("""
             SELECT RoleCode FROM traceability.ActorRoles WITH (HOLDLOCK)
@@ -68,7 +69,7 @@ public sealed class SqlTraceabilityAdapters(SqlCommandSession session) :
         var roles = ImmutableHashSet.CreateBuilder<string>(StringComparer.Ordinal);
         while (await rolesReader.ReadAsync(cancellationToken).ConfigureAwait(false))
         { roles.Add(rolesReader.GetString(0)); }
-        return new UnitGuardSnapshot(quality, location, roles.ToImmutable());
+        return new UnitGuardSnapshot(facet, location, roles.ToImmutable());
     }
 
     public async Task<SerialReservationOutcome> ReserveAsync(string siteId, string serialNumber,
@@ -110,13 +111,6 @@ public sealed class SqlTraceabilityAdapters(SqlCommandSession session) :
         incident.Parameters.Add("@actor", SqlDbType.NVarChar, 200).Value = actorId;
         incident.Parameters.Add("@occurred", SqlDbType.DateTimeOffset).Value = occurredAt;
         await incident.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
-
-        using var hold = session.CreateCommand("""
-            UPDATE traceability.SerialReservations SET QualityState = 'Held'
-            WHERE SiteId = @site AND SerialNumber = @serial AND QualityState <> 'Scrapped';
-            """);
-        AddIdentity(hold, siteId, serialNumber);
-        await hold.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
     }
 
     private void RequireSite(string siteId)

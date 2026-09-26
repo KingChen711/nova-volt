@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using System.Text.Json;
 using Nvm.Contracts.Events;
 using Nvm.Contracts.Events.Traceability;
+using Nvm.Contracts.Queries;
 using Nvm.Kernel.EventSourcing;
 using Nvm.Kernel.Identity;
 using Nvm.Traceability.Commands;
@@ -10,14 +11,14 @@ using Nvm.Traceability.Ports;
 namespace Nvm.Traceability.Entities;
 
 public enum ExecutionState { Scheduled, Running, Completed, Aborted }
-public enum QualityState { Pending, Released, Held, Rework, Scrapped }
 public enum LocationState { AtStation, InTransit, AtRack, Shipped }
 
+/// <summary>Quality là facet do FB khác đóng góp; Traceability chỉ đọc mã chặn, không biết tập trạng thái.</summary>
 public sealed record TransitionContext(ExecutionState Current, string StepCode,
-    UnitRouting Routing, QualityState Quality, LocationState Location,
+    UnitRouting Routing, UnitQualityFacet Quality, LocationState Location,
     ImmutableHashSet<string> ActorRoles, DateTimeOffset OccurredAt);
 
-/// <summary>One serialized cell, module, or pack per stream. Quality/location remain independent facts.</summary>
+/// <summary>One serialized cell, module, or pack per stream. Quality is a facet owned elsewhere.</summary>
 public sealed class ProductionUnit
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
@@ -39,7 +40,6 @@ public sealed class ProductionUnit
     public string? OperationRunId { get; private set; }
     public string? EquipmentPath { get; private set; }
     public ExecutionState Execution { get; private set; } = ExecutionState.Scheduled;
-    public QualityState Quality { get; private set; } = QualityState.Pending;
     public LocationState Location { get; private set; } = LocationState.AtStation;
     public ImmutableHashSet<string> CompletedSteps => _completedSteps;
     public long Version { get; private set; }
@@ -134,11 +134,7 @@ public sealed class ProductionUnit
         return unit;
     }
 
-    public void RefreshIndependentStates(UnitGuardSnapshot guard)
-    {
-        Quality = guard.Quality;
-        Location = guard.Location;
-    }
+    public void RefreshIndependentStates(UnitGuardSnapshot guard) => Location = guard.Location;
 
     /// <summary>State after the fact about to be appended, used at the 100-event boundary.</summary>
     public string SnapshotAfter(long version, IDomainEvent fact)
@@ -177,7 +173,6 @@ public sealed class ProductionUnit
             OperationRunId = run,
             EquipmentPath = equipment,
             Execution = execution.ToString(),
-            Quality = Quality.ToString(),
             Location = Location.ToString(),
             CompletedSteps = completed.Order(StringComparer.Ordinal).ToArray(),
             Version = version
@@ -251,12 +246,7 @@ public sealed class ProductionUnit
         return Allowed("CompleteStep", context.Current, ExecutionState.Completed, context);
     }
 
-    private static string? Guard(TransitionContext context) => context.Quality switch
-    {
-        QualityState.Scrapped => UnitReasonCodes.Scrapped,
-        QualityState.Held => UnitReasonCodes.QualityHold,
-        _ => null
-    };
+    private static string? Guard(TransitionContext context) => context.Quality.BlockingReasonCode;
 
     private static string? Allowed(string action, ExecutionState from, ExecutionState to,
         TransitionContext context)

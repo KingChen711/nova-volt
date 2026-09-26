@@ -7,6 +7,8 @@
   <Folder Name="/src/FunctionalBlocks/">
     <Project Path="src/FunctionalBlocks/Traceability/Nvm.Traceability.csproj" />
     <Project Path="src/FunctionalBlocks/Traceability.Hosting/Nvm.Traceability.Hosting.csproj" />
+    <Project Path="src/FunctionalBlocks/Quality/Nvm.Quality.csproj" />
+    <Project Path="src/FunctionalBlocks/Quality.Hosting/Nvm.Quality.Hosting.csproj" />
     <Project Path="src/FunctionalBlocks/FactoryModel/Nvm.FactoryModel.csproj" />
     <Project Path="src/FunctionalBlocks/ProductionExecution/Nvm.ProductionExecution.csproj" />
     <Project Path="src/FunctionalBlocks/ProductionExecution.Hosting/Nvm.ProductionExecution.Hosting.csproj" />

@@ -1,0 +1,13 @@
+.nvm-wip-board { width: 100%; color: inherit; }
+.nvm-wip-toolbar, .nvm-wip-pagination { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.nvm-wip-toolbar { margin-bottom: 1rem; }
+.nvm-wip-status { margin: 0 0 .25rem; font-weight: 600; }
+.nvm-wip-status-disconnected { border-left: .3rem solid #c14235; padding-left: .6rem; }
+.nvm-wip-updated { margin: 0; }
+.nvm-wip-table-container { overflow-x: auto; }
+.nvm-wip-table { width: 100%; border-collapse: collapse; }
+.nvm-wip-table caption { text-align: left; padding: .5rem 0; font-weight: 600; color: inherit; }
+.nvm-wip-table th, .nvm-wip-table td { padding: .75rem; border-bottom: 1px solid currentColor; text-align: left; }
+.nvm-wip-table .nvm-wip-count { text-align: right; font-variant-numeric: tabular-nums; }
+.nvm-wip-pagination { margin-top: 1rem; }
+.nvm-wip-empty { padding: 1rem .75rem; }

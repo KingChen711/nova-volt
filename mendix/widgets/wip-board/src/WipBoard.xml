@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<widget id="novavolt.wipboard.WipBoard" pluginWidget="true" needsEntityContext="false" supportedPlatform="Web" offlineCapable="false"
+    xmlns="http://www.mendix.com/widget/1.0/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.mendix.com/widget/1.0/ ../node_modules/mendix/custom_widget.xsd">
+    <name>NovaVolt WIP board</name>
+    <description>Live WIP groups with the last successful read and connection status from that same request.</description>
+    <studioProCategory>NovaVolt</studioProCategory>
+    <properties>
+        <propertyGroup caption="Accessibility">
+            <property key="tableCaption" type="string" defaultValue="WIP by line, step and quality state">
+                <caption>Table caption</caption>
+                <description>Accessible caption for the WIP table.</description>
+            </property>
+        </propertyGroup>
+    </properties>
+</widget>

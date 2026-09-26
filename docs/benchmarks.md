@@ -920,6 +920,35 @@ Execution metadata image216b338c0b4823f2bac5baaf140c1a415b12862560f519b7de3c523a
 - Runtime recovery: user xác nhận F5 chạy được sau Update key48; agent HTTP8080 trả200. Format verify hai file sửa key/test đạt. WIP browser đang kiểm, full bounded suite chưa kết thúc.
 
 - Full bounded suite: **891/891,0skip,8m48.157s**, integration8m47.244s (novavolt-live-bounded-suite.log). MaxThreads2 tránh startup hàng loạt trên rig; giữ toàn bộ assertions và race bên trong test. Đạt ngưỡng suite<10phút ở lượt này, không thay các DoD tải/soak.
-- Mendix live unit: op.nv1 Dispatch hiển thị3unit; mở NV1PP16267A95137 thấy đúng workorder dài và run41ký tự. Draft1fd08f97-c589-443c-b22d-b34fab7e89f6 ghi410.125V từ form; UI xác nhận đã ghi nhận, SQL đúng1row với cùng submission/run. WIP page chưa được gán quyền mở; đã thêm menu, chờ user Allowed roles=User/SaveAll/F5.
+- Mendix live unit: op.nv1 Dispatch hiển thị3unit; mở NV1PP16267A95137 thấy đúng workorder dài và run41ký tự. Draft1fd08f97-c589-443c-b22d-b34fab7e89f6 ghi410.125V từ form; UI xác nhận đã ghi nhận, SQL đúng1row với cùng submission/run. WIP page chưa được gán quyền mở; đã thêm menu, chờ user gán page Navigation → Visible for=User/SaveAll/F5 (tên field xác nhận từ ảnh Studio Pro11.12.3).
 
 - Browser DE1 sau recovery: op.de1 Dispatch chỉ1row DE1PP16267A80388, Running/EOL/P1, workorder dài đầy đủ; NV1 phiên riêng3row. Commitc13a6d92f348a7a531af71be00961680dbbc9302 đã pushmain, ls-remote khớp. Full pre-commit format đạt. Mendix model chưa commit; WIP đang chờ page access UI.
+
+### 2026-09-26 — WIP hai site và refresh với phản hồi chậm
+
+Codex; backend code `c13a6d92f348a7a531af71be00961680dbbc9302`, docs HEAD `e128c69`; Mendix11.12.3 main `1e445d9` + model dirty của nhiệm vụ. User gán Visible for và chạy F5 sau restart. Export security xác nhận Wip_Board cho Operator/LineLeader. Không có thay đổi backend trong phép đo.
+
+Lab tái lập ở `mendix/labs` (Playwright-core1.63.0, Chrome local), đối chiếu từng cột với HTTP POM đã xác thực và kiểm fixture không đổi đầu/cuối:
+
+| Lượt | Nhóm browser = POM | Request hoàn tất | Thời gian mỗi request (ms) | Max đồng thời |
+|---|---|---|---|---|
+| NV1 baseline | L1/STACK/Pending/2; P1/EOL/Pending/1 | 3 | 47,737; 48,866; 43,961 | 1 |
+| DE1 baseline | P1/EOL/Pending/1 | 3 | 31,345; 30,630; 40,705 | 1 |
+| NV1 giữ phản hồi7,5s | Hai nhóm như trên | 2 | 7574,675; 7565,855 | 1 |
+
+Cả hai lệnh `npm run wip`, `npm run wip:slow` exit0. Mọi request HTTP200, không lỗi transport, không còn request dở dang. Slow start/end lần lượt4917,161→12491,836ms và17514,389→25080,244ms từ mốc quan sát; lượt sau bắt đầu khoảng5s sau khi lượt trước kết thúc. Đây là điều phối phía browser trên fixture nhỏ, **không** phải SLO backend hay phép kiểm tải lớn. C08 last-success/connectivity chưa triển khai.
+
+Lỗi callback500 không tái hiện trong hai lệnh lab xanh trên, nhưng tái hiện với op.de1 trong lượt probe SDK tiếp theo. Probe NV1 trước đó xác nhận getData.get(entity=NvmShared.WipBoard,filter offset/limit/sort) trả đúng hai nhóm của site, qua cùng implementation mà SDK mx-api/data.retrieveByEntity gọi. Probe DE1 chưa tới bước retrieve. Log StudioPro xác nhận app trước đã đóng rồi mở lại; m2ee_log chỉ chứa startup. User cung cấp Console: LicenseRuntimeException “Maximum number of sessions exceeded! (You are currently using a trial license)” tại SessionManager.createSession → OIDC.SetSessionData. Đây xác nhận nguyên nhân callback500 mới nhất. Lab cũ chỉ context.close nên không gọi logout; đang thêm cleanup có xác nhận HTTP logout. Chưa lấy được số phiên trước/sau nên không định lượng số phiên do từng lượt lab để lại.
+
+- Sau user Stop/F5 để giải phóng session cũ, lab có logout chạy lại thành công: baseline NV1/DE1 mỗi bên3request, slowNV1 hai request7554,052/7557,124ms, maxConcurrent1, mọiHTTP200, exit0. Logout phải trảHTTP200 trước context.close, cả khi assertion lỗi. Không coi phép này là đo số session còn lại trên server.
+- Widget C08 riêng: `mendix/widgets/wip-board`, SDK `mx-api/data` external; build MPK bằng tool11.12.0, npm mendix11.8 theo dependency tool.6tests scheduler/failure/recovery/pagination/dispose qua. Root sửa scaffold còn thiếu widgetName/package.xml và Rollup config, dedupe dependency để resolve React typings; build cuối exit0. Package SHA256 `50AC03C3ADF83CCD84CD13233359E9DAF3D805C3BCF86F3C9DE7B4AFB20FFD67`. Đã copy vào app/widgets và chờ userF4; chưa có model/runtime proof cho widget mới.
+
+### 2026-09-26 — Widget WIP mới trên runtime11.12.3
+
+UserF4 nạp MPK; root thay Data Grid2 bằng widget và giữ nút mở draft qua MCP. Page check0errors, whole mxcheck0errors. Build log app_bundle hoàn tất04:04:09Z; deployment page có mã widget. Đã xem ảnh Connected/Disconnected,4cột và snapshot hiển thị đầy đủ.
+
+- `npm run wip`: NV1/DE1 mỗi3request SDK `retrieve_by_xpath`, đúng4cột so POM và không đổi fixture đầu/cuối. NV1durations46,751/47,372/50,481ms; DE1durations36,937/33,545/41,348ms. MaxConcurrent1, HTTP200, unfinished0, exit0; timestamp sau poll khác ban đầu.
+- `npm run wip:slow -- --capture`: NV1 hai request7540,971/7542,834ms; max1,HTTP200,unfinished0,exit0. Timestamp chỉ từ thành công cùng request.
+- `npm run wip:failure`: abort riêng SDK request trong browser; Disconnected, giữ nguyên4cột/timestamp, bỏ chặn và Retry → Connected/time mới, exit0.
+- `npm run wip:backend-down -- --capture`: dừng đúng nvm-execution; WIPDisconnected và giữ2nhóm/time cũ, start/healthready rồiRetry → Connected/time mới, exit0. Sau lab dockerinspect xác nhận runninghealthy; không sửa DB/seed/model trong lab.
+- Mỗi context đã gọi logout có xác nhận HTTP200 trước đóng, không tiếp tục lỗi trialsession trong các lượt này. Ảnh QA local tại output/playwright/wip (gitignored). Không dùng các lượt nhỏ này kết luận p95<1,5s hoặc nghiệm thu M4 toàn bộ.

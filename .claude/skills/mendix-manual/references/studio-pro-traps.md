@@ -745,9 +745,9 @@ ba microflow đang phục vụ traffic thật. Đối chiếu với published se
 
 ## 2. Khi tạo page và microflow mới
 
-### Danh sách allowed roles rỗng — bẫy tốn thời gian nhất
+### Quyền mở trang rỗng — bẫy tốn thời gian nhất
 
-Một page mới có thể ra đời với **allowed roles rỗng**. Rỗng **không phải lỗi model**, nên nó:
+Studio Pro11.12.3: ảnh người dùng ngày2026-09-24 xác nhận property của page là **Navigation → Visible for**, không phải Allowed roles. Wip_Board đang `(none)`; bấm dấu `...` cạnh Visible for để chọn module role. Agent đã chỉ sai tên do nhầm thuộc tính microflow với page. Một page mới có thể ra đời với **Visible for rỗng**. Rỗng **không phải lỗi model**, nên nó:
 
 - qua được Error List ✓
 - qua được `mx check` ✓
@@ -756,7 +756,7 @@ Một page mới có thể ra đời với **allowed roles rỗng**. Rỗng **kh
 Điều tương tự với **microflow dùng làm home page theo role**: allowed roles rỗng thì mọi
 kiểm tra đều xanh, rồi hỏng đúng ở role mà nó sinh ra để phục vụ.
 
-**Luôn mở properties của page/microflow mới và nhìn tận mắt danh sách roles.** So với một
+**Luôn mở properties để kiểm đúng trường: page dùng Navigation → Visible for; microflow dùng Allowed roles.** So với một
 page tương đương đã chạy được.
 
 ### Entity access biến `setValue` thành no-op im lặng
@@ -915,7 +915,7 @@ Nút logout đặt trên một page chỉ phủ đúng page đó. Mọi page th�
 | Nhiều app trùng tên trong launcher | Nhiều thư mục local khác nhau | Liệt kê đường dẫn `.mpr` tuyệt đối |
 | `mx check` báo `CE1613` hàng loạt | Tab chưa lưu | Nhìn chấm trên tab → Save All → chạy lại |
 | Không chuyển/merge branch được | Working copy dirty thật | Xem cả hai tab Changes, xác định chủ sở hữu |
-| Mọi check xanh nhưng page 404 ở F5 | Allowed roles rỗng | Mở properties của page, nhìn danh sách roles |
+| Mọi check xanh nhưng page 404 ở F5 | Visible for rỗng | Properties của page → Navigation → Visible for |
 | Giá trị không chịu lưu | Entity access chỉ Read | Kiểm access rule của attribute |
 | Mọi lỗi upstream thành 503 | Call REST đang ở Rollback | Chuột phải activity → Set error handling |
 | Gọi API trả 404 rỗng | Mendix từ chối theo role | So hình dạng envelope; gọi lại bằng role được phép |
@@ -933,3 +933,7 @@ Nút logout đặt trên một page chỉ phủ đúng page đó. Mọi page th�
 - https://docs.mendix.com/refguide/pushing-pulling/
 - https://docs.mendix.com/refguide/resolving-conflicts/
 - https://docs.mendix.com/refguide/troubleshoot-version-control-issues/
+
+### Đóng browser kiểm thử không thay cho logout Mendix (11.12.3)
+
+Codex,2026-09-26: các lượt SSO mới có lúc callback500 sau nhiều browser context nối tiếp. User gửi Console đầy đủ: `LicenseRuntimeException: Maximum number of sessions exceeded! (You are currently using a trial license)` tại `SessionManager.createSession` → `OIDC.SetSessionData`. Không phải bằng chứng lỗi POM/WIP. Lab cũ gọi context.close mà không logout; runtime client có `mx.logout()` gửi action logout tới `/xas/`. Trước khi bỏ cookie/đóng context, gọi logout và đợi phản hồi; cleanup cả nhánh assertion lỗi. Không sửa cấu hình license, không tạo thêm phiên để né giới hạn. Không kết luận mọi callback500 cùng nguyên nhân nếu chưa có log.

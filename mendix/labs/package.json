@@ -1,0 +1,13 @@
+{
+  "name": "novavolt-mendix-runtime-labs",
+  "private": true,
+  "scripts": {
+    "wip": "node wip-runtime.cjs",
+    "wip:slow": "node wip-runtime.cjs --slow",
+    "wip:failure": "node wip-runtime.cjs --failure",
+    "wip:backend-down": "node wip-runtime.cjs --backend-down"
+  },
+  "devDependencies": {
+    "playwright-core": "1.63.0"
+  }
+}

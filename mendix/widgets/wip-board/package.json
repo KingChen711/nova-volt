@@ -1,0 +1,21 @@
+{
+  "name": "novavolt-wip-board",
+  "version": "1.0.0",
+  "widgetName": "WipBoard",
+  "private": true,
+  "description": "WIP rows and connection status from the same Mendix external-entity fetch",
+  "copyright": "2026 NovaVolt MES",
+  "license": "UNLICENSED",
+  "packagePath": "novavolt",
+  "config": {},
+  "scripts": {
+    "build": "pluggable-widgets-tools build:web",
+    "test": "node --test test/*.test.mjs"
+  },
+  "engines": { "node": ">=20" },
+  "devDependencies": {
+    "@mendix/pluggable-widgets-tools": "11.12.0",
+    "mendix": "11.8.0",
+    "typescript": "5.6.3"
+  }
+}

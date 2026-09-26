@@ -70,7 +70,8 @@ thành đúng cái TSDB nằm cạnh nó.
 | `AgingPeriodElapsed` | ProductionExecution | Saga timeout — đủ ngày aging | v1 | ✅ | ✅ | M7 |
 | `OcvDriftEvaluated` | ProductionExecution | So OCV2 với OCV1; drift > 15 mV → Quality giữ cell + NCR | v1 | ✅ | ✅ | M7 |
 | `FormationProcessFaulted` | ProductionExecution | Quá trình dừng lỗi, ví dụ quá hạn formation 36 giờ | v1 | ✅ | ✅ | M7 |
-| `UnitGraded` | Grading | Gán bin sau grading | — | ☐ | ☐ | M8 |
+| `UnitGraded` | Grading | Một lần đánh giá theo rule set; đánh giá lại tạo event mới, cùng MeasurementId | v1 | ✅ | ✅ | M8 |
+| `GradingRuleSetApproved` | Grading | Rule set có version được người khác người soạn duyệt; hiệu lực từ EffectiveFrom | v1 | ✅ | ✅ | M8 |
 | `UnitAssembledInto` | Traceability | cell → module, module → pack; stream `membership:{con}` | v1 | ✅ | ✅ | M6 |
 | `UnitRemovedFrom` | Traceability | Rework: tháo ra | v1 | ✅ | ✅ | M6 |
 | `UnitQuarantined` | Quality | Bị giữ; M5 facet: serial trùng giữ unit trong cùng transaction | v1 | ✅ | ✅ | M9 |

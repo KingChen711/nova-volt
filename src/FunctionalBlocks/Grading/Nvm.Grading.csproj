@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Nvm.Grading</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../Platform/Nvm.Contracts/Nvm.Contracts.csproj" />
+    <ProjectReference Include="../../Platform/Nvm.Kernel/Nvm.Kernel.csproj" />
+    <PackageReference Include="Google.OrTools" />
+  </ItemGroup>
+</Project>

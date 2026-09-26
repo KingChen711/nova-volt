@@ -6,6 +6,8 @@ using Nvm.Bus;
 using Nvm.Bus.Outbox;
 using Nvm.CommandStore;
 using Nvm.EventStore;
+using Nvm.Grading.Commands;
+using Nvm.Grading.Hosting;
 using Nvm.Hosting;
 using Nvm.Kernel;
 using Nvm.Material.Commands;
@@ -49,6 +51,7 @@ if (args.Contains("--migrate-commands", StringComparer.Ordinal))
     await CommandSchemaMigrator.UpgradeAsync(migrationConnectionString);
     await ProductionExecutionSchemaMigrator.UpgradeAsync(migrationConnectionString);
     await QualitySchemaMigrator.UpgradeAsync(migrationConnectionString);
+    await GradingSchemaMigrator.UpgradeAsync(migrationConnectionString);
     await TraceabilitySchemaMigrator.UpgradeAsync(migrationConnectionString);
     await Nvm.EventStore.EventSchemaMigrator.UpgradeAsync(migrationConnectionString);
     return;
@@ -66,6 +69,7 @@ if (args.Contains("--prepare-command-fixture", StringComparer.Ordinal))
     await CommandContextFixtureSeed.PrepareAsync(migrationConnectionString);
     await ProductionExecutionSchemaMigrator.UpgradeAsync(migrationConnectionString);
     await QualitySchemaMigrator.UpgradeAsync(migrationConnectionString);
+    await GradingSchemaMigrator.UpgradeAsync(migrationConnectionString);
     await TraceabilitySchemaMigrator.UpgradeAsync(migrationConnectionString);
     await Nvm.EventStore.EventSchemaMigrator.UpgradeAsync(migrationConnectionString);
     await TraceabilityFixtureSeed.PrepareAsync(migrationConnectionString);
@@ -102,11 +106,12 @@ if (args.Contains("--migrate", StringComparer.Ordinal))
 
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddNvmKernel(typeof(RecordDataCollectionCommand).Assembly, typeof(SerializeUnitCommand).Assembly,
-    typeof(ConsumeMaterialCommand).Assembly);
+    typeof(ConsumeMaterialCommand).Assembly, typeof(GradeUnitCommand).Assembly);
 builder.Services.AddNvmCommandStore(builder.Configuration, builder.Environment);
 builder.Services.AddNvmTraceability(builder.Configuration);
 builder.Services.AddNvmQuality();
 builder.Services.AddNvmMaterial();
+builder.Services.AddNvmGrading();
 builder.Services.AddNvmPublicObjectModel(builder.Configuration, builder.Environment);
 builder.Services.AddNvmProductionExecutionAdapters(builder.Configuration);
 builder.Services.AddNvmBus(bus =>
@@ -125,6 +130,7 @@ app.MapNvmPublicObjectModel();
 app.MapNvmProductionExecution();
 app.MapNvmTraceability();
 app.MapNvmMaterial();
+app.MapNvmGrading();
 app.MapGet("/health/live", () => Results.Ok(new { Status = "Healthy" }));
 app.MapGet("/health/ready", async (PomReadDbContext database, SqlCommandStoreOptions commands,
     SqlEventStoreOptions events, CancellationToken cancellationToken) =>

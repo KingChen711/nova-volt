@@ -49,10 +49,12 @@ if (args.Contains("--reconcile", StringComparer.Ordinal))
     await using var store = NpgsqlDataSource.Create(postgresConnection);
     var projection = new ProductionUnitProjection(store, new SqlGlobalEventFeed(sqlConnection));
     var genealogy = new GenealogyProjection(store, new SqlGlobalEventFeed(sqlConnection));
+    var ordered = new OrderedProjectionRunner(store, new SqlGlobalEventFeed(sqlConnection), [new BinInventoryProjection()]);
     foreach (var site in sites)
     {
         await projection.CatchUpAsync(site);
         await genealogy.CatchUpAsync(site);
+        await ordered.CatchUpAsync(site);
     }
     return;
 }
@@ -72,6 +74,12 @@ builder.Services.AddSingleton(_ => NpgsqlDataSource.Create(postgresConnection));
 builder.Services.AddSingleton(new SqlGlobalEventFeed(sqlConnection));
 builder.Services.AddSingleton<ProductionUnitProjectionInbox>();
 builder.Services.AddSingleton<GenealogyProjectionInbox>();
+builder.Services.AddSingleton<IOrderedProjection, BinInventoryProjection>();
+builder.Services.AddSingleton<IGlobalEventFeed>(service => service.GetRequiredService<SqlGlobalEventFeed>());
+builder.Services.AddSingleton<OrderedProjectionRunner>();
+builder.Services.AddHostedService(service => new OrderedProjectionWorker(
+    service.GetRequiredService<OrderedProjectionRunner>(), sites,
+    service.GetRequiredService<TimeProvider>(), service.GetRequiredService<ILogger<OrderedProjectionWorker>>()));
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddHostedService(service => new ProductionUnitProjectionWorker(
     service.GetRequiredService<ProductionUnitProjectionInbox>(), sites,
@@ -90,6 +98,7 @@ builder.Services.AddNvmBus(bus =>
 {
     consumers.AddNvmConsumer<ProductionUnitProjectionConsumer>();
     consumers.AddNvmConsumer<GenealogyProjectionConsumer>();
+    consumers.AddNvmConsumer<OrderedProjectionsConsumer>();
 });
 builder.Services.AddHealthChecks()
     .AddCheck<ProjectionStoreHealthCheck>("projection-store", tags: [HealthTags.Ready])

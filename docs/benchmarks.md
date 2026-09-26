@@ -973,3 +973,7 @@ Kết luận ở [ADR-044](adr/ADR-044-mot-aggregate-cho-moi-unit.md).
 
 `FormationAgingProcessTests`: 12,04 ngày ảo trong 563–582 ms. `FormationAgingScaleLabTests` (NVM_RUN_LABS=1), 30.000 cell Aging: poll không có hạn p95 0,94 ms; rack/level 100 dòng 67 ms; xả 30.000 timeout tuần tự 54/s (operator p95 28 ms), song song 8 là 301/s trong 99,6 s (operator p95 39,3 ms). Kết luận ở [ADR-015](adr/ADR-015-saga-formation-aging-timeout-ben-trong-sql.md).
 
+## M8 — Matching 100k cell (2026-09-26, Claude)
+
+`MatchingTests` (NVM_RUN_LABS=1), 16 CPU, dữ liệu tổng hợp `MatchingDataset` (97.371 cell trong bin). greedy 1.546 module 0,65 s; greedy-ocv 4.776 module 0,35 s; cp-sat 7.498 module (7,59 % tồn dư) 21,17 s. Property test 10.000 ca: 0 vi phạm. Lab bỏ MaxDistinctLots (20.000 cell): lot tối đa/module 3 → 8, module/lot TB 98,4 → 102,8. Kết luận ở [ADR-016](adr/ADR-016-cp-sat-cho-matching.md).
+

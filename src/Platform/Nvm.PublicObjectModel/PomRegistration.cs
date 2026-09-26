@@ -35,7 +35,9 @@ public static class PomRegistration
 
         services.AddHttpContextAccessor();
         // Trace API đọc bảng genealogy bằng cùng role/connection read-only của POM.
-        services.AddSingleton(_ => new TraceQueries(NpgsqlDataSource.Create(connectionString)));
+        services.AddSingleton(_ => NpgsqlDataSource.Create(connectionString));
+        services.AddSingleton<TraceQueries>();
+        services.AddSingleton<BinInventoryQueries>();
         services.AddDbContext<PomReadDbContext>(options =>
             options.UseNpgsql(connectionString).UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking));
 

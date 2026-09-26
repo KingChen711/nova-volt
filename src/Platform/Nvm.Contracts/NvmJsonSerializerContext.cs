@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using Nvm.Contracts.CloudEvents;
 using Nvm.Contracts.Events.FactoryModel;
+using Nvm.Contracts.Events.Grading;
 using Nvm.Contracts.Events.Material;
 using Nvm.Contracts.Events.ProductionExecution;
 using Nvm.Contracts.Events.Quality;
@@ -63,4 +64,6 @@ namespace Nvm.Contracts;
 [JsonSerializable(typeof(CloudEventEnvelope<OcvDriftEvaluated>))]
 [JsonSerializable(typeof(CloudEventEnvelope<FormationProcessFaulted>))]
 [JsonSerializable(typeof(CloudEventEnvelope<NonConformanceRaised>))]
+[JsonSerializable(typeof(CloudEventEnvelope<GradingRuleSetApproved>))]
+[JsonSerializable(typeof(CloudEventEnvelope<UnitGraded>))]
 public sealed partial class NvmJsonSerializerContext : JsonSerializerContext;

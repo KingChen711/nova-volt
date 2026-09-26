@@ -1,0 +1,29 @@
+{
+  "specversion": "1.0",
+  "id": "92b2c3d4-e5f6-5a71-9b82-c3d4e5f6a702",
+  "type": "com.novavolt.grading.unit-graded.v1",
+  "source": "urn:novavolt:nv1:app-execution",
+  "subject": "urn:trace-unit:cell:NV1CL16253A03001",
+  "time": "2026-09-10T00:00:00+00:00",
+  "datacontenttype": "application/json",
+  "correlationid": "92b2c3d4-e5f6-5a71-9b82-c3d4e5f6a702",
+  "causationid": "92b2c3d4-e5f6-5a71-9b82-c3d4e5f6a702",
+  "partitionkey": "NV1:NV1CL16253A03001",
+  "data": {
+    "eventId": "92b2c3d4-e5f6-5a71-9b82-c3d4e5f6a702",
+    "occurredAt": "2026-09-10T00:00:00+00:00",
+    "recordedAt": "2026-09-10T00:00:01+00:00",
+    "siteId": "NV1",
+    "serialNumber": "NV1CL16253A03001",
+    "productCode": "NV-P120-NMC",
+    "ruleSetId": "RS-A",
+    "ruleSetVersion": 1,
+    "binCode": "A1",
+    "capacityAh": 119.9,
+    "ocvMillivolt": 3650.0,
+    "dcirMilliOhm": 0.9,
+    "ocvDriftMillivolt": 3.0,
+    "measurementId": "92b2c3d4-e5f6-5a71-9b82-c3d4e5f6a702",
+    "actorId": "op.nv1"
+  }
+}

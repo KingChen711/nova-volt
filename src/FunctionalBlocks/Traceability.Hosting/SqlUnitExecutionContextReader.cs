@@ -45,6 +45,6 @@ public sealed class SqlUnitExecutionContextReader(SqlCommandSession session, IEv
             .ConfigureAwait(false);
         return new UnitExecutionContext(unit.SiteId, unit.SerialNumber, unit.Kind.ToString(),
             unit.OperationRunId ?? "", unit.CurrentStep ?? "", unit.EquipmentPath ?? "",
-            unit.Execution.ToString(), quality.QualityState, unit.WorkOrderId);
+            unit.Execution.ToString(), quality.QualityState, unit.WorkOrderId, unit.ProductCode);
     }
 }

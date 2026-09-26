@@ -50,7 +50,7 @@ việc khác.
 | 013 | OData cho Public Object Model | Chưa viết | M4 |
 | [014](ADR-014-mendix-ui-va-draft-ben-vung.md) | Mendix sở hữu UI/draft, backend sở hữu quyết định nghiệp vụ | **Accepted** 2026-09-07 | M4 · C01 |
 | [015](ADR-015-saga-formation-aging-timeout-ben-trong-sql.md) | Saga formation/aging: process manager, timeout bền trong SQL, TimeProvider | **Accepted** 2026-09-26 | M7 |
-| 016 | OR-Tools CP-SAT cho matching | Chưa viết | M11 |
+| [016](ADR-016-cp-sat-cho-matching.md) | CP-SAT theo cửa sổ cho matching (+57 % so greedy-ocv, 21 s/100k) | **Accepted** 2026-09-26 | M8 |
 | 017 | Hold cascade là job có checkpoint | Chưa viết | M9 |
 | 018 | Package versioning theo Functional Block | Chưa viết | M12 |
 | [019](ADR-019-dotnet-10-lts.md) | Dùng .NET 10 LTS thay vì .NET 9 | **Accepted** 2026-08-26 | M0 · C14 |

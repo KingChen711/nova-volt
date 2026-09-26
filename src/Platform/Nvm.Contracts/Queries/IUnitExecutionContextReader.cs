@@ -3,7 +3,7 @@ namespace Nvm.Contracts.Queries;
 /// <summary>Trạng thái authoritative tối thiểu cho command của FB khác; không phải projection OData.</summary>
 public sealed record UnitExecutionContext(string SiteId, string SerialNumber, string UnitKind,
     string OperationRunId, string StepCode, string EquipmentPath, string ExecutionState,
-    string QualityState, string WorkOrderId);
+    string QualityState, string WorkOrderId, string? ProductCode = null);
 
 /// <summary>Đọc unit trong site và transaction của command hiện tại.</summary>
 /// <remarks>

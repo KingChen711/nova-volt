@@ -29,6 +29,12 @@ public sealed class SqlCommandSession : IAsyncDisposable
     public SqlCommand CreateCommand(string sql)
         => new(sql, _connection ?? throw new InvalidOperationException("No active command connection."), Transaction);
 
+    /// <summary>Bulk copy trong cùng transaction (ví dụ nạp bảng tạm cho thao tác set-based).</summary>
+    public SqlBulkCopy CreateBulkCopy(string destinationTable) =>
+        new(_connection ?? throw new InvalidOperationException("No active command connection."), SqlBulkCopyOptions.Default,
+            Transaction)
+        { DestinationTableName = destinationTable, BulkCopyTimeout = 300 };
+
     internal async Task BeginAsync(string connectionString, string siteId, CancellationToken cancellationToken)
     {
         if (_connection is not null)

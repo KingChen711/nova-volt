@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Nvm.Grading.Hosting</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.Data.SqlClient" />
+    <ProjectReference Include="../Grading/Nvm.Grading.csproj" />
+    <ProjectReference Include="../../Platform/Nvm.CommandStore/Nvm.CommandStore.csproj" />
+    <ProjectReference Include="../../Platform/Nvm.PublicObjectModel/Nvm.PublicObjectModel.csproj" />
+    <EmbeddedResource Include="Migrations/*.sql" />
+  </ItemGroup>
+</Project>

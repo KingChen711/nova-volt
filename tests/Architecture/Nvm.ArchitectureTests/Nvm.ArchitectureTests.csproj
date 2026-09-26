@@ -37,6 +37,8 @@
     <ProjectReference Include="../../../src/FunctionalBlocks/FactoryModel/Nvm.FactoryModel.csproj" />
     <ProjectReference Include="../../../src/FunctionalBlocks/Traceability/Nvm.Traceability.csproj" />
     <ProjectReference Include="../../../src/FunctionalBlocks/Quality/Nvm.Quality.csproj" />
+    <ProjectReference Include="../../../src/FunctionalBlocks/Material/Nvm.Material.csproj" />
+    <ProjectReference Include="../../../src/FunctionalBlocks/Grading/Nvm.Grading.csproj" />
   </ItemGroup>
 
   <ItemGroup>

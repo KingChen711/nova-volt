@@ -23,6 +23,7 @@
     <ProjectReference Include="../../FunctionalBlocks/Traceability.Hosting/Nvm.Traceability.Hosting.csproj" />
     <ProjectReference Include="../../FunctionalBlocks/Quality.Hosting/Nvm.Quality.Hosting.csproj" />
     <ProjectReference Include="../../FunctionalBlocks/Material.Hosting/Nvm.Material.Hosting.csproj" />
+    <ProjectReference Include="../../FunctionalBlocks/Grading.Hosting/Nvm.Grading.Hosting.csproj" />
   </ItemGroup>
 
 </Project>

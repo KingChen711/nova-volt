@@ -113,6 +113,41 @@ public sealed class TraceQueries(NpgsqlDataSource dataSource)
         return await ReadAsync(command, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Mọi unit (cell, module, pack) hạ nguồn của một lot, một cuộn, một đoạn cuộn [from, to) hoặc một unit — tập
+    /// mà hold cascade phải giữ. Với đoạn cuộn, chỉ cell lấy vật liệu từ đoạn đó và unit chứa chúng.
+    /// </summary>
+    public async Task<IReadOnlyList<string>> DownstreamUnitsAsync(string siteId, short rootType, string rootId,
+        decimal? fromMeter, decimal? toMeter, CancellationToken cancellationToken)
+    {
+        await using var command = dataSource.CreateCommand(fromMeter is not null && toMeter is not null
+            ? """
+              WITH cells AS (
+                  SELECT DISTINCT child_id FROM trace.genealogy_link
+                  WHERE site_id = @site AND parent_type = @type AND parent_id = @id AND unlinked_at IS NULL
+                    AND child_type = 2 AND span && numrange(@from, @to))
+              SELECT child_id FROM cells
+              UNION
+              SELECT c.descendant_id FROM rm.genealogy_closure c JOIN cells ON c.ancestor_id = cells.child_id
+              WHERE c.site_id = @site AND c.ancestor_type = 2 AND c.descendant_type IN (3, 4);
+              """
+            : """
+              SELECT descendant_id FROM rm.genealogy_closure
+              WHERE site_id = @site AND ancestor_type = @type AND ancestor_id = @id AND descendant_type IN (2, 3, 4);
+              """);
+        command.CommandTimeout = 120;
+        command.Parameters.AddWithValue("site", siteId);
+        command.Parameters.AddWithValue("type", rootType);
+        command.Parameters.AddWithValue("id", rootId);
+        command.Parameters.AddWithValue("from", (object?)fromMeter ?? DBNull.Value);
+        command.Parameters.AddWithValue("to", (object?)toMeter ?? DBNull.Value);
+        var serials = new List<string>();
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+        { serials.Add(reader.GetString(0)); }
+        return serials;
+    }
+
     private async Task<IReadOnlyList<TraceNode>> QueryAsync(string sql, string siteId, short type, string id,
         short? filter, CancellationToken cancellationToken)
     {

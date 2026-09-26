@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Nvm.Contracts;
 using Nvm.Contracts.CloudEvents;
+using Nvm.Contracts.Events.Grading;
 using Nvm.Contracts.Events.Material;
 using Nvm.Contracts.Events.ProductionExecution;
 using Nvm.Contracts.Events.Quality;
@@ -30,6 +31,8 @@ public sealed class DomainEventGoldenTests
         { "production-execution/ocv-drift-evaluated.v1.json", typeof(CloudEventEnvelope<OcvDriftEvaluated>) },
         { "production-execution/formation-process-faulted.v1.json", typeof(CloudEventEnvelope<FormationProcessFaulted>) },
         { "quality/non-conformance-raised.v1.json", typeof(CloudEventEnvelope<NonConformanceRaised>) },
+        { "grading/grading-rule-set-approved.v1.json", typeof(CloudEventEnvelope<GradingRuleSetApproved>) },
+        { "grading/unit-graded.v1.json", typeof(CloudEventEnvelope<UnitGraded>) },
     };
 
     [Theory]

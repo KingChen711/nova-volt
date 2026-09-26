@@ -240,6 +240,13 @@
       trước khi vào dự án thật. Xem scope.md §10.1.
     -->
     <PackageVersion Include="Shouldly" Version="4.3.0" />
+    <!-- Property-based test cho matching (M8, scope §9). License Apache-2.0. -->
+    <PackageVersion Include="CsCheck" Version="4.9.1" />
+  </ItemGroup>
+
+  <ItemGroup Label="Tối ưu tổ hợp — M8">
+    <!-- CP-SAT cho matching cell → module (scope §6.6, ADR-016). License Apache-2.0. -->
+    <PackageVersion Include="Google.OrTools" Version="9.15.6755" />
   </ItemGroup>
 
 </Project>

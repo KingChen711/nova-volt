@@ -6,6 +6,8 @@ using Nvm.Bus.Outbox;
 using Nvm.CommandStore;
 using Nvm.FactoryModel;
 using Nvm.FactoryModel.Commands;
+using Nvm.Grading.Commands;
+using Nvm.Grading.Hosting;
 using Nvm.Host.Infrastructure;
 using Nvm.Hosting;
 using Nvm.Kernel;
@@ -57,11 +59,12 @@ try
 
     builder.Configuration.AddEnvironmentVariables();
     builder.Services.AddNvmKernel(typeof(ActivateFactoryModelRevisionCommand).Assembly, typeof(RecordDataCollectionCommand).Assembly,
-        typeof(SerializeUnitCommand).Assembly, typeof(ConsumeMaterialCommand).Assembly);
+        typeof(SerializeUnitCommand).Assembly, typeof(ConsumeMaterialCommand).Assembly, typeof(GradeUnitCommand).Assembly);
     builder.Services.AddNvmCommandStore(builder.Configuration, builder.Environment);
     builder.Services.AddNvmTraceability(builder.Configuration);
     builder.Services.AddNvmQuality();
     builder.Services.AddNvmMaterial();
+    builder.Services.AddNvmGrading();
     builder.Services.AddNvmPublicObjectModel(builder.Configuration, builder.Environment);
     builder.Services.AddNvmProductionExecutionAdapters(builder.Configuration);
 
@@ -152,6 +155,7 @@ try
     app.MapNvmProductionExecution();
     app.MapNvmTraceability();
     app.MapNvmMaterial();
+    app.MapNvmGrading();
     app.Run();
     return 0;
 }

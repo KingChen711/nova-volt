@@ -50,11 +50,18 @@ jobs:
             docker compose --profile execution --profile projection --profile ingestion build "$service"
           done
 
+      # Log job cần đăng nhập GitHub; lỗi được đưa ra annotation để đọc được qua API công khai.
       - name: Migrations
         run: |
-          docker compose --profile ingestion run --rm --no-deps ingestion-migrate
-          docker compose --profile projection run --rm --no-deps projection-migrate
-          docker compose --profile execution run --rm --no-deps execution-prepare-commands
+          migrate() {
+            if ! out=$(docker compose --profile "$1" run --rm --no-deps "$2" 2>&1); then
+              echo "::error title=$2 failed::$(echo "$out" | tail -8 | tr '\n' ' ' | cut -c1-900)"
+              exit 1
+            fi
+          }
+          migrate ingestion ingestion-migrate
+          migrate projection projection-migrate
+          migrate execution execution-prepare-commands
 
       - name: Install kind
         run: |

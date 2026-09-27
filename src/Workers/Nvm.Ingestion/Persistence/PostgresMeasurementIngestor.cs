@@ -66,8 +66,8 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
 
     private const string StoreOutboxSql = """
         INSERT INTO ingest.measurement_outbox
-            (event_id, site_id, payload, created_at, next_attempt_at)
-        VALUES (@event_id, @site_id, @payload::jsonb, @created_at, @created_at);
+            (event_id, site_id, payload, created_at, next_attempt_at, trace_parent)
+        VALUES (@event_id, @site_id, @payload::jsonb, @created_at, @created_at, @trace_parent);
         """;
 
     private const string MissingChunkRangesSql = """
@@ -432,9 +432,12 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
 
             if (_useTransactionalOutbox)
             {
+                var traces = claimedRows.ToDictionary(row => row.SourceEventId, row => row.TraceParent);
                 foreach (var measurement in Announce(claimedRows))
                 {
                     await using var command = new NpgsqlCommand(StoreOutboxSql, connection, transaction);
+                    command.Parameters.AddWithValue("trace_parent", NpgsqlDbType.Text,
+                        (object?)traces.GetValueOrDefault(measurement.EventId) ?? DBNull.Value);
                     command.Parameters.AddWithValue("event_id", NpgsqlDbType.Uuid, measurement.EventId);
                     command.Parameters.AddWithValue("site_id", NpgsqlDbType.Text, measurement.SiteId);
                     command.Parameters.AddWithValue("payload", NpgsqlDbType.Text, JsonSerializer.Serialize(measurement));

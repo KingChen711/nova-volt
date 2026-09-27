@@ -113,6 +113,27 @@ public sealed class PostgresOutboxTests
         (await fixture.CountAsync("ingest.measurement_outbox WHERE published_at IS NULL")).ShouldBe(0);
     }
 
+    [Fact]
+    public async Task IntentWithTraceContext_IsPublishedInsideThatTrace()
+    {
+        await using var fixture = await Fixture.StartAsync();
+        await fixture.Ingestor(new PublishedSignals(["GoodResult"]))
+            .IngestAsync([Fixture.Measurement("GoodResult")], Now, TestContext.Current.CancellationToken);
+        const string traceId = "4bf92f3577b34da6a3ce929d0e0e4736";
+        // Trace context ghi cạnh intent (migration 017); dòng file drop không có, nên đặt tay cho đúng một intent.
+        await fixture.ExecuteAsync($"UPDATE ingest.measurement_outbox SET trace_parent = '00-{traceId}-00f067aa0ba902b7-01';");
+        using var listener = new System.Diagnostics.ActivityListener
+        {
+            ShouldListenTo = source => source.Name == IngestionTelemetry.Name,
+            Sample = (ref System.Diagnostics.ActivityCreationOptions<System.Diagnostics.ActivityContext> _) =>
+                System.Diagnostics.ActivitySamplingResult.AllDataAndRecorded,
+        };
+        System.Diagnostics.ActivitySource.AddActivityListener(listener);
+
+        (await fixture.Dispatcher().DispatchOneAsync(TestContext.Current.CancellationToken)).ShouldBeTrue();
+        fixture.Publisher.TraceIds.ShouldHaveSingleItem().ShouldBe(traceId);
+    }
+
     private sealed class Fixture : IAsyncDisposable
     {
         private readonly PostgreSqlContainer _postgres;
@@ -187,9 +208,11 @@ public sealed class PostgresOutboxTests
     {
         internal bool Fail { get; set; }
         internal List<MeasurementRecorded> Published { get; } = [];
+        internal List<string?> TraceIds { get; } = [];
 
         public Task<int> PublishAsync(IReadOnlyCollection<MeasurementRecorded> events, CancellationToken token)
         {
+            TraceIds.Add(System.Diagnostics.Activity.Current?.TraceId.ToString());
             if (Fail)
             {
                 return Task.FromResult(events.Count);

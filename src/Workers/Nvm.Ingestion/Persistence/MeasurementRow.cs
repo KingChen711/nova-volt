@@ -22,6 +22,9 @@ internal sealed record MeasurementRow(
     bool? BooleanValue,
     string? TextValue)
 {
+    /// <summary>Trace của publish MQTT đã tạo reading này; đi theo outbox để event lên bus nằm trong cùng trace (M13).</summary>
+    internal string? TraceParent { get; init; }
+
     internal static MeasurementRow FromSparkplug(
         DecodedSparkplugMessage message,
         DeviceReading reading,
@@ -32,7 +35,9 @@ internal sealed record MeasurementRow(
             reading.Value,
             message.GatewayTimestamp,
             recordedAt,
-            ClockQualityClassifier.Classify(reading.DeviceTimestamp, message.GatewayTimestamp, clockDriftThreshold));
+            ClockQualityClassifier.Classify(reading.DeviceTimestamp, message.GatewayTimestamp, clockDriftThreshold))
+        with
+        { TraceParent = message.TraceParent };
 
     /// <summary>Xây cùng một dòng từ một dòng CSV mà một máy cũ drop lên một share.</summary>
     /// <remarks>

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 using Npgsql;
 using NpgsqlTypes;
@@ -14,7 +15,7 @@ namespace Nvm.Ingestion.Publishing;
 public sealed class PostgresMeasurementOutboxDispatcher : BackgroundService
 {
     private const string ClaimSql = """
-        SELECT event_id, payload::text, attempt
+        SELECT event_id, payload::text, attempt, trace_parent
         FROM ingest.measurement_outbox
         WHERE published_at IS NULL AND next_attempt_at <= @now
         ORDER BY next_attempt_at, event_id
@@ -64,6 +65,7 @@ public sealed class PostgresMeasurementOutboxDispatcher : BackgroundService
         Guid eventId;
         string payload;
         int attempt;
+        string? traceParent;
 
         await using (var claim = new NpgsqlCommand(ClaimSql, connection, transaction))
         {
@@ -77,6 +79,7 @@ public sealed class PostgresMeasurementOutboxDispatcher : BackgroundService
             eventId = reader.GetGuid(0);
             payload = reader.GetString(1);
             attempt = reader.GetInt32(2);
+            traceParent = await reader.IsDBNullAsync(3, cancellationToken) ? null : reader.GetString(3);
         }
 
         var measurement = JsonSerializer.Deserialize<MeasurementRecorded>(payload)
@@ -86,6 +89,8 @@ public sealed class PostgresMeasurementOutboxDispatcher : BackgroundService
             throw new InvalidDataException($"Measurement outbox identity mismatch for {eventId}.");
         }
 
+        // Publish nằm dưới trace của thiết bị: MassTransit mang Activity.Current sang header của message (M13).
+        using var span = Persistence.IngestionTelemetry.Source.StartActivity("measurement publish", ActivityKind.Producer, traceParent);
         var failure = 0;
         try
         {

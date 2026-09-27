@@ -42,8 +42,8 @@ version theo Functional Block với ma trận tương thích. Kernel và Functio
 
 **Mất / phải chịu**
 
-- Trace thiết bị dừng ở ingestion: outbox của ingestion chưa lưu trace context, nên event `MeasurementRecorded` lên bus mở
-  trace mới; đoạn domain → projection đi tiếp nhờ MassTransit, còn OData/Mendix là request riêng của người đọc (không
+- Outbox của ingestion lưu `trace_parent` cạnh intent (migration 017) và dispatcher publish dưới trace đó. Nhưng hiện chỉ
+  kết quả file drop được announce (reading Sparkplug chưa gắn unit id), nên trace MQTT thật chưa đi tới bus; đoạn domain → projection đi tiếp nhờ MassTransit, còn OData/Mendix là request riêng của người đọc (không
   cùng trace, chỉ nối được bằng link). DoD T9 "một trace liền mạch tới Mendix" chưa đạt.
 - Chưa có OTel Collector/Tempo/Loki trong compose, chưa có dashboard SLO/error budget, business metric mới có
   `nvm.commands`. Chưa đo N1/N2 sau instrumentation (rig chưa qua preflight).
@@ -79,3 +79,5 @@ version theo Functional Block với ma trận tương thích. Kernel và Functio
   `ce_id`, đúng at-least-once của ADR-040), lượt 2 không có bản trùng. `pause` giữ nguyên cổng; chưa thử `stop` hẳn process.
 - Toàn solution trong container .NET SDK Linux như CI: 1.072/1.081 xanh, 8 skip, 7m56s (N14 < 10 phút đạt trên máy này);
   test đỏ còn lại là timeout mặc định của MassTransit harness khi chạy song song, đã nâng lên 30 s.
+- `PostgresOutboxTests.IntentWithTraceContext_IsPublishedInsideThatTrace`: intent có `trace_parent` được publish với
+  `Activity.Current` thuộc đúng trace đó.

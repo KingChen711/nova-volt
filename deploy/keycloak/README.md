@@ -49,6 +49,11 @@ Chốt mapper/role vào JSON và áp dụng cùng thay đổi vào realm đang c
 > Đã gặp thật: thêm mapper `mendix-roles`, `restart`, lấy token — claim không có. Cùng file đó,
 > `--force-recreate`, lấy token — claim có.
 
+Khi chỉ **thêm** thứ mới (client, client scope, role, user) mà không muốn recreate, chạy
+`python scripts/keycloak-add-missing.py`: script so realm đang chạy với file này và thêm phần thiếu qua Admin REST
+(`partialImport` với `SKIP`), rồi tạo user service account cho client mới. Không ghi đè gì đã có. Dùng lần đầu
+2026-09-27 để nạp `nvm-esign`, `nvm-dpp*`, scope `dpp-*`, `CustomerRepresentative`, `qm.nv1`, `pm.nv1`, `owner.demo`.
+
 ---
 
 ## Nội dung

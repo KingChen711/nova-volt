@@ -63,8 +63,9 @@ annotation (đọc qua API công khai `check-runs/{job}/annotations`).
 Runtime local đã deploy code mới (2026-09-27, Claude): build lại 4 image, chạy `ingestion-migrate` (015–017),
 `projection-migrate`, `execution-prepare-commands`; execution/projection/ingestion healthy, edge-gateway chạy. Lúc deploy lộ
 lỗi: edge-gateway crash vì `Nvm.Observability` kéo framework ASP.NET Core mà image `dotnet/runtime` không có; đã tách
-`Nvm.Observability.Web` và thêm bước CI khởi động thử từng image. Realm Keycloak mới (client `nvm-esign`, `nvm-dpp*`) chưa
-nạp: `--import-realm` bỏ qua realm đã tồn tại.
+`Nvm.Observability.Web` và thêm bước CI khởi động thử từng image. Realm Keycloak đang chạy đã được thêm client `nvm-esign`,
+`nvm-dpp*`, scope `dpp-*`, role và user mới bằng `scripts/keycloak-add-missing.py` (không recreate); token recycler/
+regulator có đúng `dpp_audience`, resolver `/01/{gtin}/21/{serial}` trả 400 với GTIN sai trên runtime.
 
 Mutation domain (ADR-050, `Entities/` của 10 FB): gộp 83,33 %, mọi FB ≥ 73 %.
 

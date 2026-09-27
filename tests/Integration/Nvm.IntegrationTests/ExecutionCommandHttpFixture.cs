@@ -17,7 +17,6 @@ using Microsoft.IdentityModel.Tokens;
 using Nvm.App.Execution;
 using Nvm.Kernel.Commands;
 using Nvm.PublicObjectModel;
-using Testcontainers.MsSql;
 using Testcontainers.PostgreSql;
 
 namespace Nvm.IntegrationTests;
@@ -25,7 +24,9 @@ namespace Nvm.IntegrationTests;
 // HTTP thật + JWT ký thật + process App thật. Chỉ issuer và database/broker thuộc fixture kiểm thử.
 public sealed class ExecutionCommandHttpFixture : IAsyncLifetime
 {
-    private readonly MsSqlContainer _sql = new MsSqlBuilder("mcr.microsoft.com/mssql/server:2022-CU26-ubuntu-22.04").Build();
+    // SQL Server dùng chung (SharedContainers): login cấp server là duy nhất cho mỗi fixture; user trong database vẫn là
+    // nvm_app, đúng tên các migration GRANT.
+    private readonly string _login = "nvm_app_" + Guid.NewGuid().ToString("N")[..12];
     private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:17.9-alpine").Build();
     private readonly string _password = "Aa1!" + Guid.NewGuid().ToString("N");
     private readonly RSA _rsa = RSA.Create(2048);
@@ -38,7 +39,7 @@ public sealed class ExecutionCommandHttpFixture : IAsyncLifetime
     private string _authority = "";
     private int _appPort;
     public HttpClient Client { get; private set; } = null!;
-    public string ConnectionString => _sql.GetConnectionString();
+    public string ConnectionString { get; private set; } = "";
     public string PostgresConnectionString => _postgres.GetConnectionString();
     public int ProcessId => _process!.Id;
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
@@ -49,16 +50,20 @@ public sealed class ExecutionCommandHttpFixture : IAsyncLifetime
             .WithEnvironment("RABBITMQ_DEFAULT_USER", "c06")
             .WithEnvironment("RABBITMQ_DEFAULT_PASS", _password)
             .WithPortBinding(5672, true).WithPortBinding(15672, true).Build();
-        await Task.WhenAll(_sql.StartAsync(Ct), _postgres.StartAsync(Ct), _rabbit.StartAsync(Ct));
+        var database = SharedContainers.NewSqlDatabaseAsync("http");
+        await Task.WhenAll(database, _postgres.StartAsync(Ct), _rabbit.StartAsync(Ct));
+        ConnectionString = await database;
         await using (var connection = new SqlConnection(ConnectionString))
         {
             await connection.OpenAsync(Ct);
             using var command = connection.CreateCommand();
             command.CommandText = """
-                DECLARE @ddl nvarchar(max) = N'CREATE LOGIN nvm_app WITH PASSWORD=' + QUOTENAME(@password, '''') + N';';
+                DECLARE @ddl nvarchar(max) = N'CREATE LOGIN ' + QUOTENAME(@login) + N' WITH PASSWORD=' + QUOTENAME(@password, '''') + N';';
                 EXEC(@ddl);
-                CREATE USER nvm_app FOR LOGIN nvm_app;
+                SET @ddl = N'CREATE USER nvm_app FOR LOGIN ' + QUOTENAME(@login) + N';';
+                EXEC(@ddl);
                 """;
+            command.Parameters.AddWithValue("@login", _login);
             command.Parameters.AddWithValue("@password", _password);
             await command.ExecuteNonQueryAsync(Ct);
         }
@@ -185,7 +190,7 @@ public sealed class ExecutionCommandHttpFixture : IAsyncLifetime
         info.Environment["ASPNETCORE_ENVIRONMENT"] = "Development";
         info.Environment["ASPNETCORE_URLS"] = $"http://127.0.0.1:{_appPort}";
         info.Environment["Logging__LogLevel__Default"] = "Warning";
-        info.Environment["NVM_COMMANDS__ConnectionString"] = new SqlConnectionStringBuilder(ConnectionString) { UserID = "nvm_app", Password = _password }.ConnectionString;
+        info.Environment["NVM_COMMANDS__ConnectionString"] = new SqlConnectionStringBuilder(ConnectionString) { UserID = _login, Password = _password }.ConnectionString;
         info.Environment["NVM_POM__ConnectionString"] = _postgres.GetConnectionString();
         info.Environment["NVM_POM__Authority"] = _authority;
         info.Environment["NVM_POM__MetadataAddress"] = _authority + "/.well-known/openid-configuration";
@@ -410,7 +415,6 @@ public sealed class ExecutionCommandHttpFixture : IAsyncLifetime
         if (_rabbit is not null)
         { await _rabbit.DisposeAsync(); }
         await _postgres.DisposeAsync();
-        await _sql.DisposeAsync();
     }
 }
 

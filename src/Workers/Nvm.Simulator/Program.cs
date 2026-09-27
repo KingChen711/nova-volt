@@ -2,6 +2,7 @@ using System.Globalization;
 using Nvm.FactoryModel.Seeding;
 using Nvm.Hosting;
 using Nvm.Kernel.Identity;
+using Nvm.Observability;
 using Nvm.Simulator;
 using Nvm.Simulator.Faults;
 using Nvm.Simulator.Formation;
@@ -13,6 +14,7 @@ CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
 CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
 
 var builder = Host.CreateApplicationBuilder(args);
+builder.AddNvmObservability("nvm-simulator");
 
 if (builder.Environment.IsDevelopment())
 {

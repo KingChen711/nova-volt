@@ -19,6 +19,8 @@ message DecodedSparkplugMessage {
   string message_type = 4;
   int64 gateway_timestamp_unix_ms = 5;
   repeated DecodedDeviceReading readings = 6;
+  // W3C traceparent của publish MQTT (M13, ADR-049). Rỗng với bản ghi cũ trong buffer và với thiết bị không gửi.
+  string trace_parent = 7;
 }
 
 message DecodedDeviceReading {

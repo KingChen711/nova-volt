@@ -78,6 +78,7 @@ public static class SparkplugIngressBatchCodec
             Topic = message.Topic.Value,
             MessageType = message.Topic.MessageType.Token(),
             GatewayTimestampUnixMs = message.GatewayTimestamp.ToUnixTimeMilliseconds(),
+            TraceParent = message.TraceParent ?? "",
         };
 
         foreach (var reading in message.Readings)
@@ -172,7 +173,8 @@ public static class SparkplugIngressBatchCodec
                 equipmentPath,
                 topic,
                 FromUnixMilliseconds(wire.GatewayTimestampUnixMs, "gateway_timestamp"),
-                readings.DrainToImmutable());
+                readings.DrainToImmutable())
+            { TraceParent = wire.TraceParent.Length == 0 ? null : wire.TraceParent };
         }
         catch (ArgumentException exception)
         {

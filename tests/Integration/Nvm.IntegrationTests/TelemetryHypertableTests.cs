@@ -273,7 +273,11 @@ public sealed class TelemetryHypertableTests
         metrics.WriteRetryCount.ShouldBe(0);
     }
 
-    internal static async Task<PostgreSqlContainer> StartAsync()
+    /// <summary>Database TimescaleDB mới trên container dùng chung (N14).</summary>
+    internal static Task<SharedTimescaleDatabase> StartAsync() => SharedContainers.NewTimescaleDatabaseAsync();
+
+    /// <summary>Container riêng, cho test tạo role cấp cluster (role Postgres không thuộc một database).</summary>
+    internal static async Task<PostgreSqlContainer> StartDedicatedAsync()
     {
         var postgres = new PostgreSqlBuilder("timescale/timescaledb:2.29.2-pg17")
             .WithDatabase("novavolt_integration")
@@ -303,7 +307,7 @@ public sealed class TelemetryHypertableTests
         {
             if ((await ReadAsync(dataSource, """
                 SELECT count(*)::text FROM pg_stat_activity
-                WHERE backend_type <> 'client backend' AND application_name ~ '\[[0-9]+\]$';
+                WHERE datname = current_database() AND backend_type <> 'client backend' AND application_name ~ '\[[0-9]+\]$';
                 """))[0] == "0")
             { return; }
             await Task.Delay(100, CancellationToken.None);

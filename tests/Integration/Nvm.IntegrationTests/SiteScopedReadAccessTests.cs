@@ -36,10 +36,11 @@ public sealed class SiteScopedReadAccessTests
     [Fact]
     public async Task AGrantedRole_ReadsItsOwnPlantAndCannotReachAnother()
     {
-        await using var postgres = await TelemetryHypertableTests.StartAsync();
+        await using var postgres = await TelemetryHypertableTests.StartDedicatedAsync();
         IngestionSchemaMigrator.Upgrade(postgres.GetConnectionString());
 
         await using var owner = NpgsqlDataSource.Create(postgres.GetConnectionString());
+        await TelemetryHypertableTests.PauseBackgroundJobsAsync(owner);
         await SeedBothPlantsAsync(owner);
         await ProvisionReaderAsync(owner, grantedSite: "NV1");
 
@@ -113,10 +114,11 @@ public sealed class SiteScopedReadAccessTests
     {
         // Base table, compatibility view, và chính grant table. Cái cuối quan trọng nhất: role đọc được
         // grant của mình thì biết nhà máy nào tồn tại; role ghi được nó thì không cần những cái khác.
-        await using var postgres = await TelemetryHypertableTests.StartAsync();
+        await using var postgres = await TelemetryHypertableTests.StartDedicatedAsync();
         IngestionSchemaMigrator.Upgrade(postgres.GetConnectionString());
 
         await using var owner = NpgsqlDataSource.Create(postgres.GetConnectionString());
+        await TelemetryHypertableTests.PauseBackgroundJobsAsync(owner);
         await SeedBothPlantsAsync(owner);
         await ProvisionReaderAsync(owner, grantedSite: "NV1");
 
@@ -134,10 +136,11 @@ public sealed class SiteScopedReadAccessTests
         // Toàn bộ design dựa vào việc reader không sửa được authorization của mình. Viết thành test vì
         // "nó read-only" là claim về role attribute mà commit sau có thể đổi trong một dòng, và đây là
         // nơi sẽ phát hiện điều đó.
-        await using var postgres = await TelemetryHypertableTests.StartAsync();
+        await using var postgres = await TelemetryHypertableTests.StartDedicatedAsync();
         IngestionSchemaMigrator.Upgrade(postgres.GetConnectionString());
 
         await using var owner = NpgsqlDataSource.Create(postgres.GetConnectionString());
+        await TelemetryHypertableTests.PauseBackgroundJobsAsync(owner);
         await SeedBothPlantsAsync(owner);
         await ProvisionReaderAsync(owner, grantedSite: "NV1");
 

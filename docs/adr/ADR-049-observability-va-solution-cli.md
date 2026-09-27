@@ -23,6 +23,10 @@ version theo Functional Block với ma trận tương thích. Kernel và Functio
   1.17, nguồn `NovaVolt.*` và `MassTransit`, ASP.NET Core, HttpClient, runtime. Chỉ khi có `NVM_OTEL:Endpoint` mới xuất
   OTLP (gRPC), timeout mặc định 2 s. Bốn host đã bật: Execution, ProjectionWorker, Ingestion, EdgeGateway.
 - **Telemetry là best-effort**: exporter chạy nền theo lô; collector tắt thì bỏ dữ liệu, không làm request lỗi.
+- **Trace qua MQTT**: simulator mở span `mqtt publish` và gửi `traceparent` trong user property MQTT 5; edge gateway
+  nhận (chỉ chuỗi đúng W3C), mở span `mqtt receive` dưới đó và ghi context vào trường `trace_parent` của
+  `gateway_ingress.proto` (trường mới, bản ghi buffer cũ vẫn đọc được); ingestion mở span `ingest batch` link tới mọi trace
+  trong lô và một span `ingest` con dưới từng trace thiết bị.
 - **Version theo FB**: `<Version>` trong csproj của từng Functional Block. `solution.yaml` khai báo App nào gồm FB version
   nào. Luật tương thích: cùng major, bản build không cũ hơn bản khai báo.
 - **`tools/solution-cli`**: `validate`, `matrix`, `generate --mode monolith|distributed`. Cả hai mode sinh overlay
@@ -38,8 +42,9 @@ version theo Functional Block với ma trận tương thích. Kernel và Functio
 
 **Mất / phải chịu**
 
-- **Chưa có** `traceparent` qua MQTT: edge gateway ghi buffer append-only (ADR-028) và gửi lô protobuf sang ingestion;
-  mang trace theo từng message cần đổi định dạng buffer. Trace hiện bắt đầu ở HTTP/bus, chưa từ thiết bị. DoD T9 chưa đạt.
+- Trace thiết bị dừng ở ingestion: outbox của ingestion chưa lưu trace context, nên event `MeasurementRecorded` lên bus mở
+  trace mới; đoạn domain → projection đi tiếp nhờ MassTransit, còn OData/Mendix là request riêng của người đọc (không
+  cùng trace, chỉ nối được bằng link). DoD T9 "một trace liền mạch tới Mendix" chưa đạt.
 - Chưa có OTel Collector/Tempo/Loki trong compose, chưa có dashboard SLO/error budget, business metric mới có
   `nvm.commands`. Chưa đo N1/N2 sau instrumentation (rig chưa qua preflight).
 - `solution-cli` chưa có Helm chart để dùng `values.yaml`; chưa deploy k3d. Mode monolith vẫn bật `edge-gateway` vì
@@ -58,8 +63,13 @@ version theo Functional Block với ma trận tương thích. Kernel và Functio
 
 - `ObservabilityTests` (lab M13): endpoint OTLP không ai nghe; 200 request HTTP đều 200; span domain nằm trong trace của
   người gọi; `StopAsync` < 15 s.
+- `MqttTraceContextTests`: publish của simulator qua mosquitto thật tới subscriber MQTT 5 mang `traceparent` đúng bằng id
+  của span `mqtt publish`. `SparkplugIngressBatchCodecTests`: trường trace đi qua mã hoá lô và bản ghi không có trường
+  vẫn đọc được; giá trị không đúng W3C bị bỏ.
 - `SolutionCliTests` 8/8: manifest của repo hợp lệ với version build và phủ đúng mọi FB; luật major/minor; FB lạ, mode lạ,
   extension app trỏ App không tồn tại đều báo lỗi; cùng manifest sinh hai mode khác nhau.
 - `dotnet run --project tools/solution-cli/Nvm.SolutionCli -- generate --mode …` rồi
   `docker compose -f docker-compose.yml -f artifacts/solution/<mode>/docker-compose.solution.yml --profile solution config --services`:
   monolith → hạ tầng (+ edge-gateway); distributed → hạ tầng + execution, projection, ingestion, edge-gateway.
+- N14 (2026-09-27): integration suite 11m18s–13m02s khi mỗi lớp test có SQL Server riêng và mỗi test telemetry có
+  TimescaleDB riêng; **7m53s** sau khi dùng chung một SQL Server và một TimescaleDB (database riêng cho mỗi fixture/test).

@@ -403,7 +403,7 @@ public sealed class RawCurveArchiveTests
 
             try
             {
-                postgres = await TelemetryHypertableTests.StartAsync();
+                postgres = await TelemetryHypertableTests.StartDedicatedAsync();
                 IngestionSchemaMigrator.Upgrade(postgres.GetConnectionString());
                 dataSource = NpgsqlDataSource.Create(postgres.GetConnectionString());
                 s3 = new AmazonS3Client(

@@ -7,7 +7,6 @@ using Nvm.CommandStore;
 using Nvm.Kernel;
 using Nvm.Kernel.Commands;
 using Nvm.Kernel.Commands.Idempotency;
-using Testcontainers.MsSql;
 
 namespace Nvm.IntegrationTests;
 
@@ -522,17 +521,15 @@ public sealed record RenamedSubmission(RecordDataCollection Original) : IDurable
 /// <summary>Container SQL Server thật + schema C05 + seed context + bảng effect test.</summary>
 public sealed class SqlCommandStoreFixture : IAsyncLifetime
 {
-    private readonly MsSqlContainer _sql =
-        new MsSqlBuilder("mcr.microsoft.com/mssql/server:2022-CU26-ubuntu-22.04").Build();
-
-    public string ConnectionString => _sql.GetConnectionString();
+    /// <summary>Database riêng của fixture trên SQL Server dùng chung (<see cref="SharedContainers"/>).</summary>
+    public string ConnectionString { get; private set; } = "";
 
     /// <summary>Fallback RAM dùng chung, giống singleton InMemoryIdempotencyStore trong DI thật.</summary>
     public InMemoryIdempotencyStore SharedInMemory { get; } = new(TimeProvider.System);
 
     public async ValueTask InitializeAsync()
     {
-        await _sql.StartAsync();
+        ConnectionString = await SharedContainers.NewSqlDatabaseAsync("cmd");
         // Seed context = migration + 2.000 unit từ cùng generator C03.
         await CommandContextFixtureSeed.PrepareAsync(ConnectionString);
         // Bảng effect chỉ dùng cho test, mô phỏng bản ghi nghiệp vụ commit cùng transaction với claim.
@@ -617,5 +614,5 @@ public sealed class SqlCommandStoreFixture : IAsyncLifetime
         return await command.ExecuteScalarAsync(cancellationToken) as string;
     }
 
-    public async ValueTask DisposeAsync() => await _sql.DisposeAsync();
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 }

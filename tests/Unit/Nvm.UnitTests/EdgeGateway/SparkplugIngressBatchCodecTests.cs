@@ -29,6 +29,30 @@ public sealed class SparkplugIngressBatchCodecTests
     }
 
     [Fact]
+    public void RoundTrip_CarriesTheTraceParent_AndAMessageWithoutOneStaysWithout()
+    {
+        const string traceParent = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01";
+        var reading = new DeviceReading("Formation/Voltage", 1, new MetricValue.Real(3.7), DeviceAt);
+        var traced = Message(reading) with { TraceParent = traceParent };
+        var plain = Message(reading);
+
+        var decoded = SparkplugIngressBatchCodec.Decode(SparkplugIngressBatchCodec.Encode([traced, plain]));
+
+        decoded[0].TraceParent.ShouldBe(traceParent);
+        decoded[1].TraceParent.ShouldBeNull();
+        decoded[0].ShouldBe(plain);   // trace không phải dữ liệu nghiệp vụ: không ảnh hưởng so sánh bằng
+    }
+
+    [Theory]
+    [InlineData("00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01", true)]
+    [InlineData("00-00000000000000000000000000000000-00f067aa0ba902b7-01", false)]   // trace id toàn 0 không hợp lệ
+    [InlineData("not-a-trace", false)]
+    [InlineData("", false)]
+    [InlineData(null, false)]
+    public void TraceContextFromADevice_IsAcceptedOnlyInW3cFormat(string? value, bool accepted) =>
+        (MqttTraceContext.Accept(value) is not null).ShouldBe(accepted);
+
+    [Fact]
     public void Encode_EmptyBatch_RefusesARequestThatCouldAcknowledgeNothing()
     {
         Should.Throw<ArgumentException>(() =>

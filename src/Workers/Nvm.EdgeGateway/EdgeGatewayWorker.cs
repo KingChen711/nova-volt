@@ -1,4 +1,5 @@
 using System.Buffers;
+using System.Diagnostics;
 using MQTTnet;
 using MQTTnet.Protocol;
 using Nvm.EdgeGateway.Buffering;
@@ -187,6 +188,18 @@ public sealed partial class EdgeGatewayWorker : BackgroundService
         {
             await arguments.AcknowledgeAsync(_stoppingToken);
             return;
+        }
+
+        // Nối trace của thiết bị (M13): span nhận nằm dưới publish của thiết bị, và context của span này đi theo message
+        // qua buffer và lô HTTP tới ingestion. Thiết bị không gửi hoặc gửi sai định dạng thì bắt đầu trace mới ở đây.
+        var property = arguments.ApplicationMessage.UserProperties?
+            .FirstOrDefault(p => string.Equals(p.Name, MqttTraceContext.PropertyName, StringComparison.Ordinal));
+        var incoming = property is null ? null
+            : MqttTraceContext.Accept(System.Text.Encoding.UTF8.GetString(property.ValueBuffer.Span));
+        using (var receive = EdgeGatewayTelemetry.Source.StartActivity("mqtt receive", ActivityKind.Consumer, incoming))
+        {
+            receive?.SetTag("messaging.destination.name", arguments.ApplicationMessage.Topic);
+            decoded = decoded with { TraceParent = receive?.Id ?? incoming };
         }
 
         var decodedCount = _counters.CountDecoded();

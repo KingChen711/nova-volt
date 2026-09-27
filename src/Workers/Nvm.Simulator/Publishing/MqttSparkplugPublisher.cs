@@ -264,11 +264,18 @@ public sealed partial class MqttSparkplugPublisher : ISparkplugPublisher
                 $"No session on {_broker}, so '{message.Topic.Value}' has nowhere to go.");
         }
 
-        var mqtt = new MqttApplicationMessageBuilder()
+        // Mỗi publish là gốc một trace (M13): traceparent đi theo user property MQTT 5 để gateway và ingestion nối tiếp.
+        using var span = SimulatorTelemetry.Source.StartActivity("mqtt publish", System.Diagnostics.ActivityKind.Producer);
+        var builder = new MqttApplicationMessageBuilder()
             .WithTopic(message.Topic.Value)
             .WithPayload(message.Payload.AsSpan().ToArray())
-            .WithQualityOfServiceLevel(MqttQualityOfServiceLevel.AtLeastOnce)
-            .Build();
+            .WithQualityOfServiceLevel(MqttQualityOfServiceLevel.AtLeastOnce);
+        if (span?.Id is { } traceParent)
+        {
+            span.SetTag("messaging.destination.name", message.Topic.Value);
+            builder = builder.WithUserProperty(MqttTraceContext.PropertyName, System.Text.Encoding.UTF8.GetBytes(traceParent).AsMemory());
+        }
+        var mqtt = builder.Build();
 
         try
         {

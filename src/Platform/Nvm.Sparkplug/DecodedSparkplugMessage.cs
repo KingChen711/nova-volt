@@ -59,6 +59,12 @@ public sealed record DecodedSparkplugMessage
     /// <summary>Các reading đã decode mà publish này mang theo.</summary>
     public ImmutableArray<DeviceReading> Readings { get; }
 
+    /// <summary>
+    /// W3C <c>traceparent</c> của publish MQTT (user property MQTT 5), để ingestion nối trace của thiết bị. Không phải
+    /// dữ liệu nghiệp vụ: không tham gia so sánh bằng và không ảnh hưởng dedup.
+    /// </summary>
+    public string? TraceParent { get; init; }
+
     /// <summary>So sánh theo giá trị thay vì theo identity nội bộ của hai immutable array.</summary>
     public bool Equals(DecodedSparkplugMessage? other) =>
         other is not null

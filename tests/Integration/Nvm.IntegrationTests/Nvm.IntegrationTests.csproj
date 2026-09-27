@@ -44,7 +44,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="../../../deploy/pom/Pom.metadata.xml" LogicalName="Pom.metadata.xml" />
+    <!-- WithCulture=false: build Linux trả resource null (2026-09-27). Giả thuyết: MSBuild suy "metadata" là culture
+         dưới ICU và đưa file vào satellite assembly; kiểm lại bằng lượt chạy Linux sau khi sửa. -->
+    <EmbeddedResource Include="../../../deploy/pom/Pom.metadata.xml" LogicalName="Pom.metadata.xml" WithCulture="false" />
     <Content Include="../../../deploy/seed/factory-model.r3.json" Link="factory-model.r3.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

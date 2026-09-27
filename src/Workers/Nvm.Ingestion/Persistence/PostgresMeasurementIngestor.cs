@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 using Npgsql;
 using NpgsqlTypes;
@@ -179,9 +180,16 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
         var rawCount = 0;
         var distinct = new Dictionary<Guid, MeasurementRow>();
 
+        var traces = new HashSet<string>(StringComparer.Ordinal);
+
         foreach (var message in messages)
         {
             ArgumentNullException.ThrowIfNull(message);
+
+            if (message.TraceParent is { } traceParent)
+            {
+                traces.Add(traceParent);
+            }
 
             foreach (var reading in message.Readings)
             {
@@ -191,7 +199,26 @@ public sealed class PostgresMeasurementIngestor : IMeasurementIngestor
             }
         }
 
-        return await StoreAsync(distinct, rawCount, cancellationToken);
+        // Một lô gom message của nhiều trace thiết bị: span lô link tới từng trace, và mỗi trace nhận một span con cùng
+        // khoảng thời gian, để trace của một thiết bị đi liền từ publish tới lúc dữ liệu vào DB (M13).
+        var started = _timeProvider.GetUtcNow();
+        using var batch = IngestionTelemetry.Source.StartActivity("ingest batch", ActivityKind.Internal, default(ActivityContext),
+            links: traces.Select(t => ActivityContext.TryParse(t, null, isRemote: true, out var link) ? new ActivityLink(link) : default)
+                .Where(l => l.Context != default));
+        var result = await StoreAsync(distinct, rawCount, cancellationToken);
+        batch?.SetTag("nvm.readings", rawCount);
+        if (IngestionTelemetry.Source.HasListeners())
+        {
+            foreach (var traceParent in traces)
+            {
+                if (ActivityContext.TryParse(traceParent, null, isRemote: true, out var parent))
+                {
+                    using var span = IngestionTelemetry.Source.StartActivity("ingest", ActivityKind.Consumer, parent,
+                        startTime: started);
+                }
+            }
+        }
+        return result;
     }
 
     /// <inheritdoc />

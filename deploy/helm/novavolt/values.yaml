@@ -1,0 +1,59 @@
+# Mặc định của chart. Phần solution/apps/workers do tools/solution-cli sinh từ solution.yaml
+# (`generate --out <dir>` ra values.yaml) và truyền bằng `-f`; không sửa tay danh sách đó ở đây.
+#
+# Credential KHÔNG nằm trong chart hay git. Mỗi workload đọc thêm biến môi trường từ Secret
+# "<release>-<tên workload>" do người vận hành tạo trước, ví dụ:
+#   kubectl create secret generic novavolt-execution --from-env-file=execution.env
+# Secret giữ các chuỗi kết nối có mật khẩu (NVM_COMMANDS__ConnectionString, NVM_POM__ConnectionString,
+# NVM_RABBITMQ_USER/PASSWORD, ...). Migration job đọc Secret "<release>-<tên workload>-migrate".
+solution:
+  name: novavolt-mes
+  version: "0.0.0"
+apps: []
+workers: []
+
+imagePullPolicy: IfNotPresent
+
+# Biến môi trường không bí mật theo tên workload.
+config:
+  execution:
+    ASPNETCORE_ENVIRONMENT: Production
+    NVM_POM__Audience: nvm-api
+    NVM_RABBITMQ_HOST: rabbitmq
+    NVM_PORT_RABBITMQ: "5672"
+  projection:
+    NVM_PROJECTIONS__Sites: NV1,DE1
+    NVM_RABBITMQ_HOST: rabbitmq
+    NVM_PORT_RABBITMQ: "5672"
+  ingestion:
+    NVM_INGEST__BusHost: rabbitmq
+    NVM_INGEST__PublishedSignals__0: Formation/CapacityResult
+  edge-gateway:
+    NVM_EDGE__BrokerHost: emqx
+    NVM_EDGE__IngestionUrl: http://ingestion:8080/api/ingestion/v1/sparkplug-batches
+
+# Health: app HTTP dùng /health/live và /health/ready; worker dùng lệnh --health-probe của chính image.
+probes:
+  projection:
+    exec: ["dotnet", "Nvm.ProjectionWorker.dll", "--health-probe"]
+  ingestion:
+    exec: ["dotnet", "Nvm.Ingestion.dll", "--health-probe", "http://127.0.0.1:8080/health/ready"]
+
+# Cổng HTTP của worker (nếu có) để tạo Service.
+workerPorts:
+  ingestion: 8080
+
+# Migration chạy như Helm hook trước install/upgrade, bằng chính image của workload.
+# Process phục vụ request không tự migrate (deploy/commands/README.md).
+migrations:
+  execution: ["--migrate-commands"]
+  projection: ["--migrate"]
+  ingestion: ["--migrate"]
+
+resources:
+  default:
+    requests:
+      cpu: 100m
+      memory: 192Mi
+    limits:
+      memory: 512Mi

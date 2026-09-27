@@ -1,0 +1,34 @@
+{{- /* Migration chạy trước install/upgrade bằng image của workload, với credential migration riêng. */ -}}
+{{- $workloads := concat .Values.apps .Values.workers }}
+{{- range $workload := $workloads }}
+{{- $args := index $.Values.migrations $workload.name }}
+{{- if $args }}
+{{- $ctx := dict "root" $ "name" $workload.name }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ printf "%s-migrate" $workload.name }}
+  labels:
+    {{- include "novavolt.labels" $ctx | nindent 4 }}
+    {{- include "novavolt.selector" $ctx | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 2
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: {{ printf "%s:%s" $workload.image $workload.tag | quote }}
+          imagePullPolicy: {{ $.Values.imagePullPolicy }}
+          args: {{ toJson $args }}
+          envFrom:
+            - secretRef:
+                name: {{ printf "%s-%s-migrate" $.Release.Name $workload.name }}
+          {{- include "novavolt.securityContext" $ctx | nindent 10 }}
+{{- end }}
+{{- end }}

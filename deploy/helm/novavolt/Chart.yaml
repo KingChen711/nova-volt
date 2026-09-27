@@ -1,0 +1,6 @@
+apiVersion: v2
+name: novavolt
+description: NovaVolt MES — App Execution và các worker (scope §12.4). Hạ tầng (SQL Server, TimescaleDB, RabbitMQ, Keycloak, EMQX, MinIO) nằm ngoài chart.
+type: application
+version: 1.13.0
+appVersion: "1.13.0"

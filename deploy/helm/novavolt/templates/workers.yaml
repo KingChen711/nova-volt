@@ -1,0 +1,60 @@
+{{- range $worker := .Values.workers }}
+{{- $ctx := dict "root" $ "name" $worker.name }}
+{{- $port := index $.Values.workerPorts $worker.name }}
+{{- $probe := index $.Values.probes $worker.name }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $worker.name }}
+  labels:
+    {{- include "novavolt.labels" $ctx | nindent 4 }}
+    {{- include "novavolt.selector" $ctx | nindent 4 }}
+spec:
+  replicas: {{ $worker.replicas }}
+  selector:
+    matchLabels:
+      {{- include "novavolt.selector" $ctx | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "novavolt.selector" $ctx | nindent 8 }}
+    spec:
+      containers:
+        - name: {{ $worker.name }}
+          image: {{ printf "%s:%s" $worker.image $worker.tag | quote }}
+          imagePullPolicy: {{ $.Values.imagePullPolicy }}
+          {{- if $port }}
+          ports:
+            - name: http
+              containerPort: {{ $port }}
+          {{- end }}
+          {{- include "novavolt.env" $ctx | nindent 10 }}
+          {{- if $probe }}
+          readinessProbe:
+            exec:
+              command: {{ toJson $probe.exec }}
+            periodSeconds: 10
+            timeoutSeconds: 5
+          {{- end }}
+          resources:
+            {{- toYaml $.Values.resources.default | nindent 12 }}
+          {{- include "novavolt.securityContext" $ctx | nindent 10 }}
+{{- if $port }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $worker.name }}
+  labels:
+    {{- include "novavolt.labels" $ctx | nindent 4 }}
+    {{- include "novavolt.selector" $ctx | nindent 4 }}
+spec:
+  selector:
+    {{- include "novavolt.selector" $ctx | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ $port }}
+      targetPort: http
+{{- end }}
+{{- end }}

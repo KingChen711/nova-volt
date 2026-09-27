@@ -137,3 +137,9 @@ jobs:
           dotnet run --project tools/solution-cli/Nvm.SolutionCli -- validate
           dotnet run --project tools/solution-cli/Nvm.SolutionCli -- generate --mode monolith --out out/monolith
           dotnet run --project tools/solution-cli/Nvm.SolutionCli -- generate --mode distributed --out out/distributed
+      # Chart đọc values do solution-cli sinh; helm có sẵn trên runner ubuntu.
+      - name: Helm lint and render (distributed values)
+        run: |
+          helm lint deploy/helm/novavolt -f out/distributed/values.yaml
+          helm template novavolt deploy/helm/novavolt -f out/distributed/values.yaml > out/rendered.yaml
+          grep -c '^kind: Deployment' out/rendered.yaml

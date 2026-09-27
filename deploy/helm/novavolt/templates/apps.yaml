@@ -1,0 +1,63 @@
+{{- range $app := .Values.apps }}
+{{- $ctx := dict "root" $ "name" $app.name }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $app.name }}
+  labels:
+    {{- include "novavolt.labels" $ctx | nindent 4 }}
+    {{- include "novavolt.selector" $ctx | nindent 4 }}
+  annotations:
+    {{- range $block, $version := $app.functionalBlocks }}
+    novavolt.io/fb-{{ $block | lower }}: {{ $version | quote }}
+    {{- end }}
+spec:
+  replicas: {{ $app.replicas }}
+  selector:
+    matchLabels:
+      {{- include "novavolt.selector" $ctx | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "novavolt.selector" $ctx | nindent 8 }}
+    spec:
+      containers:
+        - name: {{ $app.name }}
+          image: {{ printf "%s:%s" $app.image $app.tag | quote }}
+          imagePullPolicy: {{ $.Values.imagePullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ $app.port }}
+          {{- include "novavolt.env" $ctx | nindent 10 }}
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: http
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: http
+            periodSeconds: 20
+            failureThreshold: 3
+          resources:
+            {{- toYaml $.Values.resources.default | nindent 12 }}
+          {{- include "novavolt.securityContext" $ctx | nindent 10 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $app.name }}
+  labels:
+    {{- include "novavolt.labels" $ctx | nindent 4 }}
+    {{- include "novavolt.selector" $ctx | nindent 4 }}
+spec:
+  selector:
+    {{- include "novavolt.selector" $ctx | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ $app.port }}
+      targetPort: http
+{{- end }}

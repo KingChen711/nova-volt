@@ -21,6 +21,9 @@ public sealed class CloudEventHeaderTests
     private static async Task<ITestHarness> StartHarnessAsync(ServiceProvider provider)
     {
         var harness = provider.GetRequiredService<ITestHarness>();
+        // Mặc định harness chờ khoảng 5 giây; cả solution chạy song song trên runner Linux thì message tới muộn hơn (đỏ 1 lần
+        // trong lượt chạy container SDK 2026-09-27). Chờ lâu hơn không đổi điều được chứng minh.
+        harness.TestTimeout = TimeSpan.FromSeconds(30);
         await harness.Start();
 
         return harness;

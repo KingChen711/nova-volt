@@ -31,6 +31,7 @@ public sealed class MassTransitEventOutboxPublisherTests
             })
             .BuildServiceProvider(true);
         var harness = provider.GetRequiredService<ITestHarness>();
+        harness.TestTimeout = TimeSpan.FromSeconds(30);   // xem CloudEventHeaderTests: runner song song chậm hơn 5 s mặc định
         await harness.Start();
         using var scope = provider.CreateScope();
 

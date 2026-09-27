@@ -73,3 +73,9 @@ version theo Functional Block với ma trận tương thích. Kernel và Functio
   monolith → hạ tầng (+ edge-gateway); distributed → hạ tầng + execution, projection, ingestion, edge-gateway.
 - N14 (2026-09-27): integration suite 11m18s–13m02s khi mỗi lớp test có SQL Server riêng và mỗi test telemetry có
   TimescaleDB riêng; **7m53s** sau khi dùng chung một SQL Server và một TimescaleDB (database riêng cho mỗi fixture/test).
+- Chaos SQL (`SqlOutageChaosLabTests`, NVM_RUN_LABS=1, 2026-09-27): SQL Server riêng bị `docker pause` 120 s; 24 submission
+  mới trong lúc sập, mỗi cái tự gửi lại cùng submission. Hai lượt: readiness về sau 16,5 s và 17,6 s kể từ lúc SQL trở lại;
+  mọi submission đúng 1 outcome, 1 event, 1 dòng outbox; trên bus 29/29 `ce_id` tới. Lượt 1 có một event tới hai lần (cùng
+  `ce_id`, đúng at-least-once của ADR-040), lượt 2 không có bản trùng. `pause` giữ nguyên cổng; chưa thử `stop` hẳn process.
+- Toàn solution trong container .NET SDK Linux như CI: 1.072/1.081 xanh, 8 skip, 7m56s (N14 < 10 phút đạt trên máy này);
+  test đỏ còn lại là timeout mặc định của MassTransit harness khi chạy song song, đã nâng lên 30 s.

@@ -22,7 +22,7 @@ using Testcontainers.PostgreSql;
 namespace Nvm.IntegrationTests;
 
 // HTTP thật + JWT ký thật + process App thật. Chỉ issuer và database/broker thuộc fixture kiểm thử.
-public sealed class ExecutionCommandHttpFixture : IAsyncLifetime
+public class ExecutionCommandHttpFixture : IAsyncLifetime
 {
     // SQL Server dùng chung (SharedContainers): login cấp server là duy nhất cho mỗi fixture; user trong database vẫn là
     // nvm_app, đúng tên các migration GRANT.
@@ -44,13 +44,16 @@ public sealed class ExecutionCommandHttpFixture : IAsyncLifetime
     public int ProcessId => _process!.Id;
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
+    /// <summary>Database cho fixture; mặc định trên SQL Server dùng chung. Lab chaos thay bằng server riêng để tắt được.</summary>
+    protected virtual Task<string> CreateSqlDatabaseAsync() => SharedContainers.NewSqlDatabaseAsync("http");
+
     public async ValueTask InitializeAsync()
     {
         _rabbit = new ContainerBuilder("rabbitmq:4.3.5-management")
             .WithEnvironment("RABBITMQ_DEFAULT_USER", "c06")
             .WithEnvironment("RABBITMQ_DEFAULT_PASS", _password)
             .WithPortBinding(5672, true).WithPortBinding(15672, true).Build();
-        var database = SharedContainers.NewSqlDatabaseAsync("http");
+        var database = CreateSqlDatabaseAsync();
         await Task.WhenAll(database, _postgres.StartAsync(Ct), _rabbit.StartAsync(Ct));
         ConnectionString = await database;
         await using (var connection = new SqlConnection(ConnectionString))
@@ -405,8 +408,9 @@ public sealed class ExecutionCommandHttpFixture : IAsyncLifetime
         Client?.Dispose();
     }
 
-    public async ValueTask DisposeAsync()
+    public virtual async ValueTask DisposeAsync()
     {
+        GC.SuppressFinalize(this);
         await StopAppAsync();
         if (_issuer is not null)
         { await _issuer.DisposeAsync(); }

@@ -117,6 +117,7 @@ public sealed class NvmRetryPolicyTests
             .BuildServiceProvider(true);
 
         var harness = provider.GetRequiredService<ITestHarness>();
+        harness.TestTimeout = TimeSpan.FromSeconds(30);   // xem CloudEventHeaderTests: runner song song chậm hơn 5 s mặc định
         await harness.Start();
 
         await harness.Bus.Publish(new FailsTwiceProbe("NV1"), TestContext.Current.CancellationToken);

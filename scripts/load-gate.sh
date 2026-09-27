@@ -210,7 +210,12 @@ wait_for_quiescence() {
 	return 1
 }
 
-if [ "$RATE" -lt "$N1_MINIMUM" ]; then
+# Soak (NVM_LOAD_SOAK=1, scripts/soak.sh) hoi cau khac: chiu duoc bao lau o khoi luong ~86 trieu diem/ngay, khong
+# hoi nhanh bao nhieu. Chi o che do do moi cho ban duoi N1, va N1 khong bao gio duoc cham trong che do do.
+if [ "${NVM_LOAD_SOAK:-0}" = "1" ]; then
+	[ "$ENFORCE_N1" = "1" ] && { say "NVM_LOAD_SOAK=1 khong di cung NVM_LOAD_ENFORCE_N1=1." >&2; exit 2; }
+	say "== che do soak: RATE=$RATE, N1 chi in de tham khao, khong cham"
+elif [ "$RATE" -lt "$N1_MINIMUM" ]; then
 	say "RATE offered ($RATE) < N1 ($N1_MINIMUM msg/s). Ban khong the chung minh mot nguong bang" >&2
 	say "cach ban duoi no; D2 khong duoc ha de lam gate xanh." >&2
 	exit 2
@@ -381,6 +386,8 @@ wait_for_quiescence || DRAINED=0
 
 docker logs "$POLLER" >"$SAMPLE_FILE" 2>/dev/null || true
 docker rm -f "$POLLER" >/dev/null 2>&1 || true
+# Soak (scripts/soak.sh) cần giữ mẫu để so thông lượng giờ đầu với giờ cuối.
+[ -n "${NVM_LOAD_KEEP_SAMPLES:-}" ] && cp "$SAMPLE_FILE" "$NVM_LOAD_KEEP_SAMPLES"
 [ -n "$STATS_PID" ] && kill "$STATS_PID" 2>/dev/null || true
 STATS_PID=
 

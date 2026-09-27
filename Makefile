@@ -22,7 +22,7 @@ ALL_PROFILES := --profile probe --profile init --profile obs --profile tools --p
 BACKUP_DIR := $(shell grep -E '^NVM_BACKUP_DIR=' .env 2>/dev/null | cut -d= -f2-)
 
 .DEFAULT_GOAL := help
-.PHONY: help up up-obs down down-v reset ps logs net-check grafana-net-check dmz-shell build test ci hooks format format-check clean backup secret-check rotation-preflight rabbitmq-durability-check bus-fanout bus-dlq bus-chaos sim-up sim-down sim-logs sim-report sim-net-check edge-up edge-down edge-logs edge-net-check buffer-crash ingestion-up ingestion-down ingestion-logs ingestion-migrate file-drop-race-probe telemetry-policy-lab rollup-refresh-wide telemetry-backfill compression-report rollup-bench rollup-bench-line rollup-reconcile calendar-lab outage-lab backpressure-lab load load-session-check load-net-check reconcile
+.PHONY: help up up-obs down down-v reset ps logs net-check grafana-net-check dmz-shell build test ci hooks format format-check clean backup secret-check rotation-preflight rabbitmq-durability-check bus-fanout bus-dlq bus-chaos sim-up sim-down sim-logs sim-report sim-net-check edge-up edge-down edge-logs edge-net-check buffer-crash ingestion-up ingestion-down ingestion-logs ingestion-migrate file-drop-race-probe telemetry-policy-lab rollup-refresh-wide telemetry-backfill compression-report rollup-bench rollup-bench-line rollup-reconcile calendar-lab outage-lab backpressure-lab load soak load-session-check load-net-check reconcile
 
 help:
 	@echo "NovaVolt MES"
@@ -387,6 +387,10 @@ load: .env
 
 # R2 protocol gate. 500 msg/s nam duoi capacity da do cua receiver de co lap tinh hop le cua
 # Sparkplug session; no KHONG thay the D2 o target `load` (5.000 msg/s trong 600 giay).
+# M13 soak: mac dinh 24 gio 1.000 kenh, KHONG xoa du lieu (doi chieu theo delta). Dry run: DURATION=600 make soak
+soak: .env
+	@DURATION=$${DURATION:-86400} RATE=$${RATE:-1000} sh scripts/soak.sh
+
 load-session-check: .env
 	@RATE=$${RATE:-500} DURATION=$${DURATION:-60} sh scripts/load-session-check.sh
 

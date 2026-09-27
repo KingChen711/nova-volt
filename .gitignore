@@ -92,3 +92,4 @@ desktop.ini
 tests/Mutation/**/bin/
 tests/Mutation/**/obj/
 tests/Mutation/**/StrykerOutput/
+soak-*/

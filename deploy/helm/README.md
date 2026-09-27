@@ -14,7 +14,7 @@ helm template novavolt deploy/helm/novavolt -f out/distributed/values.yaml
 | Workload | Deployment | Service | Migration (hook pre-install/pre-upgrade) |
 |---|---|---|---|
 | execution | có, probe HTTP `/health/ready` + `/health/live` | 8080 | `--migrate-commands` |
-| projection | có, probe `--health-probe` | — | `--migrate` |
+| projection | có, probe `--health-probe` | — | `--migrate` (sau execution: cấp quyền trên `es.Events`) |
 | ingestion | có, probe `--health-probe` | 8080 | `--migrate` |
 | edge-gateway | có | — | — |
 

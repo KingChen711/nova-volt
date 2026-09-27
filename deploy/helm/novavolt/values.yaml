@@ -50,6 +50,13 @@ migrations:
   projection: ["--migrate"]
   ingestion: ["--migrate"]
 
+# Thứ tự hook migration (số nhỏ chạy trước; Helm đợi Job xong mới sang mức sau). Projection cấp quyền trên es.Events,
+# bảng do migration của execution tạo, nên phải chạy sau.
+migrationWeights:
+  execution: 0
+  ingestion: 0
+  projection: 1
+
 resources:
   default:
     requests:

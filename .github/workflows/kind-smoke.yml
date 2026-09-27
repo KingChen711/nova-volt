@@ -59,9 +59,10 @@ jobs:
               exit 1
             fi
           }
+          # Projection cấp quyền trên es.Events, bảng do migration của execution tạo: execution phải chạy trước.
           migrate ingestion ingestion-migrate
-          migrate projection projection-migrate
           migrate execution execution-prepare-commands
+          migrate projection projection-migrate
 
       - name: Install kind
         run: |

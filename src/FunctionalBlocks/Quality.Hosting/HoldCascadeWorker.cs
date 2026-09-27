@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Nvm.CommandStore;
 using Nvm.Kernel.Commands;
 using Nvm.Quality.Commands;
+using Nvm.Quality.Ports;
 
 namespace Nvm.Quality.Hosting;
 
@@ -29,12 +30,15 @@ public sealed class HoldCascadeWorker(IServiceScopeFactory scopes, SqlCommandSto
     public async Task<int> RunOnceAsync(CancellationToken cancellationToken = default)
     {
         var applied = 0;
+        CascadePolicy policy;
+        await using (var scope = scopes.CreateAsyncScope())
+        { policy = scope.ServiceProvider.GetService<CascadePolicy>() ?? CascadePolicy.Default; }
         foreach (var item in await PendingAsync(cancellationToken).ConfigureAwait(false))
         {
             var rounds = item.Rounds;
             var next = item.NextChunk;
             var total = item.TotalUnits;
-            var size = item.ChunkSize == 0 ? 1000 : item.ChunkSize;
+            var size = item.ChunkSize == 0 ? policy.ChunkSize : item.ChunkSize;   // job mới: kích thước mà plan sẽ ghi
             while (rounds < PlanRounds || next * size < total || (total == 0 && item.JobStatus != "Completed" && rounds > 0 && next == 0))
             {
                 if (next * size >= total && rounds < PlanRounds)

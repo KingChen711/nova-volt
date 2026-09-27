@@ -63,13 +63,17 @@ Lượt đo đầu (2026-09-26): 315.000 unit trong **63,92 s** — trượt. Ng
 
 - Lập kế hoạch lại theo lịch (hoặc khi projection báo đã qua mốc thời gian của hold) để bắt cạnh tới rất muộn.
 - Đo N9 cùng tải ingestion sau khi rig qua preflight (M9 ★, requalify ở M13).
-- Lab M9 #1 (cascade không chunk) và #2 (gộp quality/inventory state) chưa chạy.
+- Lab M9 #1 đã chạy (xem Evidence): **không** tái hiện được việc transaction lớn chặn command không liên quan. Lab #2
+  (gộp quality/inventory state) chưa chạy.
+- Chưa xác minh: khi nâng khóa **thành công** (không có reader nào giữ khóa xung đột đúng lúc nâng), transaction lớn giữ
+  khóa cả bảng `HoldMembers` tới lúc commit. Phép đo phân biệt: chạy transaction lớn không có probe, cho probe bắt đầu
+  sau khi nâng khóa đã xảy ra.
 
 ## Alternatives considered
 
 | Phương án | Vì sao loại |
 |---|---|
-| Cascade đồng bộ trong request `PlaceHold` | Một transaction 315.000 dòng giữ lock nhiều phút; timeout HTTP; không resume được |
+| Cascade đồng bộ trong request `PlaceHold` | Timeout HTTP; không resume được; một transaction 157.500 unit mất 4–7 s (lab #1). Ý "giữ lock chặn luồng khác" **chưa được lab xác nhận** |
 | Mỗi unit một command | 315.000 claim + outcome; ước tính vượt 60 s nhiều lần |
 | Đọc stream cascade để lấy expected version mỗi chunk | Đã đo: 63,92 s, chi phí O(n²) |
 | Quartz/MassTransit saga cho job | Thêm hạ tầng khi claim + bảng job SQL đã đủ; cùng lý do ADR-015 |
@@ -89,3 +93,36 @@ chứa chúng; kill sau chunk 0 rồi chạy lại xử lý đúng chunk 1–2; 
 chối; sửa một byte nội dung chữ ký → `FirstBroken` chỉ ra đúng vị trí.
 
 Giới hạn: một lần chạy cho mỗi con số; chưa có tải ingestion song song.
+
+### Lab M9 #1 — một transaction thay cho chunk (2026-09-27, Claude)
+
+`CascadeLockContentionLabTests` (NVM_RUN_LABS=1, NVM_LAB_PACKS=1500): hai lot, mỗi lot 157.500 unit. Cascade chạy
+lần lượt với chunk 1.000 (lot A) và một chunk duy nhất 1.000.000 (lot B, tức một transaction). Trong lúc đó một luồng
+khác gửi `ConsumeMaterialCommand` liên tục cho 5 cell không liên quan. Command này đọc `quality.HoldMembers WITH
+(HOLDLOCK)` qua quality facet, tức đúng bảng cascade đang ghi. Bốn lần chạy trong cùng máy:
+
+| Lần | Thứ tự | Biến thể | Cascade | Probe p50 / p95 / max | Nâng khóa: thành công / lần thử |
+|---|---|---|---:|---:|---:|
+| 1 | chunk trước | chunk 1.000 | 15,1 s | 36 / 58 / 1.554 ms | — |
+| 1 | | một transaction | 4,7 s | 41 / 63 / 615 ms | — |
+| 2 | chunk trước | chunk 1.000 | 17,0 s | 35 / 76 / 2.128 ms | 0 / — |
+| 2 | | một transaction | 4,0 s | 41 / 79 / 391 ms | 0 / — |
+| 3 | chunk trước | chunk 1.000 | 18,7 s | 35 / 86 / 4.358 ms | 0 / 0 |
+| 3 | | một transaction | 4,2 s | 42 / 92 / 464 ms | 0 / 2 |
+| 4 | transaction trước | một transaction | 6,7 s | 54 / 191 / 963 ms | 0 / 1 |
+| 4 | | chunk 1.000 | 17,3 s | 39 / 139 / 316 ms | 0 / 0 |
+
+Kết luận có giới hạn:
+
+- Ở quy mô này, transaction lớn **không** chặn probe một cách có hệ thống. p95 hai biến thể cùng cỡ; không probe nào
+  lỗi. Giả thuyết của lab chưa được tái hiện.
+- Giá trị max lớn thuộc về biến thể chạy **trước** trong process, không thuộc về chunk: đảo thứ tự ở lần 4 thì outlier
+  đổi phe. Đây là hiệu ứng khởi động, không phải hiệu ứng khóa.
+- SQL Server có **thử** nâng khóa của transaction lớn lên cả bảng (1–2 lần thử) nhưng thất bại vì probe đang giữ khóa
+  xung đột, nên không có khóa cả bảng. Tức rủi ro chưa mất: nó bị che bởi chính tải đồng thời. Trường hợp nâng khóa
+  thành công chưa đo (xem Việc phát sinh).
+- Chunk chậm hơn 3–4 lần (15–19 s so với 4–7 s). Chunk vẫn được giữ vì checkpoint/resume, log transaction có giới hạn
+  và không phụ thuộc vào việc nâng khóa thất bại. Lý do "một transaction chặn luồng khác" hiện chỉ là suy luận.
+- Lab cũng lộ một lỗi thật, đã sửa: với kích thước chunk khác 1.000, worker đoán sai số chunk của job mới và gửi thêm
+  một chunk sau khi job đã xong, làm `HoldCascadeCompleted` ghi lần hai (`EventIdentityConflictException`). Processor
+  giờ từ chối chunk ngoài phạm vi; worker lấy kích thước mặc định từ `CascadePolicy`.

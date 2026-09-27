@@ -14,7 +14,7 @@ namespace Nvm.Quality.Handlers;
 /// là invariant ở đây, không phải chính sách UI.
 /// </summary>
 public sealed class QualityHoldProcessor(IEventStore events, IHoldStore holds, ISignatureStore signatures,
-    INcrStore ncrs, IUnitQualityWriter units, IDownstreamUnits downstream, TimeProvider clock) :
+    INcrStore ncrs, IUnitQualityWriter units, IDownstreamUnits downstream, CascadePolicy cascade, TimeProvider clock) :
     ICommandHandler<PlaceHoldCommand, DomainCommandResult>,
     ICommandHandler<PlanHoldCascadeCommand, DomainCommandResult>,
     ICommandHandler<ApplyCascadeChunkCommand, DomainCommandResult>,
@@ -54,12 +54,12 @@ public sealed class QualityHoldProcessor(IEventStore events, IHoldStore holds, I
         var now = clock.GetUtcNow();
         var jobId = hold.HoldId;
         var before = await holds.LoadJobForUpdateAsync(command.SiteId, jobId, cancellationToken).ConfigureAwait(false);
-        var total = await holds.AddTargetsAsync(command.SiteId, jobId, hold.HoldId, serials, ChunkSize, now, cancellationToken)
+        var total = await holds.AddTargetsAsync(command.SiteId, jobId, hold.HoldId, serials, cascade.ChunkSize, now, cancellationToken)
             .ConfigureAwait(false);
         if (before is null)
         {
             var started = new HoldCascadeStarted(command.IdempotencyKey.Value, command.OccurredAt, now, command.SiteId,
-                hold.HoldId, jobId, total, ChunkSize);
+                hold.HoldId, jobId, total, cascade.ChunkSize);
             var startedVersion = await AppendAsync(command.SiteId, CascadeStream(jobId), "hold-cascade", 0, started, now,
                 cancellationToken).ConfigureAwait(false);
             await holds.SetStreamVersionAsync(command.SiteId, jobId, startedVersion, cancellationToken).ConfigureAwait(false);
@@ -71,7 +71,10 @@ public sealed class QualityHoldProcessor(IEventStore events, IHoldStore holds, I
     public async Task<DomainCommandResult> HandleAsync(ApplyCascadeChunkCommand command, CancellationToken cancellationToken)
     {
         var job = await holds.LoadJobForUpdateAsync(command.SiteId, command.JobId, cancellationToken).ConfigureAwait(false);
-        if (job is null || job.NextChunk != command.ChunkIndex)
+        // Chunk ngoài phạm vi đã chốt (job đã xong) bị từ chối, nếu không HoldCascadeCompleted sẽ ghi hai lần.
+        // Chunk 0 của job rỗng vẫn hợp lệ: nó đóng job.
+        if (job is null || job.NextChunk != command.ChunkIndex
+            || (command.ChunkIndex > 0 && (long)command.ChunkIndex * job.ChunkSize >= job.TotalUnits))
         { return DomainCommandResult.Reject(QualityReasonCodes.CascadeNotReady); }
         var hold = await holds.LoadForUpdateAsync(command.SiteId, job.HoldId, cancellationToken).ConfigureAwait(false);
         if (hold?.Status != "Active")

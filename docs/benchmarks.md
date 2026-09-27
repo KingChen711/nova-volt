@@ -988,3 +988,7 @@ Không phải benchmark hiệu năng. `EquipmentOeeTests`: hai line, OEE gộp 0
 ## M11 — Watcher ERP 1.000 file (2026-09-26, Claude)
 
 `ErpInboundLabTests` (NVM_RUN_LABS=1), SQL Server 2022 Testcontainers, một lần chạy: 1.000 file B2MML (mỗi file một work order) xử lý tuần tự trong một lượt, **35,99 s** (28 file/s), 1.000 work order, 0 từ chối. Kết luận ở [ADR-046](adr/ADR-046-erp-gateway-va-doi-soat-master-data.md).
+
+## M9 lab #1 — cascade một transaction so với chunk (2026-09-27, Claude)
+
+`CascadeLockContentionLabTests` (NVM_RUN_LABS=1, NVM_LAB_PACKS=1500), 157.500 unit mỗi lot, probe `ConsumeMaterialCommand` trên 5 cell không liên quan, bốn lần chạy. Chunk 1.000: cascade 15,1–18,7 s, probe p95 58–139 ms. Một transaction: 4,0–6,7 s, probe p95 63–191 ms. Không probe nào lỗi; không lần nâng khóa nào thành công (1–2 lần thử thất bại ở biến thể một transaction). Outlier max (tới 4,4 s) đi theo biến thể chạy trước, không theo chunk. **Không tái hiện** được việc transaction lớn chặn luồng khác. Chi tiết và giới hạn ở [ADR-017](adr/ADR-017-hold-cascade-la-job-co-checkpoint.md).

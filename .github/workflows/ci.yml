@@ -111,7 +111,7 @@ jobs:
 
       # Lỗ hổng CRITICAL có bản vá làm đỏ build; HIGH chỉ báo, để không chặn vì lỗ hổng chưa có bản sửa.
       - name: Scan (trivy)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: novavolt/${{ matrix.host.name }}:ci
           severity: CRITICAL

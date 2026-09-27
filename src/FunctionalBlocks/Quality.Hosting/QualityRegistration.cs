@@ -74,6 +74,7 @@ public static class QualityRegistration
         services.TryAddSingleton<HoldCascadeWorker>();
         services.AddHostedService(provider => provider.GetRequiredService<HoldCascadeWorker>());
 
+        services.TryAddSingleton(CascadePolicy.Default);
         services.AddSiteWritePolicy(HoldPolicy, ApprovalPolicy.QualityEngineer, ApprovalPolicy.QualityManager);
         services.AddSiteWritePolicy(SignPolicy, Signers);
         services.AddSiteWritePolicy(DecidePolicy, ApprovalPolicy.QualityManager, ApprovalPolicy.ProductionManager);

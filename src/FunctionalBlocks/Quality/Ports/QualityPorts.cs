@@ -84,3 +84,11 @@ public interface IDownstreamUnits
     Task<IReadOnlyList<string>> ReadAsync(string siteId, string targetKind, string targetId, decimal? spanFromMeter,
         decimal? spanToMeter, CancellationToken cancellationToken);
 }
+
+/// <summary>
+/// Kích thước chunk của hold cascade (ADR-017). Mặc định 1.000; chỉ lab M9 đổi để đo cascade không chia chunk.
+/// </summary>
+public sealed record CascadePolicy(int ChunkSize)
+{
+    public static readonly CascadePolicy Default = new(Handlers.QualityHoldProcessor.ChunkSize);
+}

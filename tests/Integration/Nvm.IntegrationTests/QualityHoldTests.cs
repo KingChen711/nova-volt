@@ -1,6 +1,7 @@
 using System.Globalization;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
 using Npgsql;
@@ -16,6 +17,7 @@ using Nvm.Projections;
 using Nvm.Quality.Commands;
 using Nvm.Quality.Entities;
 using Nvm.Quality.Hosting;
+using Nvm.Quality.Ports;
 using Nvm.Traceability.Commands;
 using Nvm.Traceability.Hosting;
 using Testcontainers.PostgreSql;
@@ -151,6 +153,38 @@ public sealed class QualityHoldTests(SqlCommandStoreFixture sql) : IClassFixture
         var stream = await ReadStore().ReadStreamAsync("NV1", "cascade:" + holdId, Ct);
         stream!.Events.Count(e => e.EventType.EndsWith("units-held-by-cascade.v1", StringComparison.Ordinal)).ShouldBe(3);
         stream.Events.Count(e => e.EventType.EndsWith("hold-cascade-completed.v1", StringComparison.Ordinal)).ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task ChunkLargerThanDefault_CompletesOnce_AndChunkPastTheEndIsRejected()
+    {
+        // Lab M9 #1 lộ lỗi: worker đoán job mới dùng chunk 1.000, nên với chunk lớn hơn nó gửi thêm chunk 1 sau khi job
+        // đã xong và HoldCascadeCompleted bị ghi lần hai.
+        await TestCommandHost.MigrateAsync(sql.ConnectionString, Ct);
+        await using var postgres = new PostgreSqlBuilder("postgres:17-alpine").Build();
+        await postgres.StartAsync(Ct);
+        await using var data = NpgsqlDataSource.Create(postgres.GetConnectionString());
+        await ProjectionSchemaMigrator.UpgradeAsync(data, Ct);
+        const int cells = 2_400;
+        await SqlEventBulkLoader.LoadAsync(sql.ConnectionString, "NV1", Enumerable.Range(0, cells).Select(i =>
+        {
+            var serial = string.Create(CultureInfo.InvariantCulture, $"NV1CL16264C{i + 1:D5}");
+            return new BulkStreamEvent("consumption:" + serial, "unit-consumption", DomainEventRecord.Create(
+                new MaterialLotConsumed(Guid.NewGuid(), T0, T0, "NV1", "ELY-ONE-CHUNK", "Lot", "ELECTROLYTE", serial, 1m, "g",
+                    null, null, "RUN", "seed"), "urn:lot", "NV1:" + serial, T0));
+        }), cancellationToken: Ct);
+        await new GenealogyProjection(data, new SqlGlobalEventFeed(sql.ConnectionString)).CatchUpAsync("NV1", cancellationToken: Ct);
+        await using var host = TestCommandHost.Build(sql.ConnectionString, new FakeTimeProvider(T0), data,
+            services => services.Replace(ServiceDescriptor.Singleton(new CascadePolicy(5_000))));
+        var holdId = (await host.DispatchAsync(new PlaceHoldCommand("NV1", "qa.eng", "hold-one-chunk", T0, "Lot",
+            "ELY-ONE-CHUNK", null, null, "CONTAMINATION", null), Ct)).ReasonText!;
+
+        (await Worker(host).RunOnceAsync(Ct)).ShouldBe(1);
+        (await Members(holdId)).Length.ShouldBe(cells);
+        var extra = await host.DispatchAsync(new ApplyCascadeChunkCommand("NV1", holdId, 1, T0), Ct);
+        extra.ReasonCode.ShouldBe(QualityReasonCodes.CascadeNotReady);
+        var stream = await ReadStore().ReadStreamAsync("NV1", "cascade:" + holdId, Ct);
+        stream!.Events.Count(e => e.EventType.EndsWith("hold-cascade-completed.v1", StringComparison.Ordinal)).ShouldBe(1);
     }
 
     private static HoldCascadeWorker Worker(ServiceProvider host) =>

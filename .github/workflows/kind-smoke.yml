@@ -72,12 +72,17 @@ jobs:
       - name: Helm install on kind and readiness
         run: bash deploy/kind/smoke.sh
 
+      # Log job cần đăng nhập GitHub, nên chẩn đoán cũng được đưa ra annotation.
       - name: Diagnostics
         if: failure()
         run: |
-          kubectl --context kind-novavolt get pods,jobs -o wide || true
-          kubectl --context kind-novavolt describe pods | tail -80 || true
+          k="kubectl --context kind-novavolt"
+          one() { tr '\n' ' ' | cut -c1-900; }
+          echo "::error title=pods and jobs::$($k get pods,jobs --no-headers 2>&1 | one)"
+          echo "::error title=warning events::$($k get events --field-selector type=Warning --no-headers 2>&1 | tail -8 | one)"
           for d in execution projection ingestion edge-gateway; do
-            kubectl --context kind-novavolt logs deploy/$d --tail 40 || true
+            echo "::error title=logs $d::$($k logs deploy/$d --tail 12 2>&1 | one)"
           done
-          docker compose ps
+          for j in $($k get jobs -o name 2>/dev/null); do
+            echo "::error title=logs $j::$($k logs $j --tail 12 2>&1 | one)"
+          done

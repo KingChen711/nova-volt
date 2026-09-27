@@ -79,6 +79,7 @@ NVM_COMMANDS__MigrationConnectionString=Server=$MSSQL;Database=NovaVolt;User Id=
 EOF
 secret "$RELEASE-execution-pom-migrate" <<EOF
 NVM_POM__MigrationConnectionString=Host=$PG;Port=5432;Database=$NVM_POSTGRES_DB;Username=$NVM_POSTGRES_USER;Password=$NVM_POSTGRES_PASSWORD;GSS Encryption Mode=Disable
+NVM_POM_PASSWORD=$NVM_POM_PASSWORD
 EOF
 secret "$RELEASE-projection" <<EOF
 NVM_PROJECTIONS__ConnectionString=Host=$PG;Database=$NVM_POSTGRES_DB;Username=nvm_projection;Password=$NVM_PROJECTION_PG_PASSWORD;GSS Encryption Mode=Disable

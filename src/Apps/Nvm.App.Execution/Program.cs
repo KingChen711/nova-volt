@@ -123,8 +123,9 @@ if (args.Contains("--prepare-operator-fixture", StringComparer.Ordinal))
 
 if (args.Contains("--migrate", StringComparer.Ordinal))
 {
-    PomSchemaMigrator.Upgrade(builder.Configuration["NVM_POM:MigrationConnectionString"]
-        ?? throw new InvalidOperationException("NVM_POM:MigrationConnectionString is required for --migrate."));
+    await PomStorageSetup.PrepareAsync(builder.Configuration["NVM_POM:MigrationConnectionString"]
+        ?? throw new InvalidOperationException("NVM_POM:MigrationConnectionString is required for --migrate."),
+        builder.Configuration["NVM_POM_PASSWORD"]);
     return;
 }
 

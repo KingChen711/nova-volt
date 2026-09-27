@@ -48,31 +48,7 @@ public static class PomFixtureSeed
         await connection.OpenAsync();
         await using var transaction = await connection.BeginTransactionAsync();
 
-        // Chỉ tạo credential lần đầu; chạy seed lại không xoay mật khẩu role đang được runtime dùng.
-        await using (var role = new NpgsqlCommand("""
-            SELECT format('CREATE ROLE nvm_pom LOGIN PASSWORD %L', @password)
-            WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nvm_pom');
-            """, connection, transaction))
-        {
-            role.Parameters.AddWithValue("password", password);
-            if (await role.ExecuteScalarAsync() is string createRole)
-            {
-                // PostgreSQL đã quote password bằng %L; tên role và câu DDL là hằng, không nhận SQL từ client.
-#pragma warning disable CA2100
-                await using var create = new NpgsqlCommand(createRole, connection, transaction);
-#pragma warning restore CA2100
-                await create.ExecuteNonQueryAsync();
-            }
-        }
-
-        await using (var grant = new NpgsqlCommand("""
-            GRANT USAGE ON SCHEMA pom TO nvm_pom;
-            GRANT SELECT ON pom.equipment, pom.production_units, pom.wip_board TO nvm_pom;
-            GRANT SELECT ON pom.production_units_read, pom.wip_board_read TO nvm_pom;
-            """, connection, transaction))
-        {
-            await grant.ExecuteNonQueryAsync();
-        }
+        await PomStorageSetup.ProvisionRuntimeRoleAsync(connection, transaction, password);
 
         var count = 0;
         foreach (var row in equipment)

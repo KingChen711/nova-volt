@@ -64,7 +64,7 @@ Lượt đo đầu (2026-09-26): 315.000 unit trong **63,92 s** — trượt. Ng
 - Lập kế hoạch lại theo lịch (hoặc khi projection báo đã qua mốc thời gian của hold) để bắt cạnh tới rất muộn.
 - Đo N9 cùng tải ingestion sau khi rig qua preflight (M9 ★, requalify ở M13).
 - Lab M9 #1 đã chạy (xem Evidence): **không** tái hiện được việc transaction lớn chặn command không liên quan. Lab #2
-  (gộp quality/inventory state) chưa chạy.
+  (gộp quality/inventory state) đã chạy (xem Evidence).
 - Chưa xác minh: khi nâng khóa **thành công** (không có reader nào giữ khóa xung đột đúng lúc nâng), transaction lớn giữ
   khóa cả bảng `HoldMembers` tới lúc commit. Phép đo phân biệt: chạy transaction lớn không có probe, cho probe bắt đầu
   sau khi nâng khóa đã xảy ra.
@@ -126,3 +126,19 @@ Kết luận có giới hạn:
 - Lab cũng lộ một lỗi thật, đã sửa: với kích thước chunk khác 1.000, worker đoán sai số chunk của job mới và gửi thêm
   một chunk sau khi job đã xong, làm `HoldCascadeCompleted` ghi lần hai (`EventIdentityConflictException`). Processor
   giờ từ chối chunk ngoài phạm vi; worker lấy kích thước mặc định từ `CascadePolicy`.
+
+### Lab M9 #2 — gộp quality state với location state (2026-09-27, Claude)
+
+`QualityInventoryStateSeparationTests` (chạy trong suite thường, không cần NVM_RUN_LABS). Kịch bản scope §6.2: cell
+xong formation → hold theo unit → "chuyển kho" bằng `StartAgingCommand` vào rack `A-14` tầng 2.
+
+| Mô hình | Sau khi chuyển kho | Cell có đi tiếp được không |
+|---|---|---|
+| Một enum gộp (ví dụ tự dựng trong test, không phải code sản phẩm) | `InWarehouse` — giá trị vị trí ghi đè `Held` | **Có** — lọt cổng |
+| Hệ thống thật: quality facet (Quality) tách khỏi vị trí rack (Production Execution) | Rack `Aging:A-14`, quality vẫn `Held` | Không — `ConsumeMaterialCommand` bị từ chối `QUALITY_HOLD` |
+
+Chuyển kho một cell đang giữ vẫn được phép: hàng đang giữ vẫn phải có chỗ nằm. Test giữ vai trò regression: nếu
+sau này ai đó gộp hai state, test sẽ đỏ ở bước `QUALITY_HOLD`.
+
+Giới hạn: backend chưa có command "chuyển vị trí" tổng quát cho unit (`traceability.SerialReservations.LocationState`
+chỉ được seed, chưa có ai ghi). Lab dùng rack aging vì đó là thao tác đổi vị trí thật duy nhất hiện có.

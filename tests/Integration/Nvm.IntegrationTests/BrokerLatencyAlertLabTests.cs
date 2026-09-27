@@ -14,6 +14,8 @@ public sealed class ObservedBrokerFixture : ToxiproxyRabbitFixture
 {
     private IContainer _collector = null!;
     private IContainer _prometheus = null!;
+    private IContainer _alertmanager = null!;
+    public HttpClient Alertmanager { get; private set; } = null!;
     public HttpClient Prometheus { get; private set; } = null!;
 
     private static string RepoFile(string relative)
@@ -42,7 +44,16 @@ public sealed class ObservedBrokerFixture : ToxiproxyRabbitFixture
             .WithPortBinding(9090, true)
             .WithWaitStrategy(Wait.ForUnixContainer().UntilHttpRequestIsSucceeded(r => r.ForPort(9090).ForPath("/-/ready")))
             .Build();
-        await Task.WhenAll(_collector.StartAsync(CancellationToken.None), _prometheus.StartAsync(CancellationToken.None));
+        _alertmanager = new ContainerBuilder("prom/alertmanager:v0.34.1")
+            .WithNetwork(Network).WithNetworkAliases("alertmanager")
+            .WithResourceMapping(new FileInfo(RepoFile("deploy/alertmanager/alertmanager.yml")), "/etc/alertmanager/")
+            .WithCommand("--config.file=/etc/alertmanager/alertmanager.yml")
+            .WithPortBinding(9093, true)
+            .WithWaitStrategy(Wait.ForUnixContainer().UntilHttpRequestIsSucceeded(r => r.ForPort(9093).ForPath("/-/ready")))
+            .Build();
+        await Task.WhenAll(_collector.StartAsync(CancellationToken.None), _prometheus.StartAsync(CancellationToken.None),
+            _alertmanager.StartAsync(CancellationToken.None));
+        Alertmanager = new HttpClient { BaseAddress = new Uri($"http://{_alertmanager.Hostname}:{_alertmanager.GetMappedPublicPort(9093)}/") };
         Prometheus = new HttpClient { BaseAddress = new Uri($"http://{_prometheus.Hostname}:{_prometheus.GetMappedPublicPort(9090)}/") };
     }
 
@@ -62,6 +73,16 @@ public sealed class ObservedBrokerFixture : ToxiproxyRabbitFixture
             .OrderBy(state => state == "firing" ? 0 : 1).FirstOrDefault() ?? "inactive";
     }
 
+    /// <summary>Receiver mà Alertmanager đã định tuyến cho cảnh báo đang active, hoặc null nếu cảnh báo chưa tới.</summary>
+    public async Task<string?> RoutedReceiverAsync(string name)
+    {
+        using var json = JsonDocument.Parse(await Alertmanager.GetStringAsync("api/v2/alerts?active=true"));
+        return json.RootElement.EnumerateArray()
+            .Where(a => a.GetProperty("labels").GetProperty("alertname").GetString() == name)
+            .SelectMany(a => a.GetProperty("receivers").EnumerateArray().Select(r => r.GetProperty("name").GetString()))
+            .FirstOrDefault();
+    }
+
     public async Task<double?> QueryAsync(string promql)
     {
         using var json = JsonDocument.Parse(await Prometheus.GetStringAsync("api/v1/query?query=" + Uri.EscapeDataString(promql)));
@@ -74,6 +95,9 @@ public sealed class ObservedBrokerFixture : ToxiproxyRabbitFixture
     {
         await base.DisposeAsync();
         Prometheus?.Dispose();
+        Alertmanager?.Dispose();
+        if (_alertmanager is not null)
+        { await _alertmanager.DisposeAsync(); }
         if (_prometheus is not null)
         { await _prometheus.DisposeAsync(); }
         if (_collector is not null)
@@ -126,6 +150,14 @@ public sealed class BrokerLatencyAlertLabTests(ObservedBrokerFixture fixture, IT
             output.WriteLine(string.Create(CultureInfo.InvariantCulture,
                 $"ALERT_BROKER baseline_p95_s={baselineP95:F3} slow_p95_s={slowP95:F3} state={state} fired_after_s={slow.Elapsed.TotalSeconds:F0}"));
             state.ShouldBe("firing", "BrokerPublishSlow phải bắn khi broker chậm 500 ms mỗi chiều");
+            // Prometheus gửi cảnh báo sang Alertmanager (deploy/alertmanager), được định tuyến tới receiver mặc định.
+            string? receiver = null;
+            var routed = Stopwatch.StartNew();
+            while ((receiver = await fixture.RoutedReceiverAsync(Alert)) is null && routed.Elapsed < TimeSpan.FromSeconds(60))
+            { await Task.Delay(TimeSpan.FromSeconds(2), Ct); }
+            output.WriteLine(string.Create(CultureInfo.InvariantCulture,
+                $"ALERT_ROUTED receiver={receiver} after_s={routed.Elapsed.TotalSeconds:F0}"));
+            receiver.ShouldBe("novavolt-default");
         }
         finally
         {

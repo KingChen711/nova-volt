@@ -620,7 +620,8 @@ broker xác nhận.
 restart app để "đẩy" event: dispatcher đã tự thử lại, restart chỉ làm dòng đang claim phải chờ hết lease 2 phút.
 
 **Kiểm chứng.** Panel "Publish từ outbox tới RabbitMQ (p95)" trên dashboard SLO về dưới 0,5 s; cảnh báo chuyển
-`inactive`. Lab `BrokerLatencyAlertLabTests` (NVM_RUN_LABS=1) kiểm chính luật này: bắn sau 95 s khi broker chậm.
+`inactive` ở Prometheus và biến khỏi Alertmanager (`http://localhost:9093`). Đang sửa thì silence trong Alertmanager, đừng
+tắt luật. Lab `BrokerLatencyAlertLabTests` (NVM_RUN_LABS=1) kiểm chính luật này: bắn sau 95 s khi broker chậm.
 
 ## 12. Cảnh báo `CommandErrorBudgetBurn`
 

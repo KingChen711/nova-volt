@@ -1,0 +1,27 @@
+# Alertmanager cho máy dev (M13): nhận cảnh báo từ Prometheus, gom nhóm, chống lặp, cho phép silence.
+#
+# Hai receiver chưa có kênh gửi: nơi nhận (email, Slack, webhook trực ca) là quyết định của người vận hành, và
+# credential của kênh không được vào git. Thêm kênh bằng cách điền vào đúng receiver, ví dụ:
+#   receivers:
+#     - name: novavolt-critical
+#       webhook_configs:
+#         - url: https://<hệ thống trực ca>/hook
+# Chưa có kênh thì cảnh báo vẫn xem, gom nhóm và silence được ở UI Alertmanager (cổng NVM_PORT_ALERTMANAGER).
+route:
+  receiver: novavolt-default
+  group_by: [alertname, service_name]
+  group_wait: 10s
+  group_interval: 1m
+  repeat_interval: 4h
+  routes:
+    - matchers: ['severity="critical"']
+      receiver: novavolt-critical
+
+receivers:
+  - name: novavolt-default
+  - name: novavolt-critical
+
+# Error budget đang cháy thì cảnh báo broker chậm cùng service là hệ quả, không cần báo riêng.
+inhibit_rules:
+  - source_matchers: ['alertname="CommandErrorBudgetBurn"']
+    target_matchers: ['alertname="BrokerPublishSlow"']

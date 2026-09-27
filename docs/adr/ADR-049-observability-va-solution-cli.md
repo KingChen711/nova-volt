@@ -53,8 +53,9 @@ version theo Functional Block với ma trận tương thích. Kernel và Functio
   `SqlEventOutboxTests.EventWrittenInsideATrace_IsPublishedInsideThatTrace_AndMigrationIsRerunnable` (đỏ khi bỏ bước ghi
   traceparent). Chưa kiểm span consumer ở ProjectionWorker qua broker thật.
 - Stack observability chỉ cho máy dev (profile `obs`): OTel Collector 0.140.0 → Tempo 2.9.1, Loki 3.6.0, Prometheus
-  v3.8.0; dữ liệu nằm trong container, mất khi recreate. Chưa có Alertmanager: cảnh báo chỉ hiện ở trạng thái `firing`
-  trong Prometheus và panel dashboard, chưa gửi đi đâu. Business metric mới có `nvm.commands` và metric outbox. Chưa đo
+  v3.8.0; dữ liệu nằm trong container, mất khi recreate. Alertmanager v0.34.1 gom nhóm, định tuyến theo severity và
+  cho silence, nhưng hai receiver chưa có kênh gửi (email/Slack/trực ca là quyết định của người vận hành; credential kênh
+  không vào git) — cảnh báo mới xem được ở UI Alertmanager, chưa tới người. Business metric mới có `nvm.commands` và metric outbox. Chưa đo
   N1/N2 sau instrumentation (rig chưa qua preflight).
 - Helm chart `deploy/helm/novavolt` dùng `values.yaml` của `solution-cli` (lint/template trong CI). Đã cài tay lên kind
   (`deploy/kind/smoke.sh`, 2026-09-27): 5 pod Ready, readiness 200; chưa có bước smoke kind trong CI. Scope ghi k3d; dùng
@@ -104,7 +105,8 @@ version theo Functional Block với ma trận tương thích. Kernel và Functio
   (8 panel) và ba datasource Prometheus/Tempo/Loki được Grafana nạp, health OK.
 - Cảnh báo broker chậm (`BrokerLatencyAlertLabTests`, NVM_RUN_LABS=1): app + RabbitMQ qua Toxiproxy + Collector và
   Prometheus chạy đúng file trong `deploy/`. Broker bình thường 90 s: p95 publish 0,024 s, `BrokerPublishSlow` inactive.
-  +500 ms mỗi chiều: p95 2,425 s, cảnh báo **firing sau 95 s**. Một lần chạy.
+  +500 ms mỗi chiều: p95 2,425 s, cảnh báo **firing sau 95 s**. Lần chạy thứ hai có thêm Alertmanager đúng file
+  `deploy/alertmanager/alertmanager.yml`: firing sau 105 s và được định tuyến ngay tới receiver `novavolt-default`.
 - Mutation (Stryker.NET 5.0, 2026-09-27): chạy được bằng `tests/Mutation/Nvm.DomainMutationTests` (xunit v2, VSTest);
   với xunit v3, test chạy trong process con nên Stryker không bật được mutant (0 bị giết). Điểm trên unit test domain:
   Equipment 28,4 %, Passport 29,7 %, Quality 12,9 %, Grading 11,7 %, Traceability 36,0 % — **trượt** ngưỡng 70 %. Phần lớn

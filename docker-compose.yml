@@ -401,6 +401,19 @@ services:
       - "127.0.0.1:${NVM_PORT_PROMETHEUS:-9090}:9090"
     networks: [it-net]
 
+  alertmanager:
+    profiles: [obs]
+    image: prom/alertmanager:v0.34.1
+    container_name: nvm-alertmanager
+    restart: unless-stopped
+    mem_limit: 128m
+    command: ["--config.file=/etc/alertmanager/alertmanager.yml"]
+    volumes:
+      - ./deploy/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    ports:
+      - "127.0.0.1:${NVM_PORT_ALERTMANAGER:-9093}:9093"
+    networks: [it-net]
+
   # ─────────────────────────────────────────────────────────
   # SQL Server — event store và write model
   #

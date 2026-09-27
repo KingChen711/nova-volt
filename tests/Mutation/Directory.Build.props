@@ -1,0 +1,14 @@
+<Project>
+
+  <!--
+    Project mutation cần output kiểu cũ (bin/ cạnh project): Stryker ghi assembly đã đột biến vào thư mục output của
+    test project; với UseArtifactsOutput của repo, test nạp bản chưa đột biến và mọi mutant "sống" (lượt thử 2026-09-27:
+    0 killed / 299 survived).
+  -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+  <PropertyGroup>
+    <UseArtifactsOutput>false</UseArtifactsOutput>
+  </PropertyGroup>
+
+</Project>

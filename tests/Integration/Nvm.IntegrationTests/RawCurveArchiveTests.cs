@@ -17,7 +17,10 @@ namespace Nvm.IntegrationTests;
 /// <summary>C12: một file máy gốc vẫn là một WORM object và một metadata row có thể kiểm chứng.</summary>
 public sealed class RawCurveArchiveTests
 {
-    private const string MinioImage = "minio/minio:RELEASE.2025-09-07T16-13-09Z";
+    // minio/minio không còn trên Docker Hub (CI 2026-09-27: "repository does not exist"). Dùng bản MinIO của Chainguard,
+    // ghim digest (RELEASE.2026-09-22T19-25-18Z) để lượt chạy lặp lại được.
+    private const string MinioImage =
+        "cgr.dev/chainguard/minio@sha256:bd014394a80898e68c149f2311fdf8d5a2c2f3bb2c33b9327ae6d02b4b065ae1";
     private const string BucketName = "raw-curve";
     private const string AccessKey = "nvm-integration";
     private const string SecretKey = "NvmIntegration!2026";

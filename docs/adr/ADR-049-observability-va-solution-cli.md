@@ -81,3 +81,11 @@ version theo Functional Block với ma trận tương thích. Kernel và Functio
   test đỏ còn lại là timeout mặc định của MassTransit harness khi chạy song song, đã nâng lên 30 s.
 - `PostgresOutboxTests.IntentWithTraceContext_IsPublishedInsideThatTrace`: intent có `trace_parent` được publish với
   `Activity.Current` thuộc đúng trace đó.
+- Chaos broker (`BrokerLatencyChaosLabTests`, NVM_RUN_LABS=1, Toxiproxy 2.12.0, 2026-09-27): +500 ms mỗi chiều trên
+  AMQP. Nhận command p95 48 ms (không đổi so với 79 ms lúc thường), 20/20 event vẫn tới nhưng mất 20,7 s thay vì 2,2 s.
+  Phần "alert bắn đúng" chưa làm: chưa có Prometheus/Alertmanager trong compose.
+- Mutation (Stryker.NET 5.0, 2026-09-27): chạy được bằng `tests/Mutation/Nvm.DomainMutationTests` (xunit v2, VSTest);
+  với xunit v3, test chạy trong process con nên Stryker không bật được mutant (0 bị giết). Điểm trên unit test domain:
+  Equipment 28,4 %, Passport 29,7 %, Quality 12,9 %, Grading 11,7 %, Traceability 36,0 % — **trượt** ngưỡng 70 %. Phần lớn
+  mutant "NoCoverage": handler chỉ được kiểm bằng integration test, mà Stryker không chạy được integration test. Trên code
+  có unit test phủ: Equipment 77 %, Passport 80 %, Quality 71 %, Traceability 58 %, Grading 21 %.

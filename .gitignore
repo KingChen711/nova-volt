@@ -87,3 +87,8 @@ docker-compose.override.local.yml
 Thumbs.db
 desktop.ini
 .DS_Store
+
+# Mutation test (Stryker) — output kiểu cũ và báo cáo
+tests/Mutation/**/bin/
+tests/Mutation/**/obj/
+tests/Mutation/**/StrykerOutput/

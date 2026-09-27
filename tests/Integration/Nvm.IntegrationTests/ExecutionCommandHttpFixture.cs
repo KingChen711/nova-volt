@@ -47,12 +47,23 @@ public class ExecutionCommandHttpFixture : IAsyncLifetime
     /// <summary>Database cho fixture; mặc định trên SQL Server dùng chung. Lab chaos thay bằng server riêng để tắt được.</summary>
     protected virtual Task<string> CreateSqlDatabaseAsync() => SharedContainers.NewSqlDatabaseAsync("http");
 
+    /// <summary>Cho lab chaos gắn RabbitMQ vào network riêng (để một proxy đứng giữa).</summary>
+    protected virtual ContainerBuilder ConfigureRabbit(ContainerBuilder builder) => builder;
+
+    /// <summary>Chạy trước khi khởi động hạ tầng (tạo network, proxy...).</summary>
+    protected virtual Task BeforeInfrastructureAsync() => Task.CompletedTask;
+
+    /// <summary>Địa chỉ AMQP app dùng; mặc định là RabbitMQ trực tiếp.</summary>
+    protected virtual Task<(string Host, int Port)> AmqpEndpointAsync(IContainer rabbit) =>
+        Task.FromResult((rabbit.Hostname, (int)rabbit.GetMappedPublicPort(5672)));
+
     public async ValueTask InitializeAsync()
     {
-        _rabbit = new ContainerBuilder("rabbitmq:4.3.5-management")
+        _rabbit = ConfigureRabbit(new ContainerBuilder("rabbitmq:4.3.5-management")
             .WithEnvironment("RABBITMQ_DEFAULT_USER", "c06")
             .WithEnvironment("RABBITMQ_DEFAULT_PASS", _password)
-            .WithPortBinding(5672, true).WithPortBinding(15672, true).Build();
+            .WithPortBinding(5672, true).WithPortBinding(15672, true)).Build();
+        await BeforeInfrastructureAsync();
         var database = CreateSqlDatabaseAsync();
         await Task.WhenAll(database, _postgres.StartAsync(Ct), _rabbit.StartAsync(Ct));
         ConnectionString = await database;
@@ -198,8 +209,9 @@ public class ExecutionCommandHttpFixture : IAsyncLifetime
         info.Environment["NVM_POM__Authority"] = _authority;
         info.Environment["NVM_POM__MetadataAddress"] = _authority + "/.well-known/openid-configuration";
         info.Environment["NVM_POM__Audience"] = "nvm-api";
-        info.Environment["NVM_RABBITMQ_HOST"] = _rabbit.Hostname;
-        info.Environment["NVM_PORT_RABBITMQ"] = _rabbit.GetMappedPublicPort(5672).ToString(System.Globalization.CultureInfo.InvariantCulture);
+        var amqp = await AmqpEndpointAsync(_rabbit);
+        info.Environment["NVM_RABBITMQ_HOST"] = amqp.Host;
+        info.Environment["NVM_PORT_RABBITMQ"] = amqp.Port.ToString(System.Globalization.CultureInfo.InvariantCulture);
         info.Environment["NVM_RABBITMQ_USER"] = "c06";
         info.Environment["NVM_RABBITMQ_PASSWORD"] = _password;
         _process = Process.Start(info)!;

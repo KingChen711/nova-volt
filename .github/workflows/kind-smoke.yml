@@ -1,0 +1,75 @@
+# Smoke M13: cài Helm chart lên kind, dùng hạ tầng compose (deploy/kind/smoke.sh). Tách khỏi ci.yml vì dựng cả SQL
+# Server, TimescaleDB, RabbitMQ, Keycloak, EMQX và build 4 image — lâu hơn nhiều so với vòng build/test thường.
+name: kind smoke
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 19 * * *"   # 02:00 giờ Việt Nam
+  push:
+    branches: [main]
+    paths:
+      - "deploy/**"
+      - "solution.yaml"
+      - "src/**/Dockerfile"
+      - ".github/workflows/kind-smoke.yml"
+
+concurrency:
+  group: kind-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    name: Helm chart on kind
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      # Mật khẩu ngẫu nhiên cho từng lượt, không phải secret của repo: hạ tầng chỉ sống trong job này.
+      - name: Generate .env from .env.example
+        run: |
+          python3 - <<'EOF'
+          import secrets, re
+          lines = open(".env.example", encoding="utf-8").read().splitlines()
+          out = [re.sub(r"=CHANGE.*$", lambda m: "=Ci1!" + secrets.token_hex(12), line) for line in lines]
+          open(".env", "w", encoding="utf-8").write("\n".join(out) + "\n")
+          EOF
+
+      - name: Infrastructure (SQL Server, TimescaleDB, RabbitMQ, Keycloak, EMQX)
+        run: |
+          docker compose up -d --wait mssql timescale rabbitmq keycloak emqx
+          docker compose --profile init run --rm mssql-init
+
+      - name: Build images
+        run: |
+          for service in execution projection ingestion edge-gateway; do
+            docker compose --profile execution --profile projection --profile ingestion build "$service"
+          done
+
+      - name: Migrations
+        run: |
+          docker compose --profile ingestion run --rm --no-deps ingestion-migrate
+          docker compose --profile projection run --rm --no-deps projection-migrate
+          docker compose --profile execution run --rm --no-deps execution-prepare-commands
+
+      - name: Install kind
+        run: |
+          curl -fsSLo kind https://kind.sigs.k8s.io/dl/v0.32.0/kind-linux-amd64
+          chmod +x kind && sudo mv kind /usr/local/bin/kind
+
+      - name: Helm install on kind and readiness
+        run: bash deploy/kind/smoke.sh
+
+      - name: Diagnostics
+        if: failure()
+        run: |
+          kubectl --context kind-novavolt get pods,jobs -o wide || true
+          kubectl --context kind-novavolt describe pods | tail -80 || true
+          for d in execution projection ingestion edge-gateway; do
+            kubectl --context kind-novavolt logs deploy/$d --tail 40 || true
+          done
+          docker compose ps

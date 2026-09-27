@@ -50,20 +50,8 @@ jobs:
             docker compose --profile execution --profile projection --profile ingestion build "$service"
           done
 
-      # Log job cần đăng nhập GitHub; lỗi được đưa ra annotation để đọc được qua API công khai.
-      - name: Migrations
-        run: |
-          migrate() {
-            if ! out=$(docker compose --profile "$1" run --rm --no-deps "$2" 2>&1); then
-              echo "::error title=$2 failed::$(echo "$out" | tail -8 | tr '\n' ' ' | cut -c1-900)"
-              exit 1
-            fi
-          }
-          # Projection cấp quyền trên es.Events, bảng do migration của execution tạo: execution phải chạy trước.
-          migrate ingestion ingestion-migrate
-          migrate execution execution-prepare-commands
-          migrate projection projection-migrate
-
+      # Không migrate bằng compose: database trống, để chính các Job hook của chart (deploy/helm) tạo schema. Đó là thứ
+      # smoke này cần kiểm; lần chạy tay đầu tiên xanh chỉ vì runtime đã có sẵn schema.
       - name: Install kind
         run: |
           curl -fsSLo kind https://kind.sigs.k8s.io/dl/v0.32.0/kind-linux-amd64

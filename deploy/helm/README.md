@@ -13,7 +13,7 @@ helm template novavolt deploy/helm/novavolt -f out/distributed/values.yaml
 
 | Workload | Deployment | Service | Migration (hook pre-install/pre-upgrade) |
 |---|---|---|---|
-| execution | có, probe HTTP `/health/ready` + `/health/live` | 8080 | `--migrate-commands` |
+| execution | có, probe HTTP `/health/ready` + `/health/live` | 8080 | `--migrate-commands` (SQL Server) và `--migrate` (POM, PostgreSQL) — hai Job |
 | projection | có, probe `--health-probe` | — | `--migrate` (sau execution: cấp quyền trên `es.Events`) |
 | ingestion | có, probe `--health-probe` | 8080 | `--migrate` |
 | edge-gateway | có | — | — |
@@ -29,8 +29,8 @@ Chart không tạo Secret và không nhận mật khẩu qua values. Trước kh
 
 - `<release>-<workload>`: biến môi trường runtime có mật khẩu, ví dụ `NVM_COMMANDS__ConnectionString`,
   `NVM_POM__ConnectionString`, `NVM_RABBITMQ_USER`, `NVM_RABBITMQ_PASSWORD` cho execution.
-- `<release>-<workload>-migrate`: chuỗi kết nối của principal migration (`NVM_COMMANDS__MigrationConnectionString`,
-  `NVM_PROJECTIONS__MigrationConnectionString`, ...), chỉ Job migration đọc.
+- `<release>-<migration>-migrate` cho từng mục trong `migrations` (`execution-commands`, `execution-pom`, `ingestion`,
+  `projection`): chuỗi kết nối của principal migration, chỉ Job migration đọc.
 
 Tên biến giống hệt khối `environment` của service tương ứng trong `docker-compose.yml`.
 
@@ -44,4 +44,5 @@ hơn 1 replica. Cài song song với một gateway khác (ví dụ compose) thì
 
 `helm lint` và `helm template` chạy trong CI (job `solution.yaml`). Smoke trên kind: `bash deploy/kind/smoke.sh` (mượn hạ
 tầng của compose, xem đầu script). Lần chạy 2026-09-27 (kind v0.32.0, Kubernetes v1.35.0): 3 job migration xong, 5 pod
-Ready, `/health/ready` của execution qua cluster trả 200, edge-gateway đăng ký được EMQX. Smoke chưa chạy trong CI.
+Ready, `/health/ready` của execution qua cluster trả 200, edge-gateway đăng ký được EMQX. Lần đó xanh nhờ runtime đã có schema;
+chạy trong CI trên database trống (`.github/workflows/kind-smoke.yml`) mới lộ hai lỗi thứ tự/thiếu migration, đã sửa.

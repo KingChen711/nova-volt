@@ -43,19 +43,28 @@ probes:
 workerPorts:
   ingestion: 8080
 
-# Migration chạy như Helm hook trước install/upgrade, bằng chính image của workload.
-# Process phục vụ request không tự migrate (deploy/commands/README.md).
+# Migration chạy như Helm hook trước install/upgrade, bằng image của workload, mỗi mục một Job với Secret riêng
+# "<release>-<name>-migrate". Process phục vụ request không tự migrate (deploy/commands/README.md).
+# weight nhỏ chạy trước; Helm đợi Job xong mới sang mức sau. Execution cần HAI migration (command store trên SQL
+# Server và POM trên PostgreSQL) vì mỗi lần chạy chỉ nhận một cờ. Projection cấp quyền trên es.Events, bảng do
+# migration command store tạo, nên chạy sau.
 migrations:
-  execution: ["--migrate-commands"]
-  projection: ["--migrate"]
-  ingestion: ["--migrate"]
-
-# Thứ tự hook migration (số nhỏ chạy trước; Helm đợi Job xong mới sang mức sau). Projection cấp quyền trên es.Events,
-# bảng do migration của execution tạo, nên phải chạy sau.
-migrationWeights:
-  execution: 0
-  ingestion: 0
-  projection: 1
+  - name: execution-commands
+    workload: execution
+    args: ["--migrate-commands"]
+    weight: 0
+  - name: execution-pom
+    workload: execution
+    args: ["--migrate"]
+    weight: 0
+  - name: ingestion
+    workload: ingestion
+    args: ["--migrate"]
+    weight: 0
+  - name: projection
+    workload: projection
+    args: ["--migrate"]
+    weight: 1
 
 resources:
   default:

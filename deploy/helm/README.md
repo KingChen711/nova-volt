@@ -34,7 +34,14 @@ Chart không tạo Secret và không nhận mật khẩu qua values. Trước kh
 
 Tên biến giống hệt khối `environment` của service tương ứng trong `docker-compose.yml`.
 
+## Edge gateway: một replica cho mỗi client id
+
+Edge gateway nối EMQX bằng client id cố định (`NVM_EDGE__ClientId`, mặc định `nvm-edge-gateway`). Hai process cùng client
+id thì EMQX cho hai phiên giành nhau mỗi vài giây và cả hai liên tục đăng ký lại. Chart từ chối render khi edge-gateway có
+hơn 1 replica. Cài song song với một gateway khác (ví dụ compose) thì đặt client id riêng trong Secret.
+
 ## Trạng thái
 
-`helm lint` và `helm template` chạy trong CI (job `solution.yaml`). **Chưa cài lên cluster thật**: smoke trên k3d/kind cần
-tải image node của cluster, chưa làm (xem `docs/plans/project-completion.md`).
+`helm lint` và `helm template` chạy trong CI (job `solution.yaml`). Smoke trên kind: `bash deploy/kind/smoke.sh` (mượn hạ
+tầng của compose, xem đầu script). Lần chạy 2026-09-27 (kind v0.32.0, Kubernetes v1.35.0): 3 job migration xong, 5 pod
+Ready, `/health/ready` của execution qua cluster trả 200, edge-gateway đăng ký được EMQX. Smoke chưa chạy trong CI.

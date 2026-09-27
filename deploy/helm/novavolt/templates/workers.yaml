@@ -2,6 +2,10 @@
 {{- $ctx := dict "root" $ "name" $worker.name }}
 {{- $port := index $.Values.workerPorts $worker.name }}
 {{- $probe := index $.Values.probes $worker.name }}
+{{- /* Mọi replica dùng chung một MQTT client id: EMQX cho các phiên giành nhau liên tục (đã gặp khi smoke kind). */ -}}
+{{- if and (eq $worker.name "edge-gateway") (gt (int $worker.replicas) 1) }}
+{{- fail "edge-gateway phải chạy 1 replica cho mỗi NVM_EDGE__ClientId" }}
+{{- end }}
 ---
 apiVersion: apps/v1
 kind: Deployment

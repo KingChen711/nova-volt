@@ -56,7 +56,9 @@ version theo Functional Block với ma trận tương thích. Kernel và Functio
   v3.8.0; dữ liệu nằm trong container, mất khi recreate. Chưa có Alertmanager: cảnh báo chỉ hiện ở trạng thái `firing`
   trong Prometheus và panel dashboard, chưa gửi đi đâu. Business metric mới có `nvm.commands` và metric outbox. Chưa đo
   N1/N2 sau instrumentation (rig chưa qua preflight).
-- Helm chart `deploy/helm/novavolt` dùng `values.yaml` của `solution-cli` (lint/template trong CI); chưa cài lên k3d/kind. Mode monolith vẫn bật `edge-gateway` vì
+- Helm chart `deploy/helm/novavolt` dùng `values.yaml` của `solution-cli` (lint/template trong CI). Đã cài tay lên kind
+  (`deploy/kind/smoke.sh`, 2026-09-27): 5 pod Ready, readiness 200; chưa có bước smoke kind trong CI. Scope ghi k3d; dùng
+  kind vì đã có sẵn trên máy, chart không phụ thuộc loại cluster. Mode monolith vẫn bật `edge-gateway` vì
   compose gốc không gắn profile cho service đó.
 - Version FB là khai báo tay trong csproj, chưa có package NuGet riêng từng FB.
 

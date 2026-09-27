@@ -992,3 +992,7 @@ Không phải benchmark hiệu năng. `EquipmentOeeTests`: hai line, OEE gộp 0
 ## M9 lab #1 — cascade một transaction so với chunk (2026-09-27, Claude)
 
 `CascadeLockContentionLabTests` (NVM_RUN_LABS=1, NVM_LAB_PACKS=1500), 157.500 unit mỗi lot, probe `ConsumeMaterialCommand` trên 5 cell không liên quan, bốn lần chạy. Chunk 1.000: cascade 15,1–18,7 s, probe p95 58–139 ms. Một transaction: 4,0–6,7 s, probe p95 63–191 ms. Không probe nào lỗi; không lần nâng khóa nào thành công (1–2 lần thử thất bại ở biến thể một transaction). Outlier max (tới 4,4 s) đi theo biến thể chạy trước, không theo chunk. **Không tái hiện** được việc transaction lớn chặn luồng khác. Chi tiết và giới hạn ở [ADR-017](adr/ADR-017-hold-cascade-la-job-co-checkpoint.md).
+
+## M6 lab kill -9 với outbox (2026-09-27, Claude)
+
+`ProcessKillOutboxLabTests` (NVM_RUN_LABS=1): 10 lần `Process.Kill` dưới tải 8 luồng, 821 submission. SQL: 0 outcome thừa, 0 submission sai số event/outbox. Bus: 821/821 `ce_id`, 2 bản trùng cùng `ce_id` (at-least-once, ADR-040), đủ sau 93,4 s vì chờ lease claim. Một lần chạy. Chi tiết ở [ADR-023](adr/ADR-023-claim-truoc-khi-chay-handler.md).

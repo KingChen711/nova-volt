@@ -64,8 +64,10 @@ Chưa deploy image mới lên runtime (migration Quality bỏ cột `traceabilit
 + ProjectionWorker cùng lúc; `--migrate-commands` thêm schema quality/grading/material/recipe/equipment/masterdata/erp/
 passport; ingestion cần migration 016–017). Realm Keycloak mới (client `nvm-esign`, `nvm-dpp*`, scope `dpp-*`) chưa nạp.
 
+M6 kill -9 outbox đã chạy (ADR-023): 10 kill, 821 submission, 0 mất, 0 trùng trong SQL, 2 bản trùng cùng `ce_id` trên bus.
+
 Còn mở: M9 preflight rig/N1/N2 (phần cứng), N9 suy giảm ingestion; M7 lab delayed plugin (cần duyệt tải);
-M6 kill -9 outbox; M13: alert cho chaos RabbitMQ (+500 ms đã đo: vẫn nhận, chậm giao), collector/Tempo/Loki + SLO dashboard, mutation
+M13: alert cho chaos RabbitMQ (+500 ms đã đo: vẫn nhận, chậm giao), collector/Tempo/Loki + SLO dashboard, mutation
 ≥ 70 % (đo được 12–36 % trên unit test domain; cần unit test cho handler), k3d + smoke, soak 24 giờ, N1/N2 đo lại, Mendix cloud; mọi màn Mendix M4–M12.
 
 CI GitHub đỏ từ 2026-08-28 vì image `minio/minio` đã bị gỡ khỏi Docker Hub (annotation: "repository does not exist"); test

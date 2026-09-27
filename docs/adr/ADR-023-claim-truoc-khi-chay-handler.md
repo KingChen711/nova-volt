@@ -216,3 +216,29 @@ tài liệu này là **lab phá hoại**: bỏ cơ chế đi thì test đỏ, đ
 
 **Hoàn nguyên**: hai file lab được khôi phục từ bản sao và đối chiếu bằng `sha256sum -c` — khớp
 bit-for-bit. Không dùng `git checkout` ([`AGENTS.md`](../../AGENTS.md) §1.2).
+
+### Lab M6 kill -9 với outbox (2026-09-27, Claude)
+
+`ProcessKillOutboxLabTests` (NVM_RUN_LABS=1): app Execution chạy như process riêng; 8 luồng gửi `RecordDataCollection`
+liên tục, mỗi submission tự gửi lại cho tới khi được nhận. Trong lúc đó process bị giết 10 lần bằng
+`Process.Kill(entireProcessTree: true)` (TerminateProcess trên Windows, SIGKILL trên Linux) cách nhau 0,5–2 s rồi khởi
+động lại. Một lần chạy, Windows 11, SQL Server 2022 + RabbitMQ Testcontainers:
+
+| Chỉ số | Kết quả |
+|---|---:|
+| Submission | 821 |
+| Số lần gửi tối đa cho một submission | 3 |
+| Khởi động lại lâu nhất | 4,5 s |
+| Submission có hơn một outcome trong SQL | 0 |
+| Submission không có đúng một event + một dòng outbox | 0 |
+| `ce_id` tới bus | 821/821 |
+| Bản trùng trên bus (cùng `ce_id`) | 2 |
+| Mọi event tới bus sau khi ngừng gửi | 93,4 s |
+
+Kết luận: T3 đạt theo nghĩa **không mất** và **không nhân đôi trong SQL**. Trên bus có 2 bản trùng, là trường hợp kill
+rơi giữa lúc broker đã nhận và lúc đánh dấu đã phát. Bản trùng mang cùng `ce_id`, nên consumer bỏ được (K7). Đây là
+hợp đồng at-least-once như ADR-040 đã ghi, không phải "exactly once" như dòng DoD gốc của scope. 93,4 s là do các dòng
+outbox bị claim dở phải chờ lease hết hạn. Đó là bằng chứng một số lần kill đã rơi vào giữa claim và publish.
+
+Giới hạn: một lần chạy; không đo được lần kill nào rơi đúng giữa `COMMIT` SQL, chỉ biết kill xảy ra dưới tải ghi liên
+tục và có submission phải gửi lại tới 3 lần.

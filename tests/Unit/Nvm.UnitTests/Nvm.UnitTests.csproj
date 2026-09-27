@@ -7,6 +7,8 @@
     <ProjectReference Include="../../../src/FunctionalBlocks/Grading/Nvm.Grading.csproj" />
     <ProjectReference Include="../../../src/FunctionalBlocks/Equipment/Nvm.Equipment.csproj" />
     <ProjectReference Include="../../../src/FunctionalBlocks/Passport/Nvm.Passport.csproj" />
+    <ProjectReference Include="../../../src/FunctionalBlocks/Recipe/Nvm.Recipe.csproj" />
+    <ProjectReference Include="../../../src/FunctionalBlocks/MasterData/Nvm.MasterData.csproj" />
     <ProjectReference Include="../../../tools/solution-cli/Nvm.SolutionCli/Nvm.SolutionCli.csproj" />
     <Content Include="EventSourcing/Fixtures/*.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>

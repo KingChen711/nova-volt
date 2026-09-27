@@ -996,3 +996,7 @@ Không phải benchmark hiệu năng. `EquipmentOeeTests`: hai line, OEE gộp 0
 ## M6 lab kill -9 với outbox (2026-09-27, Claude)
 
 `ProcessKillOutboxLabTests` (NVM_RUN_LABS=1): 10 lần `Process.Kill` dưới tải 8 luồng, 821 submission. SQL: 0 outcome thừa, 0 submission sai số event/outbox. Bus: 821/821 `ce_id`, 2 bản trùng cùng `ce_id` (at-least-once, ADR-040), đủ sau 93,4 s vì chờ lease claim. Một lần chạy. Chi tiết ở [ADR-023](adr/ADR-023-claim-truoc-khi-chay-handler.md).
+
+## M13 mutation domain (2026-09-27, Claude)
+
+`tools/mutation/run-mutation.sh` trên `Entities/` của 10 FB: gộp **83,33 %** (410/492); thấp nhất Traceability 73,47 %. Phạm vi và bảng từng FB ở [ADR-050](adr/ADR-050-mutation-do-tren-entities.md).

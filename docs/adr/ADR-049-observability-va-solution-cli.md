@@ -89,3 +89,4 @@ version theo Functional Block với ma trận tương thích. Kernel và Functio
   Equipment 28,4 %, Passport 29,7 %, Quality 12,9 %, Grading 11,7 %, Traceability 36,0 % — **trượt** ngưỡng 70 %. Phần lớn
   mutant "NoCoverage": handler chỉ được kiểm bằng integration test, mà Stryker không chạy được integration test. Trên code
   có unit test phủ: Equipment 77 %, Passport 80 %, Quality 71 %, Traceability 58 %, Grading 21 %.
+  Phạm vi "domain layer" được chốt lại ở [ADR-050](ADR-050-mutation-do-tren-entities.md): `Entities/` của mười FB, gộp 83,33 %.

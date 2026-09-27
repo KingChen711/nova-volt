@@ -82,6 +82,7 @@ việc khác.
 | [047](ADR-047-passport-la-projection-co-kiem-soat.md) | Passport là snapshot đã ký, lọc theo trường, mặc định từ chối | **Accepted** 2026-09-26 | M12 |
 | [048](ADR-048-legal-hold-truoc-retention.md) | Retention là job tự viết đứng sau legal hold; bật lại 400 ngày/15 năm | **Accepted** 2026-09-27 | M12 |
 | [049](ADR-049-observability-va-solution-cli.md) | OpenTelemetry chỉ ở host, telemetry best-effort; một solution.yaml cho hai mode | **Accepted** 2026-09-27 | M13 |
+| [050](ADR-050-mutation-do-tren-entities.md) | Mutation score "domain layer" đo trên `Entities/` của mỗi FB | **Accepted** 2026-09-27 | M13 |
 
 Cột **Ra ở** là milestone dự kiến, không phải cam kết. Quyết định đến sớm hơn thì viết sớm hơn.
 

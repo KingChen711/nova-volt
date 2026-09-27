@@ -66,7 +66,18 @@ jobs:
       # .NET 10 bỏ VSTest cho Microsoft.Testing.Platform. MTP mode bật trong
       # global.json và đổi cú pháp: phải là --solution.
       - name: Test
-        run: dotnet test --solution NovaVolt.Mes.slnx -c Release --no-build
+        shell: bash
+        run: |
+          set -o pipefail
+          dotnet test --solution NovaVolt.Mes.slnx -c Release --no-build 2>&1 | tee test.log
+
+      # Log của job cần đăng nhập mới đọc được; annotation thì đọc được qua API công khai. Đưa tên test đỏ và dòng lỗi
+      # đầu tiên của nó ra annotation để chẩn đoán CI không phụ thuộc quyền xem log.
+      - name: Report failed tests
+        if: failure()
+        shell: bash
+        run: |
+          grep -E -A4 '^\s*failed ' test.log | grep -E '^\s*failed |Exception|should|but was' | head -40             | sed -E 's/^\s*/::error title=Test failed::/' || true
 
   # M13: image của từng host, SBOM và quét lỗ hổng. Chạy sau khi test xanh; image không được đẩy đi đâu.
   images:

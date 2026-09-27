@@ -43,11 +43,18 @@ version theo Functional Block với ma trận tương thích. Kernel và Functio
 **Mất / phải chịu**
 
 - Outbox của ingestion lưu `trace_parent` cạnh intent (migration 017) và dispatcher publish dưới trace đó. Nhưng hiện chỉ
-  kết quả file drop được announce (reading Sparkplug chưa gắn unit id), nên trace MQTT thật chưa đi tới bus; đoạn domain → projection đi tiếp nhờ MassTransit, còn OData/Mendix là request riêng của người đọc (không
-  cùng trace, chỉ nối được bằng link). DoD T9 "một trace liền mạch tới Mendix" chưa đạt.
+  kết quả file drop được announce (reading Sparkplug chưa gắn unit id), nên trace MQTT thật chưa đi tới bus. OData/Mendix là request riêng của người đọc (không cùng trace, chỉ nối được bằng
+  link). DoD T9 "một trace liền mạch tới Mendix" chưa đạt.
+- **Sửa (2026-09-27, Claude):** bản trước ghi "đoạn domain → projection đi tiếp nhờ MassTransit". Câu đó sai: outbox SQL
+  của event store được dispatcher publish sau commit, lúc không còn `Activity` của command, nên message ra bus mở trace
+  mới. Đã sửa bằng migration event store `002-outbox-trace-context.sql` (cột `es.Outbox.TraceParent`): `SqlEventStore`
+  ghi traceparent W3C của command khi append, dispatcher mở span producer `event publish` (nguồn `NovaVolt.EventStore`)
+  dưới trace đó, rồi MassTransit mang tiếp sang consumer projection. Kiểm bằng
+  `SqlEventOutboxTests.EventWrittenInsideATrace_IsPublishedInsideThatTrace_AndMigrationIsRerunnable` (đỏ khi bỏ bước ghi
+  traceparent). Chưa kiểm span consumer ở ProjectionWorker qua broker thật.
 - Chưa có OTel Collector/Tempo/Loki trong compose, chưa có dashboard SLO/error budget, business metric mới có
   `nvm.commands`. Chưa đo N1/N2 sau instrumentation (rig chưa qua preflight).
-- `solution-cli` chưa có Helm chart để dùng `values.yaml`; chưa deploy k3d. Mode monolith vẫn bật `edge-gateway` vì
+- Helm chart `deploy/helm/novavolt` dùng `values.yaml` của `solution-cli` (lint/template trong CI); chưa cài lên k3d/kind. Mode monolith vẫn bật `edge-gateway` vì
   compose gốc không gắn profile cho service đó.
 - Version FB là khai báo tay trong csproj, chưa có package NuGet riêng từng FB.
 

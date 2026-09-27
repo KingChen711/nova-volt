@@ -14,12 +14,23 @@ public static class EventSchemaMigrator
         await using var connection = new SqlConnection(connectionString);
         await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
         await using var transaction = (SqlTransaction)await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
-        using var stream = typeof(EventSchemaMigrator).Assembly.GetManifestResourceStream("Nvm.EventStore.Migrations.001-event-store.sql")
-            ?? throw new InvalidOperationException("Event store migration resource is missing.");
-        using var reader = new StreamReader(stream);
-        var sql = await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
-        using var command = new SqlCommand(sql, connection, transaction);
-        await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        // Mọi file Migrations/NNN-*.sql theo thứ tự tên, trong một transaction; mỗi file tự chạy lại được.
+        var assembly = typeof(EventSchemaMigrator).Assembly;
+        var scripts = assembly.GetManifestResourceNames()
+            .Where(name => name.StartsWith("Nvm.EventStore.Migrations.", StringComparison.Ordinal)
+                && name.EndsWith(".sql", StringComparison.Ordinal))
+            .Order(StringComparer.Ordinal)
+            .ToList();
+        if (scripts.Count == 0 || !scripts[0].EndsWith("001-event-store.sql", StringComparison.Ordinal))
+        { throw new InvalidOperationException("Event store migration resource is missing."); }
+        foreach (var script in scripts)
+        {
+            using var stream = assembly.GetManifestResourceStream(script)!;
+            using var reader = new StreamReader(stream);
+            var sql = await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
+            using var command = new SqlCommand(sql, connection, transaction);
+            await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        }
         await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
     }
 }

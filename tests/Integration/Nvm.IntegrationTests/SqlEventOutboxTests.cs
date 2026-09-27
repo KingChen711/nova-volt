@@ -94,6 +94,51 @@ public sealed class SqlEventOutboxTests : IClassFixture<SqlCommandStoreFixture>,
     }
 
     [Fact]
+    public async Task EventWrittenInsideATrace_IsPublishedInsideThatTrace_AndMigrationIsRerunnable()
+    {
+        await EventSchemaMigrator.UpgradeAsync(ConnectionString, Ct);
+        await EventSchemaMigrator.UpgradeAsync(ConnectionString, Ct);   // 002 chạy lại không lỗi
+        using var listener = new System.Diagnostics.ActivityListener
+        {
+            ShouldListenTo = source => source.Name.StartsWith("NovaVolt.", StringComparison.Ordinal) || source.Name == "test",
+            Sample = (ref System.Diagnostics.ActivityCreationOptions<System.Diagnostics.ActivityContext> _) =>
+                System.Diagnostics.ActivitySamplingResult.AllDataAndRecorded,
+        };
+        System.Diagnostics.ActivitySource.AddActivityListener(listener);
+        using var source = new System.Diagnostics.ActivitySource("test");
+
+        var traced = Fact();
+        string commandTrace;
+        using (var command = source.StartActivity("command")!)
+        {
+            commandTrace = command.TraceId.ToString();
+            await AppendAsync(Stream(), traced);
+        }
+        var untraced = Fact();
+        await AppendAsync(Stream(), untraced);
+
+        var publisher = new TracePublisher();
+        var clock = new FakeTimeProvider(untraced.RecordedAt.AddSeconds(1));
+        (await Dispatcher(publisher, clock).DispatchOnceAsync(10, Ct)).Published.ShouldBe(2);
+        publisher.Seen[traced.SourceEventId].TraceId.ShouldBe(commandTrace);
+        publisher.Seen[traced.SourceEventId].Source.ShouldBe(EventStoreTelemetry.SourceName);
+        publisher.Seen[traced.SourceEventId].Kind.ShouldBe(System.Diagnostics.ActivityKind.Producer);
+        publisher.Seen[untraced.SourceEventId].TraceId.ShouldNotBe(commandTrace);   // không có trace thì không bịa trace
+    }
+
+    private sealed class TracePublisher : IEventOutboxPublisher
+    {
+        public Dictionary<Guid, (string TraceId, string Source, System.Diagnostics.ActivityKind Kind)> Seen { get; } = [];
+
+        public Task PublishAsync(OutboxEvent message, CancellationToken cancellationToken)
+        {
+            var current = System.Diagnostics.Activity.Current!;
+            Seen[message.EventId] = (current.TraceId.ToString(), current.Source.Name, current.Kind);
+            return Task.CompletedTask;
+        }
+    }
+
+    [Fact]
     public async Task CrashAfterBrokerAcceptedBeforeAck_ReclaimsLeaseWithStableIdentity()
     {
         await EventSchemaMigrator.UpgradeAsync(ConnectionString, Ct);

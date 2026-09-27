@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using System.Data;
+using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.Data.SqlClient;
 using Nvm.CommandStore;
@@ -87,6 +88,8 @@ public sealed class SqlEventStore : IEventStore
             { throw new EventConcurrencyException(siteId, streamId, expectedVersion, actualVersion); }
         }
 
+        // Trace W3C của command đang chạy, nếu có: lượt publish sau commit nối tiếp đúng trace đó (M13).
+        var traceParent = Activity.Current is { IdFormat: ActivityIdFormat.W3C } current ? current.Id : null;
         for (var i = 0; i < events.Length; i++)
         {
             var item = events[i];
@@ -119,14 +122,15 @@ public sealed class SqlEventStore : IEventStore
             using var enqueue = Command("""
                 INSERT INTO es.Outbox
                     (EventId, SiteId, StreamId, Version, EventType, SchemaVersion,
-                     PayloadJson, MetadataJson, OccurredAt, RecordedAt, CreatedAt, NextAttemptAt)
+                     PayloadJson, MetadataJson, OccurredAt, RecordedAt, CreatedAt, NextAttemptAt, TraceParent)
                 VALUES
                     (@id, @site, @stream, @version, @type, @schema,
-                     @payload, @metadata, @occurred, @recorded, @recorded, @recorded);
+                     @payload, @metadata, @occurred, @recorded, @recorded, @recorded, @trace);
                 """);
             AddIdentity(enqueue, siteId, streamId);
             enqueue.Parameters.Add("@id", SqlDbType.UniqueIdentifier).Value = item.SourceEventId;
             enqueue.Parameters.Add("@version", SqlDbType.BigInt).Value = expectedVersion + i + 1;
+            enqueue.Parameters.Add("@trace", SqlDbType.VarChar, 55).Value = (object?)traceParent ?? DBNull.Value;
             enqueue.Parameters.Add("@type", SqlDbType.VarChar, 200).Value = item.EventType;
             enqueue.Parameters.Add("@schema", SqlDbType.Int).Value = item.SchemaVersion;
             enqueue.Parameters.Add("@payload", SqlDbType.NVarChar, -1).Value = item.PayloadJson;

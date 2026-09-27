@@ -1,13 +1,17 @@
 using System.Data;
+using System.Diagnostics;
 using Microsoft.Data.SqlClient;
 
 namespace Nvm.EventStore;
 
-/// <summary>A durable event awaiting transport. EventId must be the transport message identity on every retry.</summary>
+/// <summary>
+/// A durable event awaiting transport. EventId must be the transport message identity on every retry.
+/// TraceParent là trace W3C của command đã ghi event (null nếu ghi ngoài trace).
+/// </summary>
 public sealed record OutboxEvent(
     Guid EventId, string SiteId, string StreamId, long Version, string EventType,
     int SchemaVersion, string PayloadJson, string MetadataJson,
-    DateTimeOffset OccurredAt, DateTimeOffset RecordedAt, string CloudEventJson);
+    DateTimeOffset OccurredAt, DateTimeOffset RecordedAt, string CloudEventJson, string? TraceParent = null);
 
 /// <summary>Transport adapter; implementations must publish using the unchanged EventId and honor cancellation.</summary>
 public interface IEventOutboxPublisher
@@ -55,6 +59,10 @@ public sealed class SqlEventOutboxDispatcher
             claimedCount++;
             using var budget = new CancellationTokenSource(TimeSpan.FromTicks(_lease.Ticks / 2), _clock);
             using var attempt = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, budget.Token);
+            // Publish nằm dưới trace của command đã ghi event; MassTransit mang Activity.Current sang header (M13).
+            using var span = EventStoreTelemetry.Source.StartActivity("event publish", ActivityKind.Producer,
+                claim.Message.TraceParent);
+            span?.SetTag("messaging.message.id", claim.Message.EventId);
             try
             {
                 await _publisher.PublishAsync(claim.Message, attempt.Token).ConfigureAwait(false);
@@ -96,7 +104,7 @@ public sealed class SqlEventOutboxDispatcher
             OUTPUT inserted.EventId, inserted.SiteId, inserted.StreamId, inserted.Version,
                 inserted.EventType, inserted.SchemaVersion, inserted.PayloadJson,
                 inserted.MetadataJson, inserted.OccurredAt, inserted.RecordedAt,
-                inserted.Attempt, stored.CloudEventJson
+                inserted.Attempt, stored.CloudEventJson, inserted.TraceParent
             FROM es.Outbox AS target
             INNER JOIN pending ON target.EventId = pending.EventId
             INNER JOIN es.Events AS stored ON stored.SourceEventId = target.EventId;
@@ -114,7 +122,7 @@ public sealed class SqlEventOutboxDispatcher
                 reader.GetString(4), reader.GetInt32(5), reader.GetString(6), reader.GetString(7),
                 await reader.GetFieldValueAsync<DateTimeOffset>(8, cancellationToken).ConfigureAwait(false),
                 await reader.GetFieldValueAsync<DateTimeOffset>(9, cancellationToken).ConfigureAwait(false),
-                reader.GetString(11)),
+                reader.GetString(11), await reader.IsDBNullAsync(12, cancellationToken).ConfigureAwait(false) ? null : reader.GetString(12)),
                 claimId, reader.GetInt32(10)));
         }
         return result;

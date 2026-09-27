@@ -60,7 +60,7 @@ integration 7m53s. Container .NET SDK Linux chạy cả solution như CI: 1.072/
 ở `1ce9a00`), 7m56s. GitHub CI bước Test đỏ từ 2026-08-28; log cần đăng nhập nên đã thêm bước đưa tên test đỏ ra
 annotation (đọc qua API công khai `check-runs/{job}/annotations`).
 
-Chưa deploy image mới lên runtime (migration Quality bỏ cột `traceability.SerialReservations.QualityState`; deploy Execution
+Chưa deploy image mới lên runtime (event store migration 002 thêm `es.Outbox.TraceParent`; migration Quality bỏ cột `traceability.SerialReservations.QualityState`; deploy Execution
 + ProjectionWorker cùng lúc; `--migrate-commands` thêm schema quality/grading/material/recipe/equipment/masterdata/erp/
 passport; ingestion cần migration 016–017). Realm Keycloak mới (client `nvm-esign`, `nvm-dpp*`, scope `dpp-*`) chưa nạp.
 

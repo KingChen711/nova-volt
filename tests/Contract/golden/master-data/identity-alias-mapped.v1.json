@@ -1,0 +1,24 @@
+{
+  "specversion": "1.0",
+  "id": "e3f2a3b4-c5d6-5e71-8f92-a3b4c5d6e703",
+  "type": "com.novavolt.master-data.identity-alias-mapped.v1",
+  "source": "urn:novavolt:nv1:app-execution",
+  "subject": "urn:identity-alias:Material:9812",
+  "time": "2026-08-25T00:00:00+00:00",
+  "datacontenttype": "application/json",
+  "correlationid": "e3f2a3b4-c5d6-5e71-8f92-a3b4c5d6e703",
+  "causationid": "e3f2a3b4-c5d6-5e71-8f92-a3b4c5d6e703",
+  "partitionkey": "NV1:alias:9812",
+  "data": {
+    "eventId": "e3f2a3b4-c5d6-5e71-8f92-a3b4c5d6e703",
+    "occurredAt": "2026-08-25T00:00:00+00:00",
+    "recordedAt": "2026-08-25T00:00:01+00:00",
+    "siteId": "NV1",
+    "kind": "Material",
+    "externalCode": "9812",
+    "canonicalId": "MAT-0009812",
+    "reason": "Mã ERP cũ của cùng vật liệu",
+    "revision": 3,
+    "actorId": "pm.nv1"
+  }
+}

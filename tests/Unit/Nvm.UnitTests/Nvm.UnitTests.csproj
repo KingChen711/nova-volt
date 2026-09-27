@@ -6,6 +6,7 @@
     <ProjectReference Include="../../../src/FunctionalBlocks/Quality/Nvm.Quality.csproj" />
     <ProjectReference Include="../../../src/FunctionalBlocks/Grading/Nvm.Grading.csproj" />
     <ProjectReference Include="../../../src/FunctionalBlocks/Equipment/Nvm.Equipment.csproj" />
+    <ProjectReference Include="../../../src/FunctionalBlocks/Passport/Nvm.Passport.csproj" />
     <Content Include="EventSourcing/Fixtures/*.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

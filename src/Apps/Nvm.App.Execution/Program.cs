@@ -7,13 +7,18 @@ using Nvm.Bus.Outbox;
 using Nvm.CommandStore;
 using Nvm.Equipment.Commands;
 using Nvm.Equipment.Hosting;
+using Nvm.ErpGateway;
 using Nvm.EventStore;
 using Nvm.Grading.Commands;
 using Nvm.Grading.Hosting;
 using Nvm.Hosting;
 using Nvm.Kernel;
+using Nvm.MasterData.Commands;
+using Nvm.MasterData.Hosting;
 using Nvm.Material.Commands;
 using Nvm.Material.Hosting;
+using Nvm.Passport.Commands;
+using Nvm.Passport.Hosting;
 using Nvm.ProductionExecution.Commands;
 using Nvm.ProductionExecution.Hosting;
 using Nvm.PublicObjectModel;
@@ -60,6 +65,9 @@ if (args.Contains("--migrate-commands", StringComparer.Ordinal))
     await MaterialSchemaMigrator.UpgradeAsync(migrationConnectionString);
     await RecipeSchemaMigrator.UpgradeAsync(migrationConnectionString);
     await EquipmentSchemaMigrator.UpgradeAsync(migrationConnectionString);
+    await MasterDataSchemaMigrator.UpgradeAsync(migrationConnectionString);
+    await ErpGatewaySchemaMigrator.UpgradeAsync(migrationConnectionString);
+    await PassportSchemaMigrator.UpgradeAsync(migrationConnectionString);
     await TraceabilitySchemaMigrator.UpgradeAsync(migrationConnectionString);
     await Nvm.EventStore.EventSchemaMigrator.UpgradeAsync(migrationConnectionString);
     return;
@@ -81,6 +89,9 @@ if (args.Contains("--prepare-command-fixture", StringComparer.Ordinal))
     await MaterialSchemaMigrator.UpgradeAsync(migrationConnectionString);
     await RecipeSchemaMigrator.UpgradeAsync(migrationConnectionString);
     await EquipmentSchemaMigrator.UpgradeAsync(migrationConnectionString);
+    await MasterDataSchemaMigrator.UpgradeAsync(migrationConnectionString);
+    await ErpGatewaySchemaMigrator.UpgradeAsync(migrationConnectionString);
+    await PassportSchemaMigrator.UpgradeAsync(migrationConnectionString);
     await TraceabilitySchemaMigrator.UpgradeAsync(migrationConnectionString);
     await Nvm.EventStore.EventSchemaMigrator.UpgradeAsync(migrationConnectionString);
     await TraceabilityFixtureSeed.PrepareAsync(migrationConnectionString);
@@ -118,7 +129,8 @@ if (args.Contains("--migrate", StringComparer.Ordinal))
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddNvmKernel(typeof(RecordDataCollectionCommand).Assembly, typeof(SerializeUnitCommand).Assembly,
     typeof(ConsumeMaterialCommand).Assembly, typeof(GradeUnitCommand).Assembly, typeof(PlaceHoldCommand).Assembly,
-    typeof(ApplyRecipeCommand).Assembly, typeof(RegisterEquipmentCommand).Assembly);
+    typeof(ApplyRecipeCommand).Assembly, typeof(RegisterEquipmentCommand).Assembly,
+    typeof(MapIdentityAliasCommand).Assembly, typeof(PublishPassportCommand).Assembly);
 builder.Services.AddNvmCommandStore(builder.Configuration, builder.Environment);
 builder.Services.AddNvmTraceability(builder.Configuration);
 builder.Services.AddNvmQuality(builder.Configuration);
@@ -126,8 +138,11 @@ builder.Services.AddNvmMaterial();
 builder.Services.AddNvmGrading();
 builder.Services.AddNvmRecipe();
 builder.Services.AddNvmEquipment();
+builder.Services.AddNvmMasterData();
+builder.Services.AddNvmPassport();
 builder.Services.AddNvmPublicObjectModel(builder.Configuration, builder.Environment);
 builder.Services.AddNvmProductionExecutionAdapters(builder.Configuration);
+builder.Services.AddNvmErpGateway(builder.Configuration);
 builder.Services.AddNvmBus(bus =>
 {
     bus.Host = builder.Configuration["NVM_RABBITMQ_HOST"] ?? "localhost";
@@ -148,6 +163,8 @@ app.MapNvmGrading();
 app.MapNvmQuality();
 app.MapNvmRecipe();
 app.MapNvmEquipment();
+app.MapNvmMasterData();
+app.MapNvmPassport();
 app.MapGet("/health/live", () => Results.Ok(new { Status = "Healthy" }));
 app.MapGet("/health/ready", async (PomReadDbContext database, SqlCommandStoreOptions commands,
     SqlEventStoreOptions events, CancellationToken cancellationToken) =>

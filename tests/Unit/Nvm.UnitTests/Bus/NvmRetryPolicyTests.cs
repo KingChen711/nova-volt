@@ -85,6 +85,9 @@ public sealed class NvmRetryPolicyTests
             .BuildServiceProvider(true);
 
         var harness = provider.GetRequiredService<ITestHarness>();
+        // Mặc định harness chờ khoảng 5 giây; cả bộ unit chạy song song thì đôi khi fault tới muộn hơn (đỏ 1/4 lần
+        // trong phiên 2026-09-26, xanh 3/3 khi chạy riêng). Chờ lâu hơn không đổi điều được chứng minh.
+        harness.TestTimeout = TimeSpan.FromSeconds(30);
         await harness.Start();
 
         await harness.Bus.Publish(new AlwaysFailsProbe("NV1"), TestContext.Current.CancellationToken);

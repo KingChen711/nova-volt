@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Tập con B2MML V0600 do NovaVolt tự viết cho ProductionSchedule (scope §7.6). KHÔNG phải XSD chính thức của MESA:
+  chỉ gồm phần tử gateway dùng, với namespace thật, để file thiếu ID, sai kiểu số hoặc sai thời gian bị từ chối.
+  Phần tử mở rộng thuộc namespace khác được bỏ qua (processContents="lax"); phần tử lạ trong namespace B2MML ở cấp
+  schedule/request/segment bị từ chối, vì đó thường là file sai phiên bản.
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:b2mml="http://www.mesa.org/xml/B2MML-V0600"
+           targetNamespace="http://www.mesa.org/xml/B2MML-V0600"
+           elementFormDefault="qualified">
+
+  <xs:simpleType name="NonEmptyId">
+    <xs:restriction base="xs:string">
+      <xs:minLength value="1" />
+      <xs:maxLength value="100" />
+      <xs:pattern value=".*\S.*" />
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="IdentifierType">
+    <xs:sequence>
+      <xs:element name="ID" type="b2mml:NonEmptyId" />
+      <xs:any minOccurs="0" maxOccurs="unbounded" processContents="lax" namespace="##any" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="QuantityValueType">
+    <xs:sequence>
+      <xs:element name="QuantityString">
+        <xs:simpleType>
+          <xs:restriction base="xs:decimal">
+            <xs:minExclusive value="0" />
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="UnitOfMeasure" type="b2mml:NonEmptyId" />
+      <xs:any minOccurs="0" maxOccurs="unbounded" processContents="lax" namespace="##any" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="MaterialRequirementType">
+    <xs:sequence>
+      <xs:element name="MaterialDefinitionID" type="b2mml:NonEmptyId" />
+      <xs:element name="Quantity" type="b2mml:QuantityValueType" />
+      <xs:any minOccurs="0" maxOccurs="unbounded" processContents="lax" namespace="##any" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SegmentRequirementType">
+    <xs:sequence>
+      <xs:element name="MaterialRequirement" type="b2mml:MaterialRequirementType" minOccurs="0" maxOccurs="500" />
+      <xs:any minOccurs="0" maxOccurs="unbounded" processContents="lax" namespace="##other" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ProductionRequestType">
+    <xs:sequence>
+      <xs:element name="ID" type="b2mml:NonEmptyId" />
+      <xs:element name="ProductProductionRule" type="b2mml:IdentifierType" />
+      <xs:element name="EarliestStartTime" type="xs:dateTime" minOccurs="0" />
+      <xs:element name="SegmentRequirement" type="b2mml:SegmentRequirementType" minOccurs="0" maxOccurs="unbounded" />
+      <xs:any minOccurs="0" maxOccurs="unbounded" processContents="lax" namespace="##other" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="ProductionSchedule">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="ID" type="b2mml:NonEmptyId" />
+        <xs:element name="ProductionRequest" type="b2mml:ProductionRequestType" minOccurs="1" maxOccurs="1000" />
+        <xs:any minOccurs="0" maxOccurs="unbounded" processContents="lax" namespace="##other" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

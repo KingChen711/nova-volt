@@ -984,3 +984,7 @@ Kết luận ở [ADR-044](adr/ADR-044-mot-aggregate-cho-moi-unit.md).
 ## M10 — OEE ground truth và cô lập site (2026-09-26, Claude)
 
 Không phải benchmark hiệu năng. `EquipmentOeeTests`: hai line, OEE gộp 0,8003 = 25.930/32.400, trung bình cộng 0,8582. `CrossSiteIsolationHttpTests` + lab bỏ filter site: phát hiện ở aging/due và 7 test POM. Chi tiết ở [ADR-045](adr/ADR-045-recipe-material-equipment-m10.md).
+
+## M11 — Watcher ERP 1.000 file (2026-09-26, Claude)
+
+`ErpInboundLabTests` (NVM_RUN_LABS=1), SQL Server 2022 Testcontainers, một lần chạy: 1.000 file B2MML (mỗi file một work order) xử lý tuần tự trong một lượt, **35,99 s** (28 file/s), 1.000 work order, 0 từ chối. Kết luận ở [ADR-046](adr/ADR-046-erp-gateway-va-doi-soat-master-data.md).

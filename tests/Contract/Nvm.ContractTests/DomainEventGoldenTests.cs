@@ -4,7 +4,9 @@ using Nvm.Contracts;
 using Nvm.Contracts.CloudEvents;
 using Nvm.Contracts.Events.Equipment;
 using Nvm.Contracts.Events.Grading;
+using Nvm.Contracts.Events.MasterData;
 using Nvm.Contracts.Events.Material;
+using Nvm.Contracts.Events.Passport;
 using Nvm.Contracts.Events.ProductionExecution;
 using Nvm.Contracts.Events.Quality;
 using Nvm.Contracts.Events.Recipe;
@@ -53,6 +55,14 @@ public sealed class DomainEventGoldenTests
         { "equipment/equipment-state-changed.v1.json", typeof(CloudEventEnvelope<EquipmentStateChanged>) },
         { "equipment/equipment-downtime-recorded.v1.json", typeof(CloudEventEnvelope<EquipmentDowntimeRecorded>) },
         { "equipment/production-count-recorded.v1.json", typeof(CloudEventEnvelope<ProductionCountRecorded>) },
+        { "production-execution/work-order-received.v1.json", typeof(CloudEventEnvelope<WorkOrderReceived>) },
+        { "production-execution/work-order-released.v1.json", typeof(CloudEventEnvelope<WorkOrderReleased>) },
+        { "master-data/identity-alias-mapped.v1.json", typeof(CloudEventEnvelope<IdentityAliasMapped>) },
+        { "master-data/reconciliation-task-opened.v1.json", typeof(CloudEventEnvelope<ReconciliationTaskOpened>) },
+        { "master-data/reconciliation-task-resolved.v1.json", typeof(CloudEventEnvelope<ReconciliationTaskResolved>) },
+        { "passport/battery-model-defined.v1.json", typeof(CloudEventEnvelope<BatteryModelDefined>) },
+        { "passport/carbon-footprint-recorded.v1.json", typeof(CloudEventEnvelope<CarbonFootprintRecorded>) },
+        { "passport/passport-published.v1.json", typeof(CloudEventEnvelope<PassportPublished>) },
     };
 
     [Theory]

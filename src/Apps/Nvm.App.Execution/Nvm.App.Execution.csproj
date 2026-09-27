@@ -10,6 +10,8 @@
     <ProjectReference Include="../../FunctionalBlocks/Grading.Hosting/Nvm.Grading.Hosting.csproj" />
     <ProjectReference Include="../../FunctionalBlocks/Recipe.Hosting/Nvm.Recipe.Hosting.csproj" />
     <ProjectReference Include="../../FunctionalBlocks/Equipment.Hosting/Nvm.Equipment.Hosting.csproj" />
+    <ProjectReference Include="../../FunctionalBlocks/Passport.Hosting/Nvm.Passport.Hosting.csproj" />
+    <ProjectReference Include="../../Integration/Nvm.ErpGateway/Nvm.ErpGateway.csproj" />
     <ProjectReference Include="../../Platform/Nvm.CommandStore/Nvm.CommandStore.csproj" />
     <ProjectReference Include="../../Platform/Nvm.Hosting/Nvm.Hosting.csproj" />
     <ProjectReference Include="../../Platform/Nvm.Kernel/Nvm.Kernel.csproj" />

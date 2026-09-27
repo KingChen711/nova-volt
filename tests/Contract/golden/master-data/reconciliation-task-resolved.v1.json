@@ -1,0 +1,23 @@
+{
+  "specversion": "1.0",
+  "id": "e5f2a3b4-c5d6-5e71-8f92-a3b4c5d6e705",
+  "type": "com.novavolt.master-data.reconciliation-task-resolved.v1",
+  "source": "urn:novavolt:nv1:app-execution",
+  "subject": "urn:reconciliation-task:RT-0A1B2C3D4E5F",
+  "time": "2026-08-25T00:00:00+00:00",
+  "datacontenttype": "application/json",
+  "correlationid": "e5f2a3b4-c5d6-5e71-8f92-a3b4c5d6e705",
+  "causationid": "e5f2a3b4-c5d6-5e71-8f92-a3b4c5d6e705",
+  "partitionkey": "NV1:RT-0A1B2C3D4E5F",
+  "data": {
+    "eventId": "e5f2a3b4-c5d6-5e71-8f92-a3b4c5d6e705",
+    "occurredAt": "2026-08-25T00:00:00+00:00",
+    "recordedAt": "2026-08-25T00:00:01+00:00",
+    "siteId": "NV1",
+    "taskId": "RT-0A1B2C3D4E5F",
+    "resolution": "Accepted",
+    "note": "Kho xác nhận 480 kg",
+    "revision": 8,
+    "actorId": "pm.nv1"
+  }
+}

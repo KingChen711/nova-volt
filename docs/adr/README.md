@@ -78,6 +78,8 @@ việc khác.
 | [041](ADR-041-server-derived-manual-submission-key.md) | Backend suy UUIDv5 cho submission nhập tay; client có thể bỏ key | **Accepted** 2026-09-23 | M4 · C07 |
 | [044](ADR-044-mot-aggregate-cho-moi-unit.md) | Mỗi cell/module/pack một aggregate; quan hệ là GenealogyLink (lab 96 cell) | **Accepted** 2026-09-26 | M5 |
 | [045](ADR-045-recipe-material-equipment-m10.md) | Recipe một Active chặn ở DB; luật lot có lý do cụ thể; OEE gộp bằng base | **Accepted** 2026-09-26 | M10 |
+| [046](ADR-046-erp-gateway-va-doi-soat-master-data.md) | ERP gateway: alias tường minh, không quy đổi đơn vị, lệnh chờ master data không mất | **Accepted** 2026-09-26 | M11 |
+| [047](ADR-047-passport-la-projection-co-kiem-soat.md) | Passport là snapshot đã ký, lọc theo trường, mặc định từ chối | **Accepted** 2026-09-26 | M12 |
 
 Cột **Ra ở** là milestone dự kiến, không phải cam kết. Quyết định đến sớm hơn thì viết sớm hơn.
 

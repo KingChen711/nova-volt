@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Nvm.Passport.Hosting</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.Data.SqlClient" />
+    <ProjectReference Include="../Passport/Nvm.Passport.csproj" />
+    <ProjectReference Include="../../Platform/Nvm.CommandStore/Nvm.CommandStore.csproj" />
+    <ProjectReference Include="../../Platform/Nvm.PublicObjectModel/Nvm.PublicObjectModel.csproj" />
+    <EmbeddedResource Include="Migrations/*.sql" />
+  </ItemGroup>
+</Project>

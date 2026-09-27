@@ -19,7 +19,8 @@ public sealed record CommandRequest<TPayload>(
 /// <summary>Chuyển HTTP → <see cref="DurableCommand"/> → dispatcher, và dịch lỗi hạ tầng thành mã ổn định.</summary>
 public static class DurableCommandHttp
 {
-    private const string IdentityConflictMessage = "Idempotency identity or payload conflict.";
+    /// <summary>Thông điệp khi cùng submission mang nội dung khác lần trước; adapter khác (ERP) cũng nhận diện nó.</summary>
+    public const string IdentityConflictMessage = "Idempotency identity or payload conflict.";
 
     /// <summary>Policy ghi: đúng một site_id, có sub, và thuộc một trong các role cho phép.</summary>
     public static IServiceCollection AddSiteWritePolicy(this IServiceCollection services, string name,

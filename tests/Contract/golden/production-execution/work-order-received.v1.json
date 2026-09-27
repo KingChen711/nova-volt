@@ -1,0 +1,35 @@
+{
+  "specversion": "1.0",
+  "id": "e1f2a3b4-c5d6-5e71-8f92-a3b4c5d6e701",
+  "type": "com.novavolt.production-execution.work-order-received.v1",
+  "source": "urn:novavolt:nv1:app-execution",
+  "subject": "urn:work-order:WO-0046",
+  "time": "2026-08-25T00:00:00+00:00",
+  "datacontenttype": "application/json",
+  "correlationid": "e1f2a3b4-c5d6-5e71-8f92-a3b4c5d6e701",
+  "causationid": "e1f2a3b4-c5d6-5e71-8f92-a3b4c5d6e701",
+  "partitionkey": "NV1:work-order:WO-0046",
+  "data": {
+    "eventId": "e1f2a3b4-c5d6-5e71-8f92-a3b4c5d6e701",
+    "occurredAt": "2026-08-25T00:00:00+00:00",
+    "recordedAt": "2026-08-25T00:00:01+00:00",
+    "siteId": "NV1",
+    "workOrderId": "WO-0046",
+    "scheduleId": "PS-0838",
+    "externalProductCode": "NV-P120-NMC ",
+    "productCode": "NV-P120-NMC",
+    "earliestStart": "2026-08-24T23:00:00+00:00",
+    "materials": [
+      {
+        "externalMaterialId": "MAT-0009999",
+        "quantity": 12.0,
+        "unitOfMeasure": "kg"
+      }
+    ],
+    "status": "PendingMasterData",
+    "openTaskIds": [
+      "RT-0A1B2C3D4E5F"
+    ],
+    "actorId": "system:erp-gateway"
+  }
+}

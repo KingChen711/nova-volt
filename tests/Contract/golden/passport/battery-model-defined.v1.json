@@ -1,0 +1,26 @@
+{
+  "specversion": "1.0",
+  "id": "f1a2b3c4-d5e6-5f71-8a92-b3c4d5e6f701",
+  "type": "com.novavolt.passport.battery-model-defined.v1",
+  "source": "urn:novavolt:nv1:app-execution",
+  "subject": "urn:passport:battery-model:09506000134352",
+  "time": "2026-09-26T00:00:00+00:00",
+  "datacontenttype": "application/json",
+  "correlationid": "f1a2b3c4-d5e6-5f71-8a92-b3c4d5e6f701",
+  "causationid": "f1a2b3c4-d5e6-5f71-8a92-b3c4d5e6f701",
+  "partitionkey": "NV1:battery-model:09506000134352",
+  "data": {
+    "eventId": "f1a2b3c4-d5e6-5f71-8a92-b3c4d5e6f701",
+    "occurredAt": "2026-09-26T00:00:00+00:00",
+    "recordedAt": "2026-09-26T00:00:01+00:00",
+    "siteId": "NV1",
+    "gtin": "09506000134352",
+    "productCode": "NV-P120-NMC",
+    "manufacturer": "NovaVolt",
+    "chemistry": "NMC811",
+    "nominalEnergyKwh": 120.0,
+    "expectedLifetimeCycles": 3000,
+    "requiresPassport": true,
+    "actorId": "compliance.prep"
+  }
+}

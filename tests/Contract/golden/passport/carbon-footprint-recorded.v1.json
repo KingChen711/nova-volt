@@ -1,0 +1,28 @@
+{
+  "specversion": "1.0",
+  "id": "f2a2b3c4-d5e6-5f71-8a92-b3c4d5e6f702",
+  "type": "com.novavolt.passport.carbon-footprint-recorded.v1",
+  "source": "urn:novavolt:nv1:app-execution",
+  "subject": "urn:passport:carbon:NV-C100-LFP-CTP:2026",
+  "time": "2026-09-26T00:00:00+00:00",
+  "datacontenttype": "application/json",
+  "correlationid": "f2a2b3c4-d5e6-5f71-8a92-b3c4d5e6f702",
+  "causationid": "f2a2b3c4-d5e6-5f71-8a92-b3c4d5e6f702",
+  "partitionkey": "NV1:carbon:NV-C100-LFP-CTP:2026",
+  "data": {
+    "eventId": "f2a2b3c4-d5e6-5f71-8a92-b3c4d5e6f702",
+    "occurredAt": "2026-09-26T00:00:00+00:00",
+    "recordedAt": "2026-09-26T00:00:01+00:00",
+    "siteId": "NV1",
+    "productCode": "NV-C100-LFP-CTP",
+    "year": 2026,
+    "version": 1,
+    "kgCo2ePerKwh": 38.2,
+    "recycledContentPercent": {
+      "cobalt": 0.0,
+      "lithium": 6.0
+    },
+    "verifiedBy": "TÜV (giả định)",
+    "actorId": "compliance.prep"
+  }
+}

@@ -12,8 +12,12 @@ using Nvm.Grading.Commands;
 using Nvm.Grading.Hosting;
 using Nvm.Kernel;
 using Nvm.Kernel.Commands;
+using Nvm.MasterData.Commands;
+using Nvm.MasterData.Hosting;
 using Nvm.Material.Commands;
 using Nvm.Material.Hosting;
+using Nvm.Passport.Commands;
+using Nvm.Passport.Hosting;
 using Nvm.ProductionExecution.Commands;
 using Nvm.ProductionExecution.Hosting;
 using Nvm.PublicObjectModel;
@@ -38,6 +42,9 @@ public static class TestCommandHost
         await MaterialSchemaMigrator.UpgradeAsync(connectionString, ct);
         await RecipeSchemaMigrator.UpgradeAsync(connectionString, ct);
         await EquipmentSchemaMigrator.UpgradeAsync(connectionString, ct);
+        await MasterDataSchemaMigrator.UpgradeAsync(connectionString, ct);
+        await Nvm.ErpGateway.ErpGatewaySchemaMigrator.UpgradeAsync(connectionString, ct);
+        await PassportSchemaMigrator.UpgradeAsync(connectionString, ct);
         await TraceabilityFixtureSeed.PrepareAsync(connectionString, ct);
     }
 
@@ -60,7 +67,8 @@ public static class TestCommandHost
         services.AddSingleton(clock);
         services.AddNvmKernel(typeof(RecordRollCoatedCommand).Assembly, typeof(SerializeUnitCommand).Assembly,
             typeof(ConsumeMaterialCommand).Assembly, typeof(GradeUnitCommand).Assembly, typeof(PlaceHoldCommand).Assembly,
-            typeof(ApplyRecipeCommand).Assembly, typeof(RegisterEquipmentCommand).Assembly);
+            typeof(ApplyRecipeCommand).Assembly, typeof(RegisterEquipmentCommand).Assembly,
+            typeof(MapIdentityAliasCommand).Assembly, typeof(PublishPassportCommand).Assembly);
         services.AddNvmCommandStore(configuration, new TestEnvironment());
         services.AddNvmTraceability(configuration);
         services.AddNvmQuality(configuration);
@@ -68,6 +76,8 @@ public static class TestCommandHost
         services.AddNvmGrading();
         services.AddNvmRecipe();
         services.AddNvmEquipment();
+        services.AddNvmMasterData();
+        services.AddNvmPassport();
         services.AddNvmProductionExecutionAdapters(configuration);
         if (postgres is not null)
         {

@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!--
+    NovaERP stub (M11, scope §7.6): không phải ERP, chỉ đủ để luyện tích hợp bẩn.
+    `generate <dir>` thả bộ file B2MML cố ý bẩn vào thư mục inbound (SFTP mount);
+    `serve <url> <out.jsonl>` nhận backflush, bỏ lô trùng theo Idempotency-Key và ghi từng lô một dòng.
+  -->
+
+  <PropertyGroup>
+    <RootNamespace>Nvm.NovaErp</RootNamespace>
+    <AssemblyName>Nvm.NovaErp</AssemblyName>
+  </PropertyGroup>
+
+</Project>

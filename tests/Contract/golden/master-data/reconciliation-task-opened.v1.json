@@ -1,0 +1,26 @@
+{
+  "specversion": "1.0",
+  "id": "e4f2a3b4-c5d6-5e71-8f92-a3b4c5d6e704",
+  "type": "com.novavolt.master-data.reconciliation-task-opened.v1",
+  "source": "urn:novavolt:nv1:app-execution",
+  "subject": "urn:reconciliation-task:RT-0A1B2C3D4E5F",
+  "time": "2026-08-25T00:00:00+00:00",
+  "datacontenttype": "application/json",
+  "correlationid": "e4f2a3b4-c5d6-5e71-8f92-a3b4c5d6e704",
+  "causationid": "e4f2a3b4-c5d6-5e71-8f92-a3b4c5d6e704",
+  "partitionkey": "NV1:RT-0A1B2C3D4E5F",
+  "data": {
+    "eventId": "e4f2a3b4-c5d6-5e71-8f92-a3b4c5d6e704",
+    "occurredAt": "2026-08-25T00:00:00+00:00",
+    "recordedAt": "2026-08-25T00:00:01+00:00",
+    "siteId": "NV1",
+    "taskId": "RT-0A1B2C3D4E5F",
+    "issueKind": "UomMismatch",
+    "externalCode": "MAT-0009812",
+    "canonicalId": "MAT-0009812",
+    "receivedUom": "g",
+    "expectedUom": "kg",
+    "sourceDocument": "B2MML:PS-0839/WO-0047",
+    "detail": "ERP gửi 480000 g cho MAT-0009812, đơn vị gốc là kg."
+  }
+}

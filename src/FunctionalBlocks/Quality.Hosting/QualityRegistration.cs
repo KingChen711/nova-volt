@@ -41,7 +41,7 @@ public static class QualityRegistration
     public const string SamplePolicy = "QualitySample";
     public const string ReadPolicy = "QualityRead";
     private static readonly string[] Signers = [ApprovalPolicy.QualityManager, ApprovalPolicy.ProductionManager,
-        ApprovalPolicy.QualityEngineer, ApprovalPolicy.CustomerRepresentative];
+        ApprovalPolicy.QualityEngineer, ApprovalPolicy.CustomerRepresentative, "ComplianceOwner"];
 
     /// <summary>Đăng ký sau AddNvmCommandStore và event store; mọi adapter dùng chung session của command.</summary>
     public static IServiceCollection AddNvmQuality(this IServiceCollection services, IConfiguration? configuration = null)

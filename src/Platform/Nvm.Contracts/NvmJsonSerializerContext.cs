@@ -3,7 +3,9 @@ using Nvm.Contracts.CloudEvents;
 using Nvm.Contracts.Events.Equipment;
 using Nvm.Contracts.Events.FactoryModel;
 using Nvm.Contracts.Events.Grading;
+using Nvm.Contracts.Events.MasterData;
 using Nvm.Contracts.Events.Material;
+using Nvm.Contracts.Events.Passport;
 using Nvm.Contracts.Events.ProductionExecution;
 using Nvm.Contracts.Events.Quality;
 using Nvm.Contracts.Events.Recipe;
@@ -86,4 +88,12 @@ namespace Nvm.Contracts;
 [JsonSerializable(typeof(CloudEventEnvelope<EquipmentStateChanged>))]
 [JsonSerializable(typeof(CloudEventEnvelope<EquipmentDowntimeRecorded>))]
 [JsonSerializable(typeof(CloudEventEnvelope<ProductionCountRecorded>))]
+[JsonSerializable(typeof(CloudEventEnvelope<WorkOrderReceived>))]
+[JsonSerializable(typeof(CloudEventEnvelope<WorkOrderReleased>))]
+[JsonSerializable(typeof(CloudEventEnvelope<IdentityAliasMapped>))]
+[JsonSerializable(typeof(CloudEventEnvelope<ReconciliationTaskOpened>))]
+[JsonSerializable(typeof(CloudEventEnvelope<ReconciliationTaskResolved>))]
+[JsonSerializable(typeof(CloudEventEnvelope<BatteryModelDefined>))]
+[JsonSerializable(typeof(CloudEventEnvelope<CarbonFootprintRecorded>))]
+[JsonSerializable(typeof(CloudEventEnvelope<PassportPublished>))]
 public sealed partial class NvmJsonSerializerContext : JsonSerializerContext;

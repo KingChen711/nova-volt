@@ -17,6 +17,10 @@
     <Project Path="src/FunctionalBlocks/Recipe.Hosting/Nvm.Recipe.Hosting.csproj" />
     <Project Path="src/FunctionalBlocks/Equipment/Nvm.Equipment.csproj" />
     <Project Path="src/FunctionalBlocks/Equipment.Hosting/Nvm.Equipment.Hosting.csproj" />
+    <Project Path="src/FunctionalBlocks/MasterData/Nvm.MasterData.csproj" />
+    <Project Path="src/FunctionalBlocks/MasterData.Hosting/Nvm.MasterData.Hosting.csproj" />
+    <Project Path="src/FunctionalBlocks/Passport/Nvm.Passport.csproj" />
+    <Project Path="src/FunctionalBlocks/Passport.Hosting/Nvm.Passport.Hosting.csproj" />
     <Project Path="src/FunctionalBlocks/FactoryModel/Nvm.FactoryModel.csproj" />
     <Project Path="src/FunctionalBlocks/ProductionExecution/Nvm.ProductionExecution.csproj" />
     <Project Path="src/FunctionalBlocks/ProductionExecution.Hosting/Nvm.ProductionExecution.Hosting.csproj" />
@@ -33,6 +37,9 @@
     <Project Path="src/Platform/Nvm.Sparkplug/Nvm.Sparkplug.csproj" />
     <Project Path="src/Platform/Nvm.Time/Nvm.Time.csproj" />
   </Folder>
+  <Folder Name="/src/Integration/">
+    <Project Path="src/Integration/Nvm.ErpGateway/Nvm.ErpGateway.csproj" />
+  </Folder>
   <Folder Name="/src/Workers/">
     <Project Path="src/Workers/Nvm.EdgeGateway/Nvm.EdgeGateway.csproj" />
     <Project Path="src/Workers/Nvm.Ingestion/Nvm.Ingestion.csproj" />
@@ -43,6 +50,7 @@
     <Project Path="tools/analyzers/Nvm.Analyzers/Nvm.Analyzers.csproj" />
     <Project Path="tools/buslab/Nvm.BusLab/Nvm.BusLab.csproj" />
     <Project Path="tools/loadgen/Nvm.LoadHarness/Nvm.LoadHarness.csproj" />
+    <Project Path="tools/novaerp/Nvm.NovaErp/Nvm.NovaErp.csproj" />
     <Project Path="tools/telemetry/Nvm.CalendarLab/Nvm.CalendarLab.csproj" />
     <Project Path="tools/telemetry/Nvm.TelemetryBackfill/Nvm.TelemetryBackfill.csproj" />
   </Folder>

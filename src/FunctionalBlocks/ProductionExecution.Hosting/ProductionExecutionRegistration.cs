@@ -10,6 +10,7 @@ using Nvm.CommandStore;
 using Nvm.Contracts.Events.ProductionExecution;
 using Nvm.Kernel.Commands;
 using Nvm.ProductionExecution.Commands;
+using Nvm.ProductionExecution.Handlers;
 using Nvm.ProductionExecution.Ports;
 
 namespace Nvm.ProductionExecution.Hosting;
@@ -43,6 +44,8 @@ public static class ProductionExecutionRegistration
         services.AddSingleton<IDueTimeoutSource, SqlDueTimeoutSource>();
         services.AddSingleton<FormationTimeoutWorker>();
         services.AddSingleton<AgingWarehouseQueries>();
+        services.AddScoped<IWorkOrderStore, SqlWorkOrderStore>();
+        services.AddSingleton<WorkOrderQueries>();
         if (!string.Equals(configuration["NVM_FORMATION:TimeoutWorker"], "false", StringComparison.OrdinalIgnoreCase))
         { services.AddHostedService(provider => provider.GetRequiredService<FormationTimeoutWorker>()); }
         services.AddAuthorizationBuilder().AddPolicy(RecordPolicy, policy => policy
@@ -66,6 +69,11 @@ public static class ProductionExecutionRegistration
         endpoints.MapPost("/api/v1/commands/production/record-roll-coated", RecordRollCoatedAsync)
             .RequireAuthorization(RecordPolicy);
         AgingWarehouseQueries.MapAgingWarehouse(endpoints, RecordPolicy);
+        endpoints.MapGet("/api/v1/workorders", async (string? status, HttpContext context, WorkOrderQueries queries,
+            CancellationToken ct) => status is not (null or WorkOrderStatuses.Released or WorkOrderStatuses.PendingMasterData)
+                ? Results.BadRequest()
+                : Results.Ok(await queries.ListAsync(context.User.FindFirst("site_id")!.Value, status, 500, ct)))
+            .RequireAuthorization(RecordPolicy);
         endpoints.MapPost("/api/v1/commands/production/start-formation", (CommandRequest<StartFormationPayload>? request,
             HttpContext context, ICommandDispatcher dispatcher, ILoggerFactory logs, CancellationToken ct) =>
             Execute(request, context, dispatcher, logs, (site, actor, input) => new StartFormationCommand(site, actor,

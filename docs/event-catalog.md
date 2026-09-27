@@ -91,9 +91,14 @@ thành đúng cái TSDB nằm cạnh nó.
 | `EquipmentStateChanged` | Equipment | Chạy / dừng; dừng phải có lý do là lá của cây lý do; stream `equipment:{path}` | v1 | ✅ | ✅ | M10 |
 | `EquipmentDowntimeRecorded` | Equipment | Lần dừng đã kết thúc, phân loại Planned / Unplanned (≥5 phút) / MicroStop (<5 phút) theo §6.10 | v1 | ✅ | ✅ | M10 |
 | `ProductionCountRecorded` | Equipment | Sản lượng tổng/đạt của máy trong một khoảng, chốt ideal cycle + version lúc ghi | v1 | ✅ | ✅ | M10 |
-| `WorkOrderReleased` | ProductionExecution | ERP đẩy xuống | — | ☐ | ☐ | M11 |
+| `WorkOrderReceived` | ProductionExecution | Nhận work order từ B2MML; luôn ghi, kể cả `PendingMasterData` kèm task (không mất lệnh); stream `work-order:{id}` | v1 | ✅ | ✅ | M11 |
+| `WorkOrderReleased` | ProductionExecution | Work order đủ master data, phát xuống sản xuất, kèm revision master data | v1 | ✅ | ✅ | M11 |
+| `IdentityAliasMapped` | MasterData | Mã ERP → mã chuẩn, có lý do và người chịu trách nhiệm | v1 | ✅ | ✅ | M11 |
+| `ReconciliationTaskOpened` / `ReconciliationTaskResolved` | MasterData | Sai lệch master data (mã lạ, đơn vị lệch) mở task; đóng khi ánh xạ hoặc chấp nhận có ghi chú | v1 | ✅ | ✅ | M11 |
 | `ProductionEolTestPassed` | Quality | Test cuối chuyền đạt | — | ☐ | ☐ | M9 |
-| `PassportPublished` | Passport | DPP được công bố | — | ☐ | ☐ | M12 |
+| `BatteryModelDefined` | Passport | Model pin (GTIN-14) và việc sản phẩm có cần DPP hay không | v1 | ✅ | ✅ | M12 |
+| `CarbonFootprintRecorded` | Passport | Carbon footprint + tỉ lệ tái chế theo (sản phẩm, nhà máy, năm), có version; cả sản phẩm không có passport | v1 | ✅ | ✅ | M12 |
+| `PassportPublished` | Passport | Version passport được ComplianceOwner ký và công bố; bất biến, version sau trỏ về version trước | v1 | ✅ | ✅ | M12 |
 | `GenealogyCorrectionRecorded` | Traceability | Bút toán bù trừ: thay cha đã ghi sai (cạnh CORRECTION) | v1 | ✅ | ✅ | M6 |
 
 ---

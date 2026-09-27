@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Adapter ERP (M11): đọc B2MML từ thư mục inbound, gửi command work order, đánh giá lại lệnh chờ master data,
+    và đẩy backflush tiêu hao lên ERP. Không phải Functional Block: nó ghép các FB bằng command và query của chúng.
+  -->
+
+  <PropertyGroup>
+    <RootNamespace>Nvm.ErpGateway</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.Data.SqlClient" />
+    <ProjectReference Include="../../FunctionalBlocks/ProductionExecution.Hosting/Nvm.ProductionExecution.Hosting.csproj" />
+    <ProjectReference Include="../../FunctionalBlocks/MasterData.Hosting/Nvm.MasterData.Hosting.csproj" />
+    <ProjectReference Include="../../Platform/Nvm.CommandStore/Nvm.CommandStore.csproj" />
+    <EmbeddedResource Include="Schemas/*.xsd" />
+    <EmbeddedResource Include="Migrations/*.sql" />
+  </ItemGroup>
+
+</Project>

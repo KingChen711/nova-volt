@@ -70,6 +70,9 @@ public sealed class ExecutionCommandHttpFixture : IAsyncLifetime
         await Nvm.Material.Hosting.MaterialSchemaMigrator.UpgradeAsync(ConnectionString, Ct);
         await Nvm.Recipe.Hosting.RecipeSchemaMigrator.UpgradeAsync(ConnectionString, Ct);
         await Nvm.Equipment.Hosting.EquipmentSchemaMigrator.UpgradeAsync(ConnectionString, Ct);
+        await Nvm.MasterData.Hosting.MasterDataSchemaMigrator.UpgradeAsync(ConnectionString, Ct);
+        await Nvm.ErpGateway.ErpGatewaySchemaMigrator.UpgradeAsync(ConnectionString, Ct);
+        await Nvm.Passport.Hosting.PassportSchemaMigrator.UpgradeAsync(ConnectionString, Ct);
         await Nvm.Traceability.Hosting.TraceabilitySchemaMigrator.UpgradeAsync(ConnectionString, Ct);
         PomSchemaMigrator.Upgrade(_postgres.GetConnectionString());
 
@@ -101,9 +104,11 @@ public sealed class ExecutionCommandHttpFixture : IAsyncLifetime
         await StartAppAsync();
     }
 
-    public string Token(string site = "NV1", string role = "Operator", string actor = "operator-test", bool expired = false, bool wrongAudience = false, string? secondSite = null)
+    public string Token(string site = "NV1", string role = "Operator", string actor = "operator-test", bool expired = false, bool wrongAudience = false, string? secondSite = null, IEnumerable<Claim>? extra = null)
     {
         var claims = new List<Claim> { new("sub", actor), new("site_id", site), new("mendix_roles", role) };
+        if (extra is not null)
+        { claims.AddRange(extra); }
         if (secondSite is not null)
         { claims.Add(new("site_id", secondSite)); }
         var now = TimeProvider.System.GetUtcNow();

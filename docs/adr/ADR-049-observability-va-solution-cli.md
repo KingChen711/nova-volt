@@ -58,7 +58,8 @@ version theo Functional Block với ma trận tương thích. Kernel và Functio
   không vào git) — cảnh báo mới xem được ở UI Alertmanager, chưa tới người. Business metric mới có `nvm.commands` và metric outbox. Chưa đo
   N1/N2 sau instrumentation (rig chưa qua preflight).
 - Helm chart `deploy/helm/novavolt` dùng `values.yaml` của `solution-cli` (lint/template trong CI). Đã cài tay lên kind
-  (`deploy/kind/smoke.sh`, 2026-09-27): 5 pod Ready, readiness 200; chưa có bước smoke kind trong CI. Scope ghi k3d; dùng
+  (`deploy/kind/smoke.sh`, 2026-09-27): 5 pod Ready, readiness 200. Workflow `kind-smoke.yml` chạy cùng script trên database
+  trống, xanh từ `9397524` (2026-09-28) sau khi sửa thứ tự migration và việc `--migrate` không tạo role `nvm_pom`. Scope ghi k3d; dùng
   kind vì đã có sẵn trên máy, chart không phụ thuộc loại cluster. Mode monolith vẫn bật `edge-gateway` vì
   compose gốc không gắn profile cho service đó.
 - Version FB là khai báo tay trong csproj, chưa có package NuGet riêng từng FB.

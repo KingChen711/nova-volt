@@ -60,9 +60,11 @@ integration 7m53s. Container .NET SDK Linux chạy cả solution như CI: 1.072/
 ở `1ce9a00`), 7m56s. GitHub CI bước Test đỏ từ 2026-08-28; log cần đăng nhập nên đã thêm bước đưa tên test đỏ ra
 annotation (đọc qua API công khai `check-runs/{job}/annotations`).
 
-Chưa deploy image mới lên runtime (event store migration 002 thêm `es.Outbox.TraceParent`; migration Quality bỏ cột `traceability.SerialReservations.QualityState`; deploy Execution
-+ ProjectionWorker cùng lúc; `--migrate-commands` thêm schema quality/grading/material/recipe/equipment/masterdata/erp/
-passport; ingestion cần migration 016–017). Realm Keycloak mới (client `nvm-esign`, `nvm-dpp*`, scope `dpp-*`) chưa nạp.
+Runtime local đã deploy code mới (2026-09-27, Claude): build lại 4 image, chạy `ingestion-migrate` (015–017),
+`projection-migrate`, `execution-prepare-commands`; execution/projection/ingestion healthy, edge-gateway chạy. Lúc deploy lộ
+lỗi: edge-gateway crash vì `Nvm.Observability` kéo framework ASP.NET Core mà image `dotnet/runtime` không có; đã tách
+`Nvm.Observability.Web` và thêm bước CI khởi động thử từng image. Realm Keycloak mới (client `nvm-esign`, `nvm-dpp*`) chưa
+nạp: `--import-realm` bỏ qua realm đã tồn tại.
 
 Mutation domain (ADR-050, `Entities/` của 10 FB): gộp 83,33 %, mọi FB ≥ 73 %.
 

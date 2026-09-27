@@ -12,7 +12,7 @@ using Nvm.Ingestion.FileDrop;
 using Nvm.Ingestion.Persistence;
 using Nvm.Ingestion.Publishing;
 using Nvm.Ingestion.RawCurves;
-using Nvm.Observability;
+using Nvm.Observability.Web;
 
 if (HealthProbe.IsRequested(args))
 {
@@ -23,7 +23,7 @@ CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
 CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.AddNvmObservability("nvm-ingestion");
+builder.AddNvmWebObservability("nvm-ingestion");
 
 if (builder.Environment.IsDevelopment())
 {

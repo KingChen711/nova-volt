@@ -38,8 +38,6 @@ public static class ObservabilityRegistration
             .WithTracing(tracing =>
             {
                 tracing.AddSource(SourcePrefix + "*", "MassTransit")
-                    .AddAspNetCoreInstrumentation(options => options.Filter = context =>
-                        !context.Request.Path.StartsWithSegments("/health", StringComparison.Ordinal))
                     .AddHttpClientInstrumentation();
                 if (endpoint is not null)
                 { tracing.AddOtlpExporter(Otlp); }
@@ -47,7 +45,6 @@ public static class ObservabilityRegistration
             .WithMetrics(metrics =>
             {
                 metrics.AddMeter(SourcePrefix + "*", "MassTransit")
-                    .AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
                     .AddRuntimeInstrumentation();
                 if (endpoint is not null)

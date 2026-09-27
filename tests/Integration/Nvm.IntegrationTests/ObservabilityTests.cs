@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Nvm.Kernel.Commands;
-using Nvm.Observability;
+using Nvm.Observability.Web;
 
 namespace Nvm.IntegrationTests;
 
@@ -28,7 +28,7 @@ public sealed class ObservabilityTests
             ["NVM_OTEL:Endpoint"] = "http://127.0.0.1:9",
             ["NVM_OTEL:TimeoutMilliseconds"] = "500",
         });
-        builder.AddNvmObservability("nvm-observability-test");
+        builder.AddNvmWebObservability("nvm-observability-test");
         await using var app = builder.Build();
         app.MapGet("/probe", () =>
         {

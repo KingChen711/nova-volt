@@ -3,6 +3,8 @@
   <!--
     OpenTelemetry cho các host (M13). Chỉ host reference project này; Functional Block và kernel chỉ dùng
     ActivitySource/Meter của BCL. Telemetry là best-effort: collector chết thì app vẫn chạy.
+    Không phụ thuộc ASP.NET Core: host generic (edge-gateway, simulator) chạy trên image dotnet/runtime.
+    Instrumentation HTTP phía server nằm ở Nvm.Observability.Web.
   -->
 
   <PropertyGroup>
@@ -10,10 +12,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
-    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
     <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
     <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
   </ItemGroup>

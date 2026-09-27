@@ -36,6 +36,7 @@
     <Project Path="src/Platform/Nvm.Kernel/Nvm.Kernel.csproj" />
     <Project Path="src/Platform/Nvm.Sparkplug/Nvm.Sparkplug.csproj" />
     <Project Path="src/Platform/Nvm.Time/Nvm.Time.csproj" />
+    <Project Path="src/Platform/Nvm.Observability.Web/Nvm.Observability.Web.csproj" />
     <Project Path="src/Platform/Nvm.Observability/Nvm.Observability.csproj" />
   </Folder>
   <Folder Name="/src/Integration/">

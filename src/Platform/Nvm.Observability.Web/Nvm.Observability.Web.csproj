@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Phần OpenTelemetry cần ASP.NET Core (span/metric cho request HTTP đến). Tách khỏi Nvm.Observability để host generic
+    không phải kéo framework Microsoft.AspNetCore.App: edge-gateway từng crash trên image dotnet/runtime vì điều đó.
+  -->
+
+  <PropertyGroup>
+    <RootNamespace>Nvm.Observability.Web</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Nvm.Observability/Nvm.Observability.csproj" />
+  </ItemGroup>
+
+</Project>

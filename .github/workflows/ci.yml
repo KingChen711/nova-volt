@@ -102,6 +102,16 @@ jobs:
       - name: Build image
         run: docker build -f ${{ matrix.host.dockerfile }} -t novavolt/${{ matrix.host.name }}:ci .
 
+      # Build xanh chưa chắc image chạy được: edge-gateway từng thiếu framework ASP.NET Core trên image dotnet/runtime.
+      # Không có cấu hình thì app sẽ tự thoát; bước này chỉ bắt lỗi thiếu framework .NET lúc khởi động.
+      - name: Start check (required .NET framework present)
+        run: |
+          docker run -d --name start-check novavolt/${{ matrix.host.name }}:ci
+          sleep 15
+          out=$(docker logs start-check 2>&1)
+          docker rm -f start-check
+          if echo "$out" | grep -q "You must install or update .NET"; then echo "$out" | tail -20; exit 1; fi
+
       - name: SBOM (syft, SPDX)
         uses: anchore/sbom-action@v0
         with:

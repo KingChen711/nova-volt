@@ -52,8 +52,10 @@ version theo Functional Block với ma trận tương thích. Kernel và Functio
   dưới trace đó, rồi MassTransit mang tiếp sang consumer projection. Kiểm bằng
   `SqlEventOutboxTests.EventWrittenInsideATrace_IsPublishedInsideThatTrace_AndMigrationIsRerunnable` (đỏ khi bỏ bước ghi
   traceparent). Chưa kiểm span consumer ở ProjectionWorker qua broker thật.
-- Chưa có OTel Collector/Tempo/Loki trong compose, chưa có dashboard SLO/error budget, business metric mới có
-  `nvm.commands`. Chưa đo N1/N2 sau instrumentation (rig chưa qua preflight).
+- Stack observability chỉ cho máy dev (profile `obs`): OTel Collector 0.140.0 → Tempo 2.9.1, Loki 3.6.0, Prometheus
+  v3.8.0; dữ liệu nằm trong container, mất khi recreate. Chưa có Alertmanager: cảnh báo chỉ hiện ở trạng thái `firing`
+  trong Prometheus và panel dashboard, chưa gửi đi đâu. Business metric mới có `nvm.commands` và metric outbox. Chưa đo
+  N1/N2 sau instrumentation (rig chưa qua preflight).
 - Helm chart `deploy/helm/novavolt` dùng `values.yaml` của `solution-cli` (lint/template trong CI); chưa cài lên k3d/kind. Mode monolith vẫn bật `edge-gateway` vì
   compose gốc không gắn profile cho service đó.
 - Version FB là khai báo tay trong csproj, chưa có package NuGet riêng từng FB.
@@ -90,7 +92,17 @@ version theo Functional Block với ma trận tương thích. Kernel và Functio
   `Activity.Current` thuộc đúng trace đó.
 - Chaos broker (`BrokerLatencyChaosLabTests`, NVM_RUN_LABS=1, Toxiproxy 2.12.0, 2026-09-27): +500 ms mỗi chiều trên
   AMQP. Nhận command p95 48 ms (không đổi so với 79 ms lúc thường), 20/20 event vẫn tới nhưng mất 20,7 s thay vì 2,2 s.
-  Phần "alert bắn đúng" chưa làm: chưa có Prometheus/Alertmanager trong compose.
+  Phần "alert bắn đúng" đo ở lab bên dưới.
+- Stack observability trên runtime local (2026-09-27): một request `serialize-unit` với `traceparent` biết trước cho một
+  trace 6 span qua 2 process: `POST …/serialize-unit` → `command SerializeUnit` → `event publish` (outbox) →
+  `nvm.traceability send` → ở `nvm-projection`: `receive` → `process`. Loki nhận log của execution và projection, 198/200
+  dòng có `trace_id`; tham số SQL trong log EF bị che (`'?'`). Prometheus có `nvm_commands_total`,
+  `nvm_outbox_publish_duration_seconds` (bucket theo giây qua `InstrumentAdvice`), `http_server_request_duration_seconds`;
+  5 luật trong `deploy/prometheus/rules/novavolt-slo.yml` đều `health=ok`. Dashboard `NovaVolt — SLO và error budget`
+  (8 panel) và ba datasource Prometheus/Tempo/Loki được Grafana nạp, health OK.
+- Cảnh báo broker chậm (`BrokerLatencyAlertLabTests`, NVM_RUN_LABS=1): app + RabbitMQ qua Toxiproxy + Collector và
+  Prometheus chạy đúng file trong `deploy/`. Broker bình thường 90 s: p95 publish 0,024 s, `BrokerPublishSlow` inactive.
+  +500 ms mỗi chiều: p95 2,425 s, cảnh báo **firing sau 95 s**. Một lần chạy.
 - Mutation (Stryker.NET 5.0, 2026-09-27): chạy được bằng `tests/Mutation/Nvm.DomainMutationTests` (xunit v2, VSTest);
   với xunit v3, test chạy trong process con nên Stryker không bật được mutant (0 bị giết). Điểm trên unit test domain:
   Equipment 28,4 %, Passport 29,7 %, Quality 12,9 %, Grading 11,7 %, Traceability 36,0 % — **trượt** ngưỡng 70 %. Phần lớn

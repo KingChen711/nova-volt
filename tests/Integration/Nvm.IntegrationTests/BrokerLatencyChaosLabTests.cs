@@ -9,9 +9,10 @@ using DotNet.Testcontainers.Networks;
 namespace Nvm.IntegrationTests;
 
 /// <summary>App thật nói chuyện với RabbitMQ qua Toxiproxy, để lab chaos thêm độ trễ mạng.</summary>
-public sealed class ToxiproxyRabbitFixture : ExecutionCommandHttpFixture
+public class ToxiproxyRabbitFixture : ExecutionCommandHttpFixture
 {
     private readonly INetwork _network = new NetworkBuilder().Build();
+    protected INetwork Network => _network;
     private IContainer _proxy = null!;
     private HttpClient _toxiproxy = null!;
 
@@ -68,6 +69,7 @@ public sealed class ToxiproxyRabbitFixture : ExecutionCommandHttpFixture
         if (_proxy is not null)
         { await _proxy.DisposeAsync(); }
         await _network.DisposeAsync();
+        GC.SuppressFinalize(this);
     }
 }
 

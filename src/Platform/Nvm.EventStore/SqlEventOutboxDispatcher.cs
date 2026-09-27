@@ -63,9 +63,13 @@ public sealed class SqlEventOutboxDispatcher
             using var span = EventStoreTelemetry.Source.StartActivity("event publish", ActivityKind.Producer,
                 claim.Message.TraceParent);
             span?.SetTag("messaging.message.id", claim.Message.EventId);
+            var started = _clock.GetTimestamp();
             try
             {
                 await _publisher.PublishAsync(claim.Message, attempt.Token).ConfigureAwait(false);
+                EventStoreTelemetry.PublishDuration.Record(_clock.GetElapsedTime(started).TotalSeconds,
+                    new KeyValuePair<string, object?>("outcome", "published"));
+                EventStoreTelemetry.DeliveryLag.Record((_clock.GetUtcNow() - claim.Message.RecordedAt).TotalSeconds);
                 await AcknowledgeAsync(claim, cancellationToken).ConfigureAwait(false);
                 published++;
             }
@@ -76,6 +80,8 @@ public sealed class SqlEventOutboxDispatcher
             }
             catch (Exception error)
             {
+                EventStoreTelemetry.PublishDuration.Record(_clock.GetElapsedTime(started).TotalSeconds,
+                    new KeyValuePair<string, object?>("outcome", "failed"));
                 await FailAsync(claim, error, cancellationToken).ConfigureAwait(false);
                 failed++;
             }

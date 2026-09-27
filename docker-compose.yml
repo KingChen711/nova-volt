@@ -65,6 +65,8 @@ services:
       rabbitmq:
         condition: service_healthy
     environment:
+      NVM_OTEL__Endpoint: ${NVM_OTEL_ENDPOINT:-http://otel-collector:4317}
+      OTEL_METRIC_EXPORT_INTERVAL: "15000"
       NVM_PROJECTIONS__ConnectionString: "Host=timescale;Database=${NVM_POSTGRES_DB};Username=nvm_projection;Password=${NVM_PROJECTION_PG_PASSWORD};GSS Encryption Mode=Disable"
       NVM_PROJECTIONS__SqlConnectionString: "Server=mssql;Database=NovaVolt;User Id=nvm_projection;Password=${NVM_PROJECTION_SQL_PASSWORD};Encrypt=True;TrustServerCertificate=True;Connect Timeout=3"
       NVM_PROJECTIONS__Sites: NV1,DE1
@@ -112,6 +114,8 @@ services:
       rabbitmq:
         condition: service_healthy
     environment:
+      NVM_OTEL__Endpoint: ${NVM_OTEL_ENDPOINT:-http://otel-collector:4317}
+      OTEL_METRIC_EXPORT_INTERVAL: "15000"
       ASPNETCORE_ENVIRONMENT: Development
       # Lab xác thực password; không thử Kerberos khi image không cài GSSAPI.
       NVM_POM__ConnectionString: "Host=timescale;Port=5432;Database=${NVM_POSTGRES_DB};Username=nvm_pom;Password=${NVM_POM_PASSWORD};Application Name=Nvm.Pom.Read;Command Timeout=10;GSS Encryption Mode=Disable"
@@ -344,6 +348,58 @@ services:
       timeout: 3s
       retries: 20
       start_period: 15s
+
+  # ─────────────────────────────────────────────────────────
+  # Observability (M13, ADR-049): host → OTel Collector → Tempo (trace), Loki (log), Prometheus (metric + cảnh báo).
+  # Cùng profile `obs` với Grafana. Collector đứng cả dmz-net để edge-gateway gửi được; nó chỉ nhận, không gọi ra.
+  # Dữ liệu nằm trong container: đây là dữ liệu chẩn đoán cho máy dev, không phải hồ sơ.
+  # ─────────────────────────────────────────────────────────
+  otel-collector:
+    profiles: [obs]
+    image: otel/opentelemetry-collector-contrib:0.140.0
+    container_name: nvm-otel-collector
+    restart: unless-stopped
+    mem_limit: 256m
+    command: ["--config=/etc/otelcol/collector.yaml"]
+    volumes:
+      - ./deploy/otel/collector.yaml:/etc/otelcol/collector.yaml:ro
+    networks: [it-net, dmz-net]
+
+  tempo:
+    profiles: [obs]
+    image: grafana/tempo:2.9.1
+    container_name: nvm-tempo
+    restart: unless-stopped
+    mem_limit: 512m
+    command: ["-config.file=/etc/tempo/tempo.yaml"]
+    volumes:
+      - ./deploy/tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
+    networks: [it-net]
+
+  loki:
+    profiles: [obs]
+    image: grafana/loki:3.6.0
+    container_name: nvm-loki
+    restart: unless-stopped
+    mem_limit: 512m
+    command: ["-config.file=/etc/loki/loki.yaml"]
+    volumes:
+      - ./deploy/loki/loki.yaml:/etc/loki/loki.yaml:ro
+    networks: [it-net]
+
+  prometheus:
+    profiles: [obs]
+    image: prom/prometheus:v3.8.0
+    container_name: nvm-prometheus
+    restart: unless-stopped
+    mem_limit: 512m
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.retention.time=2d"]
+    volumes:
+      - ./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./deploy/prometheus/rules:/etc/prometheus/rules:ro
+    ports:
+      - "127.0.0.1:${NVM_PORT_PROMETHEUS:-9090}:9090"
+    networks: [it-net]
 
   # ─────────────────────────────────────────────────────────
   # SQL Server — event store và write model
@@ -701,6 +757,8 @@ services:
       emqx:
         condition: service_healthy
     environment:
+      NVM_OTEL__Endpoint: ${NVM_OTEL_ENDPOINT:-http://otel-collector:4317}
+      OTEL_METRIC_EXPORT_INTERVAL: "15000"
       DOTNET_ENVIRONMENT: Production
       NVM_EDGE__BrokerHost: emqx
       # Công tắc topology: `seed` là 8 kênh của demo, `seed-load` là 1.000 kênh của bài test/load
@@ -739,6 +797,8 @@ services:
       timescale:
         condition: service_healthy
     environment:
+      NVM_OTEL__Endpoint: ${NVM_OTEL_ENDPOINT:-http://otel-collector:4317}
+      OTEL_METRIC_EXPORT_INTERVAL: "15000"
       DOTNET_ENVIRONMENT: Production
       NVM_INGEST__ConnectionString: "Host=timescale;Port=5432;Database=${NVM_POSTGRES_DB};Username=${NVM_POSTGRES_USER};Password=${NVM_POSTGRES_PASSWORD};Application Name=Nvm.Ingestion"
       NVM_INGEST__BusHost: rabbitmq

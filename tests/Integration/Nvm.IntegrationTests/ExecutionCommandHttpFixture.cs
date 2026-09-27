@@ -53,6 +53,10 @@ public class ExecutionCommandHttpFixture : IAsyncLifetime
     /// <summary>Chạy trước khi khởi động hạ tầng (tạo network, proxy...).</summary>
     protected virtual Task BeforeInfrastructureAsync() => Task.CompletedTask;
 
+    /// <summary>Cho lab thêm biến môi trường của process app (ví dụ endpoint OpenTelemetry).</summary>
+    protected virtual void ConfigureApp(IDictionary<string, string?> environment)
+    { }
+
     /// <summary>Địa chỉ AMQP app dùng; mặc định là RabbitMQ trực tiếp.</summary>
     protected virtual Task<(string Host, int Port)> AmqpEndpointAsync(IContainer rabbit) =>
         Task.FromResult((rabbit.Hostname, (int)rabbit.GetMappedPublicPort(5672)));
@@ -214,6 +218,7 @@ public class ExecutionCommandHttpFixture : IAsyncLifetime
         info.Environment["NVM_PORT_RABBITMQ"] = amqp.Port.ToString(System.Globalization.CultureInfo.InvariantCulture);
         info.Environment["NVM_RABBITMQ_USER"] = "c06";
         info.Environment["NVM_RABBITMQ_PASSWORD"] = _password;
+        ConfigureApp(info.Environment);
         _process = Process.Start(info)!;
         _stdout = _process.StandardOutput.ReadToEndAsync(Ct);
         _stderr = _process.StandardError.ReadToEndAsync(Ct);

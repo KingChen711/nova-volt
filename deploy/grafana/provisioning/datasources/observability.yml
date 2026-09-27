@@ -1,0 +1,38 @@
+# Trace/log/metric của M13 (ADR-049). Trace nối sang log theo trace id; metric từ Prometheus.
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    uid: novavolt-prometheus
+    orgId: 1
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    editable: false
+  - name: Tempo
+    uid: novavolt-tempo
+    orgId: 1
+    type: tempo
+    access: proxy
+    url: http://tempo:3200
+    editable: false
+    jsonData:
+      tracesToLogsV2:
+        datasourceUid: novavolt-loki
+        filterByTraceID: true
+      serviceMap:
+        datasourceUid: novavolt-prometheus
+  - name: Loki
+    uid: novavolt-loki
+    orgId: 1
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    editable: false
+    jsonData:
+      derivedFields:
+        - name: TraceID
+          matcherType: label
+          matcherRegex: trace_id
+          datasourceUid: novavolt-tempo
+          url: "$${__value.raw}"

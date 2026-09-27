@@ -1,0 +1,39 @@
+# SLO và cảnh báo NovaVolt (M13). Tên metric là tên OpenTelemetry sau khi exporter Prometheus đổi dấu chấm thành
+# gạch dưới và thêm hậu tố đơn vị (_seconds, _total).
+groups:
+  - name: novavolt-slo
+    rules:
+      # Tỉ lệ command bị lỗi hệ thống (outcome=error), không tính từ chối nghiệp vụ: từ chối là câu trả lời đúng.
+      - record: nvm:command_error_ratio:rate5m
+        expr: |
+          sum(rate(nvm_commands_total{outcome="error"}[5m]))
+            / clamp_min(sum(rate(nvm_commands_total[5m])), 1e-9)
+      # p95 thời gian xử lý request HTTP của App Execution (SLO: < 500 ms).
+      - record: nvm:http_request_duration_seconds:p95_5m
+        expr: |
+          histogram_quantile(0.95, sum by (le) (rate(http_server_request_duration_seconds_bucket{service_name="nvm-execution"}[5m])))
+      - record: nvm:outbox_publish_duration_seconds:p95_1m
+        expr: |
+          histogram_quantile(0.95, sum by (le, service_name) (rate(nvm_outbox_publish_duration_seconds_bucket[1m])))
+
+  - name: novavolt-alerts
+    rules:
+      # Broker chậm (lab M13: +500 ms mỗi chiều). Command vẫn được nhận vì outbox tách người gọi khỏi broker, nên
+      # dấu hiệu duy nhất là publish từ outbox chậm lại; báo trước khi consumer thấy trễ lớn.
+      - alert: BrokerPublishSlow
+        expr: nvm:outbox_publish_duration_seconds:p95_1m > 0.5
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Publish từ outbox tới RabbitMQ chậm (p95 > 0,5 s) ở {{ $labels.service_name }}"
+          runbook: "docs/runbook.md mục 11"
+      # Error budget 99,9 % command thành công: đốt nhanh gấp 14,4 lần trong 5 phút.
+      - alert: CommandErrorBudgetBurn
+        expr: nvm:command_error_ratio:rate5m > 14.4 * 0.001
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Command lỗi hệ thống vượt ngưỡng đốt error budget"
+          runbook: "docs/runbook.md mục 12"

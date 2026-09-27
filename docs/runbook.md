@@ -24,6 +24,8 @@ test nào; chưa mục nào trong số đó xảy ra trên runtime dùng chung.
 | [8](#8-otel-collector-tắt) | OTel Collector tắt | M13 |
 | [9](#port-windows-m4) | Mendix/Keycloak không bind được port trên Windows | M4 |
 | [10](#execution-c05-không-ready-hoặc-từ-chối-khởi-động-production) | Execution không ready | M4 · C05 |
+| [11](#11-cảnh-báo-brokerpublishslow) | Cảnh báo `BrokerPublishSlow` | M13 |
+| [12](#12-cảnh-báo-commanderrorbudgetburn) | Cảnh báo `CommandErrorBudgetBurn` | M13 |
 
 ---
 
@@ -603,6 +605,35 @@ endpoint không ai nghe).
 telemetry ra ngoài (có chủ ý).
 
 **Kiểm chứng.** Trace mới xuất hiện trong Tempo sau một chu kỳ export.
+
+## 11. Cảnh báo `BrokerPublishSlow`
+
+**Triệu chứng.** Prometheus báo `BrokerPublishSlow` (p95 publish từ outbox tới RabbitMQ > 0,5 s trong 1 phút). Người
+dùng vẫn gửi command được; màn hình đọc (projection) cập nhật chậm.
+
+**Cơ chế thật.** Command chỉ ghi event + dòng outbox trong SQL rồi trả lời; publish tới broker chạy sau, ở dispatcher
+outbox (ADR-040). Broker chậm thì chỉ `nvm.outbox.publish.duration` tăng, còn nhận command không đổi (lab
+`BrokerLatencyChaosLabTests`: +500 ms mỗi chiều, nhận p95 48 ms, giao 20/20). Event không mất: dòng outbox chờ tới khi
+broker xác nhận.
+
+**Thao tác.** Xem RabbitMQ (management UI: connection, queue, memory/disk alarm) và mạng giữa app và broker. Không
+restart app để "đẩy" event: dispatcher đã tự thử lại, restart chỉ làm dòng đang claim phải chờ hết lease 2 phút.
+
+**Kiểm chứng.** Panel "Publish từ outbox tới RabbitMQ (p95)" trên dashboard SLO về dưới 0,5 s; cảnh báo chuyển
+`inactive`. Lab `BrokerLatencyAlertLabTests` (NVM_RUN_LABS=1) kiểm chính luật này: bắn sau 95 s khi broker chậm.
+
+## 12. Cảnh báo `CommandErrorBudgetBurn`
+
+**Triệu chứng.** Tỉ lệ command lỗi hệ thống (outcome `error`, không tính từ chối nghiệp vụ) vượt 1,44 % trong 5 phút,
+tức đốt error budget 0,1 % nhanh gấp 14,4 lần.
+
+**Cơ chế thật.** `nvm.commands` do kernel ghi cho mọi command (`CommandDispatcher`): `accepted`, mã lý do từ chối, hoặc
+`error` khi handler ném exception. Từ chối nghiệp vụ là câu trả lời đúng nên không đốt budget.
+
+**Thao tác.** Mở trace của command lỗi trong Tempo (span `command <loại>` có status Error), rồi log cùng trace id trong
+Loki. Nguyên nhân hay gặp: SQL không sẵn sàng (xem readiness), migration chưa chạy sau khi deploy image mới.
+
+**Kiểm chứng.** Panel "Command thành công (5 phút)" trở lại ≥ 99,9 %.
 
 <a id="port-windows-m4"></a>
 

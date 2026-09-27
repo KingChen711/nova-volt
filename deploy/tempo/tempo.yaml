@@ -1,0 +1,19 @@
+# Tempo một binary cho máy dev. Lưu trong /tmp của container: trace là dữ liệu chẩn đoán, không phải hồ sơ.
+server:
+  http_listen_port: 3200
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+storage:
+  trace:
+    backend: local
+    local:
+      path: /tmp/tempo/traces
+    wal:
+      path: /tmp/tempo/wal
+compactor:
+  compaction:
+    block_retention: 48h

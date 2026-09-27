@@ -52,7 +52,7 @@ việc khác.
 | [015](ADR-015-saga-formation-aging-timeout-ben-trong-sql.md) | Saga formation/aging: process manager, timeout bền trong SQL, TimeProvider | **Accepted** 2026-09-26 | M7 |
 | [016](ADR-016-cp-sat-cho-matching.md) | CP-SAT theo cửa sổ cho matching (+57 % so greedy-ocv, 21 s/100k) | **Accepted** 2026-09-26 | M8 |
 | [017](ADR-017-hold-cascade-la-job-co-checkpoint.md) | Hold cascade là job có checkpoint, mỗi chunk 1.000 unit là một durable command (315k unit 35 s) | **Accepted** 2026-09-26 | M9 |
-| 018 | Package versioning theo Functional Block | Chưa viết | M12 |
+| 018 | Package versioning theo Functional Block | Gộp vào [049](ADR-049-observability-va-solution-cli.md) | M13 |
 | [019](ADR-019-dotnet-10-lts.md) | Dùng .NET 10 LTS thay vì .NET 9 | **Accepted** 2026-08-26 | M0 · C14 |
 | [020](ADR-020-no-invariant-globalization.md) | Không bật `InvariantGlobalization` | **Accepted** 2026-08-26 | M0 · C14 |
 | [021](ADR-021-masstransit-8-not-9.md) | Pin MassTransit 8, không nâng lên 9 | **Accepted** 2026-08-26 | M1 · C09 |
@@ -80,6 +80,8 @@ việc khác.
 | [045](ADR-045-recipe-material-equipment-m10.md) | Recipe một Active chặn ở DB; luật lot có lý do cụ thể; OEE gộp bằng base | **Accepted** 2026-09-26 | M10 |
 | [046](ADR-046-erp-gateway-va-doi-soat-master-data.md) | ERP gateway: alias tường minh, không quy đổi đơn vị, lệnh chờ master data không mất | **Accepted** 2026-09-26 | M11 |
 | [047](ADR-047-passport-la-projection-co-kiem-soat.md) | Passport là snapshot đã ký, lọc theo trường, mặc định từ chối | **Accepted** 2026-09-26 | M12 |
+| [048](ADR-048-legal-hold-truoc-retention.md) | Retention là job tự viết đứng sau legal hold; bật lại 400 ngày/15 năm | **Accepted** 2026-09-27 | M12 |
+| [049](ADR-049-observability-va-solution-cli.md) | OpenTelemetry chỉ ở host, telemetry best-effort; một solution.yaml cho hai mode | **Accepted** 2026-09-27 | M13 |
 
 Cột **Ra ở** là milestone dự kiến, không phải cam kết. Quyết định đến sớm hơn thì viết sớm hơn.
 

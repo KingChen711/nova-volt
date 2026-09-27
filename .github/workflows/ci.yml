@@ -29,7 +29,8 @@ jobs:
   build:
     name: Build, format, test
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Integration test bằng Testcontainers chạy trong job này (M5 trở đi); N14 đòi toàn suite < 10 phút.
+    timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v4
@@ -66,3 +67,59 @@ jobs:
       # global.json và đổi cú pháp: phải là --solution.
       - name: Test
         run: dotnet test --solution NovaVolt.Mes.slnx -c Release --no-build
+
+  # M13: image của từng host, SBOM và quét lỗ hổng. Chạy sau khi test xanh; image không được đẩy đi đâu.
+  images:
+    name: Images, SBOM, scan
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        host:
+          - { name: nvm-execution, dockerfile: src/Apps/Nvm.App.Execution/Dockerfile }
+          - { name: nvm-projection, dockerfile: src/Workers/Nvm.ProjectionWorker/Dockerfile }
+          - { name: nvm-ingestion, dockerfile: src/Workers/Nvm.Ingestion/Dockerfile }
+          - { name: nvm-edge-gateway, dockerfile: src/Workers/Nvm.EdgeGateway/Dockerfile }
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -f ${{ matrix.host.dockerfile }} -t novavolt/${{ matrix.host.name }}:ci .
+
+      - name: SBOM (syft, SPDX)
+        uses: anchore/sbom-action@v0
+        with:
+          image: novavolt/${{ matrix.host.name }}:ci
+          format: spdx-json
+          output-file: sbom-${{ matrix.host.name }}.spdx.json
+
+      # Lỗ hổng CRITICAL có bản vá làm đỏ build; HIGH chỉ báo, để không chặn vì lỗ hổng chưa có bản sửa.
+      - name: Scan (trivy)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: novavolt/${{ matrix.host.name }}:ci
+          severity: CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sbom-${{ matrix.host.name }}
+          path: sbom-${{ matrix.host.name }}.spdx.json
+
+  solution:
+    name: solution.yaml
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Validate manifest and generate both modes
+        run: |
+          dotnet run --project tools/solution-cli/Nvm.SolutionCli -- validate
+          dotnet run --project tools/solution-cli/Nvm.SolutionCli -- generate --mode monolith --out out/monolith
+          dotnet run --project tools/solution-cli/Nvm.SolutionCli -- generate --mode distributed --out out/distributed

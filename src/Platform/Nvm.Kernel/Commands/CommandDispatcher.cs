@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using Nvm.Kernel.Commands.Idempotency;
 
 namespace Nvm.Kernel.Commands;
 
@@ -26,7 +27,7 @@ public sealed class CommandDispatcher(IServiceProvider services) : ICommandDispa
     private readonly IServiceProvider _services = services;
 
     /// <inheritdoc />
-    public Task<TResult> DispatchAsync<TResult>(
+    public async Task<TResult> DispatchAsync<TResult>(
         ICommand<TResult> command,
         CancellationToken cancellationToken = default)
     {
@@ -36,7 +37,29 @@ public sealed class CommandDispatcher(IServiceProvider services) : ICommandDispa
             command.GetType(),
             static commandType => CreateInvoker<TResult>(commandType));
 
-        return invoker.InvokeAsync(command, _services, cancellationToken);
+        // Span "domain" của trace M13: nối HTTP/MQTT phía trước với event store/outbox phía sau. Không có listener
+        // (OpenTelemetry chưa bật) thì StartActivity trả null và chi phí gần như bằng không.
+        var type = command is IDurableCommand durable ? durable.CommandType : command.GetType().Name;
+        using var activity = KernelTelemetry.Source.StartActivity("command " + type);
+        if (activity is not null && command is IDurableCommand identity)
+        {
+            activity.SetTag("nvm.site_id", identity.SiteId);
+            activity.SetTag("nvm.command", identity.CommandType);
+        }
+        try
+        {
+            var result = await invoker.InvokeAsync(command, _services, cancellationToken).ConfigureAwait(false);
+            var outcome = result is DomainCommandResult domain ? (domain.Accepted ? "accepted" : domain.ReasonCode) : "completed";
+            activity?.SetTag("nvm.outcome", outcome);
+            KernelTelemetry.RecordCommand(type, outcome);
+            return result;
+        }
+        catch (Exception error)
+        {
+            activity?.SetStatus(System.Diagnostics.ActivityStatusCode.Error, error.GetType().Name);
+            KernelTelemetry.RecordCommand(type, "error");
+            throw;
+        }
     }
 
     private static object CreateInvoker<TResult>(Type commandType)

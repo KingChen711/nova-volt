@@ -15,7 +15,6 @@ using Nvm.Traceability.Hosting;
 namespace Nvm.IntegrationTests;
 
 /// <summary>M10: recipe có hiệu lực theo thời gian, một version active chặn ở DB; lot vật liệu bị chặn có lý do cụ thể.</summary>
-[Collection(EventStoreLatencyDefinition.Name)]
 public sealed class RecipeMaterialTests(SqlCommandStoreFixture sql) : IClassFixture<SqlCommandStoreFixture>
 {
     private static readonly DateTimeOffset T0 = new(2026, 3, 12, 0, 0, 0, TimeSpan.Zero);

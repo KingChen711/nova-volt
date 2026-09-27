@@ -7,11 +7,13 @@ using Nvm.EdgeGateway.Forwarding;
 using Nvm.EdgeGateway.Sessions;
 using Nvm.Hosting;
 using Nvm.Kernel.Identity;
+using Nvm.Observability;
 
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
 CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
 
 var builder = Host.CreateApplicationBuilder(args);
+builder.AddNvmObservability("nvm-edge-gateway");
 
 if (builder.Environment.IsDevelopment())
 {

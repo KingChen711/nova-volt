@@ -24,7 +24,6 @@ namespace Nvm.IntegrationTests;
 /// M11: B2MML bẩn từ ERP. Bốn mã về một vật liệu; file hỏng vào rejected kèm lý do mà watcher vẫn chạy; mã lạ và đơn
 /// vị lệch thành task, lệnh không mất; cùng lịch gửi hai lần chỉ tạo một work order; backflush không mất, không chồng lô.
 /// </summary>
-[Collection(EventStoreLatencyDefinition.Name)]
 public sealed class ErpGatewayTests(SqlCommandStoreFixture sql) : IClassFixture<SqlCommandStoreFixture>, IDisposable
 {
     private static readonly DateTimeOffset T0 = new(2026, 8, 25, 0, 0, 0, TimeSpan.Zero);

@@ -4,6 +4,7 @@ using Microsoft.Data.SqlClient;
 using Npgsql;
 using Nvm.Bus;
 using Nvm.Hosting;
+using Nvm.Observability;
 using Nvm.Projections;
 using Nvm.ProjectionWorker;
 
@@ -23,6 +24,7 @@ if (args.Contains("--health-probe", StringComparer.Ordinal))
 }
 
 var builder = WebApplication.CreateBuilder(args);
+builder.AddNvmObservability("nvm-projection");
 string Required(string key) => builder.Configuration[key] is { Length: > 0 } value
     ? value : throw new InvalidOperationException($"{key} is required.");
 

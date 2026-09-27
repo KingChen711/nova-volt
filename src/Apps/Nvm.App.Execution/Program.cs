@@ -17,6 +17,7 @@ using Nvm.MasterData.Commands;
 using Nvm.MasterData.Hosting;
 using Nvm.Material.Commands;
 using Nvm.Material.Hosting;
+using Nvm.Observability;
 using Nvm.Passport.Commands;
 using Nvm.Passport.Hosting;
 using Nvm.ProductionExecution.Commands;
@@ -48,6 +49,7 @@ if (args.Contains("--health-probe", StringComparer.Ordinal))
 }
 
 var builder = WebApplication.CreateBuilder(args);
+builder.AddNvmObservability("nvm-execution");
 if (builder.Environment.IsDevelopment())
 {
     DotEnvLoader.Load(builder.Environment.ContentRootPath);

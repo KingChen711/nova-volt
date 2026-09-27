@@ -291,6 +291,26 @@ public sealed class TelemetryHypertableTests
         return postgres;
     }
 
+    /// <summary>
+    /// Tắt lịch mọi job nền của TimescaleDB (compression, refresh, retention) và chờ job đang chạy xong. Test thao tác
+    /// chunk bằng tay mà chạy song song job nền thì đua nhau: "already compressed", deadlock khi drop_chunks
+    /// (gặp ở full suite 2026-09-27).
+    /// </summary>
+    internal static async Task PauseBackgroundJobsAsync(NpgsqlDataSource dataSource)
+    {
+        await ExecuteAsync(dataSource, "SELECT alter_job(job_id, scheduled => false) FROM timescaledb_information.jobs WHERE job_id >= 1000;");
+        for (var i = 0; i < 300; i++)
+        {
+            if ((await ReadAsync(dataSource, """
+                SELECT count(*)::text FROM pg_stat_activity
+                WHERE backend_type <> 'client backend' AND application_name ~ '\[[0-9]+\]$';
+                """))[0] == "0")
+            { return; }
+            await Task.Delay(100, CancellationToken.None);
+        }
+        throw new TimeoutException("TimescaleDB background jobs did not finish within 30 s.");
+    }
+
     /// <summary>Rollback script được đưa tới output directory dưới dạng content.</summary>
     internal static string DownScriptPath(string name) =>
         Path.Combine(AppContext.BaseDirectory, "Migrations", "Down", name + ".sql");

@@ -22,7 +22,6 @@ namespace Nvm.IntegrationTests;
 /// M12: passport dựng từ genealogy thật, công bố bằng chữ ký ComplianceOwner, bất biến ở DB, công bố lại là version mới;
 /// regulator đọc có audit; sản phẩm B không có passport nhưng có carbon footprint.
 /// </summary>
-[Collection(EventStoreLatencyDefinition.Name)]
 public sealed class PassportTests(SqlCommandStoreFixture sql) : IClassFixture<SqlCommandStoreFixture>
 {
     private static readonly DateTimeOffset T0 = new(2026, 9, 26, 0, 0, 0, TimeSpan.Zero);

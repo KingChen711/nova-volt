@@ -9,12 +9,21 @@ created: 2026-08-31
 Một sự cố một mục. Mỗi mục có **triệu chứng**, **cơ chế thật** (đã kiểm, không phải giả định),
 **thao tác**, và **phép kiểm chứng minh đã xong**.
 
-`scope.md` §9/M13 đặt mục tiêu **10 mục**. Hiện có **2** — viết khi gặp thật, không viết trước cho đủ số.
+`scope.md` §9/M13 đặt mục tiêu **10 mục**. Hiện có **10**. Mục 3–8 viết từ cơ chế đã kiểm bằng test (M9–M13), ghi rõ
+test nào; chưa mục nào trong số đó xảy ra trên runtime dùng chung.
 
 | # | Mục | Ra ở |
 |---|---|---|
 | [1](#1-xoay-9-credential-tại-chỗ-không-mất-dữ-liệu) | Xoay 9 credential tại chỗ, không mất dữ liệu | M3 · K13 |
 | [2](#2-file-nằm-trong-inbox-mà-không-được-đọc) | File nằm trong inbox mà không được đọc | M3 · C15 |
+| [3](#3-file-b2mml-nằm-trong-rejected) | File B2MML nằm trong `rejected/` | M11 |
+| [4](#4-work-order-kẹt-ở-pendingmasterdata) | Work order kẹt ở `PendingMasterData` | M11 |
+| [5](#5-backflush-không-tiến) | Backflush không tiến | M11 |
+| [6](#6-hold-cascade-dừng-giữa-chừng) | Hold cascade dừng giữa chừng | M9 |
+| [7](#7-telemetry-quá-hạn-không-bị-xoá) | Telemetry quá hạn không bị xoá | M12 |
+| [8](#8-otel-collector-tắt) | OTel Collector tắt | M13 |
+| [9](#port-windows-m4) | Mendix/Keycloak không bind được port trên Windows | M4 |
+| [10](#execution-c05-không-ready-hoặc-từ-chối-khởi-động-production) | Execution không ready | M4 · C05 |
 
 ---
 
@@ -513,6 +522,87 @@ docker logs nvm-ingestion 2>&1 | grep 'reads an export only once'
 
 Sau khi sửa exporter: thả một export thật, rồi kiểm cả ba mặt trong cùng một lượt — row vào database,
 object trong MinIO, và file trong `processed/`. Chỉ một trong ba là chưa chứng minh được gì.
+
+## 3. File B2MML nằm trong `rejected/`
+
+**Triệu chứng.** File ERP không thành work order; trong thư mục gateway (`NVM_ERP:RootDirectory`) có
+`rejected/<file>.xml` và `<file>.xml.error.txt`.
+
+**Cơ chế thật.** `ErpInboundProcessor` đọc `inbound/*.xml` theo thứ tự tên, kiểm XSD tập con B2MML V0600. XML hỏng, sai
+schema (có dòng/cột), work order trùng trong một file, hoặc cùng `ScheduleId/WorkOrderId` đã nhận với nội dung khác →
+file vào `rejected/` kèm lý do, và vòng xử lý đi tiếp file sau (`ErpGatewayTests`, `B2mmlParserTests`). File đang được
+ghi dở (không mở độc quyền được) ở lại `inbound/` cho lượt sau. Lỗi DB → file ở lại `inbound/`, lượt đó dừng.
+
+**Thao tác.** Đọc `.error.txt`. Sai schema: ERP sửa và gửi file mới. "Đã nhận với nội dung khác": ERP phải phát lịch
+mới với **ID mới**; không sửa tay file cũ rồi thả lại cùng ID. Không chép file từ `rejected/` về `inbound/` khi chưa sửa.
+
+**Kiểm chứng.** `GET /api/v1/workorders` có đúng work order; file mới nằm trong `processed/`.
+
+## 4. Work order kẹt ở `PendingMasterData`
+
+**Triệu chứng.** `GET /api/v1/workorders?status=PendingMasterData` có dòng; `GET /api/v1/masterdata/reconciliation-tasks?status=Open`
+có task `UnknownMaterial`, `UnknownProduct` hoặc `UomMismatch`.
+
+**Cơ chế thật.** Lệnh luôn được ghi; thiếu master data thì chờ, không mất và không quy đổi. Mỗi thay đổi master data tăng
+revision của site; gateway đánh giá lại mỗi lệnh chờ đúng một lần cho mỗi revision (`ErpGatewayTests`).
+
+**Thao tác.** Mã lạ: `POST /api/v1/commands/masterdata/map-alias` (mã ERP → mã chuẩn, có lý do) hoặc `define-item` nếu
+đó là vật liệu mới thật. Lệch đơn vị: xác nhận với kho rồi `accept-task` kèm ghi chú; số lượng trong lệnh **không** đổi.
+Không sửa bảng `execution.WorkOrders` bằng tay.
+
+**Kiểm chứng.** Sau một chu kỳ gateway (`NVM_ERP:PollInterval`), lệnh sang `Released`; task sang `Resolved`.
+
+## 5. Backflush không tiến
+
+**Triệu chứng.** ERP không nhận tiêu hao mới; `erp.BackflushCheckpoints` có `PendingBatchId` khác NULL lâu hơn một chu kỳ.
+
+**Cơ chế thật.** Lô được chốt (khoảng `GlobalSequence` + `BatchId`) trước khi POST; chỉ tiến checkpoint khi ERP trả 2xx.
+ERP lỗi/không trả lời → gửi lại **đúng lô đó** ở chu kỳ sau, cùng `Idempotency-Key` (`ErpGatewayTests`).
+
+**Thao tác.** Sửa phía ERP (endpoint `NVM_ERP:ErpBaseAddress`, xác thực, lỗi 5xx). Không xoá `PendingBatchId` bằng tay:
+lô mới sẽ chồng lên lô ERP có thể đã nhận.
+
+**Kiểm chứng.** `PendingBatchId` về NULL và `LastGlobalSequence` tăng.
+
+## 6. Hold cascade dừng giữa chừng
+
+**Triệu chứng.** `GET /api/v1/quality/holds/{holdId}` cho thấy job chưa `Completed`; unit hạ nguồn chưa bị giữ hết.
+
+**Cơ chế thật.** Mỗi chunk 1.000 unit là một durable command có checkpoint (ADR-017). Process chết giữa chừng → worker
+khởi động lại tiếp từ `NextChunk`; chunk đã commit chỉ phát lại kết quả cũ (`QualityHoldTests`).
+
+**Thao tác.** Khởi động lại Execution với `NVM_QUALITY:CascadeWorker` không phải `false`. Không đặt hold thứ hai cho cùng
+lot để "chạy lại". Unit lắp sau khi projection genealogy chạy lượt lập kế hoạch thứ hai cần một hold mới hoặc lượt lập kế
+hoạch sau (giới hạn đã ghi trong ADR-017).
+
+**Kiểm chứng.** Job `Completed`, số `HoldMembers` bằng số target.
+
+## 7. Telemetry quá hạn không bị xoá
+
+**Triệu chứng.** Đĩa TimescaleDB tăng; chunk cũ hơn 400 ngày (raw) hoặc 15 năm (rollup) vẫn còn.
+
+**Cơ chế thật.** Retention là job `ts.enforce_retention` (ADR-048). Chunk bị giữ khi một legal hold đang hiệu lực chồng lên
+khoảng của nó (`held`), hoặc raw chunk còn dòng nhận trong 400 ngày gần đây (`recently_recorded`, đồng hồ máy sai).
+Mọi quyết định có trong `ts.retention_log` (`LegalHoldRetentionTests`).
+
+**Thao tác.** `SELECT action, hold_ids, chunk FROM ts.retention_log ORDER BY log_id DESC LIMIT 20;`. Nếu là `held`: hỏi
+người sở hữu hold (compliance). Chỉ họ được thả: `UPDATE ts.legal_hold SET released_by = …, released_at = now() WHERE hold_id = …;`.
+Không xoá hold, không gọi `drop_chunks` bằng tay, không thêm `add_retention_policy`.
+
+**Kiểm chứng.** Lượt job kế tiếp ghi `dropped` cho chunk đó.
+
+## 8. OTel Collector tắt
+
+**Triệu chứng.** Grafana/Tempo không có trace hoặc metric mới.
+
+**Cơ chế thật.** Exporter OTLP chạy nền theo lô, timeout `NVM_OTEL:TimeoutMilliseconds` (mặc định 2 s); collector không
+nghe thì dữ liệu telemetry bị bỏ, request vẫn được phục vụ và app dừng nhanh (`ObservabilityTests`, 200 request với
+endpoint không ai nghe).
+
+**Thao tác.** Khởi động lại collector; không restart app vì lý do này. Không có `NVM_OTEL:Endpoint` thì app không xuất
+telemetry ra ngoài (có chủ ý).
+
+**Kiểm chứng.** Trace mới xuất hiện trong Tempo sau một chu kỳ export.
 
 <a id="port-windows-m4"></a>
 

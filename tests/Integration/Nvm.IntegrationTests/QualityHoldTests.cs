@@ -23,7 +23,6 @@ using Testcontainers.PostgreSql;
 namespace Nvm.IntegrationTests;
 
 /// <summary>M9: hold cascade theo span, idempotent, resume; thả hold cần hai chữ ký khác người giữ; chuỗi hash.</summary>
-[Collection(EventStoreLatencyDefinition.Name)]
 public sealed class QualityHoldTests(SqlCommandStoreFixture sql) : IClassFixture<SqlCommandStoreFixture>
 {
     private static readonly DateTimeOffset T0 = new(2026, 9, 20, 0, 0, 0, TimeSpan.Zero);

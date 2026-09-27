@@ -93,6 +93,7 @@ public sealed class TelemetryPolicyTests
         IngestionSchemaMigrator.Upgrade(postgres.GetConnectionString());
 
         await using var dataSource = NpgsqlDataSource.Create(postgres.GetConnectionString());
+        await TelemetryHypertableTests.PauseBackgroundJobsAsync(dataSource);
         var at = new DateTimeOffset(2026, 1, 12, 10, 0, 0, TimeSpan.Zero);
         var ingestor = new PostgresMeasurementIngestor(
             dataSource,
@@ -143,6 +144,7 @@ public sealed class TelemetryPolicyTests
         IngestionSchemaMigrator.Upgrade(postgres.GetConnectionString());
 
         await using var dataSource = NpgsqlDataSource.Create(postgres.GetConnectionString());
+        await TelemetryHypertableTests.PauseBackgroundJobsAsync(dataSource);
         var databaseNow = DateTimeOffset.Parse(
             (await TelemetryHypertableTests.ReadAsync(dataSource, "SELECT now()::text;"))[0],
             System.Globalization.CultureInfo.InvariantCulture);

@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    "Solution Studio" của NovaVolt (scope §12.4, M13): đọc solution.yaml, kiểm version Functional Block và sinh cấu hình
+    triển khai cho hai mode từ cùng một manifest. Không build image, không chạy docker: chỉ sinh file.
+  -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Nvm.SolutionCli</RootNamespace>
+    <AssemblyName>Nvm.SolutionCli</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="YamlDotNet" />
+  </ItemGroup>
+
+</Project>

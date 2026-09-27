@@ -13,6 +13,8 @@
 
   <PropertyGroup>
     <RootNamespace>Nvm.FactoryModel</RootNamespace>
+    <!-- SemVer của Functional Block (scope §12.4); solution.yaml khai báo version các App dùng. -->
+    <Version>1.1.0</Version>
   </PropertyGroup>
 
   <ItemGroup>

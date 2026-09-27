@@ -1,0 +1,40 @@
+# Manifest của manufacturing solution NovaVolt (scope §12.4). tools/solution-cli đọc file này:
+#   validate  — FB có tồn tại, version khai báo tương thích với version trong csproj (cùng major, không mới hơn)
+#   matrix    — bảng App × Functional Block × version
+#   generate  — monolith: hạ tầng trong container + một process Nvm.Host.All chạy trên máy dev
+#               distributed: hạ tầng + mỗi App một container, và Helm values cho k3d
+solution:
+  name: novavolt-mes
+  version: 1.13.0
+  mode: distributed
+
+infrastructure: [mssql, timescale, rabbitmq, keycloak, emqx, minio]
+
+apps:
+  - name: Nvm.App.Execution
+    service: execution
+    image: novavolt/nvm-execution
+    port: 8080
+    replicas: 2
+    functionalBlocks:
+      - { name: FactoryModel,        version: "1.1.0" }
+      - { name: Traceability,        version: "2.0.0" }
+      - { name: ProductionExecution, version: "1.3.0" }
+      - { name: Material,            version: "1.1.0" }
+      - { name: Quality,             version: "2.0.0" }
+      - { name: Grading,             version: "1.0.0" }
+      - { name: Recipe,              version: "1.0.0" }
+      - { name: Equipment,           version: "1.0.0" }
+      - { name: MasterData,          version: "1.0.0" }
+      - { name: Passport,            version: "1.0.0" }
+    publicObjectModel: { route: /pom/v1, odataVersion: "4.01" }
+
+workers:
+  - { name: Nvm.ProjectionWorker, service: projection, image: novavolt/nvm-projection, replicas: 1 }
+  - { name: Nvm.Ingestion, service: ingestion, image: novavolt/nvm-ingestion, replicas: 1 }
+  - { name: Nvm.EdgeGateway, service: edge-gateway, image: novavolt/nvm-edge-gateway, replicas: 1 }
+
+extensionApps:
+  - name: NvmShopFloor
+    kind: mendix
+    consumes: ["Nvm.App.Execution/pom/v1", "Nvm.App.Execution/api/v1"]

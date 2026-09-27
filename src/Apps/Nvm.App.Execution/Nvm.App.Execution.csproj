@@ -3,6 +3,7 @@
     <RootNamespace>Nvm.App.Execution</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../../Platform/Nvm.Observability/Nvm.Observability.csproj" />
     <ProjectReference Include="../../FunctionalBlocks/ProductionExecution.Hosting/Nvm.ProductionExecution.Hosting.csproj" />
     <ProjectReference Include="../../FunctionalBlocks/Traceability.Hosting/Nvm.Traceability.Hosting.csproj" />
     <ProjectReference Include="../../FunctionalBlocks/Quality.Hosting/Nvm.Quality.Hosting.csproj" />

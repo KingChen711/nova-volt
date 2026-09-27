@@ -24,7 +24,6 @@ using Testcontainers.PostgreSql;
 namespace Nvm.IntegrationTests;
 
 /// <summary>M8: rule set có version, grade không ghi đè, đánh giá lại, kho bin từ event thật.</summary>
-[Collection(EventStoreLatencyDefinition.Name)]
 public sealed class GradingTests(SqlCommandStoreFixture sql) : IClassFixture<SqlCommandStoreFixture>
 {
     private static readonly DateTimeOffset T0 = new(2026, 9, 10, 0, 0, 0, TimeSpan.Zero);

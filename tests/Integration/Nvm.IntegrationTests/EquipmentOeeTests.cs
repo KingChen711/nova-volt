@@ -10,7 +10,6 @@ using Nvm.Kernel.Commands;
 namespace Nvm.IntegrationTests;
 
 /// <summary>M10: dừng máy có lý do lá, micro-stop, OEE hai line gộp bằng base và khớp ground truth tính tay.</summary>
-[Collection(EventStoreLatencyDefinition.Name)]
 public sealed class EquipmentOeeTests(SqlCommandStoreFixture sql) : IClassFixture<SqlCommandStoreFixture>
 {
     private static readonly DateTimeOffset T0 = new(2026, 3, 12, 0, 0, 0, TimeSpan.Zero);

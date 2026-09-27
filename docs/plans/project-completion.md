@@ -74,7 +74,7 @@ Helm chart `deploy/helm/novavolt` đọc values do solution-cli sinh; `helm lint
 M6 kill -9 outbox đã chạy (ADR-023): 10 kill, 821 submission, 0 mất, 0 trùng trong SQL, 2 bản trùng cùng `ce_id` trên bus.
 
 Còn mở: M9 preflight rig/N1/N2 (phần cứng), N9 suy giảm ingestion;
-M13: kênh gửi của Alertmanager (người vận hành chọn), smoke kind trong CI, soak 24 giờ, N1/N2 đo lại, Mendix cloud; mọi màn Mendix M4–M12.
+M13: kênh gửi của Alertmanager (người vận hành chọn), smoke kind trong CI (workflow `kind-smoke.yml` đang sửa lỗi migration exit 139 trên runner), soak 24 giờ **đang chạy** trên runtime local (`make soak`, T0 2026-09-27 16:10:57 UTC, 1.000 kênh, 1.000 msg/s, không xoá dữ liệu; dry run 10 phút đạt: 600.999 row exact, 997,5 msg/s), N1/N2 đo lại (rig chưa qua preflight; `make load` sẽ TRUNCATE 102,7 triệu row telemetry nên chưa chạy khi chưa có quyết định của owner), Mendix cloud; mọi màn Mendix M4–M12 (MCP Mendix chưa kết nối).
 
 CI GitHub đỏ từ 2026-08-28 vì image `minio/minio` đã bị gỡ khỏi Docker Hub (annotation: "repository does not exist"); test
 đã chuyển sang `cgr.dev/chainguard/minio` ghim digest. `docker-compose.yml` vẫn dùng `minio/minio` + `minio/mc`: máy mới

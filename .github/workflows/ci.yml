@@ -77,7 +77,10 @@ jobs:
         if: failure()
         shell: bash
         run: |
-          grep -E -A4 '^\s*failed ' test.log | grep -E '^\s*failed |Exception|should|but was' | head -40             | sed -E 's/^\s*/::error title=Test failed::/' || true
+          # Bỏ mã màu ANSI trước khi lọc: log MTP trên runner có màu nên "^failed" không khớp (2026-09-27).
+          sed -E 's/\x1B\[[0-9;]*[A-Za-z]//g' test.log > test.plain.log
+          grep -E -A6 'failed [A-Za-z]' test.plain.log | grep -E 'failed [A-Za-z]|Exception|should|but was|error' | head -40             | sed -E 's/^[[:space:]]*/::error title=Test failed::/' || true
+          echo "failed lines: $(grep -cE 'failed [A-Za-z]' test.plain.log || true)"
 
   # M13: image của từng host, SBOM và quét lỗ hổng. Chạy sau khi test xanh; image không được đẩy đi đâu.
   images:

@@ -50,14 +50,20 @@ Khi thiếu quyền hoặc nguồn lực thật, ghi rõ thao tác đã chuẩn 
 
 Giữ draft NV1 Pending `144c883e-4de3-40a5-a3c9-de1cb00d0211` cho kiểm ownership. Pack NV1PP16267A95137/DE1PP16267A80388 vẫn Running cho E2E; draft NV1 `1fd08f97-c589-443c-b22d-b34fab7e89f6` đã gửi410.125V đúng1SQLrow. C07 còn mấtACK/same-siteownership/perf; C08 còn gate input và p95; C09/C10 và M5–M13 vẫn mở. Không stage `docs/roadmap-m2-m3.md` (có trước ngoài nhiệm vụ).
 
-**Điểm tiếp quản 2026-09-26 · Claude (cập nhật sau M10 backend).** Làm backend trước, Mendix sau (AGENTS.md §0.2).
-Đã commit: `2fffdf2` facet QualityState; `b6b6c37` lab 96 cell (ADR-044); `9fb0664` genealogy M6 (ADR-005/006/009);
-`6abb305` formation/aging M7 (ADR-015); `f099742` grading/matching M8 (ADR-016); commit M9 + M10 ghi ở `git log`.
-Kiểm chứng cuối: unit 626/628 (2 skip), contract 87/87, arch 33/33, integration xem dòng dưới.
-Chưa deploy image mới lên runtime: migration Quality bỏ cột `traceability.SerialReservations.QualityState`, phải
-deploy Execution + ProjectionWorker cùng lúc và chạy `--migrate-commands` (thêm schema quality/grading/material/
-recipe/equipment).
+**Điểm tiếp quản 2026-09-27 · Claude.** Backend trước, Mendix sau (AGENTS.md §0.2; Mendix MCP port 7910 chưa kết nối).
+Commit trên `main` (đã push): `6bbb5ed` M9+M10, `17e56ef` M11+M12, `2b9426f` legal hold + OTel + solution-cli,
+`073f88e` trace MQTT + container dùng chung + sửa test Linux, `1ce9a00` chaos SQL, `830420e` annotation CI, `d248068`
+trace qua outbox ingestion. ADR mới: 017, 045–049.
 
-M11 ERP (ADR-046), M12 Passport (ADR-047) và legal hold (ADR-048) backend xong. Còn mở phía backend: `TelemetryPolicyTests` đỏ 1/11 lần, nguyên nhân chưa xác minh; M9 preflight rig/N1/N2 (phần cứng), N9 suy giảm ingestion, lab M9
-#1/#2; M7 lab delayed plugin (cần duyệt tải); M6 kill -9 outbox và lab tắt RabbitMQ; M13 hardening. Mendix chờ
-MCP port 7910.
+Kiểm chứng gần nhất: Windows unit 669/671 (2 skip), contract 103/103, arch 35/35, integration 244/249 (5 skip lab), 0 đỏ;
+integration 7m53s. Container .NET SDK Linux chạy cả solution như CI: 1.072/1.081, 1 đỏ (timeout harness MassTransit, đã sửa
+ở `1ce9a00`), 7m56s. GitHub CI bước Test đỏ từ 2026-08-28; log cần đăng nhập nên đã thêm bước đưa tên test đỏ ra
+annotation (đọc qua API công khai `check-runs/{job}/annotations`).
+
+Chưa deploy image mới lên runtime (migration Quality bỏ cột `traceability.SerialReservations.QualityState`; deploy Execution
++ ProjectionWorker cùng lúc; `--migrate-commands` thêm schema quality/grading/material/recipe/equipment/masterdata/erp/
+passport; ingestion cần migration 016–017). Realm Keycloak mới (client `nvm-esign`, `nvm-dpp*`, scope `dpp-*`) chưa nạp.
+
+Còn mở: M9 preflight rig/N1/N2 (phần cứng), N9 suy giảm ingestion, lab M9 #1/#2; M7 lab delayed plugin (cần duyệt tải);
+M6 kill -9 outbox; M13: chaos RabbitMQ +500 ms + alert, collector/Tempo/Loki + SLO dashboard, mutation ≥ 70 % (đang chạy
+Stryker), k3d + smoke, soak 24 giờ, N1/N2 đo lại, Mendix cloud; mọi màn Mendix M4–M12.

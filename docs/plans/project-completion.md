@@ -79,10 +79,12 @@ Quyết định của owner (2026-09-28, qua Claude):
   khi có rig mạnh hơn.
 - **Kênh gửi cảnh báo: chưa cần.** Cảnh báo xem ở UI Alertmanager và dashboard Grafana trên máy dev.
 - **Mendix (màn M4–M12, trace tới Mendix, Mendix cloud): để sau.** MCP Mendix (cổng 7910) chưa kết nối.
-- **Soak 24 giờ: chạy hết.** `make soak`, T0 2026-09-27 16:10:57 UTC, xong khoảng 2026-09-28 16:15 UTC; kết quả ghi vào
-  `soak-20260927/summary.txt` rồi chép vào ADR-034/benchmarks.
+- **Soak 24 giờ: owner cho dừng giữa chừng** (2026-09-28). Chạy từ T0 2026-09-27 16:10:57 UTC khoảng 8 giờ ở 1.000 kênh,
+  1.000 msg/s: mỗi giờ đủ từ 17:00 tới 23:00 UTC ghi 3.600.116–3.630.004 row, không thấy suy giảm. Vì dừng giữa chừng
+  nên **không có** đối chiếu exact cuối lượt, không có oracle cold/hot sau 24 giờ: DoD soak **chưa đạt**. Chạy lại bằng
+  `make soak` khi máy rảnh 24 giờ.
 
-Còn mở: kết quả soak (đang chạy); N1/N2/N9 (phần cứng); Mendix M4–M12 + Mendix cloud (MCP).
+Còn mở: soak 24 giờ trọn vẹn (đã dừng theo owner sau ~8 giờ); N1/N2/N9 (phần cứng); Mendix M4–M12 + Mendix cloud (MCP).
 
 CI GitHub đỏ từ 2026-08-28 vì image `minio/minio` đã bị gỡ khỏi Docker Hub (annotation: "repository does not exist"); test
 đã chuyển sang `cgr.dev/chainguard/minio` ghim digest. `docker-compose.yml` vẫn dùng `minio/minio` + `minio/mc`: máy mới

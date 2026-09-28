@@ -1000,3 +1000,7 @@ Không phải benchmark hiệu năng. `EquipmentOeeTests`: hai line, OEE gộp 0
 ## M13 mutation domain (2026-09-27, Claude)
 
 `tools/mutation/run-mutation.sh` trên `Entities/` của 10 FB: gộp **83,33 %** (410/492); thấp nhất Traceability 73,47 %. Phạm vi và bảng từng FB ở [ADR-050](adr/ADR-050-mutation-do-tren-entities.md).
+
+## M13 soak — lượt bị dừng (2026-09-27/28, Claude)
+
+`make soak` (1.000 kênh `seed-load`, 1.000 msg/s, không xoá dữ liệu). Dry run 10 phút: đối chiếu exact 600.999 row, receiver 997,5 msg/s, EMQX drop 0, raw/parent/child đều có hot chunk mới. Lượt 24 giờ từ 2026-09-27 16:10:57 UTC bị dừng theo yêu cầu owner sau khoảng 8 giờ; mỗi giờ đủ (17:00–23:00 UTC) ghi 3.600.116–3.630.004 row. **Không phải kết quả soak**: không có đối chiếu cuối lượt và oracle sau 24 giờ.

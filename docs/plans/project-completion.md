@@ -73,8 +73,16 @@ Helm chart `deploy/helm/novavolt` đọc values do solution-cli sinh; `helm lint
 
 M6 kill -9 outbox đã chạy (ADR-023): 10 kill, 821 submission, 0 mất, 0 trùng trong SQL, 2 bản trùng cùng `ce_id` trên bus.
 
-Còn mở: M9 preflight rig/N1/N2 (phần cứng), N9 suy giảm ingestion;
-M13: kênh gửi của Alertmanager (người vận hành chọn),  soak 24 giờ **đang chạy** trên runtime local (`make soak`, T0 2026-09-27 16:10:57 UTC, 1.000 kênh, 1.000 msg/s, không xoá dữ liệu; dry run 10 phút đạt: 600.999 row exact, 997,5 msg/s), N1/N2 đo lại (rig chưa qua preflight; `make load` sẽ TRUNCATE 102,7 triệu row telemetry nên chưa chạy khi chưa có quyết định của owner), Mendix cloud; mọi màn Mendix M4–M12 (MCP Mendix chưa kết nối).
+Quyết định của owner (2026-09-28, qua Claude):
+- **N1/N2/N9 suy giảm ingestion: không chạy trên máy này.** Rig trượt preflight (5.951 < 10.000 msg/s) nên kết quả không
+  nghiệm thu được, và `make load` sẽ TRUNCATE 102,7 triệu row telemetry (bỏ qua legal hold). Chặn bởi phần cứng cho tới
+  khi có rig mạnh hơn.
+- **Kênh gửi cảnh báo: chưa cần.** Cảnh báo xem ở UI Alertmanager và dashboard Grafana trên máy dev.
+- **Mendix (màn M4–M12, trace tới Mendix, Mendix cloud): để sau.** MCP Mendix (cổng 7910) chưa kết nối.
+- **Soak 24 giờ: chạy hết.** `make soak`, T0 2026-09-27 16:10:57 UTC, xong khoảng 2026-09-28 16:15 UTC; kết quả ghi vào
+  `soak-20260927/summary.txt` rồi chép vào ADR-034/benchmarks.
+
+Còn mở: kết quả soak (đang chạy); N1/N2/N9 (phần cứng); Mendix M4–M12 + Mendix cloud (MCP).
 
 CI GitHub đỏ từ 2026-08-28 vì image `minio/minio` đã bị gỡ khỏi Docker Hub (annotation: "repository does not exist"); test
 đã chuyển sang `cgr.dev/chainguard/minio` ghim digest. `docker-compose.yml` vẫn dùng `minio/minio` + `minio/mc`: máy mới

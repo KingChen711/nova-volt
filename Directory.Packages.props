@@ -1,7 +1,18 @@
 <Project>
-  <ItemGroup Label="SQL command outcomes — M4/C05">
+  <ItemGroup Label="DB MOM của plant — R1">
+    <!--
+      EF Core chỉ nằm BÊN TRONG Foundation: Query/ProjectionQuery trả IQueryable cho handler, handler
+      không reference EF (K9). Schema do Update Database của Foundation sinh từ model, không dùng
+      migration EF (ADR-054). License MIT, kiểm nuspec 2026-10-27.
+    -->
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.11" />
     <PackageVersion Include="Microsoft.Data.SqlClient" Version="7.0.3" />
     <PackageVersion Include="Testcontainers.MsSql" Version="4.14.0" />
+    <!--
+      Ghim bản đã vá qua transitive pinning: SqlClient và gói test analyzer kéo bản 9.0.x có
+      GHSA-846f-f764-76mx (vá ở 9.0.21 / 10.0.13). Kiểm advisory 2026-10-27.
+    -->
+    <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.14" />
   </ItemGroup>
 
   <!--
@@ -83,50 +94,7 @@
     <PackageVersion Include="MassTransit.RabbitMQ" Version="8.5.10" />
   </ItemGroup>
 
-  <ItemGroup Label="Sparkplug B / protobuf — M2/C01 trở đi">
-    <!--
-      HAI GÓI, HAI VAI TRÒ. Google.Protobuf là runtime (app nạp lúc chạy); Grpc.Tools chỉ là
-      build-time — nó mang theo protoc.exe và móc vào MSBuild để sinh C# từ .proto.
 
-      LICENSE, kiểm 2026-08-28 trước khi pin (§2.2 của plan M2, cùng quy trình đã dùng cho
-      MassTransit ở M1/C09):
-        google.protobuf 3.35.1 → <license type="expression">BSD-3-Clause</license>
-        grpc.tools      2.83.0 → <license type="expression">Apache-2.0</license>
-      Cả hai permissive, không có bẫy như FluentAssertions v8 hay MassTransit v9.
-
-      VÌ SAO 3.35.1 CHỨ KHÔNG PHẢI 3.36.0 (bản stable mới nhất lúc pin) — cùng loại lý do với
-      Microsoft.CodeAnalysis ở dưới: pin theo thứ TOOLCHAIN ĐANG SHIP, không pin theo "mới nhất".
-
-      Đo ngày 2026-08-28:
-        tools/windows_x64/protoc.exe trong grpc.tools 2.83.0  → `libprotoc 35.1`
-        nuspec google.protobuf 3.35.1 → repository commit 35cd01f9fe9afbeea38cc7b979a3b6bfcde82c03
-        protobuf tag v35.1            → cùng commit 35cd01f9fe9afbeea38cc7b979a3b6bfcde82c03
-      Tức runtime 3.35.1 và protoc 35.1 build ra từ ĐÚNG một commit. Không còn chiều nào để
-      phải suy luận.
-
-      Quy tắc chung nếu sau này lệch: runtime phải >= protoc, không bao giờ thấp hơn. Code do
-      protoc mới sinh ra có thể gọi API mà runtime cũ chưa có; chiều ngược lại thì an toàn.
-
-      KHÔNG nâng lên 4.0.0-rc*: prerelease.
-    -->
-    <PackageVersion Include="Google.Protobuf" Version="3.35.1" />
-    <PackageVersion Include="Grpc.Tools" Version="2.83.0" />
-  </ItemGroup>
-
-  <ItemGroup Label="MQTT — M2/C05 trở đi">
-    <!--
-      Client MQTT cho simulator (C05) và edge gateway (C08). KHÔNG decode Sparkplug — payload là
-      protobuf, và đó là việc của Nvm.Sparkplug (ADR-026).
-
-      LICENSE, kiểm 2026-08-28 trước khi pin: nuspec ghi <license type="file">LICENSE</license>,
-      và file LICENSE trong gói là **MIT** ("The MIT License (MIT) — Copyright (c) .NET Foundation
-      and Contributors"). projectUrl là github.com/dotnet/MQTTnet. Không có bẫy như MassTransit v9.
-
-      5.2.0.1603 có nhóm targetFramework net10.0 và **không phụ thuộc package nào** — nên không có
-      version nào bị nâng ngầm qua đường transitive.
-    -->
-    <PackageVersion Include="MQTTnet" Version="5.2.0.1603" />
-  </ItemGroup>
 
   <ItemGroup Label="PostgreSQL ingestion — M2/C12 trở đi">
     <!--
@@ -144,21 +112,6 @@
     <PackageVersion Include="Testcontainers.PostgreSql" Version="4.14.0" />
   </ItemGroup>
 
-  <ItemGroup Label="Raw formation curve archive — M3/C12">
-    <!--
-      AWSSDK.S3 chỉ là S3 client; server vẫn là MinIO image đã pin trong compose. Chọn client này
-      thay vì MinIO SDK vì PutObjectRequest có IfNoneMatch="*" công khai: trong bucket có versioning,
-      một lần HEAD rồi PUT không đủ chống hai uploader đồng thời tạo hai version WORM.
-
-      LICENSE, kiểm 2026-08-31 trước khi pin:
-        AWSSDK.S3           4.0.102.4 → Apache-2.0
-        Testcontainers.Minio 4.14.0  → MIT
-      Cả hai có asset dùng được từ net8.0 trở lên; repo chạy net10.0. Testcontainers.Minio chỉ có
-      trong integration test và chạy đúng image MinIO mà compose dùng, không dùng tag mặc định cũ.
-    -->
-    <PackageVersion Include="AWSSDK.S3" Version="4.0.102.4" />
-    <PackageVersion Include="Testcontainers.Minio" Version="4.14.0" />
-  </ItemGroup>
 
   <ItemGroup Label="ASP.NET Core test host — M2/C10">
     <!--
@@ -252,13 +205,7 @@
       trước khi vào dự án thật. Xem scope.md §10.1.
     -->
     <PackageVersion Include="Shouldly" Version="4.3.0" />
-    <!-- Property-based test cho matching (M8, scope §9). License Apache-2.0. -->
-    <PackageVersion Include="CsCheck" Version="4.9.1" />
   </ItemGroup>
 
-  <ItemGroup Label="Tối ưu tổ hợp — M8">
-    <!-- CP-SAT cho matching cell → module (scope §6.6, ADR-016). License Apache-2.0. -->
-    <PackageVersion Include="Google.OrTools" Version="9.15.6755" />
-  </ItemGroup>
 
 </Project>

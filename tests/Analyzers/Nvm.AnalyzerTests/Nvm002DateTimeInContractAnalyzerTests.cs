@@ -26,14 +26,14 @@ public sealed class Nvm002DateTimeInContractAnalyzerTests
 
         namespace Somewhere.Else
         {
-            using Nvm.Contracts.Events;
+            using Nvm.Foundation;
 
             [EventVersion(1)]
             public sealed record ProbeEvent(
                 System.Guid EventId,
                 System.DateTimeOffset OccurredAt,
                 string SiteId,
-                {{members}}) : IDomainEvent;
+                {{members}}) : IFoundationEvent;
         }
         """;
 
@@ -62,29 +62,33 @@ public sealed class Nvm002DateTimeInContractAnalyzerTests
     }
 
     [Fact]
-    public async Task ATypeInTheContractsNamespaceIsCheckedEvenWhenItIsNotAnEvent()
+    public async Task AnEntityIsCheckedBecauseItsColumnsArePersisted()
     {
-        // Một record hôm nay chưa phải event sẽ trở thành payload của một event ở milestone kế tiếp,
-        // và đến lúc đó DateTime của nó đã nằm trong các row mà không ai được phép ghi lại.
-        const string source = """
-            namespace Nvm.Contracts.Something
+        // Entity và facet là cột của DB MOM, đọc lại nhiều năm sau như event.
+        const string source = $$"""
+            {{AnalyzerSnippet.ContractTypes}}
+
+            namespace Somewhere.Else
             {
-                public sealed record Measurement(System.DateTime TakenAt);
+                public sealed class Pallet : Nvm.Foundation.Entity
+                {
+                    public System.DateTime PackedOn { get; set; }
+                }
             }
             """;
 
-        await VerifyAsync(source, Violation(source, "Measurement", "TakenAt", "DateTime"));
+        await VerifyAsync(source, Violation(source, "Pallet", "PackedOn", "DateTime"));
     }
 
     [Fact]
     public async Task ATypeOutsideTheContractSurfaceIsLeftAlone()
     {
-        // NVM002 là về những gì lên wire và vào append-only store. Một helper in-memory trong một
+        // NVM002 là về những gì lên bus và xuống bảng. Một helper in-memory trong một
         // Functional Block nào đó được tự do dùng DateTime — từ chối nó ở đó sẽ khiến rule cảm giác
         // tùy tiện, và đó chính là cách rule bị suppress thay vì được tuân theo.
         await VerifyAsync(
             """
-            namespace Nvm.FactoryModel.Internals
+            namespace Nvm.Product.Internals
             {
                 public sealed record Scratch(System.DateTime TakenAt);
             }
@@ -97,10 +101,12 @@ public sealed class Nvm002DateTimeInContractAnalyzerTests
         // Cả property lẫn field đều được đọc, nên một implementation ngây thơ sẽ báo cáo một
         // auto-property hai lần: một lần cho property và một lần cho backing field do compiler sinh
         // ra. Hai lỗi trên một dòng là cách người ta kết luận analyzer bị hỏng.
-        const string source = """
-            namespace Nvm.Contracts.Something
+        const string source = $$"""
+            {{AnalyzerSnippet.ContractTypes}}
+
+            namespace Somewhere.Else
             {
-                public sealed class Holder
+                public sealed class Holder : Nvm.Foundation.Entity
                 {
                     public System.DateTime Field;
 

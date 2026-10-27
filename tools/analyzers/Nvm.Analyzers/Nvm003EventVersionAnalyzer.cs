@@ -57,7 +57,7 @@ public sealed class Nvm003EventVersionAnalyzer : DiagnosticAnalyzer
 
         context.RegisterCompilationStartAction(start =>
         {
-            var domainEvent = start.Compilation.GetTypeByMetadataName(ContractSymbols.DomainEventInterface);
+            var domainEvent = start.Compilation.GetTypeByMetadataName(ContractSymbols.FoundationEvent);
             var versionAttribute = start.Compilation.GetTypeByMetadataName(ContractSymbols.EventVersionAttribute);
 
             // Không có gì để enforce trong một compilation chưa từng nghe đến type nào trong hai type đó.
@@ -78,7 +78,7 @@ public sealed class Nvm003EventVersionAnalyzer : DiagnosticAnalyzer
         INamedTypeSymbol domainEvent,
         INamedTypeSymbol versionAttribute)
     {
-        if (!ContractSymbols.IsConcreteDomainEvent(type, domainEvent))
+        if (!ContractSymbols.IsConcreteEvent(type, domainEvent))
         {
             return;
         }

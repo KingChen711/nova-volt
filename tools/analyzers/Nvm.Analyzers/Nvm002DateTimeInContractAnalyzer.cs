@@ -4,15 +4,14 @@ using Microsoft.CodeAnalysis.Diagnostics;
 
 namespace Nvm.Analyzers;
 
-/// <summary>Từ chối <c>DateTime</c> ở bất kỳ đâu trong một wire contract. AGENTS.md K2.</summary>
+/// <summary>Từ chối <c>DateTime</c> ở bất kỳ đâu trong event, entity hoặc facet. AGENTS.md K2.</summary>
 /// <remarks>
 /// <para>
 /// <b>Cái gì sai, và sai ở đâu.</b> <c>DateTime</c> mang theo một cờ <c>Kind</c>, không phải một
-/// offset, và cờ đó không sống sót qua JSON: serialize một <c>DateTime</c> kiểu local rồi đọc lại và
-/// bạn nhận được đúng giá trị wall-clock đó mà không có cách nào biết nó từng có nghĩa gì. Site DE1 là
-/// Leipzig và quan sát daylight saving, nên một giờ mỗi mùa thu xảy ra hai lần. Một traceability
-/// record ghi trong giờ đó sẽ mập mờ mãi mãi, và event store là append-only — không có cách nào sửa
-/// nó sau này.
+/// offset, và cờ đó không sống sót qua JSON hay cột SQL: ghi một <c>DateTime</c> kiểu local rồi đọc lại
+/// và bạn nhận được đúng giá trị wall-clock đó mà không có cách nào biết nó từng có nghĩa gì. Khung ca
+/// tính theo múi giờ của plant; ở plant có daylight saving, một giờ mỗi mùa thu xảy ra hai lần. Một
+/// bản ghi truy vết trong giờ đó sẽ mập mờ mãi mãi.
 /// </para>
 /// <para>
 /// Lỗi này mang tính mùa vụ, đó là lý do nó cần một compiler chứ không phải một review. Mọi thứ hoạt
@@ -20,10 +19,9 @@ namespace Nvm.Analyzers;
 /// của hai event bỗng đảo ngược.
 /// </para>
 /// <para>
-/// <b>Vì sao là toàn bộ contract surface, không chỉ event.</b> Một record trong <c>Nvm.Contracts</c>
-/// hôm nay chưa phải event sẽ trở thành payload của một event vào ngày mai, và đến lúc đó
-/// <c>DateTime</c> của nó đã được serialize vào các row mà không ai được phép ghi lại. Xem
-/// <see cref="ContractSymbols.IsWireContract"/> để biết ba cách một type đủ điều kiện.
+/// <b>Áp cho event và cho entity/facet.</b> Event lên bus và vào bảng event; entity và facet là cột
+/// của DB MOM. Cả hai được đọc lại nhiều năm sau và không ai được ghi lại chúng. Xem
+/// <see cref="ContractSymbols.IsPersistedContract"/>.
 /// </para>
 /// </remarks>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
@@ -36,10 +34,10 @@ public sealed class Nvm002DateTimeInContractAnalyzer : DiagnosticAnalyzer
 
     private static readonly DiagnosticDescriptor Rule = new(
         DiagnosticId,
-        title: "DateTime in a wire contract",
+        title: "DateTime in an event or a persisted model object",
         messageFormat:
-            "'{0}.{1}' is typed '{2}', which carries no UTC offset. Use DateTimeOffset, or site DE1 "
-            + "records an ambiguous timestamp for one hour every autumn (AGENTS.md K2).",
+            "'{0}.{1}' is typed '{2}', which carries no UTC offset. Use DateTimeOffset: shift windows "
+            + "follow the plant time zone, and a DST hour happens twice every autumn (AGENTS.md K2).",
         Category,
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,
@@ -64,16 +62,12 @@ public sealed class Nvm002DateTimeInContractAnalyzer : DiagnosticAnalyzer
 
         context.RegisterCompilationStartAction(start =>
         {
-            var domainEvent = start.Compilation.GetTypeByMetadataName(ContractSymbols.DomainEventInterface);
+            var foundationEvent = start.Compilation.GetTypeByMetadataName(ContractSymbols.FoundationEvent);
+            var modelObject = start.Compilation.GetTypeByMetadataName(ContractSymbols.ModelObject);
             var dateTime = start.Compilation.GetSpecialType(SpecialType.System_DateTime);
 
-            var wholeAssemblyIsContracts = string.Equals(
-                start.Compilation.Assembly.Name,
-                ContractSymbols.ContractsAssembly,
-                StringComparison.Ordinal);
-
             start.RegisterSymbolAction(
-                symbol => Analyze((INamedTypeSymbol)symbol.Symbol, symbol, domainEvent, dateTime, wholeAssemblyIsContracts),
+                symbol => Analyze((INamedTypeSymbol)symbol.Symbol, symbol, foundationEvent, modelObject, dateTime),
                 SymbolKind.NamedType);
         });
     }
@@ -81,11 +75,11 @@ public sealed class Nvm002DateTimeInContractAnalyzer : DiagnosticAnalyzer
     private static void Analyze(
         INamedTypeSymbol type,
         SymbolAnalysisContext context,
-        INamedTypeSymbol? domainEvent,
-        INamedTypeSymbol dateTime,
-        bool wholeAssemblyIsContracts)
+        INamedTypeSymbol? foundationEvent,
+        INamedTypeSymbol? modelObject,
+        INamedTypeSymbol dateTime)
     {
-        if (!ContractSymbols.IsWireContract(type, domainEvent, wholeAssemblyIsContracts))
+        if (!ContractSymbols.IsPersistedContract(type, foundationEvent, modelObject))
         {
             return;
         }

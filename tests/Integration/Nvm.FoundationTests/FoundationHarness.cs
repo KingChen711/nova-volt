@@ -1,0 +1,108 @@
+using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Time.Testing;
+using Nvm.Foundation.Runtime;
+using Nvm.FoundationTests.LabModel;
+using Testcontainers.MsSql;
+
+// SQL trong harness là SQL của chính test (tên bảng từ registry, NId cố định), không có dữ liệu người dùng.
+#pragma warning disable CA2100
+
+namespace Nvm.FoundationTests;
+
+/// <summary>Một SQL Server cho cả lượt test; mỗi harness một database riêng, đã chạy Update Database.</summary>
+internal static class SharedSqlServer
+{
+    private static readonly Lazy<Task<MsSqlContainer>> Container = new(async () =>
+    {
+        // Cùng image với docker-compose.yml.
+        var container = new MsSqlBuilder("mcr.microsoft.com/mssql/server:2022-CU26-ubuntu-22.04").Build();
+        await container.StartAsync(CancellationToken.None);
+        return container;
+    });
+
+    public static async Task<string> NewDatabaseAsync()
+    {
+        var container = await Container.Value;
+        var name = "nvm_" + Guid.NewGuid().ToString("N")[..16];
+        var master = container.GetConnectionString();
+        await using (var connection = new SqlConnection(master))
+        {
+            await connection.OpenAsync(TestContext.Current.CancellationToken);
+            await using var create = new SqlCommand($"CREATE DATABASE [{name}];", connection);
+            await create.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
+        }
+
+        return new SqlConnectionStringBuilder(master) { InitialCatalog = name }.ConnectionString;
+    }
+}
+
+/// <summary>Foundation đã dựng trên một DB mới, với model thử nghiệm và hai app: LabApp bật pre-check, OtherApp thì không.</summary>
+internal sealed class FoundationHarness
+{
+    public static readonly ModelRegistry Registry = ModelRegistry.Build(LabTypes);
+
+    /// <summary>Chỉ namespace LabModel: assembly test còn chứa model cố ý sai cho test lỗi khai báo.</summary>
+    public static IEnumerable<Type> LabTypes =>
+        typeof(LabOrder).Assembly.GetTypes().Where(t => t.Namespace == typeof(LabOrder).Namespace);
+
+    private FoundationHarness(string connectionString, SolutionConfiguration solution)
+    {
+        ConnectionString = connectionString;
+        Solution = solution;
+        Executor = new CommandExecutor(connectionString, Registry, solution, Time, Traces, Events);
+    }
+
+    public string ConnectionString { get; }
+
+    public SolutionConfiguration Solution { get; }
+
+    public FakeTimeProvider Time { get; } = new(new DateTimeOffset(2026, 10, 27, 6, 0, 0, TimeSpan.Zero));
+
+    public InMemoryTraceSink Traces { get; } = new();
+
+    public InMemoryEventPublisher Events { get; } = new();
+
+    public CommandExecutor Executor { get; }
+
+    public static async Task<FoundationHarness> CreateAsync(Action<SolutionConfiguration>? configure = null)
+    {
+        var connectionString = await SharedSqlServer.NewDatabaseAsync();
+        SchemaUpdater.UpdateDatabase(connectionString, Registry);
+
+        var solution = new SolutionConfiguration();
+        var lab = new AppConfiguration(LabApp.Name);
+        var other = new AppConfiguration(LabApp.OtherName);
+        foreach (var command in Registry.Commands.Where(c => !c.IsComposite))
+        {
+            lab.Commands.Add(command.Type);
+            other.Commands.Add(command.Type);
+        }
+
+        lab.EnabledPreChecks.Add(nameof(RejectNegativeQuantity));
+        solution.Apps.Add(lab);
+        solution.Apps.Add(other);
+        configure?.Invoke(solution);
+        return new FoundationHarness(connectionString, solution);
+    }
+
+    public CommandResult Run(object command, string app = LabApp.Name) => Executor.Execute(app, command);
+
+    /// <summary>SQL trực tiếp, như sổ tay SQL chỉ đọc: không qua bộ lọc <c>IsDeleted</c> của platform.</summary>
+    public T Scalar<T>(string sql)
+    {
+        using var connection = new SqlConnection(ConnectionString);
+        connection.Open();
+        using var command = new SqlCommand(sql, connection);
+        return (T)command.ExecuteScalar()!;
+    }
+
+    public void Execute(string sql)
+    {
+        using var connection = new SqlConnection(ConnectionString);
+        connection.Open();
+        using var command = new SqlCommand(sql, connection);
+        command.ExecuteNonQuery();
+    }
+
+    public string TableOf<T>() => Executor.Registry.TableOf(typeof(T));
+}

@@ -17,13 +17,13 @@ public sealed class Nvm003EventVersionAnalyzerTests
 
         namespace Somewhere.Else
         {
-            using Nvm.Contracts.Events;
+            using Nvm.Foundation;
 
             {{attribute}}
             public sealed record ProbeEvent(
                 System.Guid EventId,
                 System.DateTimeOffset OccurredAt,
-                string SiteId) : IDomainEvent;
+                string SiteId) : IFoundationEvent;
         }
         """;
 
@@ -75,9 +75,9 @@ public sealed class Nvm003EventVersionAnalyzerTests
 
             namespace Somewhere.Else
             {
-                using Nvm.Contracts.Events;
+                using Nvm.Foundation;
 
-                public interface IPlantEvent : IDomainEvent;
+                public interface IPlantEvent : IFoundationEvent;
             }
             """);
     }
@@ -93,12 +93,12 @@ public sealed class Nvm003EventVersionAnalyzerTests
 
             namespace Somewhere.Else
             {
-                using Nvm.Contracts.Events;
+                using Nvm.Foundation;
 
                 public abstract record PlantEvent(
                     System.Guid EventId,
                     System.DateTimeOffset OccurredAt,
-                    string SiteId) : IDomainEvent;
+                    string SiteId) : IFoundationEvent;
             }
             """);
     }

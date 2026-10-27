@@ -2,7 +2,7 @@ using Microsoft.CodeAnalysis;
 
 namespace Nvm.Analyzers;
 
-/// <summary>Vài cái tên từ <c>Nvm.Contracts</c> mà các analyzer phải nhận ra.</summary>
+/// <summary>Vài cái tên từ <c>Nvm.Foundation</c> mà các analyzer phải nhận ra.</summary>
 /// <remarks>
 /// <para>
 /// Một analyzer không thể reference assembly nó đang phân tích — nó được compiler nạp lên, và
@@ -10,50 +10,57 @@ namespace Nvm.Analyzers;
 /// compilation.
 /// </para>
 /// <para>
-/// Điều đó khiến các chuỗi này trở thành một coupling thật sự: đổi tên <c>IDomainEvent</c> hoặc
-/// chuyển nó sang namespace khác sẽ tắt cả hai rule, và triệu chứng là một build xanh. Architecture
-/// test ở C17 là thứ nhận ra điều đó, vì nó assert rằng type tồn tại đúng nơi các chuỗi này nói.
+/// Điều đó khiến các chuỗi này trở thành một coupling thật sự: đổi tên một type ở Foundation sẽ tắt
+/// rule, và triệu chứng là một build xanh. Test trong <c>Nvm.FoundationTests</c> chứa đúng một chỗ dùng
+/// sai model có <c>#pragma warning disable NVM004</c>; rule im lặng thì pragma đó vô nghĩa nhưng không đỏ,
+/// nên test analyzer dựng snippet bằng đúng các tên dưới đây.
 /// </para>
 /// </remarks>
 internal static class ContractSymbols
 {
-    internal const string DomainEventInterface = "Nvm.Contracts.Events.IDomainEvent";
+    internal const string FoundationEvent = "Nvm.Foundation.IFoundationEvent";
 
-    internal const string EventVersionAttribute = "Nvm.Contracts.Events.EventVersionAttribute";
+    internal const string EventVersionAttribute = "Nvm.Foundation.EventVersionAttribute";
 
-    /// <summary>Assembly nơi mọi wire contract sinh sống.</summary>
-    /// <remarks>
-    /// NVM002 áp dụng cho toàn bộ assembly này, không chỉ cho event. Một record hôm nay chưa phải
-    /// event sẽ trở thành payload của một event vào ngày mai, và đến lúc đó <c>DateTime</c> bên trong
-    /// nó đã được serialize vào store rồi.
-    /// </remarks>
-    internal const string ContractsAssembly = "Nvm.Contracts";
+    /// <summary>Gốc của mọi entity và facet: cột của chúng lưu thẳng xuống DB MOM (K2).</summary>
+    internal const string ModelObject = "Nvm.Foundation.ModelObject";
+
+    internal const string ReadOnlyPlatform = "Nvm.Foundation.IReadOnlyPlatform";
+
+    internal const string FunctionalBlockAttribute = "Nvm.Foundation.FunctionalBlockAttribute";
+
+    internal const string EntityAttribute = "Nvm.Foundation.EntityAttribute`1";
+
+    internal const string FacetAttribute = "Nvm.Foundation.FacetAttribute`1";
+
+    internal const string CommandAttribute = "Nvm.Foundation.CommandAttribute`1";
+
+    internal const string CommandHandler = "Nvm.Foundation.ICommandHandler`2";
+
+    internal const string PreCheck = "Nvm.Foundation.IPreCheck`1";
+
+    internal const string PostAction = "Nvm.Foundation.IPostAction`2";
 
     /// <summary>Một type có phải một concrete event hay không, khác với marker hay một abstract base.</summary>
-    internal static bool IsConcreteDomainEvent(INamedTypeSymbol type, INamedTypeSymbol? domainEvent) =>
-        domainEvent is not null
+    internal static bool IsConcreteEvent(INamedTypeSymbol type, INamedTypeSymbol? foundationEvent) =>
+        foundationEvent is not null
         && type is { IsAbstract: false, TypeKind: TypeKind.Class or TypeKind.Struct }
-        && type.AllInterfaces.Contains(domainEvent, SymbolEqualityComparer.Default);
+        && type.AllInterfaces.Contains(foundationEvent, SymbolEqualityComparer.Default);
 
-    /// <summary>Một type có thuộc về wire contract surface hay không.</summary>
-    /// <remarks>
-    /// Ba phép kiểm tra, OR với nhau, vì mỗi cái bắt được điều mà những cái khác bỏ lỡ: một type ở
-    /// assembly khác implement marker; một type bên trong project contracts nhưng đặt ở namespace
-    /// khác; và một type có hình dạng contract nhưng chưa được biến thành event. Cái cuối cùng là cái
-    /// phổ biến nhất — một record hôm nay chưa phải event sẽ trở thành payload của một event ở
-    /// milestone kế tiếp.
-    /// </remarks>
-    internal static bool IsWireContract(INamedTypeSymbol type, INamedTypeSymbol? domainEvent, bool assemblyIsContracts) =>
-        IsConcreteDomainEvent(type, domainEvent)
-        || assemblyIsContracts
-        || IsInContractsNamespace(type);
+    /// <summary>Type mà dữ liệu của nó ra khỏi process: event (lên bus, vào bảng event) hoặc entity/facet (vào bảng).</summary>
+    internal static bool IsPersistedContract(INamedTypeSymbol type, INamedTypeSymbol? foundationEvent, INamedTypeSymbol? modelObject) =>
+        IsConcreteEvent(type, foundationEvent) || (modelObject is not null && DerivesFrom(type, modelObject));
 
-    private static bool IsInContractsNamespace(INamedTypeSymbol type)
+    private static bool DerivesFrom(INamedTypeSymbol type, INamedTypeSymbol baseType)
     {
-        var name = type.ContainingNamespace?.ToDisplayString();
+        for (var current = type.BaseType; current is not null; current = current.BaseType)
+        {
+            if (SymbolEqualityComparer.Default.Equals(current, baseType))
+            {
+                return true;
+            }
+        }
 
-        return name is not null
-            && (string.Equals(name, ContractsAssembly, StringComparison.Ordinal)
-                || name.StartsWith(ContractsAssembly + ".", StringComparison.Ordinal));
+        return false;
     }
 }

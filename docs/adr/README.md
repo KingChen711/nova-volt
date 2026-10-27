@@ -90,6 +90,7 @@ ADR-051 dựng lại dự án; code v1 nằm ở tag `v1.0`. ADR 001–050 giữ
 | [051](ADR-051-rebuild-theo-mo-hinh-mom-that.md) | Dựng lại NovaVolt (v2) theo cơ chế và nghiệp vụ của một hệ MOM thật; v1 đóng ở tag `v1.0` | **Accepted** 2026-10-27 | v2 · R0 |
 | [052](ADR-052-clean-room.md) | Clean-room: repo public không chứa tên, mã, code của dự án thật; kiểm bằng HMAC | **Accepted** 2026-10-27 | v2 · R0 |
 | [053](ADR-053-giao-dien-nextjs.md) | Giao diện v2 bằng Next.js, thay Mendix | **Accepted** 2026-10-27 | v2 · R0 |
+| [054](ADR-054-foundation-model-va-pipeline.md) | Foundation: model khai bằng attribute, handler đồng bộ, EF Core bên trong, schema sinh từ model | **Accepted** 2026-10-27 | v2 · R1 |
 
 Cột **Ra ở** là milestone dự kiến, không phải cam kết. Quyết định đến sớm hơn thì viết sớm hơn.
 

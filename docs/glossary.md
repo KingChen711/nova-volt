@@ -28,8 +28,13 @@ Thêm khái niệm mới vào đây cùng lúc thêm vào model (AGENTS.md §5.8
 | **Worker role** | Nhóm tiến trình chạy command hoặc handler; song song hoặc tuần tự |
 | **Signal rule** | Luật gọi một command theo lịch hoặc theo event |
 | **Configuration key** | Cặp tên–giá trị cấu hình trong DB (`NId`, `Val`, `Type`, `Category`) |
-| **Xóa mềm** | `Delete` đặt `IsDeleted` khác 0 thay vì xóa dòng; đọc qua platform tự lọc |
-| **CorrelationId** | Mã gắn mọi dòng trace của một lời gọi và các command con của nó |
+| **Xóa mềm** | `Delete` đặt `IsDeleted` = số lớn nhất của bảng + 1 thay vì xóa dòng; đọc qua platform tự lọc, SQL trực tiếp thì không |
+| **`Query` / `ProjectionQuery`** | Đọc trong transaction của command, chỉ cùng domain / đọc ngoài transaction, mọi domain, chỉ bản đã commit |
+| **`Submit`** | Đẩy thay đổi vào transaction để phần sau của chuỗi thấy; commit do nền làm khi chuỗi kết thúc không lỗi |
+| **`CallCommand`** | Gọi command khác từ handler: cùng domain thì chung transaction, khác domain thì transaction riêng; người gọi tự kiểm `Succeeded` |
+| **Update Database** | Bước căn schema của DB MOM theo model: thêm bảng, cột còn thiếu; tên bảng cắt ngắn kèm hậu tố số, tra ở `Foundation_ModelTable` |
+| **Lỗi `6400`** | Service layer từ chối vì thiếu tham số bắt buộc, trước khi handler chạy; dạng `{"error":{"code":...}}`, không có `Succeeded` |
+| **CorrelationId** | Mã gắn mọi dòng trace của một lời gọi và các command con của nó; mỗi lời gọi có `CurrentId`, command con có `ParentId` trỏ về cha, cả chuỗi chung `RootRequestId` |
 
 ## Sản xuất
 

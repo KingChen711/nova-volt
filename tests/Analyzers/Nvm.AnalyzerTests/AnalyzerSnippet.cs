@@ -20,21 +20,29 @@ namespace Nvm.AnalyzerTests;
 /// </remarks>
 internal static class AnalyzerSnippet
 {
-    /// <summary>Các contract type mà một event snippet cần, vì snippet không reference project nào.</summary>
+    /// <summary>Bản rút gọn các type của <c>Nvm.Foundation</c> mà analyzer nhận ra, vì snippet không reference project nào.</summary>
     /// <remarks>
-    /// Khai báo ở đây thay vì reference, và đó là có chủ đích: nó thực thi đúng cái sự thật rằng cả
-    /// hai analyzer resolve các type này <b>theo tên</b>. Đổi tên một trong số chúng thật sự và các
+    /// Khai báo ở đây thay vì reference, và đó là có chủ đích: nó thực thi đúng cái sự thật rằng các
+    /// analyzer resolve các type này <b>theo tên</b>. Đổi tên một trong số chúng thật sự và các
     /// rule sẽ im lặng — một snippet lấy chúng từ project reference sẽ không bao giờ nhận ra.
     /// </remarks>
     public const string ContractTypes = """
-        namespace Nvm.Contracts.Events
+        namespace Nvm.Foundation
         {
-            public interface IDomainEvent
+            public enum ModelDomain { MasterData = 1, OperationalData = 2, ReferenceData = 3 }
+
+            public sealed class FunctionalBlockAttribute : System.Attribute
             {
-                System.Guid EventId { get; }
-                System.DateTimeOffset OccurredAt { get; }
-                string SiteId { get; }
+                public FunctionalBlockAttribute(string name, ModelDomain domain) { }
             }
+
+            public sealed class EntityAttribute<TBlock> : System.Attribute where TBlock : class { }
+
+            public sealed class FacetAttribute<TBlock> : System.Attribute where TBlock : class { }
+
+            public sealed class CommandAttribute<TBlock> : System.Attribute where TBlock : class { }
+
+            public interface IFoundationEvent { }
 
             [System.AttributeUsage(System.AttributeTargets.Class, Inherited = false)]
             public sealed class EventVersionAttribute : System.Attribute
@@ -43,6 +51,27 @@ internal static class AnalyzerSnippet
 
                 public int Version { get; }
             }
+
+            public abstract class ModelObject { public System.Guid Id { get; set; } }
+
+            public abstract class Entity : ModelObject { public string NId { get; set; } = ""; }
+
+            public interface IReadOnlyPlatform
+            {
+                System.Linq.IQueryable<T> Query<T>() where T : ModelObject;
+
+                System.Linq.IQueryable<T> ProjectionQuery<T>() where T : ModelObject;
+            }
+
+            public interface IPlatform : IReadOnlyPlatform { }
+
+            public class CommandResponse { }
+
+            public interface ICommandHandler<in TCommand, out TResponse> { TResponse Handle(TCommand command, IPlatform platform); }
+
+            public interface IPreCheck<in TCommand> { bool Check(TCommand command, IReadOnlyPlatform platform); }
+
+            public interface IPostAction<in TCommand, TResponse> { TResponse Execute(TCommand command, TResponse response, IPlatform platform); }
         }
         """;
 

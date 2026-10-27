@@ -6,19 +6,27 @@ vi phạm. Dự án này chạy 6 tháng, một người làm, không có review
 | ID | Cấm gì | Ràng buộc | Ra ở |
 |---|---|---|---|
 | `NVM001` | Đọc đồng hồ máy: `DateTime.Now/UtcNow/Today`, `DateTimeOffset.Now/UtcNow` | K1 | M1 · C15 |
-| `NVM002` | `DateTime` trong contract, **kể cả lồng trong generic / mảng / nullable** | K2 | M1 · C16 |
-| `NVM003` | Event thiếu `[EventVersion(n)]`, hoặc `n < 1` | K6 | M1 · C16 |
+| `NVM002` | `DateTime` trong event, entity, facet, **kể cả lồng trong generic / mảng / nullable** | K2 | M1 · C16; v2 R1 |
+| `NVM003` | Event thiếu `[EventVersion(n)]`, hoặc `n < 1` | K6 | M1 · C16; v2 R1 |
+| `NVM004` | `Query<T>` đọc entity của domain khác trong handler, pre-check, post-action | K8 | v2 R1 |
+
+Các rule nhận ra type của Foundation **theo tên** (`ContractSymbols`), vì analyzer không reference được
+assembly nó đang phân tích. Đổi tên một type ở Foundation thì rule im lặng; test analyzer dựng snippet
+bằng đúng các tên đó.
 
 ### NVM002 soi những type nào
 
-Ba điều kiện **HOẶC** — xem `ContractSymbols.IsWireContract`:
+Hai điều kiện **HOẶC** — xem `ContractSymbols.IsPersistedContract`:
 
-1. cài `IDomainEvent` (event ở FB khác cũng bị soi),
-2. nằm trong assembly `Nvm.Contracts`,
-3. namespace bắt đầu bằng `Nvm.Contracts.`
+1. cài `Nvm.Foundation.IFoundationEvent` (lên bus, vào bảng event),
+2. kế thừa `Nvm.Foundation.ModelObject`: entity và facet, tức cột của DB MOM.
 
-Điều kiện 3 tồn tại cho trường hợp hay gặp nhất: một record **chưa** là event. Milestone sau nó thành
-payload của một event, và lúc đó `DateTime` bên trong đã nằm trong những dòng không ai được sửa.
+### NVM004 lấy domain ở đâu
+
+Domain của kiểu được đọc lấy từ `[Entity<TBlock>]`/`[Facet<TBlock>]`; domain của command lấy từ
+`[Command<TBlock>]` của tham số đầu trong `ICommandHandler`/`IPreCheck`/`IPostAction`; cả hai rồi tra
+`[FunctionalBlock(name, domain)]` của block. Thiếu một mắt xích thì rule im lặng; lúc chạy,
+`ModelMisuseException` vẫn chặn.
 
 `Mentions()` đệ quy qua `TypeArguments` và `ElementType`, nên `DateTime?`, `DateTime[]`,
 `IReadOnlyList<DateTime>` và `Dictionary<string, DateTime[]>` đều bị bắt. Bản chỉ so kiểu ngoài cùng

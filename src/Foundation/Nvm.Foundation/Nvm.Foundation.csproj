@@ -4,10 +4,22 @@
     Lớp Foundation: cơ chế nền kiểu Opcenter (model, command pipeline, transaction,
     event, OData, signal rule, configuration key, state machine). Dựng ở R1-R2.
     Không reference lớp nào phía trên (Product, Project, Shopfloor, Integration).
+
+    EF Core chỉ dùng bên trong (namespace Nvm.Foundation.Runtime). API cho handler
+    (namespace Nvm.Foundation) chỉ có BCL: IQueryable, TimeProvider. K9, ADR-054.
   -->
 
   <PropertyGroup>
     <RootNamespace>Nvm.Foundation</RootNamespace>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
+    <PackageReference Include="Microsoft.Data.SqlClient" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Nvm.FoundationTests" />
+  </ItemGroup>
 
 </Project>

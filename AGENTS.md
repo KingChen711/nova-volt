@@ -31,15 +31,17 @@ Quy tắc báo cáo ở **§5.8**. Nội dung dạy học có thể thực hiệ
 
 ### 0.2 Cách thực hiện được chủ repo chốt 2026-09-23
 
-Agent nhận toàn bộ phần việc. Không tạo plan riêng cho từng mốc, không chia tiến độ thành lượt chờ theo từng commit. Dùng scope v2 và [tracker](docs/plans/tracker.md); giữ tracker ngắn, triển khai và kiểm chứng liên tục. Chỉ nhờ chủ repo khi thiếu quyền truy cập hoặc phải quyết contract cứng. Agent được tự commit/push theo §1.1.
+Agent nhận toàn bộ phần việc. Không tạo plan riêng cho từng mốc, không chia tiến độ thành lượt chờ theo từng commit. Dùng scope v2 và [tracker](docs/plans/tracker.md); giữ tracker ngắn, triển khai và kiểm chứng liên tục. Chỉ nhờ chủ repo khi thiếu quyền truy cập hoặc phải quyết contract cứng. Commit và push theo §1.1: chủ repo đọc trước.
 
 Làm theo cách của agent, không theo nhịp người học: gom việc thành lô lớn, **không bắt buộc đúng thứ tự mốc** khi phụ thuộc cho phép (scope §5). DoD, K1–K14 và yêu cầu bằng chứng giữ nguyên.
 
 ## 1. Quy tắc tuyệt đối — không có ngoại lệ
 
-### 1.1 Agent được tự commit và push
+### 1.1 Chủ repo đọc trước, rồi mới commit
 
-Chủ repo giao toàn bộ việc triển khai và cho phép agent tự commit/push các thay đổi thuộc dự án (2026-09-23). Không cần xin xác nhận theo từng commit. Trước khi commit, kiểm diff, loại secret/artifact tạm, xác nhận các kiểm tra phù hợp đã đạt; trước khi push, xác nhận đúng repository, branch và remote. Giữ các commit có phạm vi rõ; không trộn thay đổi ngoài nhiệm vụ. Không force-push hoặc bỏ thay đổi của người khác khi chưa có chỉ dẫn riêng.
+Từ 2026-10-27, agent **không tự commit hay push**. Làm xong một lô thì để thay đổi ở working tree, báo file nào đổi và đã kiểm gì; chủ repo đọc diff. Chỉ khi chủ repo bảo commit thì agent mới gộp thành commit của mốc, gắn tag `rN` (annotated) ở commit cuối của mốc, push branch và tag, rồi ghi tag vào [tracker](docs/plans/tracker.md). So code giữa hai mốc: `git diff r0 r1 --stat` hoặc trang compare trên GitHub.
+
+Trước khi commit, kiểm diff, loại secret/artifact tạm, xác nhận các kiểm tra phù hợp đã đạt; trước khi push, xác nhận đúng repository, branch và remote. Không force-push hoặc bỏ thay đổi của người khác khi chưa có chỉ dẫn riêng.
 
 ### 1.2 Không phá working copy của người khác
 
@@ -282,7 +284,7 @@ Nếu một ràng buộc trong số này **cản trở thật sự**, đó là d
 
 ### 5.1 Đơn vị công việc có thể kiểm chứng độc lập
 
-Chia việc thành lát cắt có mục tiêu, diff và cách kiểm chứng rõ. Agent triển khai liên tục qua các lát cắt và milestone trong phạm vi dự án, ghi bằng chứng vào [tracker hoàn thành](docs/plans/project-completion.md). Agent tự commit/push phần đã kiểm chứng; không dừng triển khai để chờ review theo từng commit.
+Chia việc thành lát cắt có mục tiêu, diff và cách kiểm chứng rõ. Agent triển khai liên tục qua các lát cắt trong phạm vi dự án, ghi bằng chứng vào [tracker](docs/plans/tracker.md). Thay đổi chờ chủ repo đọc rồi mới commit (§1.1).
 
 ### 5.2 Conventional Commits
 
@@ -333,7 +335,7 @@ Khi công cụ hỗ trợ và công việc có ranh giới độc lập, giao su
 
 ### 5.7 Lab phá hoại và phép đo
 
-Lab trong `scope.md` là phép kiểm kỹ thuật khi có rủi ro cụ thể; agent tự chạy trong môi trường thử nghiệm phù hợp và ghi số thật vào ADR hoặc `docs/benchmarks.md` (tạo khi có số đo đầu tiên của v2; số v1 nằm ở tag `v1.0`). Không yêu cầu chủ repo dự đoán kết quả trước khi đo. Không lấy một dự đoán hay một lời giải thích làm bằng chứng thay test.
+Lab trong `scope.md` là phép kiểm kỹ thuật khi có rủi ro cụ thể; agent tự chạy trong môi trường thử nghiệm phù hợp và ghi số thật vào ADR hoặc `docs/benchmarks.md` (số v1 nằm ở tag `v1.0`). Không yêu cầu chủ repo dự đoán kết quả trước khi đo. Không lấy một dự đoán hay một lời giải thích làm bằng chứng thay test.
 
 ---
 
@@ -353,26 +355,14 @@ Khi báo cáo một thay đổi nghiệp vụ, giải thích ngắn thuật ng�
 | `docs/adr/` | Architecture Decision Records; 001–050 là của v1 |
 | `docs/private/` | Riêng tư, không commit: plan đầy đủ, bảng đối chiếu tên thật, danh sách từ cấm, khóa clean-room |
 | `tools/cleanroom/` | Kiểm clean-room (K14) |
-
----|---|
-| `AGENTS.md` | Tài liệu này — nguyên tắc làm việc |
-| `docs/scope.md` | Scope & design đầy đủ: nghiệp vụ, kiến trúc, domain, contract, 14 milestone |
-| **`docs/glossary.md`** | Từ điển nghiệp vụ, cập nhật khi model thêm khái niệm mới |
-| `.claude/skills/mendix-manual/` | Skill Mendix: bố cục hướng dẫn, bẫy Studio Pro, tích hợp backend |
-| `docs/plans/M*.md` | Plan chi tiết từng milestone và cách kiểm chứng |
-| `docs/plans/project-completion.md` | Tracker hoàn thiện M4–M13, gate kỹ thuật và blocker |
-| `docs/adr/` | Architecture Decision Records — tối thiểu 18 bản |
-| `docs/oef-mapping.md` | Ánh xạ khái niệm Opcenter Execution Foundation → thành phần trong repo |
-| `docs/benchmarks.md` | Số đo hiệu năng theo thời gian, kèm ngày và commit hash |
-| `docs/runbook.md` | 10 sự cố thường gặp và cách xử lý |
-| `docs/event-catalog.md` | Danh mục domain event: version, đã cài đặt chưa, có golden file chưa |
+| `docs/benchmarks.md` | Số đo có ngày, commit và điều kiện đo |
 
 ---
 
 ## 7. Tóm tắt cho agent đang vội
 
 0. Agent hoàn thiện toàn bộ scope và thu thập bằng chứng kỹ thuật; teach-back/dự đoán không là gate (§0.1, §5.8).
-1. **Được tự commit/push phần đã kiểm chứng.** Tiếp tục các đơn vị việc đã được giao, không chờ duyệt theo commit.
+1. **Không tự commit/push.** Để thay đổi ở working tree cho chủ repo đọc; được bảo mới commit, gắn tag `rN`, push (§1.1).
 2. Docs là bản đồ, không phải đường ray — **được phép làm trái, nhưng phải nói ra và cập nhật docs**.
 2b. Cập nhật docs = **sửa câu sai**, không phải viết thêm mục *"bài học"* bên dưới nó (§2.5). Plan mô tả trạng thái cuối; diễn biến ở `git log`.
 3. Audit thì kiểm cả plan, không chỉ kiểm code. Plan sai thì đề xuất sửa plan. File audit là file tạm và **phải bị xoá** khi sửa xong (§3.5).

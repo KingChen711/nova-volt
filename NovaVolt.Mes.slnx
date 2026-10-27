@@ -29,6 +29,9 @@
   <Folder Name="/tests/Architecture/">
     <Project Path="tests/Architecture/Nvm.ArchitectureTests/Nvm.ArchitectureTests.csproj" />
   </Folder>
+  <Folder Name="/tests/Integration/">
+    <Project Path="tests/Integration/Nvm.FoundationTests/Nvm.FoundationTests.csproj" />
+  </Folder>
   <Folder Name="/tests/Unit/">
     <Project Path="tests/Unit/Nvm.UnitTests/Nvm.UnitTests.csproj" />
   </Folder>

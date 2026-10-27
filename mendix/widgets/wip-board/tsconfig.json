@@ -1,5 +1,0 @@
-{
-  "extends": "@mendix/pluggable-widgets-tools/configs/tsconfig.base",
-  "compilerOptions": { "allowJs": true, "checkJs": false, "noImplicitAny": false },
-  "include": ["src", "typings"]
-}

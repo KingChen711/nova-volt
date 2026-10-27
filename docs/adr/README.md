@@ -31,6 +31,10 @@ nghĩa vụ chứ không phải gợi ý.
 milestone. ADR-019 trở đi cấp phát theo thứ tự phát sinh. Đừng lấy số trong khoảng đã giữ chỗ cho
 việc khác.
 
+## v2 (từ 2026-10-27)
+
+ADR-051 dựng lại dự án; code v1 nằm ở tag `v1.0`. ADR 001–050 giữ nguyên làm lịch sử. Phần lớn chúng gắn với thành phần v2 không mang sang (event store, projection, ingestion Sparkplug, telemetry, grading, passport, Mendix); khi v2 quyết lại một chủ đề trong số đó, ADR mới ghi rõ nó thay ADR nào.
+
 ## Index
 
 | # | Quyết định | Trạng thái | Ra ở |
@@ -83,6 +87,9 @@ việc khác.
 | [048](ADR-048-legal-hold-truoc-retention.md) | Retention là job tự viết đứng sau legal hold; bật lại 400 ngày/15 năm | **Accepted** 2026-09-27 | M12 |
 | [049](ADR-049-observability-va-solution-cli.md) | OpenTelemetry chỉ ở host, telemetry best-effort; một solution.yaml cho hai mode | **Accepted** 2026-09-27 | M13 |
 | [050](ADR-050-mutation-do-tren-entities.md) | Mutation score "domain layer" đo trên `Entities/` của mỗi FB | **Accepted** 2026-09-27 | M13 |
+| [051](ADR-051-rebuild-theo-mo-hinh-mom-that.md) | Dựng lại NovaVolt (v2) theo cơ chế và nghiệp vụ của một hệ MOM thật; v1 đóng ở tag `v1.0` | **Accepted** 2026-10-27 | v2 · R0 |
+| [052](ADR-052-clean-room.md) | Clean-room: repo public không chứa tên, mã, code của dự án thật; kiểm bằng HMAC | **Accepted** 2026-10-27 | v2 · R0 |
+| [053](ADR-053-giao-dien-nextjs.md) | Giao diện v2 bằng Next.js, thay Mendix | **Accepted** 2026-10-27 | v2 · R0 |
 
 Cột **Ra ở** là milestone dự kiến, không phải cam kết. Quyết định đến sớm hơn thì viết sớm hơn.
 

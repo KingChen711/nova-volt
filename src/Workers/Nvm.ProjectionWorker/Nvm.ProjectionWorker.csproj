@@ -1,9 +1,0 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
-  <PropertyGroup>
-    <RootNamespace>Nvm.ProjectionWorker</RootNamespace>
-  </PropertyGroup>
-  <ItemGroup>
-    <ProjectReference Include="../../Platform/Nvm.Observability.Web/Nvm.Observability.Web.csproj" />
-    <ProjectReference Include="../../Platform/Nvm.Projections/Nvm.Projections.csproj" />
-  </ItemGroup>
-</Project>

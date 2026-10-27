@@ -1,80 +1,35 @@
 <Solution>
   <Folder Name="/src/" />
-  <Folder Name="/src/Apps/">
-    <Project Path="src/Apps/Nvm.App.Execution/Nvm.App.Execution.csproj" />
-    <Project Path="src/Apps/Nvm.Host.All/Nvm.Host.All.csproj" />
+  <Folder Name="/src/Foundation/">
+    <Project Path="src/Foundation/Nvm.Foundation/Nvm.Foundation.csproj" />
+    <Project Path="src/Foundation/Nvm.Hosting/Nvm.Hosting.csproj" />
+    <Project Path="src/Foundation/Nvm.Observability/Nvm.Observability.csproj" />
+    <Project Path="src/Foundation/Nvm.Observability.Web/Nvm.Observability.Web.csproj" />
+    <Project Path="src/Foundation/Nvm.Time/Nvm.Time.csproj" />
   </Folder>
-  <Folder Name="/src/FunctionalBlocks/">
-    <Project Path="src/FunctionalBlocks/Traceability/Nvm.Traceability.csproj" />
-    <Project Path="src/FunctionalBlocks/Traceability.Hosting/Nvm.Traceability.Hosting.csproj" />
-    <Project Path="src/FunctionalBlocks/Quality/Nvm.Quality.csproj" />
-    <Project Path="src/FunctionalBlocks/Quality.Hosting/Nvm.Quality.Hosting.csproj" />
-    <Project Path="src/FunctionalBlocks/Material/Nvm.Material.csproj" />
-    <Project Path="src/FunctionalBlocks/Material.Hosting/Nvm.Material.Hosting.csproj" />
-    <Project Path="src/FunctionalBlocks/Grading/Nvm.Grading.csproj" />
-    <Project Path="src/FunctionalBlocks/Grading.Hosting/Nvm.Grading.Hosting.csproj" />
-    <Project Path="src/FunctionalBlocks/Recipe/Nvm.Recipe.csproj" />
-    <Project Path="src/FunctionalBlocks/Recipe.Hosting/Nvm.Recipe.Hosting.csproj" />
-    <Project Path="src/FunctionalBlocks/Equipment/Nvm.Equipment.csproj" />
-    <Project Path="src/FunctionalBlocks/Equipment.Hosting/Nvm.Equipment.Hosting.csproj" />
-    <Project Path="src/FunctionalBlocks/MasterData/Nvm.MasterData.csproj" />
-    <Project Path="src/FunctionalBlocks/MasterData.Hosting/Nvm.MasterData.Hosting.csproj" />
-    <Project Path="src/FunctionalBlocks/Passport/Nvm.Passport.csproj" />
-    <Project Path="src/FunctionalBlocks/Passport.Hosting/Nvm.Passport.Hosting.csproj" />
-    <Project Path="src/FunctionalBlocks/FactoryModel/Nvm.FactoryModel.csproj" />
-    <Project Path="src/FunctionalBlocks/ProductionExecution/Nvm.ProductionExecution.csproj" />
-    <Project Path="src/FunctionalBlocks/ProductionExecution.Hosting/Nvm.ProductionExecution.Hosting.csproj" />
+  <Folder Name="/src/Product/">
+    <Project Path="src/Product/Nvm.Product/Nvm.Product.csproj" />
   </Folder>
-  <Folder Name="/src/Platform/">
-    <Project Path="src/Platform/Nvm.EventStore/Nvm.EventStore.csproj" />
-    <Project Path="src/Platform/Nvm.CommandStore/Nvm.CommandStore.csproj" />
-    <Project Path="src/Platform/Nvm.Projections/Nvm.Projections.csproj" />
-    <Project Path="src/Platform/Nvm.PublicObjectModel/Nvm.PublicObjectModel.csproj" />
-    <Project Path="src/Platform/Nvm.Bus/Nvm.Bus.csproj" />
-    <Project Path="src/Platform/Nvm.Contracts/Nvm.Contracts.csproj" />
-    <Project Path="src/Platform/Nvm.Hosting/Nvm.Hosting.csproj" />
-    <Project Path="src/Platform/Nvm.Kernel/Nvm.Kernel.csproj" />
-    <Project Path="src/Platform/Nvm.Sparkplug/Nvm.Sparkplug.csproj" />
-    <Project Path="src/Platform/Nvm.Time/Nvm.Time.csproj" />
-    <Project Path="src/Platform/Nvm.Observability.Web/Nvm.Observability.Web.csproj" />
-    <Project Path="src/Platform/Nvm.Observability/Nvm.Observability.csproj" />
+  <Folder Name="/src/Project/">
+    <Project Path="src/Project/Nvm.Project/Nvm.Project.csproj" />
+  </Folder>
+  <Folder Name="/src/Shopfloor/">
+    <Project Path="src/Shopfloor/Nvm.Shopfloor/Nvm.Shopfloor.csproj" />
   </Folder>
   <Folder Name="/src/Integration/">
-    <Project Path="src/Integration/Nvm.ErpGateway/Nvm.ErpGateway.csproj" />
-  </Folder>
-  <Folder Name="/src/Workers/">
-    <Project Path="src/Workers/Nvm.EdgeGateway/Nvm.EdgeGateway.csproj" />
-    <Project Path="src/Workers/Nvm.Ingestion/Nvm.Ingestion.csproj" />
-    <Project Path="src/Workers/Nvm.ProjectionWorker/Nvm.ProjectionWorker.csproj" />
-    <Project Path="src/Workers/Nvm.Simulator/Nvm.Simulator.csproj" />
+    <Project Path="src/Integration/Nvm.Integration/Nvm.Integration.csproj" />
   </Folder>
   <Folder Name="/tools/">
     <Project Path="tools/analyzers/Nvm.Analyzers/Nvm.Analyzers.csproj" />
-    <Project Path="tools/buslab/Nvm.BusLab/Nvm.BusLab.csproj" />
-    <Project Path="tools/loadgen/Nvm.LoadHarness/Nvm.LoadHarness.csproj" />
-    <Project Path="tools/novaerp/Nvm.NovaErp/Nvm.NovaErp.csproj" />
-    <Project Path="tools/solution-cli/Nvm.SolutionCli/Nvm.SolutionCli.csproj" />
-    <Project Path="tools/telemetry/Nvm.CalendarLab/Nvm.CalendarLab.csproj" />
-    <Project Path="tools/telemetry/Nvm.TelemetryBackfill/Nvm.TelemetryBackfill.csproj" />
   </Folder>
   <Folder Name="/tests/" />
-  <Folder Name="/tests/TestAssets/">
-    <Project Path="tests/TestAssets/Nvm.CommandStoreProbe/Nvm.CommandStoreProbe.csproj" />
-  </Folder>
   <Folder Name="/tests/Analyzers/">
     <Project Path="tests/Analyzers/Nvm.AnalyzerTests/Nvm.AnalyzerTests.csproj" />
   </Folder>
   <Folder Name="/tests/Architecture/">
     <Project Path="tests/Architecture/Nvm.ArchitectureTests/Nvm.ArchitectureTests.csproj" />
   </Folder>
-  <Folder Name="/tests/Contract/">
-    <Project Path="tests/Contract/Nvm.ContractTests/Nvm.ContractTests.csproj" />
-  </Folder>
-  <Folder Name="/tests/Integration/">
-    <Project Path="tests/Integration/Nvm.IntegrationTests/Nvm.IntegrationTests.csproj" />
-  </Folder>
   <Folder Name="/tests/Unit/">
     <Project Path="tests/Unit/Nvm.UnitTests/Nvm.UnitTests.csproj" />
   </Folder>
-  <Folder Name="/tools/analyzers/" />
 </Solution>

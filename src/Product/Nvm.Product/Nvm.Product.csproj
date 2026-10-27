@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Lớp Product: vai nhà cung cấp sản phẩm (Equipment, Material, MTU, WO, NC,
+    containment, buffer). Dựng ở R3. Chỉ dựa trên Foundation.
+  -->
+
+  <PropertyGroup>
+    <RootNamespace>Nvm.Product</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Foundation/Nvm.Foundation/Nvm.Foundation.csproj" />
+  </ItemGroup>
+
+</Project>

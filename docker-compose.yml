@@ -1,470 +1,60 @@
-# NovaVolt MES — hạ tầng local
+# NovaVolt MOM v2 — hạ tầng local
 #
-# Ranh giới mạng được dựng TRƯỚC khi có service nào, để không bao giờ phải "sửa lại cho
-# đúng" sau. Đây là ràng buộc K11 trong AGENTS.md: service ở tầng IT không có route
-# xuống tầng OT. Trong nhà máy thật đây là chính sách an ninh (IEC 62443 zones &
-# conduits), không phải khuyến nghị.
+# Ba vùng mạng (K11): `ot-net` là phía xưởng (LineDB, line simulator), `it-net` là MOM và hệ
+# doanh nghiệp. Chỉ relay và lệnh đọc tin của Foundation được nối vào LineDB (R5).
 #
 # Profile:
-#   (mặc định)  service cần cho M0-M12
-#   obs         observability stack, bật từ M13 hoặc khi cần debug  (xem plan §2.2)
-#   probe       container rỗng chỉ để kiểm chứng ranh giới mạng
-#   sim         simulator thiết bị của M2 — `make up` thường KHÔNG kéo nó lên
-#   ingestion   HTTP bridge + migration job của M2
-#   execution   POM của M4; fixture/migration chạy tường minh trước khi start
-#   load        harness đo 5.000 msg/s của M2 (D2)
+#   (mặc định)  hạ tầng MOM: SQL Server, RabbitMQ, Keycloak, LineDB, Redpanda, Mailpit
+#   init        job một lần: tạo database SQL Server
 #
-# Mọi service PHẢI khai báo mem_limit: máy chỉ có 15,4 GB và cần biết cái nào ngốn.
+# Observability (OTel, Tempo, Loki, Prometheus, Grafana) quay lại khi Foundation có host ở R1–R2;
+# cấu hình v1 nằm ở tag v1.0.
 #
-# MỌI `ports:` đều bind `127.0.0.1`, không phải `0.0.0.0`. Docker publish mặc định ra mọi interface,
-# nên `5432:5432` nghĩa là Postgres của máy này mở cho cả LAN và cả Wi-Fi quán cà phê — với mật khẩu
-# nằm trong `.env.example` đã commit. Comment "dev-only" không phải một ràng buộc; dòng bind mới là.
-# Muốn cho máy khác vào thật thì sửa có chủ đích ở đúng service đó, đừng bỏ tiền tố này hàng loạt.
-# Xem thêm `make secret-check`: credential local phải khác giá trị example (K13).
+# Mọi service khai báo mem_limit, và mọi `ports:` bind 127.0.0.1: Docker publish mặc định ra mọi
+# interface, và mật khẩu mẫu nằm trong .env.example đã commit.
 
 name: novavolt-mes
 
 networks:
-  # Tầng nhà máy. internal: true = không ra internet, không tới network khác.
-  # Thiết bị và simulator sống ở đây (M2).
-  ot-net:
-    internal: true
-
-  # Vùng đệm. Broker và edge gateway đứng đây làm cầu nối OT <-> IT.
-  dmz-net: {}
-
-  # Hệ thống doanh nghiệp: database, bus, app, Mendix.
+  ot-net: {}
   it-net: {}
 
 volumes:
-  pgdata:
-  grafanadata:
-  simdata:
-  edgedata:
-  ingestdata:
   mssqldata:
   rabbitmqdata:
-  emqxdata:
-  miniodata:
+  linedbdata:
+  redpandadata:
 
 services:
-  projection:
-    profiles: [projection]
-    build:
-      context: .
-      dockerfile: src/Workers/Nvm.ProjectionWorker/Dockerfile
-    image: novavolt/nvm-projection:dev
-    container_name: nvm-projection
-    restart: unless-stopped
-    mem_limit: 256m
-    depends_on:
-      timescale:
-        condition: service_healthy
-      mssql:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-    environment:
-      NVM_OTEL__Endpoint: ${NVM_OTEL_ENDPOINT:-http://otel-collector:4317}
-      OTEL_METRIC_EXPORT_INTERVAL: "15000"
-      NVM_PROJECTIONS__ConnectionString: "Host=timescale;Database=${NVM_POSTGRES_DB};Username=nvm_projection;Password=${NVM_PROJECTION_PG_PASSWORD};GSS Encryption Mode=Disable"
-      NVM_PROJECTIONS__SqlConnectionString: "Server=mssql;Database=NovaVolt;User Id=nvm_projection;Password=${NVM_PROJECTION_SQL_PASSWORD};Encrypt=True;TrustServerCertificate=True;Connect Timeout=3"
-      NVM_PROJECTIONS__Sites: NV1,DE1
-      NVM_RABBITMQ_HOST: rabbitmq
-      NVM_PORT_RABBITMQ: "5672"
-      NVM_RABBITMQ_USER: ${NVM_RABBITMQ_USER}
-      NVM_RABBITMQ_PASSWORD: ${NVM_RABBITMQ_PASSWORD}
-    networks: [it-net]
-    healthcheck:
-      test: ["CMD", "dotnet", "Nvm.ProjectionWorker.dll", "--health-probe"]
-      interval: 10s
-      timeout: 5s
-      retries: 6
-      start_period: 10s
-
-  projection-migrate:
-    profiles: [projection]
-    image: novavolt/nvm-projection:dev
-    restart: "no"
-    mem_limit: 256m
-    environment:
-      NVM_PROJECTIONS__MigrationConnectionString: "Host=timescale;Database=${NVM_POSTGRES_DB};Username=${NVM_POSTGRES_USER};Password=${NVM_POSTGRES_PASSWORD};GSS Encryption Mode=Disable"
-      NVM_PROJECTIONS__SqlMigrationConnectionString: "Server=mssql;Database=NovaVolt;User Id=sa;Password=${NVM_MSSQL_SA_PASSWORD};Encrypt=True;TrustServerCertificate=True"
-      NVM_PROJECTION_PG_PASSWORD: ${NVM_PROJECTION_PG_PASSWORD}
-      NVM_PROJECTION_SQL_PASSWORD: ${NVM_PROJECTION_SQL_PASSWORD}
-    networks: [it-net]
-    command: ["--migrate"]
-
-  execution:
-    profiles: [execution]
-    build:
-      context: .
-      dockerfile: src/Apps/Nvm.App.Execution/Dockerfile
-    image: novavolt/nvm-execution:dev
-    container_name: nvm-execution
-    restart: unless-stopped
-    mem_limit: 384m
-    depends_on:
-      timescale:
-        condition: service_healthy
-      keycloak:
-        condition: service_healthy
-      mssql:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-    environment:
-      NVM_OTEL__Endpoint: ${NVM_OTEL_ENDPOINT:-http://otel-collector:4317}
-      OTEL_METRIC_EXPORT_INTERVAL: "15000"
-      ASPNETCORE_ENVIRONMENT: Development
-      # Lab xác thực password; không thử Kerberos khi image không cài GSSAPI.
-      NVM_POM__ConnectionString: "Host=timescale;Port=5432;Database=${NVM_POSTGRES_DB};Username=nvm_pom;Password=${NVM_POM_PASSWORD};Application Name=Nvm.Pom.Read;Command Timeout=10;GSS Encryption Mode=Disable"
-      NVM_POM__Authority: "http://localhost:${NVM_PORT_KEYCLOAK}/realms/novavolt"
-      NVM_POM__MetadataAddress: "http://keycloak:8080/realms/novavolt/.well-known/openid-configuration"
-      NVM_POM__Audience: nvm-api
-      NVM_COMMANDS__ConnectionString: "Server=mssql;Database=NovaVolt;User Id=nvm_app;Password=${NVM_MSSQL_APP_PASSWORD};Encrypt=True;TrustServerCertificate=True;Connect Timeout=3;Application Name=Nvm.Commands"
-      NVM_RABBITMQ_HOST: rabbitmq
-      NVM_PORT_RABBITMQ: "5672"
-      NVM_RABBITMQ_USER: ${NVM_RABBITMQ_USER}
-      NVM_RABBITMQ_PASSWORD: ${NVM_RABBITMQ_PASSWORD}
-    ports:
-      - "127.0.0.1:${NVM_PORT_EXECUTION:-5081}:8080"
-    networks: [it-net]
-    healthcheck:
-      test: ["CMD", "dotnet", "Nvm.App.Execution.dll", "--health-probe"]
-      interval: 10s
-      timeout: 5s
-      retries: 6
-      start_period: 10s
-
-  execution-prepare-poc:
-    profiles: [execution]
-    image: novavolt/nvm-execution:dev
-    restart: "no"
-    mem_limit: 256m
-    depends_on:
-      timescale:
-        condition: service_healthy
-    environment:
-      ASPNETCORE_ENVIRONMENT: Development
-      NVM_POM__MigrationConnectionString: "Host=timescale;Port=5432;Database=${NVM_POSTGRES_DB};Username=${NVM_POSTGRES_USER};Password=${NVM_POSTGRES_PASSWORD};GSS Encryption Mode=Disable"
-      NVM_POM_PASSWORD: ${NVM_POM_PASSWORD}
-      NVM_POM__FactoryModelPath: /app/seed/factory-model.r3.json
-    networks: [it-net]
-    command: ["--prepare-poc"]
-
-  execution-prepare-commands:
-    profiles: [execution]
-    image: novavolt/nvm-execution:dev
-    restart: "no"
-    mem_limit: 256m
-    depends_on:
-      mssql:
-        condition: service_healthy
-    environment:
-      ASPNETCORE_ENVIRONMENT: Development
-      NVM_COMMANDS__MigrationConnectionString: "Server=mssql;Database=NovaVolt;User Id=sa;Password=${NVM_MSSQL_SA_PASSWORD};Encrypt=True;TrustServerCertificate=True"
-    networks: [it-net]
-    command: ["--prepare-command-fixture"]
-
-  # ─────────────────────────────────────────────────────────
-  # PostgreSQL + TimescaleDB — telemetry và read model
-  #
-  # KHÔNG dùng tag đuôi `-oss`: bản Apache-2 thiếu compression, continuous
-  # aggregate và retention policy — đúng ba thứ scope.md §8.3 cần. Phải là bản
-  # Community (TSL license), tức tag không có hậu tố.
-  # Tag pin cứng, không dùng `latest-pg17`: build hôm nay và build 6 tháng nữa
-  # phải cho cùng kết quả.
-  # ─────────────────────────────────────────────────────────
-  timescale:
-    image: timescale/timescaledb:2.29.2-pg17
-    container_name: nvm-timescale
-    restart: unless-stopped
-    # 2 GiB, không phải 1: `shared_buffers` nằm TRONG hạn mức của container, nên cap 1 GiB ép
-    # Postgres chạy với 128 MB mặc định. Xem `command` bên dưới để biết vì sao con số đó là nút thắt.
-    mem_limit: 2g
-    # /dev/shm mac dinh cua Docker la 64 MB, va Postgres dung no cho parallel worker (Gather,
-    # Parallel Bitmap Heap Scan, hash/sort chia se). Do duoc 2026-09-01 tren truy van muc line
-    # 1.000 kenh: mot trong 12 lan chay chet voi
-    #   could not resize shared memory segment "/PostgreSQL.1939511196" to 8388608 bytes:
-    #   No space left on device
-    # Loi nay NGAU NHIEN va khong lien quan gi toi SQL — no chi phu thuoc co bao nhieu worker
-    # xin bo nho cung luc. Mot dashboard Grafana muc line se gap dung no.
-    shm_size: 1g
-    # Postgres mặc định là cấu hình cho một máy không ai biết trước. Ở đây thì biết: ingestion ghi
-    # liên tục ở N1 vào một bảng vài triệu dòng có HAI index trên UUID ngẫu nhiên
-    # (`source_event_id` là hàm của natural key nên KHÔNG thể sắp theo thời gian được).
-    #
-    # Đo được ở R5: một backend Postgres bão hoà ~1 core và trần đầu-cuối dừng ở 4.300 msg/s, trong
-    # khi `shared_buffers` 128 MB nhỏ hơn working set của các index đó — mỗi lần chèn là một lần
-    # miss rồi đọc lại.
-    #
-    # `synchronous_commit` và `full_page_writes` GIỮ NGUYÊN mặc định (on). Đổi hai cái đó là mua
-    # throughput bằng độ bền, và D1 đòi số row khớp tuyệt đối sau khi kill process.
-    command:
-      - postgres
-      - -c
-      - shared_buffers=768MB
-      - -c
-      - effective_cache_size=2GB
-      - -c
-      - maintenance_work_mem=256MB
-      # Checkpoint thưa hơn: dưới tải ghi liên tục, `max_wal_size` 1 GB mặc định ép checkpoint vài
-      # phút một lần, và mỗi checkpoint kéo theo full-page write cho từng page bị chạm lần đầu.
-      - -c
-      - max_wal_size=8GB
-      - -c
-      - min_wal_size=1GB
-      - -c
-      - checkpoint_timeout=15min
-      - -c
-      - checkpoint_completion_target=0.9
-      - -c
-      - wal_buffers=64MB
-    environment:
-      POSTGRES_DB: ${NVM_POSTGRES_DB}
-      POSTGRES_USER: ${NVM_POSTGRES_USER}
-      POSTGRES_PASSWORD: ${NVM_POSTGRES_PASSWORD}
-    ports:
-      - "127.0.0.1:${NVM_PORT_POSTGRES}:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-      - ./deploy/postgres/init:/docker-entrypoint-initdb.d:ro
-    networks: [it-net]
-    healthcheck:
-      # -h 127.0.0.1 là cố ý, KHÔNG bỏ đi. Trong lúc chạy init script, entrypoint
-      # của Postgres đặt listen_addresses='' và chỉ mở unix socket. `pg_isready`
-      # qua socket sẽ báo sẵn sàng khi schema CHƯA được tạo xong, và service phụ
-      # thuộc sẽ khởi động quá sớm. Ép qua TCP thì chỉ xanh khi init đã xong thật.
-      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
-      interval: 5s
-      timeout: 3s
-      retries: 20
-      # 180s, khong phai 20s. Do duoc 2026-08-31 sau khi dataset D1 nang database tu 5,7 len
-      # 16 GB va tu 61 len 103 chunk: container `Started` luc 09:51:10, healthcheck dau tien
-      # xanh luc 09:53:31 — 141 giay. Ngan sach cu (20s + 20x5s) het truoc moc do, nen
-      # `make up-obs` bao "container nvm-timescale is unhealthy" va BO service phu thuoc lai,
-      # trong khi Postgres hoan toan binh thuong vai giay sau do.
-      #
-      # Day la healthcheck do sai vi du lieu lon len, khong phai Postgres cham di. Nang
-      # start_period chu khong nang retries: start_period la cua so "dang khoi dong", va
-      # that bai trong do KHONG dot vao quota retries — dung ngu nghia can o day.
-      start_period: 180s
-
-  # One-shot: tạo/rotate role chỉ-đọc sau khi migration đã dựng schema ts. Không
-  # nhét password vào SQL hay provisioning file; .env local là nguồn duy nhất.
-  # Cố ý dùng lại image TimescaleDB đã pin để không thêm một image psql trôi version.
-  grafana-db-init:
-    profiles: [init]
-    image: timescale/timescaledb:2.29.2-pg17
-    container_name: nvm-grafana-db-init
-    restart: "no"
-    mem_limit: 128m
-    depends_on:
-      timescale:
-        condition: service_healthy
-    environment:
-      NVM_POSTGRES_DB: ${NVM_POSTGRES_DB}
-      NVM_POSTGRES_USER: ${NVM_POSTGRES_USER}
-      NVM_POSTGRES_PASSWORD: ${NVM_POSTGRES_PASSWORD}
-      NVM_GRAFANA_DB_PASSWORD: ${NVM_GRAFANA_DB_PASSWORD}
-      NVM_GRAFANA_SITES: ${NVM_GRAFANA_SITES}
-    networks: [it-net]
-    entrypoint: ["/bin/sh", "-ec"]
-    command:
-      - |
-        export PGPASSWORD="$$NVM_POSTGRES_PASSWORD"
-        psql --host timescale --username "$$NVM_POSTGRES_USER" --dbname "$$NVM_POSTGRES_DB" \
-          --set ON_ERROR_STOP=1 \
-          --set database="$$NVM_POSTGRES_DB" \
-          --set owner="$$NVM_POSTGRES_USER" \
-          --set grafana_sites="$$NVM_GRAFANA_SITES" \
-          --set grafana_password="$$NVM_GRAFANA_DB_PASSWORD" <<'SQL'
-        DO $$$$
-        BEGIN
-            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'nvm_grafana') THEN
-                CREATE ROLE nvm_grafana LOGIN;
-            END IF;
-        END
-        $$$$;
-        ALTER ROLE nvm_grafana WITH LOGIN PASSWORD :'grafana_password' CONNECTION LIMIT 10;
-        ALTER ROLE nvm_grafana SET statement_timeout = '30s';
-        ALTER ROLE nvm_grafana SET default_transaction_read_only = on;
-        GRANT CONNECT ON DATABASE :"database" TO nvm_grafana;
-
-        -- KHONG cap quyen tren schema ts. Migration 008 dung ts_scoped: view loc theo current_user
-        -- va doc bang goc bang quyen cua chu view. Cap SELECT thang tren ts la mo lai dung cai lo K3
-        -- ma 008 vua dong — mot panel editor la du de doi sang site khac.
-        REVOKE ALL ON ALL TABLES IN SCHEMA ts FROM nvm_grafana;
-        REVOKE ALL ON SCHEMA ts FROM nvm_grafana;
-        ALTER DEFAULT PRIVILEGES FOR ROLE :"owner" IN SCHEMA ts
-            REVOKE SELECT ON TABLES FROM nvm_grafana;
-        GRANT USAGE ON SCHEMA ts_scoped TO nvm_grafana;
-        GRANT SELECT ON ALL TABLES IN SCHEMA ts_scoped TO nvm_grafana;
-        ALTER DEFAULT PRIVILEGES FOR ROLE :"owner" IN SCHEMA ts_scoped
-            GRANT SELECT ON TABLES TO nvm_grafana;
-
-        -- Site nao duoc doc la quyet dinh cua deployment, khong phai cua migration va cang khong
-        -- phai cua dashboard. Doi NVM_GRAFANA_SITES roi chay lai `make up-obs` la duong duy nhat de
-        -- mo rong; DELETE truoc INSERT nen bo mot site khoi bien la thu hoi that.
-        DELETE FROM ts.site_read_grant WHERE role_name = 'nvm_grafana';
-        INSERT INTO ts.site_read_grant (role_name, site_id, reason)
-        SELECT 'nvm_grafana', btrim(site), 'Local obs stack, NVM_GRAFANA_SITES'
-        FROM unnest(string_to_array(:'grafana_sites', ',')) AS site
-        WHERE btrim(site) <> '';
-        SQL
-
-  # Grafana OSS 13.2.0, AGPL-3.0-only, chạy nguyên container chính thức. C13 chỉ
-  # dựng dashboard-as-code; OIDC/authorization theo site được làm cùng Keycloak ở M13.
-  grafana:
-    profiles: [obs]
-    image: grafana/grafana:13.2.0
-    container_name: nvm-grafana
-    restart: unless-stopped
-    mem_limit: 512m
-    depends_on:
-      timescale:
-        condition: service_healthy
-    environment:
-      GF_SECURITY_ADMIN_USER: ${NVM_GRAFANA_ADMIN_USER}
-      GF_SECURITY_ADMIN_PASSWORD: ${NVM_GRAFANA_ADMIN_PASSWORD}
-      GF_USERS_ALLOW_SIGN_UP: "false"
-      GF_AUTH_ANONYMOUS_ENABLED: "false"
-      GF_ANALYTICS_REPORTING_ENABLED: "false"
-      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
-      NVM_POSTGRES_DB: ${NVM_POSTGRES_DB}
-      NVM_GRAFANA_DB_PASSWORD: ${NVM_GRAFANA_DB_PASSWORD}
-    ports:
-      - "127.0.0.1:${NVM_PORT_GRAFANA}:3000"
-    volumes:
-      - grafanadata:/var/lib/grafana
-      - ./deploy/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
-      - ./deploy/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
-      - ./deploy/grafana/dashboards:/var/lib/grafana/dashboards:ro
-    networks: [it-net]
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:3000/api/health"]
-      interval: 5s
-      timeout: 3s
-      retries: 20
-      start_period: 15s
-
-  # ─────────────────────────────────────────────────────────
-  # Observability (M13, ADR-049): host → OTel Collector → Tempo (trace), Loki (log), Prometheus (metric + cảnh báo).
-  # Cùng profile `obs` với Grafana. Collector đứng cả dmz-net để edge-gateway gửi được; nó chỉ nhận, không gọi ra.
-  # Dữ liệu nằm trong container: đây là dữ liệu chẩn đoán cho máy dev, không phải hồ sơ.
-  # ─────────────────────────────────────────────────────────
-  otel-collector:
-    profiles: [obs]
-    image: otel/opentelemetry-collector-contrib:0.140.0
-    container_name: nvm-otel-collector
-    restart: unless-stopped
-    mem_limit: 256m
-    command: ["--config=/etc/otelcol/collector.yaml"]
-    volumes:
-      - ./deploy/otel/collector.yaml:/etc/otelcol/collector.yaml:ro
-    networks: [it-net, dmz-net]
-
-  tempo:
-    profiles: [obs]
-    image: grafana/tempo:2.9.1
-    container_name: nvm-tempo
-    restart: unless-stopped
-    mem_limit: 512m
-    command: ["-config.file=/etc/tempo/tempo.yaml"]
-    volumes:
-      - ./deploy/tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
-    networks: [it-net]
-
-  loki:
-    profiles: [obs]
-    image: grafana/loki:3.6.0
-    container_name: nvm-loki
-    restart: unless-stopped
-    mem_limit: 512m
-    command: ["-config.file=/etc/loki/loki.yaml"]
-    volumes:
-      - ./deploy/loki/loki.yaml:/etc/loki/loki.yaml:ro
-    networks: [it-net]
-
-  prometheus:
-    profiles: [obs]
-    image: prom/prometheus:v3.8.0
-    container_name: nvm-prometheus
-    restart: unless-stopped
-    mem_limit: 512m
-    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.retention.time=2d"]
-    volumes:
-      - ./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ./deploy/prometheus/rules:/etc/prometheus/rules:ro
-    ports:
-      - "127.0.0.1:${NVM_PORT_PROMETHEUS:-9090}:9090"
-    networks: [it-net]
-
-  alertmanager:
-    profiles: [obs]
-    image: prom/alertmanager:v0.34.1
-    container_name: nvm-alertmanager
-    restart: unless-stopped
-    mem_limit: 128m
-    command: ["--config.file=/etc/alertmanager/alertmanager.yml"]
-    volumes:
-      - ./deploy/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
-    ports:
-      - "127.0.0.1:${NVM_PORT_ALERTMANAGER:-9093}:9093"
-    networks: [it-net]
-
-  # ─────────────────────────────────────────────────────────
-  # SQL Server — event store và write model
-  #
-  # Chọn có chủ đích để bám sát Opcenter thật: kiến trúc tham chiếu của Siemens
-  # dùng SQL Server làm primary data store. Bản 2022 chứ không phải 2025 — MES
-  # trong nhà máy hiếm khi chạy phiên bản mới nhất.
-  #
-  # Đây là service ngốn RAM nhất (2 GB / 8 GB quota Docker) và khởi động chậm nhất,
-  # nên nó là đường găng của D1 (`make up` < 5 phút).
-  # ─────────────────────────────────────────────────────────
+  # DB MOM của một plant, như DB của Opcenter: mọi app của plant dùng chung (K3).
+  # SQL Agent bật để chạy cleaning rules ở R12.
   mssql:
     image: mcr.microsoft.com/mssql/server:2022-CU26-ubuntu-22.04
     container_name: nvm-mssql
     restart: unless-stopped
-    # SQL Server TỪ CHỐI khởi động nếu dưới 2 GB. Đừng hạ xuống để tiết kiệm.
+    # SQL Server từ chối khởi động nếu dưới 2 GB.
     mem_limit: 2g
     environment:
       ACCEPT_EULA: "Y"
       MSSQL_PID: Developer
-      # MSSQL_SA_PASSWORD, không phải SA_PASSWORD — biến cũ đã deprecated.
       MSSQL_SA_PASSWORD: ${NVM_MSSQL_SA_PASSWORD}
-      MSSQL_AGENT_ENABLED: "false"
+      MSSQL_AGENT_ENABLED: "true"
     ports:
       - "127.0.0.1:${NVM_PORT_MSSQL}:1433"
     volumes:
       - mssqldata:/var/opt/mssql
     networks: [it-net]
     healthcheck:
-      # Chỉ hỏi "server trả lời được chưa", CỐ Ý không hỏi database NovaVolt đã có chưa.
-      # Nếu hỏi, sẽ khoá chết: mssql-init cần server healthy mới chạy được, mà server
-      # lại cần init xong mới healthy. Service phụ thuộc về sau chờ mssql-init, không
-      # chờ mssql. Xem C07.2 trong plan.
-      # -C là bắt buộc: mssql-tools18 mặc định encrypt=yes, mà cert của server là self-signed.
+      # Chỉ hỏi server trả lời được chưa: mssql-init cần server healthy mới chạy được.
+      # -C bắt buộc: mssql-tools18 mặc định encrypt=yes, cert của server là self-signed.
       test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -b -Q 'SELECT 1' || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 20
       start_period: 45s
 
-  # Chạy một lần rồi thoát. SQL Server không có cơ chế /docker-entrypoint-initdb.d
-  # như Postgres, nên phải tự dựng bước này.
-  # Script phải IDEMPOTENT vì nó chạy lại ở mọi lần `up`.
+  # Profile `init`: `up --wait` coi container đã thoát là thất bại, kể cả thoát 0.
   mssql-init:
-    # Profile `init` là BẮT BUỘC, không phải để cho gọn.
-    # `docker compose up --wait` coi mọi container ĐÃ THOÁT là thất bại, kể cả khi
-    # thoát 0. Đo được: up --wait chỉ với timescale+mssql -> exit 0; thêm mssql-init
-    # vào -> exit 1 dù nó thoát 0. Để nó ngoài profile mặc định thì `up --wait` sạch,
-    # còn init chạy bằng một bước riêng có mã thoát thật:
-    #     docker compose up -d --wait
-    #     docker compose run --rm mssql-init
-    # `make up` ở C11 gộp đúng hai bước này.
     profiles: [init]
     image: mcr.microsoft.com/mssql/server:2022-CU26-ubuntu-22.04
     container_name: nvm-mssql-init
@@ -480,44 +70,21 @@ services:
       - ./deploy/mssql/init:/init:ro
     networks: [it-net]
     entrypoint: ["/bin/bash", "-c"]
-    # -b: thoát với mã lỗi khi SQL lỗi. Thiếu cờ này thì service_completed_successfully
-    # vô nghĩa vì container vẫn thoát 0 dù script hỏng.
-    #
-    # PHẢI là list một phần tử. Nếu viết `command: >` dạng scalar, Compose tách chuỗi
-    # theo khoảng trắng thành 14 tham số rời, và `bash -c` chỉ lấy tham số đầu làm
-    # script — sqlcmd sẽ chạy trần không có đối số nào.
+    # Phải là list một phần tử: dạng scalar bị Compose tách thành nhiều tham số rời.
     command:
       - >
         /opt/mssql-tools18/bin/sqlcmd -S mssql -U sa -P "$$MSSQL_SA_PASSWORD" -C -b
         -v AppPassword="$$NVM_MSSQL_APP_PASSWORD"
         -i /init/01-database.sql
 
-  # ─────────────────────────────────────────────────────────
-  # RabbitMQ — Manufacturing Service Bus
-  #
-  # Đây là hiện thân của "Bus-Centric Design", nguyên tắc thiết kế số 1 của
-  # Opcenter Execution Foundation. Mọi giao tiếp giữa các Functional Block đi qua
-  # đây, không gọi thẳng nhau. Lý do không phải thẩm mỹ mà là N15: MES chết thì
-  # dây chuyền vẫn phải chạy, nên không được có lời gọi đồng bộ nào từ dưới lên.
-  # ─────────────────────────────────────────────────────────
+  # Bus event của Foundation: event lưu lúc commit rồi phát lên đây (R2).
   rabbitmq:
     image: rabbitmq:4.3.5-management
     container_name: nvm-rabbitmq
     restart: unless-stopped
     mem_limit: 512m
-    # Erlang node name bam theo hostname, va hostname mac dinh cua Docker la container id — moi lan
-    # `up` sau mot `down` la mot NODE MOI, va node cu bi bo lai nguyen trong volume. Do duoc
-    # 2026-09-01: volume chua 5 thu muc `rabbit@<id>`, cai bi bo roi lon nhat giu 4,1 MB, con node
-    # dang chay bao 0 queue. Trong ca thang M2/M3 khong ai thay vi khong co gi durable ton tai du
-    # lau de mat — nhung mot bus "at-least-once" ma state bien mat moi lan recreate thi khong the
-    # goi la at-least-once (K12, N15).
-    #
-    # Ghim vao DUNG luc nay la re nhat co the: node hien tai giu 0 queue, 0 exchange tu tao, mot
-    # vhost mac dinh va mot user sinh lai duoc tu .env. Tuc la defect da pha sach roi, nen viec sua
-    # no khong ton gi. Sau day thi state bat dau song that, va moi `down`/`up` giu nguyen.
-    #
-    # `hostname` chu khong phai RABBITMQ_NODENAME: mot bien moi truong bi bo qua neu ai do chay
-    # container bang tay, con hostname thi khong.
+    # Node name bám hostname; hostname mặc định là container id nên mỗi lần recreate là một node
+    # mới và state durable bị bỏ lại trong volume.
     hostname: nvm-rabbitmq
     environment:
       RABBITMQ_DEFAULT_USER: ${NVM_RABBITMQ_USER}
@@ -529,429 +96,103 @@ services:
       - rabbitmqdata:/var/lib/rabbitmq
     networks: [it-net]
     healthcheck:
-      # `ping` chỉ xác nhận Erlang node trả lời, chưa nói gì về việc broker nhận
-      # được message. check_running + check_local_alarms mới là bộ kiểm chuẩn:
-      # cái sau bắt được tình trạng broker còn sống nhưng đã chặn publisher vì
-      # hết bộ nhớ hoặc hết đĩa — đúng kiểu hỏng âm thầm ở M2 khi bơm 5.000 msg/s.
       test: ["CMD-SHELL", "rabbitmq-diagnostics -q check_running && rabbitmq-diagnostics -q check_local_alarms"]
       interval: 10s
       timeout: 10s
       retries: 12
       start_period: 30s
 
-  # ─────────────────────────────────────────────────────────
-  # EMQX — MQTT broker, Unified Namespace
-  #
-  # CỐ Ý không nằm trên it-net. Nó bắc cầu ot-net <-> dmz-net, đúng vai trò
-  # probe-dmz đã mô phỏng ở C05. Service .NET muốn nghe MQTT phải qua
-  # Nvm.EdgeGateway đứng ở dmz-net (M2), không được nối thẳng.
-  # Nếu thấy bất tiện, đó là dấu hiệu ranh giới đang hoạt động đúng.
-  #
-  # CỐ Ý KHÔNG CÓ `ports:` — đây là service duy nhất chạm ot-net.
-  #
-  # Publish port ra host mở lại đúng cái đường vừa chặn: container trên it-net
-  # không tới được `nvm-emqx:1883`, nhưng tới được `host.docker.internal:1883`.
-  # Đo được, không phải lo xa. Bind `127.0.0.1` KHÔNG cứu: proxy của Docker
-  # Desktop nối tới host qua chính loopback, nên container it-net vẫn vào được
-  # một port đã bind loopback. Cả hai số đo ở docs/plans/M0-bootstrap.md §C08.4.
-  #
-  # Muốn dùng MQTT hoặc gọi dashboard API lúc dev: `make dmz-shell`.
-  # ─────────────────────────────────────────────────────────
-  emqx:
-    image: emqx/emqx:5.10.4
-    container_name: nvm-emqx
-    restart: unless-stopped
-    # 512m KHÔNG đủ: đo được 411 MiB ngay lúc rảnh (80%), và EMQX bật cảnh báo
-    # high_system_memory_usage ở ngưỡng 70%. Broker trong trạng thái cảnh báo sẽ
-    # chặn publisher — đúng thứ sẽ giết mục tiêu 5.000 msg/s ở M2.
-    mem_limit: 1g
-    environment:
-      # Tên node phải ổn định, nếu không EMQX coi mỗi lần khởi động là một node
-      # mới và bỏ lại dữ liệu cũ trong volume.
-      EMQX_NODE__NAME: emqx@nvm-emqx
-      EMQX_DASHBOARD__DEFAULT_USERNAME: ${NVM_EMQX_USER}
-      EMQX_DASHBOARD__DEFAULT_PASSWORD: ${NVM_EMQX_PASSWORD}
-      # Gateway ACK chỉ sau fsync. Cửa sổ 32 mặc định đo được ép batch 128 xuống đúng 32 record,
-      # khiến receiver chỉ đạt ~939 msg/s và broker drop 245.165/300.000 message trong 60 giây.
-      #
-      # 512 chứ không phải 128: cửa sổ phải chứa được số message đang chờ fsync ở CẢ hai chiều —
-      # broker gửi xuống gateway, và harness gửi lên broker. Đo 2026-08-29: nâng 32 lên 256 đưa
-      # batch fsync về đúng 128 record; nâng tiếp 256 lên 512 KHÔNG đổi trần (5.119 so với 5.104
-      # msg/s), vì trần nằm ở chi phí fan-out của chính EMQX, không nằm ở cửa sổ.
-      EMQX_MQTT__MAX_INFLIGHT: "512"
-      # Không chữa throughput bằng queue. 16.384 chỉ hấp thụ burst dropout đã đo 1.627 message và
-      # tối đa khoảng hai giây reconnect ở 5.000 msg/s; gate D2 vẫn bắt receiver chậm kéo dài.
-      EMQX_MQTT__MAX_MQUEUE_LEN: "16384"
-    volumes:
-      - emqxdata:/opt/emqx/data
-    networks: [ot-net, dmz-net]
-    healthcheck:
-      # KHÔNG dùng `emqx ctl status`: lệnh đó đi qua Erlang distribution và trong
-      # image này báo "not responding to pings" dù broker chạy hoàn toàn bình thường
-      # (endpoint /status trả 200, log ghi "EMQX is running now").
-      # Kiểm qua HTTP đúng nguyên tắc đã dùng ở C06.2 và C07.2: healthcheck phải
-      # thử đúng đường mà consumer thật đi, không phải đường ống nội bộ.
-      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://localhost:18083/status"]
-      interval: 10s
-      timeout: 5s
-      retries: 12
-      start_period: 30s
-
-  # ─────────────────────────────────────────────────────────
-  # MinIO — object storage cho evidence
-  #
-  # Ảnh vision, đường cong formation thô, log máy. Trong DB chỉ lưu key + SHA-256.
-  # Quy tắc scope.md §5.5: KHÔNG BAO GIỜ để blob trong DB giao dịch.
-  # ─────────────────────────────────────────────────────────
-  minio:
-    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
-    container_name: nvm-minio
-    restart: unless-stopped
-    mem_limit: 512m
-    command: ["server", "/data", "--console-address", ":9001"]
-    environment:
-      MINIO_ROOT_USER: ${NVM_MINIO_USER}
-      MINIO_ROOT_PASSWORD: ${NVM_MINIO_PASSWORD}
-    ports:
-      - "127.0.0.1:${NVM_PORT_MINIO}:9000"
-      - "127.0.0.1:${NVM_PORT_MINIO_UI}:9001"
-    volumes:
-      - miniodata:/data
-    networks: [it-net]
-    healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
-      interval: 10s
-      timeout: 5s
-      retries: 12
-      start_period: 20s
-
-  # One-shot: tạo bucket rồi thoát. Cùng profile `init` với mssql-init, cùng lý do
-  # đã ghi ở C07.1 — `up --wait` coi container đã thoát là thất bại.
-  minio-init:
-    profiles: [init]
-    image: minio/mc:RELEASE.2025-08-13T08-35-41Z
-    container_name: nvm-minio-init
-    restart: "no"
-    mem_limit: 128m
-    depends_on:
-      minio:
-        condition: service_healthy
-    environment:
-      NVM_MINIO_USER: ${NVM_MINIO_USER}
-      NVM_MINIO_PASSWORD: ${NVM_MINIO_PASSWORD}
-    networks: [it-net]
-    entrypoint: ["/bin/sh", "-c"]
-    command:
-      - >
-        mc alias set nvm http://minio:9000 "$$NVM_MINIO_USER" "$$NVM_MINIO_PASSWORD" &&
-        mc mb --ignore-existing nvm/evidence &&
-        mc mb --ignore-existing nvm/vision &&
-        mc mb --ignore-existing --with-lock nvm/raw-curve &&
-        mc retention set --default COMPLIANCE 15y nvm/raw-curve &&
-        mc retention info --default nvm/raw-curve &&
-        mc ls nvm
-
-  # ─────────────────────────────────────────────────────────
-  # Keycloak — identity provider cho cả .NET lẫn Mendix
-  #
-  # Cổng 8081 chứ không phải 8080: Mendix Studio Pro chạy app local ở 8080 và đổi
-  # nó phiền hơn. Quyết định chốt ở C05, ghi trong .env.example.
-  #
-  # start-dev dùng H2 nhúng — chỉ hợp môi trường học. Production cần DB thật.
-  # ─────────────────────────────────────────────────────────
+  # Danh tính và role. Realm vẫn là bản v1, viết lại theo vai v2 ở R2.
   keycloak:
     image: quay.io/keycloak/keycloak:26.7.2
     container_name: nvm-keycloak
     restart: unless-stopped
-    # 768m đo được 597 MiB (78%) ngay lúc rảnh, chưa có ai đăng nhập. JVM sát trần
-    # thì lần đầu Mendix đăng nhập hàng loạt ở M4 sẽ bị OOM-kill. Nâng lên 1g.
     mem_limit: 1g
     command: ["start-dev", "--import-realm"]
     environment:
-      # KC 26 đổi tên biến: KEYCLOAK_ADMIN cũ đã deprecated.
       KC_BOOTSTRAP_ADMIN_USERNAME: ${NVM_KEYCLOAK_ADMIN}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${NVM_KEYCLOAK_PASSWORD}
       KC_HEALTH_ENABLED: "true"
     ports:
       - "127.0.0.1:${NVM_PORT_KEYCLOAK}:8080"
+    # Không có volume cho H2: mỗi lần recreate là import lại realm từ file (realm-as-code).
     volumes:
       - ./deploy/keycloak:/opt/keycloak/data/import:ro
-    # CỐ Ý không có volume cho H2.
-    #
-    # Lý do kỹ thuật: named volume gắn vào /opt/keycloak/data/h2 được Docker tạo với
-    # chủ sở hữu root, còn Keycloak chạy bằng uid 1000, nên H2 chết với
-    # AccessDeniedException ngay lúc khởi động.
-    #
-    # Nhưng lý do THIẾT KẾ mới là cái đáng giữ: không có volume thì mỗi lần recreate
-    # là một lần import lại realm từ file. File JSON trong git trở thành nguồn sự thật
-    # duy nhất, và mọi thay đổi bấm tay trong console đều biến mất nếu không giữ H2 — buộc thay đổi phải
-    # đi qua realm-novavolt.json và được commit. Đây là realm-as-code.
     networks: [it-net]
     healthcheck:
-      # Health của KC 26 nằm ở MANAGEMENT PORT 9000, không phải 8080. Image lại
-      # không có curl/wget, nên phải mở socket bằng bash. Xem C09.2 trong plan.
+      # Health của KC 26 ở management port 9000; image không có curl nên mở socket bằng bash.
       test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && grep -q '\"status\": \"UP\"' <&3"]
       interval: 10s
       timeout: 5s
       retries: 20
       start_period: 40s
 
-  # ─────────────────────────────────────────────────────────
-  # Nvm.Simulator — thiết bị giả của M2
-  #
-  # `networks: [ot-net]` VÀ CHỈ THẾ. Đây là ràng buộc, không phải cấu hình: một
-  # simulator có thêm chân it-net sẽ publish thẳng lên RabbitMQ được, và đó là dựng
-  # lại đúng lỗ hổng M0/R1 đã bịt (K11). `scripts/sim-net-check.sh` kiểm đúng dòng này —
-  # nó đọc danh sách network của container, không chỉ đo định tuyến, vì thêm một
-  # network vào đây là thay đổi không phép đo định tuyến nào từ probe khác thấy được.
-  #
-  # Chạy trong container chứ không `dotnet run` trên Windows: máy Windows là tầng IT,
-  # và nối `localhost:1883` từ đó là tự tay mở lại đường vòng qua port host
-  # (docs/scope.md §13.1, R-M2-2). Bất tiện lúc dev thì dùng `make dmz-shell`.
-  #
-  # Fault BẬT ở đây, tắt trong code. Đây là "lab" mà C06 nói tới: một fault bật mặc
-  # định trong code sẽ bị quên, và rồi mọi con số của M2 có một thành phần không ai khai.
-  # ─────────────────────────────────────────────────────────
-  simulator:
-    profiles: [sim]
-    build:
-      context: .
-      dockerfile: src/Workers/Nvm.Simulator/Dockerfile
-    image: novavolt/nvm-simulator:dev
-    container_name: nvm-simulator
+  # Database phía xưởng: máy ghi bảng ở đây, trigger chép sang bảng trung gian chờ MOM đọc (R5).
+  # Ở ot-net và it-net: vai của nó là chỗ giao duy nhất giữa hai vùng; quyền vào schema trung
+  # gian giới hạn bằng role riêng ở R5.
+  linedb:
+    image: postgres:17.6
+    container_name: nvm-linedb
     restart: unless-stopped
-    mem_limit: 256m
-    depends_on:
-      emqx:
-        condition: service_healthy
+    mem_limit: 512m
     environment:
-      DOTNET_ENVIRONMENT: Production
-      # Tên service trên ot-net. Không có host, không có IP, không có port host.
-      NVM_SIM__BrokerHost: emqx
-      NVM_SIM__LinePath: NOVAVOLT/NV1/FORMATION/F1
-      # 60x: một phút thời gian nhà máy mỗi giây đồng hồ, nên chu kỳ 18 giờ xong trong
-      # 18 phút và một buổi lab nhìn thấy được cả birth lẫn vòng cell mới.
-      # NVM_SIM_COMPRESSION la cong tac cua lab D1: dat 1 de chay theo dong ho THAT.
-      # Nen thoi gian lam device_timestamp vuot len truoc gateway_timestamp, nen moi row
-      # thanh Drifted va lag thanh AM — so dem row van dung, hai cot kia thi vo nghia.
-      NVM_SIM__TimeCompression: "${NVM_SIM_COMPRESSION:-60}"
-      NVM_SIM__Faults__DuplicateRate: "0.10"
-      NVM_SIM__Faults__DriftedDeviceRate: "0.10"
-      NVM_SIM__Faults__DropoutMeanInterval: "00:05:00"
-      NVM_SIM__Faults__DropoutDuration: "00:00:30"
+      POSTGRES_DB: ${NVM_LINEDB_DB}
+      POSTGRES_USER: ${NVM_LINEDB_USER}
+      POSTGRES_PASSWORD: ${NVM_LINEDB_PASSWORD}
+    ports:
+      - "127.0.0.1:${NVM_PORT_LINEDB}:5432"
     volumes:
-      - simdata:/var/lib/nvm-simulator
-    networks: [ot-net]
-
-  # ─────────────────────────────────────────────────────────
-  # Nvm.EdgeGateway — conduit từ OT sang ingestion
-  #
-  # Chỉ một chân ở dmz-net. EMQX có chân thứ hai ở ot-net và là thứ duy nhất mang traffic
-  # thiết bị qua ranh giới; gateway không đứng cạnh thiết bị và không nhìn thấy RabbitMQ.
-  # `scripts/edge-net-check.sh` đo trên network namespace thật của container.
-  #
-  # POST thất bại giữ nguyên cursor của buffer; message đã fsync không bị biến thành loss chỉ vì
-  # ingestion chưa sẵn sàng.
-  #
-  # NVM_EDGE_FLUSH_RATE là công tắc A/B của lab §5.C10.3. Mặc định **0 = không có trần tĩnh**,
-  # chốt 2026-08-30 (G3): lab đo đường ống xả 13.224 msg/s, nên trần 12.000 cũ nằm DƯỚI khả năng
-  # thật và chỉ làm hồi phục chậm hơn 165 giây mà không chặn được gì — ingestion chưa từng trả
-  # 429/503. Phanh thật là closed-loop: 429/503 + Retry-After. Xem ADR-029 §Evidence.
-  # ─────────────────────────────────────────────────────────
-  edge-gateway:
-    build:
-      context: .
-      dockerfile: src/Workers/Nvm.EdgeGateway/Dockerfile
-    image: novavolt/nvm-edge-gateway:dev
-    container_name: nvm-edge-gateway
-    restart: unless-stopped
-    mem_limit: 256m
-    depends_on:
-      emqx:
-        condition: service_healthy
-    environment:
-      NVM_OTEL__Endpoint: ${NVM_OTEL_ENDPOINT:-http://otel-collector:4317}
-      OTEL_METRIC_EXPORT_INTERVAL: "15000"
-      DOTNET_ENVIRONMENT: Production
-      NVM_EDGE__BrokerHost: emqx
-      # Công tắc topology: `seed` là 8 kênh của demo, `seed-load` là 1.000 kênh của bài test/load
-      # (deploy/seed-load/). Harness phải đặt CÙNG giá trị, nếu không gateway từ chối mọi topic.
-      NVM_EDGE__SeedDirectory: "${NVM_SEED_DIR:-seed}"
-      NVM_EDGE__IngestionUrl: http://ingestion:8080/api/ingestion/v1/sparkplug-batches
-      NVM_EDGE__LogEvery: "1000"
-      NVM_EDGE__Buffer__DirectoryPath: /var/lib/nvm-edge-gateway/buffer
-      NVM_EDGE__Buffer__FlushMessagesPerSecond: "${NVM_EDGE_FLUSH_RATE:-0}"
-      NVM_EDGE__Buffer__FlushBurstMessages: "${NVM_EDGE_FLUSH_RATE:-0}"
-      # Flusher là một vòng lặp tuần tự: đọc batch, POST, tiến cursor. Trần của nó đúng bằng
-      # batch size chia round trip, nên đây là công tắc A/B để đo xem 4.300 msg/s là do batch
-      # quá nhỏ hay do PostgreSQL đã bão hoà. Không đoán, đo rồi mới chốt default.
-      NVM_EDGE__Buffer__FlushBatchSize: "${NVM_EDGE_FLUSH_BATCH:-1024}"
-    volumes:
-      - edgedata:/var/lib/nvm-edge-gateway
-    networks: [dmz-net]
-
-  # ─────────────────────────────────────────────────────────
-  # Nvm.Ingestion — cầu DMZ -> IT duy nhất của đường telemetry
-  #
-  # Service phục vụ HTTP KHÔNG tự đổi schema lúc startup. `make ingestion-up` chạy job migration
-  # riêng trước, đúng scope.md §8.4. Không publish port ra host: gateway gọi bằng service DNS trên
-  # dmz-net, còn PostgreSQL chỉ nhìn thấy từ chân it-net.
-  # ─────────────────────────────────────────────────────────
-  ingestion:
-    profiles: [ingestion]
-    build:
-      context: .
-      dockerfile: src/Workers/Nvm.Ingestion/Dockerfile
-    image: novavolt/nvm-ingestion:dev
-    container_name: nvm-ingestion
-    restart: unless-stopped
-    mem_limit: 256m
-    depends_on:
-      timescale:
-        condition: service_healthy
-    environment:
-      NVM_OTEL__Endpoint: ${NVM_OTEL_ENDPOINT:-http://otel-collector:4317}
-      OTEL_METRIC_EXPORT_INTERVAL: "15000"
-      DOTNET_ENVIRONMENT: Production
-      NVM_INGEST__ConnectionString: "Host=timescale;Port=5432;Database=${NVM_POSTGRES_DB};Username=${NVM_POSTGRES_USER};Password=${NVM_POSTGRES_PASSWORD};Application Name=Nvm.Ingestion"
-      NVM_INGEST__BusHost: rabbitmq
-      NVM_INGEST__BusUsername: ${NVM_RABBITMQ_USER}
-      NVM_INGEST__BusPassword: ${NVM_RABBITMQ_PASSWORD}
-      # Whitelist một signal code RIÊNG cho kết quả cuối đã đánh giá. Đường cong thô mang tên
-      # Formation/Capacity và không bao giờ nằm trong danh sách này, nên nó dừng ở TimescaleDB kể cả
-      # sau M7 — khi channel đã ánh xạ được vào cell và mọi reading thô cũng sẽ có UnitId.
-      # Tính "đã đánh giá" phải nằm ở TÊN tín hiệu, không suy ra từ việc có UnitId hay không.
-      NVM_INGEST__PublishedSignals__0: Formation/CapacityResult
-      # File drop của C15: máy EOL cũ xuất CSV lên share. Cùng cửa dedup với đường MQTT.
-      NVM_INGEST__FileDrop__Enabled: "true"
-      NVM_INGEST__FileDrop__InboxPath: /var/lib/nvm-ingestion/inbox
-      NVM_INGEST__FileDrop__ProcessedPath: /var/lib/nvm-ingestion/processed
-      NVM_INGEST__FileDrop__RejectedPath: /var/lib/nvm-ingestion/rejected
-      # Hop dong publish: exporter ghi ra ten tam, dong file, roi rename NGUYEN TU thanh
-      # `<ten>.csv.ready`. Chinh phep rename do la publish, va do la thu duy nhat adapter doc.
-      # Doi ten mot file KHONG dong handle ma exporter dang giu — tren NFS no van ghi tiep vao cung
-      # inode sau khi ingestion da claim, va ingestion luu nua run roi xoa phan duoi cung claim.
-      # Readiness nam trong CHINH TEN file chu khong o mot file marker ben canh: hai file thi phai
-      # lay bang hai lan rename, va producer publish lai giua hai lan do lam nguoi doc lay byte cua
-      # export nay duoi readiness cua export khac (ADR-035, probe PAIR_RACE).
-      # Bat buoc co hau to publish; gia tri rong bi tu choi khi khoi dong (ADR-036).
-      NVM_INGEST__FileDrop__PublishedSuffix: .ready
-      # C12: byte GOC cua moi file drop di thang len bucket WORM `raw-curve` (object lock COMPLIANCE
-      # 15 nam, do minio-init dung). Truoc audit M3, `RawCurveArchiveStore` chi duoc goi tu integration
-      # test — tuc la M3 co primitive luu ban goc chu chua co luong nao that su luu.
-      NVM_INGEST__RawCurveArchive__Enabled: "true"
-      NVM_INGEST__RawCurveArchive__ServiceUrl: http://minio:9000
-      NVM_INGEST__RawCurveArchive__AccessKey: ${NVM_MINIO_USER}
-      NVM_INGEST__RawCurveArchive__SecretKey: ${NVM_MINIO_PASSWORD}
-    volumes:
-      - ingestdata:/var/lib/nvm-ingestion
-    networks: [dmz-net, it-net]
+      - linedbdata:/var/lib/postgresql/data
+    networks: [ot-net, it-net]
     healthcheck:
-      test: ["CMD", "dotnet", "Nvm.Ingestion.dll", "--health-probe", "http://127.0.0.1:8080/health/ready"]
+      # -h 127.0.0.1: trong lúc chạy init script, Postgres chỉ mở unix socket; ép qua TCP thì chỉ
+      # xanh khi init đã xong thật.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 30s
+
+  # Kafka API cho gateway (R11): lịch xe của nhà cung cấp và đơn của khách đi qua Kafka như ở dự án thật.
+  redpanda:
+    image: redpandadata/redpanda:v25.2.10
+    container_name: nvm-redpanda
+    restart: unless-stopped
+    mem_limit: 1g
+    command:
+      - redpanda
+      - start
+      - --mode=dev-container
+      - --smp=1
+      - --memory=512M
+      - --overprovisioned
+      - --kafka-addr=internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr=internal://redpanda:9092,external://localhost:${NVM_PORT_KAFKA}
+    ports:
+      - "127.0.0.1:${NVM_PORT_KAFKA}:19092"
+    volumes:
+      - redpandadata:/var/lib/redpanda/data
+    networks: [it-net]
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -E 'Healthy:.+true' || exit 1"]
+      interval: 10s
       timeout: 5s
       retries: 20
+      start_period: 20s
+
+  # Bắt mọi email MOM gửi (danh sách pallet staged, xe rời, skid chưa nhận…); xem ở giao diện web.
+  mailpit:
+    image: axllent/mailpit:v1.27.10
+    container_name: nvm-mailpit
+    restart: unless-stopped
+    mem_limit: 128m
+    ports:
+      - "127.0.0.1:${NVM_PORT_SMTP}:1025"
+      - "127.0.0.1:${NVM_PORT_MAIL_UI}:8025"
+    networks: [it-net]
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
       start_period: 10s
-
-  ingestion-migrate:
-    profiles: [ingestion]
-    image: novavolt/nvm-ingestion:dev
-    container_name: nvm-ingestion-migrate
-    restart: "no"
-    mem_limit: 256m
-    depends_on:
-      timescale:
-        condition: service_healthy
-    environment:
-      DOTNET_ENVIRONMENT: Production
-      NVM_INGEST__ConnectionString: "Host=timescale;Port=5432;Database=${NVM_POSTGRES_DB};Username=${NVM_POSTGRES_USER};Password=${NVM_POSTGRES_PASSWORD};Application Name=Nvm.Ingestion.Migrate"
-    networks: [it-net]
-    command: ["--migrate"]
-
-  # ─────────────────────────────────────────────────────────
-  # Nvm.LoadHarness — phép đo D2, chạy TRONG ot-net
-  #
-  # Cùng chân mạng với simulator vì nó GIẢ LÀM thiết bị: nếu chạy ngoài ot-net thì phép đo
-  # là phép đo của một đường đi không tồn tại trong production (scope.md §13.1, R-M2-2).
-  #
-  # KHÔNG bật fault lệch đồng hồ. Lag của D2 là hiệu HAI đồng hồ, nên một đồng hồ sai sẽ được
-  # đo thành độ trễ đường ống. Điều này phải ghi ngay cạnh mọi con số harness sinh ra.
-  # ─────────────────────────────────────────────────────────
-  load-harness:
-    profiles: [load]
-    build:
-      context: .
-      dockerfile: tools/loadgen/Nvm.LoadHarness/Dockerfile
-    image: novavolt/nvm-load-harness:dev
-    container_name: nvm-load-harness
-    restart: "no"
-    mem_limit: 512m
-    depends_on:
-      emqx:
-        condition: service_healthy
-    environment:
-      DOTNET_ENVIRONMENT: Production
-      NVM_LOAD_BROKER_HOST: emqx
-      NVM_LOAD_LINE_PATH: NOVAVOLT/NV1/FORMATION/F1
-      # Cùng công tắc topology với gateway. Xem NVM_EDGE__SeedDirectory.
-      NVM_LOAD_SEED_DIRECTORY: "${NVM_SEED_DIR:-seed}"
-      NVM_LOAD_RATE: "${NVM_LOAD_RATE:-5000}"
-      NVM_LOAD_DURATION_SECONDS: "${NVM_LOAD_DURATION:-600}"
-      # Một MQTT session đại diện EDGE-F1; concurrency chỉ là cửa sổ QoS 1 đang chờ ACK.
-      NVM_LOAD_MAX_IN_FLIGHT: "${NVM_LOAD_MAX_IN_FLIGHT:-256}"
-    networks: [ot-net]
-
-  # Hai container rỗng, chỉ tồn tại để chứng minh ranh giới mạng có thật.
-  # Không chạy trong `make up` thường — cần `--profile probe`.
-  probe-ot:
-    profiles: [probe]
-    image: alpine:3.21
-    container_name: nvm-probe-ot
-    command: ["sleep", "infinity"]
-    mem_limit: 32m
-    networks: [ot-net]
-
-  # Đứng hai chân trên ot-net và dmz-net — đúng vai trò EMQX sẽ đảm nhận ở C08.
-  # Đây là con đường HỢP LỆ duy nhất để dữ liệu từ tầng nhà máy đi lên.
-  #
-  # Dùng image mosquitto chứ không phải alpine: `scripts/net-check.sh` cần chứng
-  # minh đường hợp lệ bằng một vòng pub/sub MQTT THẬT, không chỉ bằng một cú bắt
-  # tay TCP. Cùng lý do đã ghi ở C08.4 — thất bại hay thành công đều phải đúng
-  # lý do, không chỉ đúng exit code.
-  probe-dmz:
-    profiles: [probe]
-    image: eclipse-mosquitto:2.0.22
-    container_name: nvm-probe-dmz
-    command: ["sleep", "infinity"]
-    mem_limit: 32m
-    networks: [ot-net, dmz-net]
-
-  probe-it:
-    profiles: [probe]
-    image: alpine:3.21
-    container_name: nvm-probe-it
-    command: ["sleep", "infinity"]
-    mem_limit: 32m
-    networks: [it-net]
-
-  # ─────────────────────────────────────────────────────────
-  # dmz-shell — bàn làm việc của người phát triển, đặt trong DMZ
-  #
-  # Sau khi EMQX bỏ `ports:`, đây là đường HỢP LỆ để một con người chạm tới
-  # MQTT: bước vào vùng đệm rồi làm việc từ trong đó. Trong nhà máy thật, kỹ sư
-  # không nối thẳng laptop vào mạng thiết bị mà đi qua một jump host ở DMZ —
-  # container này chính là jump host đó, thu nhỏ.
-  #
-  # CHỈ có chân dmz-net, KHÔNG có ot-net. Một máy trạm của người dùng không được
-  # đứng hai chân sang tầng thiết bị. probe-dmz có hai chân vì nó mô phỏng EMQX,
-  # là thiết bị hạ tầng, không phải người.
-  # ─────────────────────────────────────────────────────────
-  dmz-shell:
-    profiles: [tools]
-    image: eclipse-mosquitto:2.0.22
-    container_name: nvm-dmz-shell
-    mem_limit: 64m
-    stdin_open: true
-    tty: true
-    entrypoint: ["/bin/sh"]
-    networks: [dmz-net]

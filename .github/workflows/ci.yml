@@ -1,14 +1,7 @@
-# CI cho NovaVolt MES
+# CI cho NovaVolt MOM v2
 #
-# Các bước ở đây PHẢI khớp với target `ci` trong Makefile. Hai bên lệch nhau thì
-# CI không còn là thứ dự đoán được, và người ta sẽ học cách bỏ qua nó.
-#
-# Repo chưa có remote (xem docs/plans/M0-bootstrap.md §3, Q1), nên workflow này
-# chưa từng chạy. Nó được viết sẵn để lúc `git remote add` là dùng được ngay,
-# không phải viết lại.
-#
-# Integration test bằng Testcontainers đến ở M5 — lúc đó tách thành job riêng,
-# vì chúng cần Docker và chậm hơn hẳn.
+# Các bước ở đây PHẢI khớp với target `ci` trong Makefile. Hai bên lệch nhau thì CI không
+# còn là thứ dự đoán được, và người ta sẽ học cách bỏ qua nó.
 
 name: CI
 
@@ -26,17 +19,30 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # K14: repo public không được chứa tên, mã của dự án khách hàng. Danh sách từ cấm chỉ có
+  # dạng HMAC trong repo; khóa là secret. PR từ fork không có secret nên bước này chỉ bắt buộc
+  # khi push lên main.
+  cleanroom:
+    name: Clean-room
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Scan tracked files
+        env:
+          NVM_CLEANROOM_KEY: ${{ secrets.NVM_CLEANROOM_KEY }}
+          NVM_CLEANROOM_REQUIRED: ${{ github.event_name == 'push' && '1' || '0' }}
+        run: python3 -I -X utf8 tools/cleanroom/check.py
+
   build:
     name: Build, format, test
     runs-on: ubuntu-latest
-    # Integration test bằng Testcontainers chạy trong job này (M5 trở đi); N14 đòi toàn suite < 10 phút.
     timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v4
 
-      # Không ghi cứng version ở đây: global.json đã pin SDK, và để hai chỗ
-      # cùng khai báo là tạo cơ hội cho chúng lệch nhau.
+      # Không ghi cứng version: global.json đã pin SDK.
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
@@ -49,107 +55,29 @@ jobs:
           key: nuget-${{ runner.os }}-${{ hashFiles('**/Directory.Packages.props', '**/*.csproj') }}
           restore-keys: nuget-${{ runner.os }}-
 
-      - name: Rotation verifier preflight
-        run: sh scripts/rotate-env-preflight-test.sh
-
       - name: Restore
         run: dotnet restore NovaVolt.Mes.slnx
 
-      # Chạy TRƯỚC build: một lỗi thụt lề không đáng phải chờ hết một lần
-      # build Release mới lộ ra.
+      # Chạy TRƯỚC build: một lỗi thụt lề không đáng phải chờ hết một lần build Release.
       - name: Format check
         run: dotnet format NovaVolt.Mes.slnx --verify-no-changes --no-restore
 
       - name: Build
         run: dotnet build NovaVolt.Mes.slnx -c Release --no-restore --nologo
 
-      # .NET 10 bỏ VSTest cho Microsoft.Testing.Platform. MTP mode bật trong
-      # global.json và đổi cú pháp: phải là --solution.
+      # MTP mode bật trong global.json và đổi cú pháp: phải là --solution.
       - name: Test
         shell: bash
         run: |
           set -o pipefail
           dotnet test --solution NovaVolt.Mes.slnx -c Release --no-build 2>&1 | tee test.log
 
-      # Log của job cần đăng nhập mới đọc được; annotation thì đọc được qua API công khai. Đưa tên test đỏ và dòng lỗi
-      # đầu tiên của nó ra annotation để chẩn đoán CI không phụ thuộc quyền xem log.
+      # Log của job cần đăng nhập mới đọc được; annotation thì đọc được qua API công khai.
       - name: Report failed tests
         if: failure()
         shell: bash
         run: |
-          # Bỏ mã màu ANSI trước khi lọc: log MTP trên runner có màu nên "^failed" không khớp (2026-09-27).
           sed -E 's/\x1B\[[0-9;]*[A-Za-z]//g' test.log > test.plain.log
-          grep -E -A6 'failed [A-Za-z]' test.plain.log | grep -E 'failed [A-Za-z]|Exception|should|but was|error' | head -40             | sed -E 's/^[[:space:]]*/::error title=Test failed::/' || true
+          grep -E -A6 'failed [A-Za-z]' test.plain.log | grep -E 'failed [A-Za-z]|Exception|should|but was|error' | head -40 \
+            | sed -E 's/^[[:space:]]*/::error title=Test failed::/' || true
           echo "failed lines: $(grep -cE 'failed [A-Za-z]' test.plain.log || true)"
-
-  # M13: image của từng host, SBOM và quét lỗ hổng. Chạy sau khi test xanh; image không được đẩy đi đâu.
-  images:
-    name: Images, SBOM, scan
-    needs: build
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        host:
-          - { name: nvm-execution, dockerfile: src/Apps/Nvm.App.Execution/Dockerfile }
-          - { name: nvm-projection, dockerfile: src/Workers/Nvm.ProjectionWorker/Dockerfile }
-          - { name: nvm-ingestion, dockerfile: src/Workers/Nvm.Ingestion/Dockerfile }
-          - { name: nvm-edge-gateway, dockerfile: src/Workers/Nvm.EdgeGateway/Dockerfile }
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Build image
-        run: docker build -f ${{ matrix.host.dockerfile }} -t novavolt/${{ matrix.host.name }}:ci .
-
-      # Build xanh chưa chắc image chạy được: edge-gateway từng thiếu framework ASP.NET Core trên image dotnet/runtime.
-      # Không có cấu hình thì app sẽ tự thoát; bước này chỉ bắt lỗi thiếu framework .NET lúc khởi động.
-      - name: Start check (required .NET framework present)
-        run: |
-          docker run -d --name start-check novavolt/${{ matrix.host.name }}:ci
-          sleep 15
-          out=$(docker logs start-check 2>&1)
-          docker rm -f start-check
-          if echo "$out" | grep -q "You must install or update .NET"; then echo "$out" | tail -20; exit 1; fi
-
-      - name: SBOM (syft, SPDX)
-        uses: anchore/sbom-action@v0
-        with:
-          image: novavolt/${{ matrix.host.name }}:ci
-          format: spdx-json
-          output-file: sbom-${{ matrix.host.name }}.spdx.json
-
-      # Lỗ hổng CRITICAL có bản vá làm đỏ build; HIGH chỉ báo, để không chặn vì lỗ hổng chưa có bản sửa.
-      - name: Scan (trivy)
-        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
-        with:
-          image-ref: novavolt/${{ matrix.host.name }}:ci
-          severity: CRITICAL
-          ignore-unfixed: true
-          exit-code: '1'
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: sbom-${{ matrix.host.name }}
-          path: sbom-${{ matrix.host.name }}.spdx.json
-
-  solution:
-    name: solution.yaml
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
-        with:
-          global-json-file: global.json
-      - name: Validate manifest and generate both modes
-        run: |
-          dotnet run --project tools/solution-cli/Nvm.SolutionCli -- validate
-          dotnet run --project tools/solution-cli/Nvm.SolutionCli -- generate --mode monolith --out out/monolith
-          dotnet run --project tools/solution-cli/Nvm.SolutionCli -- generate --mode distributed --out out/distributed
-      # Chart đọc values do solution-cli sinh; helm có sẵn trên runner ubuntu.
-      - name: Helm lint and render (distributed values)
-        run: |
-          helm lint deploy/helm/novavolt -f out/distributed/values.yaml
-          helm template novavolt deploy/helm/novavolt -f out/distributed/values.yaml > out/rendered.yaml
-          grep -c '^kind: Deployment' out/rendered.yaml

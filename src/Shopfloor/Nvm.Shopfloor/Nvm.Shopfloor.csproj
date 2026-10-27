@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Phía xưởng: LineDB, line simulator, relay chuyển tin. Dựng ở R5.
+    Chỉ nói chuyện với MOM qua event và command của Foundation, không reference Product hay Project.
+  -->
+
+  <PropertyGroup>
+    <RootNamespace>Nvm.Shopfloor</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Foundation/Nvm.Foundation/Nvm.Foundation.csproj" />
+  </ItemGroup>
+
+</Project>

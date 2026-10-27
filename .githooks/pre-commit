@@ -17,6 +17,16 @@ if git diff --cached --quiet; then
     exit 0
 fi
 
+# Clean-room (K14): chạy với MỌI commit, kể cả commit chỉ có tài liệu, vì tên của dự án
+# khách hàng lọt vào repo public hay nhất là qua tài liệu.
+# Chạy thử `--version`: trên Windows `python3` có thể là stub mở Microsoft Store.
+PY=python3
+"$PY" --version >/dev/null 2>&1 || PY=python
+if ! "$PY" -I -X utf8 tools/cleanroom/check.py --staged; then
+    printf '\nCOMMIT BI CHAN: co tu cam cua du an khach hang (K14). Doi theo bang ten gia.\n'
+    exit 1
+fi
+
 # Không đụng tới .cs nào thì bỏ qua — commit tài liệu không cần chờ dotnet format.
 if ! git diff --cached --name-only --diff-filter=ACM | grep -q '\.cs$'; then
     exit 0

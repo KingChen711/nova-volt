@@ -1,167 +1,90 @@
-# NovaVolt Battery MES
+# NovaVolt MOM v2
 
-Hệ thống MES / Traceability mô phỏng cho nhà máy sản xuất pin xe điện.
-
-Đây là dự án MES giả lập được hoàn thiện và kiểm chứng kỹ thuật trước khi đối chiếu với Opcenter và quy ước công ty. Tài liệu học tập vẫn hữu ích, nhưng không chặn triển khai chức năng.
+Bản mô phỏng một hệ MOM (Manufacturing Operations Management) cho nhà máy module pin, dựng lại cơ chế
+của một nền kiểu Opcenter EX bằng .NET để luyện kiểm thử quy trình, xử lý sự cố và viết tính năng theo
+cách một team dự án mở rộng sản phẩm của nhà cung cấp. Mọi tên công ty, sản phẩm, hệ thống là hư cấu.
 
 | | |
 |---|---|
-| **Backend** | .NET 10 LTS · SQL Server (event store, write model) · PostgreSQL + TimescaleDB (telemetry, read model) |
-| **Messaging** | RabbitMQ (Manufacturing Service Bus) · EMQX (MQTT Sparkplug B) |
-| **UI** | Mendix (toàn bộ) |
-| **Trạng thái** | **M0, M1 đã đóng theo bằng chứng lịch sử** · M2/M3 có số đo kỹ thuật lịch sử, cần audit lại trước khi đổi trạng thái · M4 đang triển khai · M5–M13 còn mở. Xem [tracker hoàn thành](docs/plans/project-completion.md) và [scope M0–M13](docs/scope.md#9-lộ-trình-milestone) |
+| **Backend** | .NET 10 · SQL Server (DB MOM của plant) · PostgreSQL (LineDB phía xưởng) |
+| **Messaging** | RabbitMQ (bus event) · Redpanda/Kafka (gateway tích hợp) |
+| **UI** | Next.js (từ R2) |
+| **Trạng thái** | **R0 xong** · R1–R13 còn mở. Xem [tracker](docs/plans/tracker.md) và [scope](docs/scope.md) |
+
+v1 (MES pin "trung tính", M0–M13) nằm ở tag [`v1.0`](https://github.com/KingChen711/nova-volt/tree/v1.0); vì sao dựng lại: [ADR-051](docs/adr/ADR-051-rebuild-theo-mo-hinh-mom-that.md).
 
 ---
 
 ## Quickstart
 
-Mục tiêu: máy lạ chạy được trong **15 phút** chỉ bằng cách đọc mục này. Phải tra cứu ra ngoài
-nghĩa là mục này còn thiếu — báo lại.
-
 ### Cần có trước
 
 | | Bản | Kiểm bằng |
 |---|---|---|
-| **Docker Desktop** | quota RAM **≥ 8 GB** | Settings → Resources. Hạ tầng khai báo `mem_limit` tổng 6,00 GB |
-| **.NET SDK** | **10.0.300** trở lên | `dotnet --version` |
-| **GNU Make** | bất kỳ | `make --version` |
-| **`sh`** | có sẵn cùng Git trên Windows | Makefile ép `SHELL := sh` để chạy giống nhau mọi nền tảng |
-| Mendix Studio Pro | 11.12.3 | **Chỉ cần nếu đụng tới UI** — xem [`mendix/README.md`](mendix/README.md) |
+| **Docker Desktop** | quota RAM ≥ 8 GB | Settings → Resources |
+| **.NET SDK** | 10.0.300 trở lên | `dotnet --version` |
+| **GNU Make**, **`sh`** | bất kỳ (`sh` đi cùng Git trên Windows) | `make --version` |
+| **Python 3** | bất kỳ | dùng cho kiểm clean-room |
 
-Docker phải **đang chạy**. Thiếu bước này là lỗi hay gặp nhất, và thông báo của compose không
-nói thẳng ra.
-
-### Năm bước
+### Các bước
 
 ```bash
-cp .env.example .env          # 1. Không có .env thì make up dừng ngay, có hướng dẫn
-make up                       # 2. Hạ tầng + khởi tạo DB/bucket. ~40–60 s khi image đã cache
-make hooks                    # 3. Bật pre-commit hook — KHÔNG tự bật khi clone
-make test                     # 4. Test gate; kỹ thuật M3 hiện 688/688
-dotnet run --project src/Apps/Nvm.Host.All   # 5. Host .NET ở :5080
+cp .env.example .env          # 1. rồi điền mọi CHANGE_ME_*
+make up                       # 2. hạ tầng + tạo database, chờ tới khi healthy
+make hooks                    # 3. bật pre-commit hook (format + clean-room); Git không tự bật khi clone
+make ci                       # 4. clean-room -> restore -> format -> build -> test
 ```
 
-`make up` **là hai lệnh gộp** — `up --wait` rồi chạy profile `init`. Chạy tay `docker compose up`
-sẽ có SQL Server nhưng **không** có database `NovaVolt`, và hỏng theo kiểu rất khó đoán.
-
-**Bước 3 không bỏ được.** Git cố ý không kích hoạt hook từ repo khi clone. Không chạy `make hooks`
-thì hook nằm trong `.githooks/` mà **không chạy**, và bạn sẽ tưởng format đang được kiểm.
-
-Kiểm bước 5 ở cửa sổ khác:
-
-```bash
-curl http://localhost:5080/health/ready
-```
-
-Phải trả `"status":"Healthy"` kèm **6 check**: `sqlserver`, `postgres`, `rabbitmq`, `bus`,
-`minio`, `keycloak`. EMQX **cố ý không** nằm trong readiness — host chưa dùng MQTT, xem
-`docs/plans/M0-bootstrap.md` §C10.1.
-
-`bus` và `rabbitmq` **không thay thế được cho nhau**, và cả hai đều phải có. `bus` là health check của
-MassTransit: nó nói về bus **trong process này** — đã khởi động chưa. `rabbitmq` nói về **broker**. Đo
-được: broker chết *trước* khi app khởi động thì cả hai bắt được; broker chết *sau* khi bus đã chạy thì
-`bus` báo `Healthy` suốt **152 giây** trong khi `rabbitmq` bắt được ngay. Xoá `rabbitmq` vì *"MassTransit
-đã có health check rồi"* là để đúng kịch bản nguy hiểm nhất — broker chết giữa ca — không ai canh
-(`docs/benchmarks.md`).
+Máy từng chạy v1: dừng stack cũ trước (`docker compose down --remove-orphans`). Volume dữ liệu v1 không bị xóa.
 
 ### Bảng port
 
-`.env` là nguồn sự thật; dưới đây là giá trị mặc định trong `.env.example`.
+`.env` là nguồn sự thật; dưới đây là mặc định trong `.env.example`. Mọi port bind `127.0.0.1`.
 
-| Cổng | Service | Mở bằng trình duyệt | Tài khoản |
-|---|---|---|---|
-| 5080 | **Nvm.Host.All** (.NET, chạy ngoài Docker) | `/health/live` · `/health/ready` | — |
-| 8080 | **Mendix** `NvmShopFloor` (Studio Pro, ngoài Docker) | `/oauth/v2/login` | `op.nv1` |
-| 8081 | **Keycloak** | <http://localhost:8081> | `NVM_KEYCLOAK_ADMIN` |
-| 15672 | **RabbitMQ** management | <http://localhost:15672> | `NVM_RABBITMQ_USER` |
-| 18083 | **EMQX** dashboard | **không publish** — xem ghi chú dưới bảng | `NVM_EMQX_USER` |
-| 9001 | **MinIO** console | <http://localhost:9001> | `NVM_MINIO_USER` |
-| 9000 | MinIO API | — | — |
-| 1433 | SQL Server | — | `sa` / `NVM_MSSQL_SA_PASSWORD` |
-| 5432 | PostgreSQL + TimescaleDB | — | `NVM_POSTGRES_USER` |
-| 5672 | RabbitMQ AMQP | — | — |
-| 1883 | EMQX MQTT | **không publish** — xem ghi chú dưới bảng | — |
-| 3000 | Grafana — profile `obs`, được thêm từ M3 và chỉ bật khi cần | — | — |
+| Cổng | Service | Tài khoản |
+|---|---|---|
+| 1433 | SQL Server | `sa` / `NVM_MSSQL_SA_PASSWORD` |
+| 5672 / 15672 | RabbitMQ / giao diện quản trị | `NVM_RABBITMQ_USER` |
+| 8081 | Keycloak | `NVM_KEYCLOAK_ADMIN` |
+| 5432 | LineDB (Postgres phía xưởng) | `NVM_LINEDB_USER` |
+| 19092 | Redpanda (Kafka API) | — |
+| 1025 / 8025 | Mailpit SMTP / giao diện xem email | — |
 
-Mật khẩu nằm trong `.env` dưới đúng khoá ghi ở cột cuối. **Không chép chúng vào tài liệu** —
-hai bản sẽ trôi khỏi nhau.
-
-> [!important] EMQX không mở port nào ra host, và đó là điều bắt buộc
-> EMQX là service duy nhất chạm `ot-net`. Publish port của nó ra host mở lại đúng đường mà
-> K11 cấm: container trên `it-net` không tới được `nvm-emqx:1883`, nhưng tới được
-> `host.docker.internal:1883`. Bind `127.0.0.1` **không** cứu — đo được, xem
-> `docs/plans/M0-bootstrap.md` §C08.4.
->
-> Cần MQTT hoặc dashboard API lúc dev thì bước vào vùng đệm thay vì kéo nó ra ngoài:
->
-> ```
-> make dmz-shell
-> mosquitto_sub -h emqx -t '#' -v
-> wget -qO- http://emqx:18083/status
-> ```
->
-> Kiểm ranh giới bất cứ lúc nào bằng `make net-check` (9 phép đo, exit ≠ 0 nếu thủng).
-
-> **8080 là của Mendix, 8081 là của Keycloak.** Quyết định chốt ở C05 vì cả hai cùng mặc định
-> 8080 và đổi Mendix phiền hơn. Đổi lại sau là phải sửa cả realm config.
+Mật khẩu nằm trong `.env`; không chép vào tài liệu.
 
 ### Lệnh hay dùng
 
-`make` không tham số in ra toàn bộ danh sách. Bốn cái dùng nhiều nhất:
+`make` không tham số in danh sách đầy đủ.
 
 | Lệnh | Việc |
 |---|---|
-| `make ci` | Đúng chuỗi CI sẽ chạy: restore → format → build Release → test |
-| `make down` | Dừng, **giữ** dữ liệu |
-| `make down-v` | Dừng và **xoá volume** — mất sạch dữ liệu |
+| `make ci` | Đúng chuỗi CI |
+| `make cleanroom` | Kiểm repo không chứa tên, mã của dự án thật (K14) |
+| `make down` / `make down-v` | Dừng, giữ / xóa volume |
 | `make backup` | `git bundle` toàn repo sang `NVM_BACKUP_DIR`, có `verify` |
-
-### Khi hỏng
-
-| Triệu chứng | Nhìn chỗ này trước |
-|---|---|
-| `make up` báo lỗi biến không resolve được | Chưa `cp .env.example .env` |
-| `make up` treo ở `--wait` | Docker Desktop chưa chạy, hoặc quota RAM < 8 GB |
-| `/health/ready` báo `Unhealthy[sqlserver]` | SQL Server khởi động lâu nhất — đợi thêm. App **không** crash, đó là chủ ý (N15) |
-| Commit không bị chặn dù sai format | Chưa chạy `make hooks` |
-| Mendix không đăng nhập được | [`mendix/README.md`](mendix/README.md) — cấu hình IdP là **dữ liệu runtime**, không đi theo Git |
 
 ---
 
 ## Cấu trúc thư mục
 
 ```
-novavolt-mes/
-├─ AGENTS.md              Nguyên tắc làm việc — ĐỌC TRƯỚC TIÊN
+├─ AGENTS.md            Nguyên tắc làm việc — ĐỌC TRƯỚC TIÊN
 ├─ docs/
-│  ├─ scope.md            Scope & design đầy đủ (nghiệp vụ, kiến trúc, 14 milestone)
-│  ├─ plans/              Plan chi tiết từng milestone, chia theo commit
-│  ├─ adr/                Architecture Decision Records
-│  ├─ oef-mapping.md      Khái niệm Opcenter → thành phần trong repo, kèm trạng thái
-│  └─ benchmarks.md       Sổ ghi số đo — mọi con số trong repo phải có một dòng ở đây
-│
+│  ├─ scope.md          Scope v2: bốn lớp, cơ chế nền, lộ trình R0–R13, lab sự cố
+│  ├─ plans/tracker.md  Trạng thái từng mốc và nợ mở
+│  ├─ adr/              Architecture Decision Records
+│  ├─ oef-mapping.md    Bảng cơ chế nền và test chứng minh
+│  └─ glossary.md       Thuật ngữ
 ├─ src/
-│  ├─ Platform/           Horizontal layers: Contracts, Bus, EventStore, Kernel, Time, POM
-│  ├─ FunctionalBlocks/   Vertical layers: mỗi FB là một bounded context
-│  ├─ Apps/               Deployable: gom FB + expose Public Object Model
-│  └─ Workers/            Ingestion, EdgeGateway, Projections, ErpGateway, Simulator
-│
-├─ tests/                 Unit · Architecture · Integration · Contract · Load · Chaos
-├─ tools/                 Project template, Roslyn analyzer, solution CLI
-├─ deploy/                Helm chart, k3d, script khởi tạo DB
-└─ mendix/                Tài liệu về các app Mendix (app sống ở Team Server riêng)
+│  ├─ Foundation/       Cơ chế nền (vai nền tảng của nhà cung cấp)
+│  ├─ Product/          Vai sản phẩm của nhà cung cấp
+│  ├─ Project/          Vai team dự án
+│  ├─ Shopfloor/        LineDB, line simulator, relay
+│  └─ Integration/      Gateway, hệ ngoài giả lập
+├─ tests/               Unit · Architecture · Analyzers
+├─ tools/               Analyzer, kiểm clean-room
+└─ deploy/              Script khởi tạo SQL Server, realm Keycloak
 ```
-
----
-
-## Bắt đầu từ đâu
-
-| Bạn muốn | Đọc |
-|---|---|
-| Hiểu nguyên tắc làm việc trong repo | [`AGENTS.md`](AGENTS.md) |
-| Hiểu nghiệp vụ và kiến trúc | [`docs/scope.md`](docs/scope.md) |
-| Biết việc tiếp theo phải làm gì | [`docs/plans/project-completion.md`](docs/plans/project-completion.md) |
-| Biết vì sao chọn công nghệ X | [`docs/adr/`](docs/adr/) |
 
 ---
 
@@ -169,10 +92,6 @@ novavolt-mes/
 
 Chi tiết ở [`AGENTS.md`](AGENTS.md). Ba điều dễ quên nhất:
 
-1. **Agent được tự commit/push.** Agent kiểm diff, secret và test trước khi commit; tiếp tục các mốc đã giao mà không chờ theo từng commit.
-2. **Docs là bản đồ, không phải đường ray.** Được phép làm trái nếu có lý do — nhưng phải nói ra và cập nhật docs.
-3. **Cấm `DateTime.UtcNow`.** Dùng `TimeProvider`. Lý do: saga chạy nhiều ngày phải test được trong vài giây.
-
----
-
-*Tài liệu nghiệp vụ nguồn và ghi chú học tập nằm trong Obsidian vault, không nằm trong repo này.*
+1. **Clean-room (K14).** Không đưa tên, mã, code của dự án thật vào repo; hook và CI chặn.
+2. **Docs là bản đồ, không phải đường ray.** Được làm trái nếu có lý do, nhưng phải nói ra và sửa docs.
+3. **Cấm `DateTime.UtcNow`.** Dùng `TimeProvider` để test được lịch ca và timer bằng đồng hồ giả.

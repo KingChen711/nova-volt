@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Lớp Foundation: cơ chế nền kiểu Opcenter (model, command pipeline, transaction,
+    event, OData, signal rule, configuration key, state machine). Dựng ở R1-R2.
+    Không reference lớp nào phía trên (Product, Project, Shopfloor, Integration).
+  -->
+
+  <PropertyGroup>
+    <RootNamespace>Nvm.Foundation</RootNamespace>
+  </PropertyGroup>
+
+</Project>

@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Gateway tích hợp và các hệ ngoài giả lập. Dựng ở R11.
+    Gọi MOM qua command API như hệ ngoài thật, không reference Product hay Project.
+  -->
+
+  <PropertyGroup>
+    <RootNamespace>Nvm.Integration</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Foundation/Nvm.Foundation/Nvm.Foundation.csproj" />
+  </ItemGroup>
+
+</Project>

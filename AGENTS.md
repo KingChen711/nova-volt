@@ -8,19 +8,22 @@
 
 ## 0. Bối cảnh một dòng
 
-Đây là dự án MES giả lập để hoàn thiện đầy đủ chức năng và kiểm chứng kỹ thuật trước khi ánh xạ sang Opcenter và quy ước công ty. Kiến thức của chủ repo là mục tiêu học tập riêng, **không phải điều kiện nghiệm thu hoặc điều kiện dừng triển khai** (quyết định 2026-09-23, [ADR-039](docs/adr/ADR-039-delivery-without-learning-gates.md)).
+Đây là **NovaVolt v2**: bản mô phỏng tại nhà của một hệ MOM chạy trên nền kiểu Opcenter EX, dựng lại cơ chế nền theo hành vi đã quan sát, nghiệp vụ đồng dạng nhưng đổi tên ([ADR-051](docs/adr/ADR-051-rebuild-theo-mo-hinh-mom-that.md)). v1 nằm ở tag `v1.0`. Repo **public**: không đưa tên, mã, code của dự án thật vào repo (K14, [ADR-052](docs/adr/ADR-052-clean-room.md)). Kiến thức của chủ repo là mục tiêu học tập riêng, **không phải điều kiện nghiệm thu hoặc điều kiện dừng triển khai** ([ADR-039](docs/adr/ADR-039-delivery-without-learning-gates.md)).
 
 ### 0.1 Trách nhiệm triển khai của agent
 
-Chủ repo không tự gõ phần lớn code .NET. Agent chịu trách nhiệm triển khai, sửa finding và thu thập bằng chứng cho toàn bộ M0–M13. Tiếp tục qua các đơn vị việc và milestone đã nằm trong scope, không chờ chủ repo commit, trả lời teach-back hoặc dự đoán số đo. Chỉ dừng ở việc thực sự cần quyền truy cập, thao tác UI không có công cụ hỗ trợ, hoặc quyết định đổi contract cứng.
+Chủ repo không tự gõ phần lớn code. Agent chịu trách nhiệm triển khai, sửa finding và thu thập bằng chứng cho toàn bộ R0–R13. Tiếp tục qua các đơn vị việc và mốc đã nằm trong scope, không chờ chủ repo commit, trả lời teach-back hoặc dự đoán số đo. Chỉ dừng ở việc thực sự cần quyền truy cập, hoặc quyết định đổi contract cứng.
+
+Kiến thức về hệ thật lấy từ tài liệu tìm hiểu riêng của chủ repo, nằm ngoài repo; bảng đối chiếu tên thật và tên giả ở `docs/private/` (git bỏ qua bằng `.git/info/exclude`). Mỗi hành vi đưa vào code phải dẫn được về một nguồn quan sát trong tài liệu đó; chỗ chưa xác minh thì dựng hai biến thể chọn bằng cấu hình (scope §7), không đoán.
 
 Nền tảng chuyên môn của chủ repo, để agent nhắm đúng chỗ:
 
 | Mảng | Mức | Nghĩa là |
 |---|---|---|
 | .NET, C#, SQL, system design, distributed systems | **vững** | Không giải thích `record`, DI, index, CQRS là gì. Giải thích **vì sao chọn cách này ở đây** |
-| **Nghiệp vụ sản xuất pin / MES / traceability** | **mới** | Giải thích thuật ngữ ngắn gọn khi báo cáo nếu cần để người đọc hiểu kết quả |
-| Opcenter EF, Mendix | đang học | Giữ ánh xạ và bằng chứng riêng; không lấy mức hiểu của người học làm gate |
+| **Nghiệp vụ MOM nhà máy pin** | đã tìm hiểu kỹ ở dự án thật | Giải thích ngắn thuật ngữ khi báo cáo; dùng tên giả trong repo |
+| Cơ chế nền Opcenter EX | đã quan sát trên hệ thật | Bám hành vi đã quan sát, không theo phỏng đoán |
+| React/Next.js | — | Giao diện v2 (ADR-053) |
 
 Quy tắc báo cáo ở **§5.8**. Nội dung dạy học có thể thực hiện khi được yêu cầu, độc lập với trạng thái chức năng.
 
@@ -28,9 +31,9 @@ Quy tắc báo cáo ở **§5.8**. Nội dung dạy học có thể thực hiệ
 
 ### 0.2 Cách thực hiện được chủ repo chốt 2026-09-23
 
-Agent nhận toàn bộ phần việc còn lại. Không phải tạo plan riêng cho từng milestone, không chia tiến độ thành lượt chờ theo từng commit. Dùng scope/DoD và plan hiện có làm tham chiếu; giữ tracker ngắn, triển khai và kiểm chứng liên tục. Chỉ nhờ chủ repo thực hiện thao tác Mendix không có công cụ hỗ trợ, hoặc cung cấp quyền truy cập/quyết định contract cứng thật sự thiếu. Agent được tự commit/push theo §1.1.
+Agent nhận toàn bộ phần việc. Không tạo plan riêng cho từng mốc, không chia tiến độ thành lượt chờ theo từng commit. Dùng scope v2 và [tracker](docs/plans/tracker.md); giữ tracker ngắn, triển khai và kiểm chứng liên tục. Chỉ nhờ chủ repo khi thiếu quyền truy cập hoặc phải quyết contract cứng. Agent được tự commit/push theo §1.1.
 
-Bổ sung 2026-09-26: làm theo cách của agent, không theo nhịp người học. Gom việc thành lô lớn, không lập kế hoạch chi tiết theo từng commit, và **không bắt buộc đúng thứ tự milestone**. Ví dụ: hoàn thiện backend M5–M13 trước, dựng màn hình Mendix sau khi contract POM/Command API đã ổn định. DoD, K1–K13 và yêu cầu bằng chứng giữ nguyên.
+Làm theo cách của agent, không theo nhịp người học: gom việc thành lô lớn, **không bắt buộc đúng thứ tự mốc** khi phụ thuộc cho phép (scope §5). DoD, K1–K14 và yêu cầu bằng chứng giữ nguyên.
 
 ## 1. Quy tắc tuyệt đối — không có ngoại lệ
 
@@ -42,7 +45,6 @@ Chủ repo giao toàn bộ việc triển khai và cho phép agent tự commit/p
 
 - Không `git reset --hard`, `git checkout -- .`, `git stash drop`, `git clean -fd`.
 - Không đổi branch khi working copy đang dirty.
-- Với Mendix: **không bao giờ** đề xuất "Revert All Changes" như một cách xử lý tiện.
 
 ### 1.3 Báo cáo trung thực
 
@@ -156,10 +158,9 @@ Thứ tự bắt buộc trong một lượt re-audit:
 2. Nếu còn bất kỳ finding actionable nào: **dừng, báo cáo, không chạy full CI**.
 3. Chỉ khi hai bước trên sạch mới chạy `make ci` làm gate cuối.
 
-Đặc biệt, **không chạy `buffer-crash` 200 vòng trong lúc audit vẫn còn lỗi đã biết**. Phép kiểm đó tốn
-thời gian và chỉ trả lời contract crash-recovery; nó không phát hiện mâu thuẫn nghiệp vụ, ADR sai,
-test false-positive hay bằng chứng vận hành thiếu. Không dùng một CI xanh để thay cho việc đọc và
-đánh giá thay đổi.
+Đặc biệt, **không chạy lab dài (tải, chịu lỗi nhiều vòng) trong lúc audit vẫn còn lỗi đã biết**. Các
+phép kiểm đó tốn thời gian và không phát hiện mâu thuẫn nghiệp vụ, ADR sai, test false-positive hay
+bằng chứng vận hành thiếu. Không dùng một CI xanh để thay cho việc đọc và đánh giá thay đổi.
 
 Nếu người dùng yêu cầu rõ không chạy full CI trong lượt hiện tại thì dừng sau targeted checks, kể cả
 khi audit đã sạch, và ghi rõ `full CI chưa chạy theo yêu cầu`.
@@ -208,10 +209,10 @@ tự tìm ra:
 **Thứ tự nguồn sự thật.** Hai tài liệu mâu thuẫn thì **cái trên thắng**, và mâu thuẫn đó **tự nó là
 một phát hiện**:
 
-1. `AGENTS.md` §4 — ràng buộc **K1–K13**. Không milestone nào được nới.
+1. `AGENTS.md` §4 — ràng buộc **K1–K14**. Không mốc nào được nới.
 2. `docs/adr/ADR-*.md` — quyết định đã `Accepted`. ADR **không sửa**; đổi ý thì viết ADR mới.
 3. `docs/scope.md` — hợp đồng gốc.
-4. `docs/plans/M*.md` — DoD và checklist của milestone.
+4. `docs/plans/tracker.md` — DoD và trạng thái của từng mốc.
 5. Code, migration, `docker-compose.yml`.
 6. Hệ thống đang chạy.
 
@@ -242,7 +243,7 @@ CONTRACT  : điều khoản nào bị vi phạm, trích nguyên văn
 ĐỀ XUẤT   : ≥ 2 đường, nói rõ đường nào cần chủ repo duyệt
 ```
 
-**P1** — vi phạm K1–K13, mất dữ liệu, hoặc một DoD được tuyên bố đạt mà không đạt. **P2** — contract
+**P1** — vi phạm K1–K14, mất dữ liệu, hoặc một DoD được tuyên bố đạt mà không đạt. **P2** — contract
 và thực tế lệch nhau; đúng nhưng không kiểm được. **P3** — nợ kỹ thuật đã biết, ghi để không quên.
 **Không đề xuất giải pháp cho P3 nếu chưa được hỏi**: audit nói *cái gì sai*, sửa là lượt khác (§3.3).
 
@@ -258,19 +259,20 @@ Vi phạm những điều dưới đây là bug, không phải lựa chọn phon
 
 | # | Ràng buộc | Vì sao |
 |---|---|---|
-| K1 | Cấm `DateTime.Now` / `DateTime.UtcNow`. Dùng `TimeProvider` | Saga nhiều ngày phải test được bằng `FakeTimeProvider` |
-| K2 | Cấm `DateTime` trong entity và event. Dùng `DateTimeOffset` | Hai site khác timezone, một site có DST |
-| K3 | Mọi bảng, event, query có `SiteId`. Filter ép ở server, không tin client | Rò rỉ cross-site là lỗi bảo mật |
-| K4 | Event store và genealogy là **append-only**. Không `UPDATE`, không `DELETE` | Traceability là hồ sơ pháp lý |
-| K5 | Sửa sai bằng bút toán bù trừ có lý do + người thực hiện | Cùng lý do K4 |
-| K6 | Mọi event có `[EventVersion(n)]` ngay từ v1. Không sửa golden file cũ | Code năm 2036 phải đọc được event năm 2026 |
-| K7 | Mọi command handler idempotent | Bus là at-least-once |
-| K8 | Functional Block không reference FB khác trực tiếp — chỉ qua Contracts + bus | Ranh giới bounded context |
-| K9 | Domain layer không reference EF Core / Npgsql / MassTransit | Testability |
-| K10 | Mendix chỉ đi qua Public Object Model và Command API. **Không** connection string tới DB của .NET | Bounded context |
-| K11 | Service ở `it-net` không có route tới `ot-net` | Ranh giới OT/IT là ranh giới an ninh |
-| K12 | Ingestion không gọi App bằng HTTP đồng bộ. Chỉ qua bus | MES down không được làm dừng dây chuyền |
+| K1 | Cấm `DateTime.Now` / `DateTime.UtcNow`. Dùng `TimeProvider` | Lịch ca, timer, hạn đo phải test được bằng `FakeTimeProvider` |
+| K2 | Cấm `DateTime` trong entity và event. Dùng `DateTimeOffset` | Giờ ca theo múi giờ plant, có DST |
+| K3 | Plant là phạm vi deploy và URL: một plant một DB MOM | Như nền tảng thật; không trộn dữ liệu hai plant trong một DB |
+| K4 | Lịch sử MTU và genealogy append-only; xóa là xóa mềm (`IsDeleted`). Chỉ job dọn dữ liệu được xóa thật, và phải ghi log | Truy vết là hồ sơ; xóa thật phải có dấu vết |
+| K5 | Sửa sai bằng thao tác bù có lý do + người thực hiện (kết luận NC, hoàn tác tháo rã…) | Cùng lý do K4 |
+| K6 | Event lên bus và hợp đồng của gateway có `[EventVersion(n)]`. Không sửa golden file cũ | Bên nhận năm sau phải đọc được tin năm nay |
+| K7 | Đường tin máy idempotent theo cách hệ thật: trạng thái dòng tin, khóa tự nhiên, không trừ nguyên liệu hai lần. Command khác theo đúng hành vi của nền, có test khẳng định hành vi khi gửi lại | Tin máy là at-least-once; command thì giữ đúng ngữ nghĩa nền tảng |
+| K8 | Phụ thuộc chỉ đi xuống: Project → Product → Foundation; Shopfloor và Integration chỉ thấy Foundation. Cùng domain dùng `Query`, khác domain dùng `ProjectionQuery`; pre-check cùng domain với command; extension app không extend extension app | Ranh giới như nền tảng thật; ép bằng test kiến trúc |
+| K9 | Handler chỉ dùng `IPlatform` của Foundation; không reference EF Core, Npgsql, client bus | Testability; giống handler của nền thật chỉ thấy `platform` |
+| K10 | Giao diện chỉ gọi POM (OData) và command API; không nối thẳng DB, không giữ logic nghiệp vụ | Ranh giới app |
+| K11 | LineDB ở `ot-net`; chỉ relay và lệnh đọc tin có quyền vào schema trung gian | Ranh giới OT/IT |
+| K12 | Line không bao giờ chờ MOM: MOM chết thì dòng tin đứng ở trạng thái chờ và được gửi lại | Dây chuyền không dừng vì MOM |
 | K13 | Secret không nằm trong file commit lên git | Hiển nhiên, nhưng vẫn hay quên |
+| K14 | **Clean-room**: không tên, mã, tiền tố, định dạng, câu lỗi, code của dự án thật trong repo. Giữ cấu trúc, đổi bề mặt. Kiểm bằng `make cleanroom`, hook pre-commit, job CI | Repo public; đã push là không rút lại được (ADR-052) |
 
 Nếu một ràng buộc trong số này **cản trở thật sự**, đó là dấu hiệu thiết kế sai ở chỗ khác. Nêu ra, đừng lách.
 
@@ -289,9 +291,9 @@ Chia việc thành lát cắt có mục tiêu, diff và cách kiểm chứng rõ
 ```
 
 `type`: `feat` · `fix` · `docs` · `test` · `refactor` · `perf` · `build` · `ci` · `chore`
-`scope`: tên FB hoặc thành phần — `traceability`, `ingestion`, `host`, `infra`, `mendix`, `pom`…
+`scope`: lớp hoặc thành phần — `foundation`, `product`, `project`, `shopfloor`, `integration`, `web`, `infra`, `cleanroom`…
 
-Ví dụ: `feat(traceability): add optimistic concurrency to event store`
+Ví dụ: `feat(foundation): run post-actions inside the command transaction`
 
 ### 5.3 Ngôn ngữ
 
@@ -303,10 +305,10 @@ Ví dụ: `feat(traceability): add optimistic concurrency to event store`
 | Tài liệu trong `docs/`, ADR | Tiếng Việt (giữ nguyên thuật ngữ tiếng Anh) |
 | Giải thích cho người dùng | Tiếng Việt |
 
-### 5.4 Trước khi bắt đầu một milestone
+### 5.4 Trước khi bắt đầu một mốc
 
-1. Đọc `docs/scope.md` phần milestone đó **và** phần domain/contract liên quan.
-2. Đọc plan trong `docs/plans/`.
+1. Đọc `docs/scope.md` phần mốc đó **và** phần cơ chế/contract liên quan.
+2. Đọc mục của mốc trong [tracker](docs/plans/tracker.md) và nợ mở.
 3. Tự xử lý lựa chọn triển khai thông thường. Chỉ hỏi khi cần quyền truy cập/thao tác chỉ người dùng làm được hoặc khi phải đổi contract cứng; gom câu hỏi theo lần phụ thuộc đầu tiên.
 
 ### 5.5 Hỏi ít, hỏi đúng lúc
@@ -315,96 +317,23 @@ Chủ repo đã nói rõ: **hỏi dồn nhiều câu thì phiền**. Nguyên t�
 
 - Việc gì tự quyết được theo §2.3 thì tự quyết, nói một câu.
 - Chỉ hỏi khi câu trả lời **đổi việc phải làm**.
-- Gom câu hỏi vào một lần, đầu milestone. Không rải rác.
+- Gom câu hỏi vào một lần, đầu mốc. Không rải rác.
 - Mỗi câu hỏi phải kèm: *nếu chọn A thì sao, chọn B thì sao*.
 
 ### 5.5.1 Phân công nhiều agent
 
-Khi công cụ hỗ trợ và công việc có ranh giới độc lập, giao subagent phạm vi file/contract rõ, tránh sửa trùng, đồng thời tuân theo giới hạn phân công người dùng đang áp dụng trong phiên. Codex chịu trách nhiệm tích hợp, kiểm chứng và kết luận; reviewer độc lập chỉ đọc. Mọi sub-agent chỉ dùng **Astra** (người dùng chốt 2026-09-26, thay lựa chọn Sol trước đây). Không dùng Sol/Terra/Luna cho sub-agent. Effort do agent chọn theo việc. Không còn yêu cầu dùng Claude CLI hay pin model Claude cũ. Agent chính điều phối commit/push để tránh xung đột; phân công không nới DoD.
+Khi công cụ hỗ trợ và công việc có ranh giới độc lập, giao subagent phạm vi file/contract rõ, tránh sửa trùng, và theo giới hạn phân công người dùng đang áp dụng trong phiên. Agent chính tích hợp, kiểm chứng, kết luận và điều phối commit/push; reviewer độc lập chỉ đọc. Phân công không nới DoD.
 
-### 5.6 Mendix — agent hoàn thiện model bằng công cụ được hỗ trợ
+### 5.6 Giao diện web (Next.js)
 
-Agent chịu trách nhiệm triển khai và kiểm chứng Mendix trong phạm vi dự án bằng Studio Pro MCP,
-API, CLI hoặc UI được hỗ trợ. Nếu thao tác chỉ thực hiện được trực tiếp trong Studio Pro mà công cụ
-không hỗ trợ, chuẩn bị bước cụ thể và nhờ người dùng đúng phần đó. Không biến bài thực hành thủ công
-thành điều kiện đóng milestone.
-
-| Quy tắc | Chi tiết |
-|---|---|
-| Agent tự thao tác khi công cụ hỗ trợ | Dựng page, domain model, microflow, workflow và chạy kiểm chứng trong phạm vi đã giao |
-| MCP tầng đọc | `ped_read_document`, `ped_check_errors`, `list_modules`… Dùng để kiểm chứng thay vì hỏi |
-| MCP tầng ghi | Được dùng để hoàn thiện model trong phạm vi dự án; giữ bản sao/khả năng khôi phục và ghi rõ document đã sửa |
-| Sau khi ghi bằng MCP | Nói rõ đã tạo/sửa document nào và vì sao |
-| **Thao tác và giải thích phải TÁCH RỜI** | Xem §5.6.1 — đây là yêu cầu rõ ràng của người dùng |
-
-Chi tiết đầy đủ ở skill [`mendix-manual`](.claude/skills/mendix-manual/SKILL.md).
-
-**Đăng nhập khi kiểm thử:** Khi kiểm thử đã được giao cho agent,
-agent tự đăng nhập bằng tài khoản/mật khẩu người dùng đã cung cấp hoặc nguồn credential
-được phép dùng, kể cả đăng nhập lại sau F5. Không yêu cầu người dùng tự nhập chỉ vì trường
-đó là mật khẩu. Chỉ nhờ người dùng khi thiếu credential, cần MFA/CAPTCHA hoặc công cụ thật
-sự không thao tác được. Không in mật khẩu/token vào output hay ghi vào file được commit;
-ẩn output của công cụ có thể echo thao tác nhập mật khẩu trước khi trả kết quả.
-
-#### 5.6.1 Bố cục bắt buộc khi hướng dẫn thao tác Mendix
-
-Người dùng đã nêu rõ: **trộn thao tác với giải thích làm các bước rất khó đọc.** Người đang
-ngồi trước Studio Pro cần bấm, không cần đọc lý do song song.
-
-```
-### Thao tác
-
-Mở:      <đường dẫn .mpr tuyệt đối>
-Branch:  <tên branch>
-Mục tiêu: <một câu>
-
-1. <một hành động>
-2. <một hành động>
-
-Báo lại: <đúng một thứ>
-
----
-
-### Giải thích
-
-<viết tự do>
-```
-
-Luật cho khối **Thao tác**: mỗi bước một hành động · **không có chữ "vì", "để", "do"** ·
-đường dẫn menu đầy đủ · giá trị chính xác trong `code` · không nêu phương án thay thế ·
-tối đa 7 bước một khối · kết thúc bằng đúng một thứ cần báo lại.
-
-Khối **Giải thích** đặt sau, ngăn bằng `---`, được dài. Không có gì đáng giải thích thì bỏ hẳn.
-
-#### 5.6.2 Phát hiện skill sai thì sửa skill NGAY trong phiên
-
-Skill `mendix-manual` chỉ có giá trị nếu nó tích luỹ được thứ **đã kiểm chứng**. Mỗi lần thực
-tế trong Studio Pro khác với thứ agent nói, đó là một lỗ hổng phải vá ngay — không ghi chú
-"để sau", không đợi cuối milestone.
-
-**Bắt buộc sửa `references/studio-pro-traps.md` §0 khi gặp bất kỳ điều nào sau:**
-
-| Dấu hiệu | Ghi lại gì |
-|---|---|
-| Tên menu, nút, trường agent đưa ra **không tồn tại** | Tên thật, kèm đường dẫn đầy đủ |
-| Phiên bản module/Studio Pro khác docs hoặc khác plan | Số version thật và hệ quả |
-| Một bước sinh ra lỗi mà agent không lường trước | Mã lỗi, nguyên nhân, cách sửa đã chạy được |
-| Danh sách dependency thiếu hoặc thừa | Danh sách đúng, kèm điều kiện version |
-| Giả thuyết agent nêu ra được xác nhận hoặc bác bỏ | Kết luận dứt khoát, xoá chữ "giả thuyết" |
-
-**Quy tắc ghi**: chỉ ghi thứ đã **thấy tận mắt** trong phiên — ảnh chụp của người dùng, output
-lệnh, hoặc lỗi thật. Không ghi phỏng đoán. Nếu chưa xác nhận thì đánh dấu rõ *đang kiểm* và
-quay lại chốt khi có kết quả.
-
-**Nguồn nào được dùng làm giá trị chính xác** — xem bảng trong `SKILL.md` §1. Tóm tắt: ảnh chụp
-và §0 thì tin được; blog, Medium, forum, trí nhớ về bản cũ thì không.
-
-Sai một tên menu làm người dùng đi tìm thứ không tồn tại. Sai hai lần thì họ mất tin vào cả
-khối thao tác — và lúc đó skill trở thành gánh nặng thay vì công cụ.
+- Web nằm ở `web/`, chia khu theo cách hệ thật chia app; menu và quyền theo role trong token.
+- Chỉ gọi OData và command API (K10); hiện nguyên mã lỗi và câu lỗi trong thân response.
+- Mỗi mốc từ R4 làm màn của luồng mình; DoD của mốc gồm chạy luồng chính trên màn (lab Playwright).
+- Khi kiểm thử đã được giao, agent tự đăng nhập bằng tài khoản thử trong realm; không in mật khẩu hay token.
 
 ### 5.7 Lab phá hoại và phép đo
 
-Lab trong `scope.md` là phép kiểm kỹ thuật khi có rủi ro cụ thể; agent tự chạy trong môi trường thử nghiệm phù hợp và ghi số thật vào ADR hoặc `docs/benchmarks.md`. Không yêu cầu chủ repo dự đoán kết quả trước khi đo. Không lấy một dự đoán hay một lời giải thích làm bằng chứng thay test.
+Lab trong `scope.md` là phép kiểm kỹ thuật khi có rủi ro cụ thể; agent tự chạy trong môi trường thử nghiệm phù hợp và ghi số thật vào ADR hoặc `docs/benchmarks.md` (tạo khi có số đo đầu tiên của v2; số v1 nằm ở tag `v1.0`). Không yêu cầu chủ repo dự đoán kết quả trước khi đo. Không lấy một dự đoán hay một lời giải thích làm bằng chứng thay test.
 
 ---
 
@@ -416,6 +345,16 @@ Khi báo cáo một thay đổi nghiệp vụ, giải thích ngắn thuật ng�
 
 | File | Nội dung |
 |---|---|
+| `AGENTS.md` | Tài liệu này — nguyên tắc làm việc |
+| `docs/scope.md` | Scope v2: bốn lớp, cơ chế nền, lộ trình R0–R13, lab sự cố |
+| `docs/plans/tracker.md` | Trạng thái từng mốc, bằng chứng, nợ mở |
+| `docs/glossary.md` | Thuật ngữ, cập nhật khi model thêm khái niệm mới |
+| `docs/oef-mapping.md` | Bảng cơ chế nền và test chứng minh |
+| `docs/adr/` | Architecture Decision Records; 001–050 là của v1 |
+| `docs/private/` | Riêng tư, không commit: plan đầy đủ, bảng đối chiếu tên thật, danh sách từ cấm, khóa clean-room |
+| `tools/cleanroom/` | Kiểm clean-room (K14) |
+
+---|---|
 | `AGENTS.md` | Tài liệu này — nguyên tắc làm việc |
 | `docs/scope.md` | Scope & design đầy đủ: nghiệp vụ, kiến trúc, domain, contract, 14 milestone |
 | **`docs/glossary.md`** | Từ điển nghiệp vụ, cập nhật khi model thêm khái niệm mới |
@@ -440,5 +379,5 @@ Khi báo cáo một thay đổi nghiệp vụ, giải thích ngắn thuật ng�
 4. §4 là ràng buộc cứng, không lách.
 5. Chia việc thành lát cắt có thể review; không dừng ở ranh giới commit.
 6. Test đỏ thì nói đỏ.
-7. Mendix: agent tự làm qua công cụ được hỗ trợ; chỉ nhờ người dùng phần UI không thể tự thao tác (§5.6).
-8. Skill Mendix nói sai thì **sửa skill ngay trong phiên**, không để sau (§5.6.2).
+7. Giao diện là Next.js, chỉ gọi POM và command API (§5.6, K10).
+8. **Clean-room (K14)**: không đưa tên, mã, code của dự án thật vào repo; dùng bảng tên giả trong `docs/private/`.

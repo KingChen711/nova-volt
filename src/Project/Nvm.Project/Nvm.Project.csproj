@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Lớp Project: vai team dự án (FB, extension app, app nghiệp vụ). Dựng từ R4.
+    Mở rộng lớp Product bằng facet, pre-check, post-action; không sửa lớp Product.
+  -->
+
+  <PropertyGroup>
+    <RootNamespace>Nvm.Project</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Foundation/Nvm.Foundation/Nvm.Foundation.csproj" />
+    <ProjectReference Include="../../Product/Nvm.Product/Nvm.Product.csproj" />
+  </ItemGroup>
+
+</Project>

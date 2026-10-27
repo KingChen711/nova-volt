@@ -1,48 +1,19 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!--
-    Ranh giới ở scope.md §5.4 phải ĐỎ ĐƯỢC, không chỉ là một sơ đồ trong tài liệu.
-
-    Project này reference MỌI assembly production để duyệt metadata của chúng. Đó là lý do
-    duy nhất — không có dòng nào ở đây GỌI code trong các assembly đó.
+    Ép ranh giới giữa các lớp v2 (AGENTS.md K8) bằng đồ thị ProjectReference.
+    Đọc .csproj thay vì metadata assembly: compiler bỏ reference không dùng tới khỏi metadata,
+    nên một reference sai chiều mà chưa dùng type nào sẽ lọt qua phép kiểm dựa trên assembly.
   -->
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <RootNamespace>Nvm.ArchitectureTests</RootNamespace>
-    <!--
-      Analyzer TẮT ở project này, có chủ đích. Nó chứa những type CỐ TÌNH sai để chứng minh
-      rule đỏ được — mà NVM002/NVM003 sẽ chặn ngay lúc biên dịch.
-
-      Đó cũng chính là điều C17 muốn cho thấy: analyzer tắt được, architecture test thì không.
-      Type sai ở đây là type mà analyzer chưa từng nhìn thấy, và rule vẫn bắt được nó.
-    -->
-    <UseNvmAnalyzers>false</UseNvmAnalyzers>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../../src/FunctionalBlocks/ProductionExecution/Nvm.ProductionExecution.csproj" />
     <PackageReference Include="xunit.v3" />
     <PackageReference Include="Shouldly" />
-    <PackageReference Include="NetArchTest.Rules" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="../../../src/Platform/Nvm.Contracts/Nvm.Contracts.csproj" />
-    <ProjectReference Include="../../../src/Platform/Nvm.Kernel/Nvm.Kernel.csproj" />
-    <ProjectReference Include="../../../src/Platform/Nvm.Bus/Nvm.Bus.csproj" />
-    <ProjectReference Include="../../../src/Platform/Nvm.Hosting/Nvm.Hosting.csproj" />
-    <ProjectReference Include="../../../src/Platform/Nvm.Sparkplug/Nvm.Sparkplug.csproj" />
-    <ProjectReference Include="../../../src/Platform/Nvm.Time/Nvm.Time.csproj" />
-    <ProjectReference Include="../../../src/FunctionalBlocks/FactoryModel/Nvm.FactoryModel.csproj" />
-    <ProjectReference Include="../../../src/FunctionalBlocks/Traceability/Nvm.Traceability.csproj" />
-    <ProjectReference Include="../../../src/FunctionalBlocks/Quality/Nvm.Quality.csproj" />
-    <ProjectReference Include="../../../src/FunctionalBlocks/Material/Nvm.Material.csproj" />
-    <ProjectReference Include="../../../src/FunctionalBlocks/Grading/Nvm.Grading.csproj" />
-    <ProjectReference Include="../../../src/FunctionalBlocks/Recipe/Nvm.Recipe.csproj" />
-    <ProjectReference Include="../../../src/FunctionalBlocks/Equipment/Nvm.Equipment.csproj" />
-    <ProjectReference Include="../../../src/FunctionalBlocks/MasterData/Nvm.MasterData.csproj" />
-    <ProjectReference Include="../../../src/FunctionalBlocks/Passport/Nvm.Passport.csproj" />
   </ItemGroup>
 
   <ItemGroup>

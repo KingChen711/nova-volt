@@ -1,17 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <ItemGroup>
-    <ProjectReference Include="../../../src/Platform/Nvm.EventStore/Nvm.EventStore.csproj" />
-    <ProjectReference Include="../../../src/FunctionalBlocks/Traceability/Nvm.Traceability.csproj" />
-    <ProjectReference Include="../../../src/FunctionalBlocks/Material/Nvm.Material.csproj" />
-    <ProjectReference Include="../../../src/FunctionalBlocks/Quality/Nvm.Quality.csproj" />
-    <ProjectReference Include="../../../src/FunctionalBlocks/Grading/Nvm.Grading.csproj" />
-    <ProjectReference Include="../../../src/FunctionalBlocks/Equipment/Nvm.Equipment.csproj" />
-    <ProjectReference Include="../../../src/FunctionalBlocks/Passport/Nvm.Passport.csproj" />
-    <ProjectReference Include="../../../src/FunctionalBlocks/Recipe/Nvm.Recipe.csproj" />
-    <ProjectReference Include="../../../src/FunctionalBlocks/MasterData/Nvm.MasterData.csproj" />
-    <ProjectReference Include="../../../tools/solution-cli/Nvm.SolutionCli/Nvm.SolutionCli.csproj" />
-    <Content Include="EventSourcing/Fixtures/*.json" CopyToOutputDirectory="PreserveNewest" />
-  </ItemGroup>
 
   <PropertyGroup>
     <!-- xunit v3 test projects are executables; the runner is compiled into the assembly. -->
@@ -20,79 +7,20 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../../src/FunctionalBlocks/ProductionExecution/Nvm.ProductionExecution.csproj" />
-    <ProjectReference Include="../../../src/FunctionalBlocks/ProductionExecution.Hosting/Nvm.ProductionExecution.Hosting.csproj" />
     <!--
       Chỉ cần xunit.v3: nó đã nhúng sẵn Microsoft.Testing.Platform runner.
       KHÔNG thêm Microsoft.NET.Test.Sdk hay xunit.runner.visualstudio — đó là hạ tầng
-      VSTest, và .NET 10 đã bỏ hỗ trợ VSTest cho MTP. Xem dotnet.config ở thư mục gốc.
+      VSTest, và .NET 10 đã bỏ hỗ trợ VSTest cho MTP.
     -->
     <PackageReference Include="xunit.v3" />
     <PackageReference Include="Shouldly" />
-    <PackageReference Include="CsCheck" />
-    <!--
-      Container thật để kiểm AddNvmKernel và dispatcher. Nvm.Kernel chỉ tham chiếu Abstractions;
-      chỗ duy nhất cần một container là test và host.
-    -->
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
-    <!-- FakeTimeProvider: tua đồng hồ trong test thay vì chờ thật. Nền cho K1, dùng nhiều từ M7. -->
+    <!-- FakeTimeProvider: tua đồng hồ trong test thay vì chờ thật (K1). -->
     <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../../src/Platform/Nvm.Contracts/Nvm.Contracts.csproj" />
-    <!-- Nvm.Bus kéo theo MassTransit; test pin version đọc assembly qua đường này. -->
-    <ProjectReference Include="../../../src/Platform/Nvm.Bus/Nvm.Bus.csproj" />
-    <ProjectReference Include="../../../src/Platform/Nvm.Kernel/Nvm.Kernel.csproj" />
-    <ProjectReference Include="../../../src/FunctionalBlocks/FactoryModel/Nvm.FactoryModel.csproj" />
     <!-- Lịch sản xuất là hàm domain thuần: production day, ca kíp, DST. Không cần DB nào để kiểm. -->
-    <ProjectReference Include="../../../src/Platform/Nvm.Time/Nvm.Time.csproj" />
-    <!-- Nvm.Sparkplug kéo theo Google.Protobuf; test pin đọc assembly qua đường này. -->
-    <ProjectReference Include="../../../src/Platform/Nvm.Sparkplug/Nvm.Sparkplug.csproj" />
-    <!-- Simulator: sinh dữ liệu là logic, và nó được kiểm ở đây chứ không phải bằng cách nhìn log. -->
-    <ProjectReference Include="../../../src/Workers/Nvm.Simulator/Nvm.Simulator.csproj" />
-    <!-- Gateway: decode + gateway timestamp + protobuf HTTP body được kiểm trước khi chạy container. -->
-    <ProjectReference Include="../../../src/Workers/Nvm.EdgeGateway/Nvm.EdgeGateway.csproj" />
-    <!--
-      Ingestion: phân loại clock_quality là logic thuần trên hai timestamp, không cần database.
-      Phần chạm PostgreSQL nằm ở tests/Integration.
-    -->
-    <ProjectReference Include="../../../src/Workers/Nvm.Ingestion/Nvm.Ingestion.csproj" />
-    <!-- Harness đo D2: cấu hình sai thì con số ra vẫn có, chỉ là của một đường đi khác. -->
-    <ProjectReference Include="../../../tools/loadgen/Nvm.LoadHarness/Nvm.LoadHarness.csproj" />
-    <!-- Backfill phải dùng đúng FormationLine và đúng natural key, không có bộ sinh/identity thứ hai. -->
-    <ProjectReference Include="../../../tools/telemetry/Nvm.TelemetryBackfill/Nvm.TelemetryBackfill.csproj" />
-    <!-- Lab C14 phải tự đỏ khi phép gán ngày ngây thơ không còn được đối chiếu đúng cách. -->
-    <ProjectReference Include="../../../tools/telemetry/Nvm.CalendarLab/Nvm.CalendarLab.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <!--
-      Seed thật, không phải fixture rút gọn. Test đọc đúng file mà hệ thống sẽ đọc, nên sửa
-      seed sẽ làm test đếm node đỏ — đó là hành vi đúng (deploy/seed/README.md).
-    -->
-    <Content Include="../../../deploy/seed/**/*.json" LinkBase="seed" CopyToOutputDirectory="PreserveNewest" />
-    <!--
-      Topology 1.000 kênh của bài test/load. Catalog RIÊNG, không phải revision mới của seed demo:
-      thêm r4 vào deploy/seed/ sẽ làm mọi thứ mặc định nhảy sang 1.000 kênh vì `LatestRevision`.
-      Xem deploy/seed-load/make-load-topology.py.
-    -->
-    <Content Include="../../../deploy/seed-load/*.json" LinkBase="seed-load" CopyToOutputDirectory="PreserveNewest" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <!--
-      Payload Sparkplug B thật, nằm ngoài project vì từ C08 trở đi gateway và integration test
-      cũng đọc chúng — cùng lý do golden file nằm ở tests/Contract/golden/.
-      Xem tests/Fixtures/sparkplug/README.md để biết chúng được sinh bằng gì và vì sao.
-    -->
-    <Content Include="../../Fixtures/sparkplug/*.bin" LinkBase="sparkplug" CopyToOutputDirectory="PreserveNewest" />
-    <!--
-      File .proto vendored, để SparkplugPinTests băm được nó. Đọc bản copy chứ không lần ngược
-      lên gốc repo từ AppContext.BaseDirectory: đường lần ngược đó hỏng ngay khi ai đó đổi
-      ArtifactsPath, và hỏng theo kiểu "không tìm thấy file" chứ không phải "hash sai".
-    -->
-    <Content Include="../../../src/Platform/Nvm.Sparkplug/proto/sparkplug_b.proto" LinkBase="sparkplug" CopyToOutputDirectory="PreserveNewest" />
+    <ProjectReference Include="../../../src/Foundation/Nvm.Time/Nvm.Time.csproj" />
   </ItemGroup>
 
   <ItemGroup>

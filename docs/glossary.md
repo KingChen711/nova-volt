@@ -23,10 +23,13 @@ Thêm khái niệm mới vào đây cùng lúc thêm vào model (AGENTS.md §5.8
 | **Pre-check** | Kiểm trước command, chỉ đọc, chặn được; bật theo từng app |
 | **Post-action** | Việc thêm sau handler, trong cùng transaction; áp cho mọi app |
 | **Facet** | Bộ thuộc tính thêm vào entity có sẵn mà không sửa entity đó |
-| **Reading function** | Hàm chỉ đọc của app, trả danh sách qua OData |
-| **Subscription** | Nối một event với handler và worker role; không có thì event không ai nhận |
+| **Reading function** | Hàm chỉ đọc của app, trả query trì hoãn; OData lọc tiếp rồi mới đọc DB |
+| **Reading model** | Lớp chỉ đọc ánh xạ vào view SQL cùng tên; view cài tay ngoài gói, thiếu thì OData trả 200 với thân bị cắt |
+| **Subscription** | Nối một event với subscriber và worker role. *Predefined* khai trong model, bật ở mọi plant; loại còn lại tạo theo plant bằng dữ liệu. Không có subscription thì event vẫn phát nhưng không ai nhận |
 | **Worker role** | Nhóm tiến trình chạy command hoặc handler; song song hoặc tuần tự |
 | **Signal rule** | Luật gọi một command theo lịch hoặc theo event |
+| **Timer** | Bộ đếm giờ tạo lúc chạy, có mã định danh; tới hạn thì các signal rule trỏ vào nó chạy, mỗi nhịp bị lỡ một lần |
+| **Relay** | Vòng gửi lại event đã lưu cùng transaction nhưng chưa lên bus (bus chết lúc commit) |
 | **Configuration key** | Cặp tên–giá trị cấu hình trong DB (`NId`, `Val`, `Type`, `Category`) |
 | **Xóa mềm** | `Delete` đặt `IsDeleted` = số lớn nhất của bảng + 1 thay vì xóa dòng; đọc qua platform tự lọc, SQL trực tiếp thì không |
 | **`Query` / `ProjectionQuery`** | Đọc trong transaction của command, chỉ cùng domain / đọc ngoài transaction, mọi domain, chỉ bản đã commit |

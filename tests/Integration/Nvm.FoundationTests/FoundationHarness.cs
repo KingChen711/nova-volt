@@ -3,6 +3,7 @@ using Microsoft.Extensions.Time.Testing;
 using Nvm.Foundation.Runtime;
 using Nvm.FoundationTests.LabModel;
 using Testcontainers.MsSql;
+using Testcontainers.RabbitMq;
 
 // SQL trong harness là SQL của chính test (tên bảng từ registry, NId cố định), không có dữ liệu người dùng.
 #pragma warning disable CA2100
@@ -36,6 +37,20 @@ internal static class SharedSqlServer
     }
 }
 
+/// <summary>Một RabbitMQ cho cả lượt test. Test bus dùng plant riêng, nên exchange và queue không lẫn giữa các test.</summary>
+internal static class SharedRabbitMq
+{
+    private static readonly Lazy<Task<RabbitMqContainer>> Container = new(async () =>
+    {
+        // Cùng image với docker-compose.yml.
+        var container = new RabbitMqBuilder("rabbitmq:4.3.5-management").Build();
+        await container.StartAsync(CancellationToken.None);
+        return container;
+    });
+
+    public static async Task<string> UriAsync() => (await Container.Value).GetConnectionString();
+}
+
 /// <summary>Foundation đã dựng trên một DB mới, với model thử nghiệm và hai app: LabApp bật pre-check, OtherApp thì không.</summary>
 internal sealed class FoundationHarness
 {
@@ -45,11 +60,12 @@ internal sealed class FoundationHarness
     public static IEnumerable<Type> LabTypes =>
         typeof(LabOrder).Assembly.GetTypes().Where(t => t.Namespace == typeof(LabOrder).Namespace);
 
-    private FoundationHarness(string connectionString, SolutionConfiguration solution)
+    private FoundationHarness(string connectionString, SolutionConfiguration solution, Func<FoundationHarness, IEventPublisher>? publisher)
     {
         ConnectionString = connectionString;
         Solution = solution;
-        Executor = new CommandExecutor(connectionString, Registry, solution, Time, Traces, Events);
+        Executor = new CommandExecutor(connectionString, Registry, solution, Time, Traces, publisher?.Invoke(this) ?? Events);
+        Rules = new SignalRuleEngine(Executor, connectionString);
     }
 
     public string ConnectionString { get; }
@@ -64,25 +80,23 @@ internal sealed class FoundationHarness
 
     public CommandExecutor Executor { get; }
 
-    public static async Task<FoundationHarness> CreateAsync(Action<SolutionConfiguration>? configure = null)
+    public SignalRuleEngine Rules { get; }
+
+    /// <summary>Harness có publisher thật (RabbitMQ). <paramref name="publisher"/> null là publisher trong bộ nhớ.</summary>
+    public static async Task<FoundationHarness> CreateAsync(
+        Action<SolutionConfiguration>? configure = null,
+        Func<FoundationHarness, IEventPublisher>? publisher = null)
     {
         var connectionString = await SharedSqlServer.NewDatabaseAsync();
         SchemaUpdater.UpdateDatabase(connectionString, Registry);
 
+        // POM (app nào công bố gì) nằm trong model: LabAppDefinition, OtherAppDefinition. Ở đây chỉ còn command settings.
         var solution = new SolutionConfiguration();
         var lab = new AppConfiguration(LabApp.Name);
-        var other = new AppConfiguration(LabApp.OtherName);
-        foreach (var command in Registry.Commands.Where(c => !c.IsComposite))
-        {
-            lab.Commands.Add(command.Type);
-            other.Commands.Add(command.Type);
-        }
-
         lab.EnabledPreChecks.Add(nameof(RejectNegativeQuantity));
         solution.Apps.Add(lab);
-        solution.Apps.Add(other);
         configure?.Invoke(solution);
-        return new FoundationHarness(connectionString, solution);
+        return new FoundationHarness(connectionString, solution, publisher);
     }
 
     public CommandResult Run(object command, string app = LabApp.Name) => Executor.Execute(app, command);

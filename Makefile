@@ -15,7 +15,7 @@ PYTHON   := $(shell python3 --version >/dev/null 2>&1 && echo python3 || echo py
 BACKUP_DIR := $(shell grep -E '^NVM_BACKUP_DIR=' .env 2>/dev/null | cut -d= -f2-)
 
 .DEFAULT_GOAL := help
-.PHONY: help up down down-v reset ps logs build test ci hooks format format-check clean backup secret-check cleanroom
+.PHONY: help up down down-v reset ps logs build test ci hooks format format-check clean backup secret-check cleanroom update-db keycloak-users mom web web-ci
 
 help:
 	@echo "NovaVolt MOM v2"
@@ -32,6 +32,13 @@ help:
 	@echo "    make ci            Dung chuoi CI: cleanroom -> restore -> format -> build -> test"
 	@echo "    make format        Sua format theo .editorconfig"
 	@echo "    make hooks         Bat pre-commit hook (format + clean-room)"
+	@echo ""
+	@echo "  Chay MOM"
+	@echo "    make update-db     Update Database: can schema DB MOM theo model (quyen sa)"
+	@echo "    make keycloak-users Dat mat khau user thu cua realm tu NVM_DEMO_USER_PASSWORD"
+	@echo "    make mom           Chay host MOM (OData, worker event, signal rule) o NVM_PORT_MOM"
+	@echo "    make web           Chay web Next.js o NVM_PORT_WEB (lan dau: npm ci trong web/)"
+	@echo "    make web-ci        Kiem kieu va build web, nhu job CI"
 	@echo ""
 	@echo "  Kiem tra"
 	@echo "    make secret-check  .env co dung credential cong khai khong (K13)"
@@ -106,3 +113,20 @@ backup:
 	@git bundle create "$(BACKUP_DIR)/novavolt-mes.bundle" --all
 	@git bundle verify "$(BACKUP_DIR)/novavolt-mes.bundle" >/dev/null
 	@echo "Backup OK: $(BACKUP_DIR)/novavolt-mes.bundle"
+
+update-db:
+	dotnet run --project src/Solution/Nvm.Mom.Host --no-launch-profile -- --update-database
+
+keycloak-users:
+	@$(PYTHON) -I -X utf8 scripts/keycloak-demo-users.py
+
+mom:
+	dotnet run --project src/Solution/Nvm.Mom.Host --no-launch-profile
+
+web:
+	npm run --prefix web dev
+
+web-ci:
+	npm ci --prefix web
+	npm run --prefix web typecheck
+	npm run --prefix web build

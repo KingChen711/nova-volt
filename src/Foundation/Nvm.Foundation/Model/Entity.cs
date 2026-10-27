@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Nvm.Foundation;
 
 /// <summary>Cột hệ thống mà nền tự quản lý cho mọi entity và facet.</summary>
@@ -13,11 +15,13 @@ public abstract class ModelObject
     public DateTimeOffset LastUpdatedOn { get; internal set; }
 
     /// <summary>Phiên bản lạc quan; hai transaction cùng sửa một dòng thì bên ghi sau thất bại.</summary>
+    [JsonIgnore]
     public IReadOnlyList<byte> OptimisticVersion => Version ?? [];
 
     /// <summary><c>0</c> là bản đang sống. Xóa đặt số lớn nhất của bảng + 1, nên mỗi bản đã xóa có một số riêng.</summary>
     public int IsDeleted { get; internal set; }
 
+    [JsonIgnore]
     internal byte[]? Version { get; set; }
 }
 

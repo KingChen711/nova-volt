@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Service layer HTTP của Foundation: OData theo app (đọc entity set, POST command, reading function), token có hạn.
+    Thuộc lớp Foundation: chỉ dựa trên Nvm.Foundation.
+  -->
+
+  <PropertyGroup>
+    <RootNamespace>Nvm.Foundation.Web</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Nvm.Foundation/Nvm.Foundation.csproj" />
+  </ItemGroup>
+
+</Project>

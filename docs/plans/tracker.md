@@ -7,7 +7,7 @@ test và số đo tương ứng (AGENTS.md §1.3). Agent làm theo lô lớn, kh
 |---|---|---|
 | R0 Đóng v1, khung v2, clean-room | **đạt** (2026-10-27) | Tag `r0`; mục R0 bên dưới |
 | R1 Foundation: model, command, transaction | **đạt** (2026-10-27) | Tag `r1`; mục R1 bên dưới |
-| R2 Foundation: App/OData, event, rule, key, state machine; khung web | chưa làm | |
+| R2 Foundation: App/OData, event, rule, key, state machine; khung web | **đạt** (2026-10-28) | Tag `r2`; mục R2 bên dưới |
 | R3 Product | chưa làm | |
 | R4 Runner suite, master data, WO theo ca | chưa làm | |
 | R5 Tin từ xưởng | chưa làm | |
@@ -47,10 +47,30 @@ test và số đo tương ứng (AGENTS.md §1.3). Agent làm theo lô lớn, kh
   đóng N-R0-1. Cổng SMTP host của Mailpit đổi 1025 → 25025: trên máy có dải cổng động Windows bắt đầu từ 1024,
   1025 bị tiến trình hệ thống giữ.
 
+## R2
+
+- App và extension app khai trong model (`AppDefinition`, POM), tiền tố `<ExtApp>_` dưới base app, extension app phẳng.
+- Service layer HTTP (`src/Foundation/Nvm.Foundation.Web`): OData theo app (tập con, ADR-055), POST command theo tên
+  công bố, reading function trả query trì hoãn, token JWT có hạn (hết hạn → 401 `6401`).
+- Event lưu cùng transaction rồi lên RabbitMQ (exchange theo plant, queue theo worker role), relay gửi lại;
+  subscription Predefined và theo plant; signal rule theo timer và theo event; configuration key; state machine dạng
+  dữ liệu với role theo transition. Quyết định ở ADR-055.
+- DoD: 26 test hành vi mới trong `tests/Integration/Nvm.FoundationTests` (tên ở [bảng cơ chế](../oef-mapping.md)),
+  gồm lab L04, L05, và sớm L06, L15.
+- Host chạy được (`src/Solution/Nvm.Mom.Host`, `make update-db`, `make mom`); realm Keycloak v2 (role theo khu, token
+  600 giây, mật khẩu user thử từ `.env`), đóng N-R0-2.
+- Khung web Next.js (`web/`, thiết kế ở `web/DESIGN.md`): đăng nhập Keycloak bằng PKCE, menu và route theo role, màn
+  Quản trị (configuration key, state machine, signal rule và timer) hiện nguyên thân response. Kiểm tay trên trình
+  duyệt 2026-10-28: `admin.nv1` thấy mọi khu, đọc và ghi key, thấy lỗi `7001` nguyên văn; `op.nv1` chỉ thấy hai khu và
+  bị chặn ở `/admin`. Job CI `Web` (kiểm kiểu, build).
+- Cổng web đổi 3000 → 3100: Windows trên máy giữ riêng dải 3000–3019. Next ghim 16.4.3 (vá ba advisory của ≤ 16.4.0).
+
 ## Nợ mở
 
 | Mã | Nợ | Mốc xử lý |
 |---|---|---|
-| N-R0-2 | Realm Keycloak vẫn là bản v1 (role, user của v1) | R2 |
-| N-R0-3 | Observability stack chưa có trong compose v2 | R2 |
+| N-R0-3 | Observability stack chưa có trong compose v2. Trace hiện đi ra log của host và `ActivitySource`; dashboard theo `CorrelationId` thuộc bộ chẩn đoán | R12 |
 | N-R0-4 | Site tài liệu Mintlify vẫn mô tả v1; chưa chạy kiểm clean-room | R12 |
+| N-R2-1 | Service layer chưa kiểm quyền theo role cho từng command: ai có token hợp lệ cũng gọi được mọi command app công bố. Web chỉ ẩn menu và chặn route | R4 (trước khi có màn nghiệp vụ đầu tiên) |
+| N-R2-2 | Web chưa có test tự động; R2 kiểm tay trên trình duyệt. Lab Playwright theo scope | R4 |
+| N-R2-3 | Host chạy bằng `dotnet run`, chưa có trong compose | R12 |

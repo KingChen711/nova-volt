@@ -18,6 +18,7 @@ public static class LabApp
 {
     public const string Name = "LabApp";
     public const string OtherName = "OtherApp";
+    public const string ExtensionName = "LabExt";
 }
 
 [Entity<LabMasterBlock>]
@@ -30,8 +31,10 @@ public sealed class LabMaterial : Entity
 }
 
 [Entity<LabOperationBlock>]
-public sealed class LabOrder : Entity
+public sealed class LabOrder : Entity, IHasStatus
 {
+    public string? Status { get; set; }
+
     [Mandatory]
     public string? MaterialNId { get; set; }
 

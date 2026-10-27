@@ -2,6 +2,7 @@
   <Folder Name="/src/" />
   <Folder Name="/src/Foundation/">
     <Project Path="src/Foundation/Nvm.Foundation/Nvm.Foundation.csproj" />
+    <Project Path="src/Foundation/Nvm.Foundation.Web/Nvm.Foundation.Web.csproj" />
     <Project Path="src/Foundation/Nvm.Hosting/Nvm.Hosting.csproj" />
     <Project Path="src/Foundation/Nvm.Observability/Nvm.Observability.csproj" />
     <Project Path="src/Foundation/Nvm.Observability.Web/Nvm.Observability.Web.csproj" />
@@ -18,6 +19,9 @@
   </Folder>
   <Folder Name="/src/Integration/">
     <Project Path="src/Integration/Nvm.Integration/Nvm.Integration.csproj" />
+  </Folder>
+  <Folder Name="/src/Solution/">
+    <Project Path="src/Solution/Nvm.Mom.Host/Nvm.Mom.Host.csproj" />
   </Folder>
   <Folder Name="/tools/">
     <Project Path="tools/analyzers/Nvm.Analyzers/Nvm.Analyzers.csproj" />

@@ -81,3 +81,18 @@ jobs:
           grep -E -A6 'failed [A-Za-z]' test.plain.log | grep -E 'failed [A-Za-z]|Exception|should|but was|error' | head -40 \
             | sed -E 's/^[[:space:]]*/::error title=Test failed::/' || true
           echo "failed lines: $(grep -cE 'failed [A-Za-z]' test.plain.log || true)"
+
+  # Web Next.js: kiểm kiểu và build, cùng lệnh với `make web-ci`. Không cần MOM hay Keycloak đang chạy.
+  web:
+    name: Web
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install, typecheck, build
+        run: make web-ci

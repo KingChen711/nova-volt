@@ -48,6 +48,8 @@ output/playwright/
 .env
 .env.*
 !.env.example
+# Địa chỉ dev của web (NEXT_PUBLIC_*), không có secret: trình duyệt nào cũng đọc được các biến này.
+!web/.env.development
 appsettings.*.Local.json
 appsettings.Local.json
 secrets.json

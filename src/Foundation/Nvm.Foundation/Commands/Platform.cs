@@ -30,6 +30,9 @@ public interface IReadOnlyPlatform
     ITracer Tracer { get; }
 
     TimeProvider Time { get; }
+
+    /// <summary>Người gọi lời gọi gốc; role dùng cho state machine (role theo transition).</summary>
+    CallerIdentity Caller { get; }
 }
 
 /// <summary>Platform mà handler và post-action nhận.</summary>
@@ -72,6 +75,8 @@ public interface ICompositePlatform
     ITracer Tracer { get; }
 
     TimeProvider Time { get; }
+
+    CallerIdentity Caller { get; }
 }
 
 /// <summary>Dùng sai model: đọc khác domain bằng <c>Query</c>, ghi trong pre-check… Runtime của luật mà NVM004 bắt lúc build.</summary>

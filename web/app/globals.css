@@ -1,0 +1,134 @@
+@import "tailwindcss";
+
+/*
+  Token theo web/DESIGN.md: style Data-Dense Dashboard, nền xám trung tính (zinc), xanh dữ liệu + hổ phách nhấn, trạng thái đỏ/hổ phách/xanh lá.
+  Component chỉ dùng tên token (bg-surface, text-muted…), không dùng mã màu trực tiếp.
+*/
+@theme {
+  --font-sans: var(--font-fira-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-fira-code), ui-monospace, monospace;
+
+  --color-bg: #f4f4f5;
+  --color-surface: #ffffff;
+  --color-raised: #fafafa;
+  --color-line: #e4e4e7;
+  --color-ink: #18181b;
+  --color-muted: #52525b;
+  --color-primary: #1e40af;
+  --color-primary-ink: #ffffff;
+  --color-primary-soft: #dbeafe;
+  --color-accent: #d97706;
+  --color-accent-soft: #fef3c7;
+  --color-ok: #15803d;
+  --color-ok-soft: #dcfce7;
+  --color-warn: #b45309;
+  --color-warn-soft: #fef3c7;
+  --color-bad: #b91c1c;
+  --color-bad-soft: #fee2e2;
+
+  /* Sidebar xám than ở cả hai chế độ: vùng điều hướng tách hẳn khỏi vùng dữ liệu. Không dùng nền xanh đen. */
+  --color-nav: #1c1c1f;
+  --color-nav-raised: #2e2e33;
+  --color-nav-ink: #e4e4e7;
+  --color-nav-muted: #a1a1aa;
+  --color-nav-active: #f59e0b;
+
+  --spacing-row: 2.5rem;
+  --spacing-touch: 2.75rem;
+
+  --shadow-card: 0 1px 2px rgb(24 24 27 / 0.06), 0 1px 3px rgb(24 24 27 / 0.08);
+  --shadow-pop: 0 8px 24px rgb(24 24 27 / 0.18);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #111113;
+    --color-surface: #19191c;
+    --color-raised: #222226;
+    --color-line: #323238;
+    --color-ink: #e4e4e7;
+    --color-muted: #a1a1aa;
+    --color-primary: #60a5fa;
+    --color-primary-ink: #111113;
+    --color-primary-soft: #27272a;
+    --color-accent: #fbbf24;
+    --color-accent-soft: #451a03;
+    --color-ok: #4ade80;
+    --color-ok-soft: #052e16;
+    --color-warn: #fbbf24;
+    --color-warn-soft: #451a03;
+    --color-bad: #f87171;
+    --color-bad-soft: #450a0a;
+    --color-nav: #0b0b0d;
+    --color-nav-raised: #232327;
+    --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4);
+    --shadow-pop: 0 8px 24px rgb(0 0 0 / 0.5);
+  }
+}
+
+html,
+body {
+  background: var(--color-bg);
+  color: var(--color-ink);
+}
+
+body {
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Lưới mảnh gợi bản vẽ mặt bằng xưởng, chỉ dùng ở mảng thương hiệu của trang đăng nhập. */
+.blueprint {
+  background-color: var(--color-nav);
+  background-image:
+    linear-gradient(rgb(161 161 170 / 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(161 161 170 / 0.08) 1px, transparent 1px),
+    radial-gradient(circle at 20% 15%, rgb(245 158 11 / 0.18), transparent 45%),
+    radial-gradient(circle at 85% 90%, rgb(161 161 170 / 0.1), transparent 50%);
+  background-size: 32px 32px, 32px 32px, auto, auto;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: -200% 0;
+  }
+  to {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--color-raised) 25%, var(--color-line) 50%, var(--color-raised) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+  border-radius: 0.25rem;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.toast-in {
+  animation: toast-in 200ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0ms !important;
+    animation-duration: 0ms !important;
+  }
+}

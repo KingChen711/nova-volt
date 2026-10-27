@@ -62,6 +62,31 @@ public sealed record EventModel(Type Type, BlockModel Block, int Version)
     public string Name => Block.Name + "." + Type.Name;
 }
 
+/// <summary>App và POM của nó. Extension app có <see cref="BaseApp"/>; command của nó chạy dưới base app.</summary>
+public sealed record AppModel(
+    Type Type,
+    string Name,
+    AppModel? BaseApp,
+    IReadOnlySet<Type> Objects,
+    IReadOnlySet<Type> Commands,
+    IReadOnlySet<Type> ReadingFunctions)
+{
+    public bool IsExtension => BaseApp is not null;
+}
+
+/// <summary>Reading model ánh xạ vào view <c>dbo.&lt;Name&gt;</c>.</summary>
+public sealed record ReadingModelModel(Type Type, BlockModel Block)
+{
+    public string ViewName => Type.Name;
+}
+
+public sealed record ReadingFunctionModel(Type Type, string App, Type ParametersType, Type RowType)
+{
+    public string Name => Type.Name;
+}
+
+public sealed record EventSubscriberModel(Type Type, Type EventType, BlockModel Block, string Subscription, bool Predefined, string WorkerRole);
+
 /// <summary>Model của solution, dựng một lần lúc khởi động từ attribute trong các assembly được nạp.</summary>
 /// <remarks>Thay cho bước biên dịch file khai báo model của nền thật: lỗi khai báo phải chặn khởi động, không đợi tới lúc chạy.</remarks>
 public sealed class ModelRegistry
@@ -80,6 +105,10 @@ public sealed class ModelRegistry
     private readonly Dictionary<Type, EventModel> _events = [];
     private readonly List<PreCheckModel> _preChecks = [];
     private readonly List<PostActionModel> _postActions = [];
+    private readonly Dictionary<string, AppModel> _apps = new(StringComparer.Ordinal);
+    private readonly Dictionary<Type, ReadingModelModel> _readingModels = [];
+    private readonly Dictionary<Type, ReadingFunctionModel> _readingFunctions = [];
+    private readonly List<EventSubscriberModel> _eventSubscribers = [];
 
     private ModelRegistry()
     {
@@ -95,6 +124,14 @@ public sealed class ModelRegistry
 
     public IReadOnlyList<PostActionModel> PostActions => _postActions;
 
+    public IReadOnlyCollection<AppModel> Apps => _apps.Values;
+
+    public IReadOnlyCollection<ReadingModelModel> ReadingModels => _readingModels.Values;
+
+    public IReadOnlyCollection<EventModel> Events => _events.Values;
+
+    public IReadOnlyList<EventSubscriberModel> EventSubscribers => _eventSubscribers;
+
     /// <summary>Mỗi entity có facet: một bảng facet dùng chung.</summary>
     public IReadOnlyList<EntityFacetTable> FacetTables { get; private set; } = [];
 
@@ -108,7 +145,8 @@ public sealed class ModelRegistry
     {
         ArgumentNullException.ThrowIfNull(modelTypes);
         var registry = new ModelRegistry();
-        var types = modelTypes.Distinct().ToArray();
+        // Model riêng của Foundation (configuration key, state machine, signal rule, timer) luôn có mặt.
+        var types = modelTypes.Concat(typeof(ModelRegistry).Assembly.GetTypes()).Distinct().ToArray();
         var blocks = new Dictionary<Type, BlockModel>();
 
         BlockModel BlockOf(Type modelType, Type attributeType)
@@ -228,9 +266,177 @@ public sealed class ModelRegistry
 
                 registry._events.Add(type, new EventModel(type, BlockOf(type, eventAttr), version));
             }
+
+            if (Find(type, typeof(ReadingModelAttribute<>)) is { } readingAttr)
+            {
+                registry._readingModels.Add(type, new ReadingModelModel(type, BlockOf(type, readingAttr)));
+            }
+        }
+
+        registry.BuildApps(types);
+
+        foreach (var type in types)
+        {
+            if (Find(type, typeof(EventSubscriberAttribute<>)) is { } handlerAttr)
+            {
+                var eventType = type.GetInterfaces()
+                    .SingleOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IEventSubscriber<>))?
+                    .GetGenericArguments()[0]
+                    ?? throw Invalid($"Event handler {type.Name} must implement IEventSubscriber<TEvent>.");
+                _ = registry.EventOf(eventType);
+                var declared = type.GetCustomAttribute(handlerAttr)!;
+                object? Read(string name) => handlerAttr.GetProperty(name)!.GetValue(declared);
+                registry._eventSubscribers.Add(new EventSubscriberModel(type, eventType, BlockOf(type, handlerAttr),
+                    (string)Read(nameof(EventSubscriberAttribute<object>.Subscription))!,
+                    (bool)Read(nameof(EventSubscriberAttribute<object>.Predefined))!,
+                    (string)Read(nameof(EventSubscriberAttribute<object>.WorkerRole))!));
+            }
+        }
+
+        var duplicate = registry._eventSubscribers.GroupBy(h => h.Subscription, StringComparer.Ordinal).FirstOrDefault(g => g.Count() > 1);
+        if (duplicate is not null)
+        {
+            throw Invalid($"Subscription {duplicate.Key} is declared by more than one handler.");
         }
 
         return registry;
+    }
+
+    public AppModel AppOf(string name) =>
+        _apps.GetValueOrDefault(name) ?? throw new KeyNotFoundException($"App {name} is not part of the model.");
+
+    public bool HasApp(string name) => _apps.ContainsKey(name);
+
+    public EventModel? EventByName(string name) =>
+        _events.Values.FirstOrDefault(e => string.Equals(e.Name, name, StringComparison.Ordinal));
+
+    public ReadingModelModel? ReadingModelOf(Type type) => _readingModels.GetValueOrDefault(type);
+
+    /// <summary>Tên mà <paramref name="app"/> công bố cho command, hoặc null nếu app không công bố nó.</summary>
+    /// <remarks>Command của FB: import vào POM. Composite: của chính app, hoặc của extension app gắn vào nó (có tiền tố).</remarks>
+    public string? PublicNameIn(string app, CommandModel command)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        var model = AppOf(app);
+        if (command.App is null)
+        {
+            return model.Commands.Contains(command.Type) ? command.Name : null;
+        }
+
+        if (string.Equals(command.App, app, StringComparison.Ordinal) && !model.IsExtension)
+        {
+            return command.Name;
+        }
+
+        var owner = _apps.GetValueOrDefault(command.App);
+        return owner?.BaseApp == model ? owner.Name + "_" + command.Name : null;
+    }
+
+    /// <summary>Command theo tên công bố trên app (POST tới OData của app).</summary>
+    public CommandModel? CommandByPublicName(string app, string name) =>
+        _commands.Values.FirstOrDefault(c => string.Equals(PublicNameIn(app, c), name, StringComparison.Ordinal));
+
+    /// <summary>Reading function theo tên công bố trên app; cùng luật tiền tố như command.</summary>
+    public ReadingFunctionModel? ReadingFunctionByPublicName(string app, string name)
+    {
+        var model = AppOf(app);
+        return _readingFunctions.Values.FirstOrDefault(f =>
+            (string.Equals(f.App, app, StringComparison.Ordinal) && !model.IsExtension
+                && string.Equals(f.Name, name, StringComparison.Ordinal))
+            || (_apps.GetValueOrDefault(f.App)?.BaseApp == model
+                && string.Equals(f.App + "_" + f.Name, name, StringComparison.Ordinal)));
+    }
+
+    /// <summary>Entity set mà app công bố: entity, facet hoặc reading model đã import.</summary>
+    public Type? EntitySetIn(string app, string name) =>
+        AppOf(app).Objects.FirstOrDefault(t => string.Equals(t.Name, name, StringComparison.Ordinal));
+
+    private void BuildApps(Type[] types)
+    {
+        var byType = new Dictionary<Type, AppModel>();
+
+        AppModel Create(Type type, AppAttribute attribute)
+        {
+            if (byType.TryGetValue(type, out var existing))
+            {
+                return existing;
+            }
+
+            if (!typeof(AppDefinition).IsAssignableFrom(type) || type.IsAbstract)
+            {
+                throw Invalid($"App {attribute.Name} must be a concrete AppDefinition.");
+            }
+
+            AppModel? baseApp = null;
+            if (attribute.BaseApp is { } baseType)
+            {
+                var baseAttribute = baseType.GetCustomAttribute<AppAttribute>()
+                    ?? throw Invalid($"App {attribute.Name} extends {baseType.Name}, which has no [App].");
+                baseApp = Create(baseType, baseAttribute);
+                if (baseApp.IsExtension)
+                {
+                    // Extension app phẳng: không gắn vào extension app khác.
+                    throw Invalid($"Extension app {attribute.Name} cannot extend extension app {baseApp.Name}.");
+                }
+            }
+
+            var pom = new PomBuilder();
+            ((AppDefinition)Activator.CreateInstance(type)!).Build(pom);
+            var unknownObject = pom.Objects.FirstOrDefault(t =>
+                !_entities.ContainsKey(t) && !_facets.ContainsKey(t) && !_readingModels.ContainsKey(t));
+            if (unknownObject is not null)
+            {
+                throw Invalid($"App {attribute.Name} imports {unknownObject.Name}, which is not an entity, facet or reading model.");
+            }
+
+            var unknownCommand = pom.Commands.FirstOrDefault(t => !_commands.TryGetValue(t, out var c) || c.IsComposite);
+            if (unknownCommand is not null)
+            {
+                throw Invalid($"App {attribute.Name} imports {unknownCommand.Name}, which is not a functional block command.");
+            }
+
+            var app = new AppModel(type, attribute.Name, baseApp, pom.Objects, pom.Commands, pom.ReadingFunctions);
+            if (!_apps.TryAdd(app.Name, app))
+            {
+                throw Invalid($"App name {app.Name} is declared twice.");
+            }
+
+            byType.Add(type, app);
+            return app;
+        }
+
+        foreach (var type in types)
+        {
+            if (type.GetCustomAttribute<AppAttribute>() is { } attribute)
+            {
+                Create(type, attribute);
+            }
+        }
+
+        var orphan = _commands.Values.FirstOrDefault(c => c.IsComposite && !_apps.ContainsKey(c.App!));
+        if (orphan is not null)
+        {
+            throw Invalid($"Command {orphan.Name} belongs to app {orphan.App}, which is not declared.");
+        }
+
+        foreach (var type in types)
+        {
+            if (type.GetCustomAttribute<ReadingFunctionAttribute>() is not { } attribute)
+            {
+                continue;
+            }
+
+            var contract = type.GetInterfaces()
+                .SingleOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IReadingFunction<,>))
+                ?? throw Invalid($"Reading function {type.Name} must implement IReadingFunction<TParameters, TRow>.");
+            if (!_apps.ContainsKey(attribute.App))
+            {
+                throw Invalid($"Reading function {type.Name} belongs to app {attribute.App}, which is not declared.");
+            }
+
+            _readingFunctions.Add(type, new ReadingFunctionModel(type, attribute.App, contract.GetGenericArguments()[0],
+                contract.GetGenericArguments()[1]));
+        }
     }
 
     public EntityModel? EntityOf(Type type) => _entities.GetValueOrDefault(type);
@@ -241,6 +447,7 @@ public sealed class ModelRegistry
     public ModelDomain DomainOf(Type modelType) =>
         EntityOf(modelType)?.Block.Domain
         ?? FacetOf(modelType)?.Block.Domain
+        ?? ReadingModelOf(modelType)?.Block.Domain
         ?? throw new ModelMisuseException($"{modelType.Name} is not a registered entity or facet.");
 
     /// <summary>Tên bảng SQL của một entity hoặc facet.</summary>

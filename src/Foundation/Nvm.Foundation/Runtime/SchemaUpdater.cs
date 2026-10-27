@@ -47,6 +47,11 @@ public static class SchemaUpdater
                 CorrelationId uniqueidentifier NOT NULL,
                 RaisedOn datetimeoffset(7) NOT NULL);
             """;
+        // Null: chưa lên bus. Relay gửi lại các dòng này (bus chết lúc commit, host chết giữa commit và publish).
+        yield return $"""
+            IF COL_LENGTH(N'dbo.{EventTable}', N'PublishedOn') IS NULL
+                ALTER TABLE dbo.{EventTable} ADD PublishedOn datetimeoffset(7) NULL;
+            """;
         yield return $"""
             IF OBJECT_ID(N'dbo.{ModelTable}', N'U') IS NULL
             CREATE TABLE dbo.{ModelTable} (

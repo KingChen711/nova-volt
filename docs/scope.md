@@ -81,7 +81,7 @@ Bảng trạng thái từng cơ chế: [`oef-mapping.md`](oef-mapping.md).
 | Keycloak | Danh tính, role |
 | Redpanda (Kafka API) | Gateway nhận lịch xe của nhà cung cấp và đơn của khách |
 | Mailpit | Bắt email MOM gửi |
-| OpenTelemetry, Tempo, Loki, Prometheus, Grafana | Trace theo `CorrelationId`, log, số đo (quay lại từ R1–R2) |
+| OpenTelemetry, Tempo, Loki, Prometheus, Grafana | Trace theo `CorrelationId`, log, số đo (dựng cùng bộ chẩn đoán ở R12) |
 | Next.js | Giao diện (ADR-053) |
 
 ## 5. Lộ trình

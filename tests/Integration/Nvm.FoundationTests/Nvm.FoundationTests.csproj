@@ -11,15 +11,22 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="xunit.v3" />
     <PackageReference Include="Shouldly" />
     <PackageReference Include="Testcontainers.MsSql" />
+    <PackageReference Include="Testcontainers.RabbitMq" />
+    <PackageReference Include="Microsoft.AspNetCore.TestHost" />
     <PackageReference Include="Microsoft.Data.SqlClient" />
     <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="../../../src/Foundation/Nvm.Foundation/Nvm.Foundation.csproj" />
+    <ProjectReference Include="../../../src/Foundation/Nvm.Foundation.Web/Nvm.Foundation.Web.csproj" />
   </ItemGroup>
 
   <ItemGroup>

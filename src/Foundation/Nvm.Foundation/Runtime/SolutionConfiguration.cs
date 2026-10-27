@@ -1,12 +1,20 @@
 namespace Nvm.Foundation.Runtime;
 
-/// <summary>Cấu hình của solution: app nào publish command nào, bật pre-check nào. Tương ứng Command Settings của nền thật.</summary>
+/// <summary>Cấu hình của solution cho một plant: command settings của từng app, worker role, các biến thể hành vi.</summary>
+/// <remarks>App nào công bố gì là POM, khai trong model (<see cref="AppDefinition"/>), không nằm ở đây.</remarks>
 public sealed class SolutionConfiguration
 {
+    /// <summary>Plant của lần deploy này: một plant một DB MOM (K3), nằm trong URL và tên exchange.</summary>
+    public string Plant { get; set; } = "NV1";
+
     public IList<AppConfiguration> Apps { get; } = [];
 
     /// <summary>Post-action tùy chọn đã tắt (theo tên lớp). Post-action bắt buộc thì không tắt được.</summary>
     public ISet<string> DisabledPostActions { get; } = new HashSet<string>(StringComparer.Ordinal);
+
+    /// <summary>Worker role theo tên. Role mà handler khai nhưng không có ở đây chạy một instance, song song.</summary>
+    public IDictionary<string, WorkerRoleConfiguration> WorkerRoles { get; } =
+        new Dictionary<string, WorkerRoleConfiguration>(StringComparer.Ordinal);
 
     /// <summary>Response trả gì khi commit hỏng sau khi handler xong. Mặc định báo lỗi; biến thể kia dành cho lab L02.</summary>
     public CommitFailureReporting CommitFailureReporting { get; set; } = CommitFailureReporting.Failure;
@@ -17,9 +25,12 @@ public sealed class SolutionConfiguration
     /// </summary>
     public bool ChildFailureDoomsTransaction { get; set; }
 
+    /// <summary>Command settings của app; app chưa cấu hình thì không bật pre-check nào.</summary>
     public AppConfiguration App(string name) =>
-        Apps.FirstOrDefault(a => string.Equals(a.Name, name, StringComparison.Ordinal))
-        ?? throw new KeyNotFoundException($"App '{name}' is not part of the solution.");
+        Apps.FirstOrDefault(a => string.Equals(a.Name, name, StringComparison.Ordinal)) ?? new AppConfiguration(name);
+
+    public WorkerRoleConfiguration WorkerRole(string name) =>
+        WorkerRoles.TryGetValue(name, out var role) ? role : new WorkerRoleConfiguration();
 }
 
 public enum CommitFailureReporting
@@ -31,14 +42,20 @@ public enum CommitFailureReporting
     HandlerResult = 2,
 }
 
-/// <summary>Một app: các command của FB nó publish và các pre-check nó bật.</summary>
+/// <summary>Command settings của một app: các pre-check bật ở app đó.</summary>
 public sealed class AppConfiguration(string name)
 {
     public string Name { get; } = name;
 
-    /// <summary>Command của FB mà app publish. Composite command của app thì tự thuộc app.</summary>
-    public ISet<Type> Commands { get; } = new HashSet<Type>();
-
     /// <summary>Pre-check bật ở app này (theo tên lớp). Cùng command gọi qua app khác thì pre-check không chạy.</summary>
     public ISet<string> EnabledPreChecks { get; } = new HashSet<string>(StringComparer.Ordinal);
+}
+
+/// <summary>Worker role: số instance nhận event, và nhận tuần tự (một message một lúc) hay song song.</summary>
+public sealed class WorkerRoleConfiguration
+{
+    public int Instances { get; set; } = 1;
+
+    /// <summary>Tuần tự: một consumer, một message một lúc, đúng thứ tự trong queue. Bỏ qua <see cref="Instances"/>.</summary>
+    public bool Sequential { get; set; }
 }

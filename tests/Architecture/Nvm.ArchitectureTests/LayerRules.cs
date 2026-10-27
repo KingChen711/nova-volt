@@ -14,6 +14,8 @@ public static class LayerRules
         // Phía xưởng và gateway đóng vai hệ bên ngoài: chỉ thấy Foundation, như hệ thật chỉ thấy command và event.
         ["Shopfloor"] = ["Shopfloor", "Foundation"],
         ["Integration"] = ["Integration", "Foundation"],
+        // Host của một lần deploy: ghép mọi lớp lại, nên được thấy tất cả; không lớp nào được thấy nó.
+        ["Solution"] = ["Solution", "Project", "Product", "Foundation", "Shopfloor", "Integration"],
     };
 
     public static string RepoRoot()

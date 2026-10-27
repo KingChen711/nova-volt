@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!--
+    Host MOM của một plant: service layer OData, worker nhận event, vòng signal rule, relay event.
+    Lớp Solution: ghép model của mọi lớp (Foundation; Product và Project từ R3). Tham số update-database căn schema theo
+    model rồi thoát, như bước Update Database của gói deploy.
+  -->
+
+  <PropertyGroup>
+    <RootNamespace>Nvm.Mom.Host</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Foundation/Nvm.Foundation/Nvm.Foundation.csproj" />
+    <ProjectReference Include="../../Foundation/Nvm.Foundation.Web/Nvm.Foundation.Web.csproj" />
+    <ProjectReference Include="../../Foundation/Nvm.Hosting/Nvm.Hosting.csproj" />
+  </ItemGroup>
+
+</Project>

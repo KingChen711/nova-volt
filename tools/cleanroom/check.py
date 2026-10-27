@@ -61,7 +61,8 @@ def tracked_files(staged: bool) -> list[str]:
     if staged:
         args = ["git", "diff", "--cached", "--name-only", "--diff-filter=ACMR"]
     else:
-        args = ["git", "ls-files"]
+        # Cả file mới chưa commit (trừ file .gitignore bỏ qua): `make ci` chạy trên working tree trước khi commit.
+        args = ["git", "ls-files", "--cached", "--others", "--exclude-standard"]
     out = subprocess.run(args, cwd=ROOT, capture_output=True, text=True, check=True).stdout
     return [line for line in out.splitlines() if line]
 

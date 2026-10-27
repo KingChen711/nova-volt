@@ -18,6 +18,8 @@ internal class ReadOnlyPlatform(CommandExecutor executor, DomainTransaction tran
 
     public TimeProvider Time => executor.Time;
 
+    public CallerIdentity Caller => scope.Caller;
+
     public IQueryable<T> Query<T>()
         where T : ModelObject
     {
@@ -126,6 +128,8 @@ internal sealed class CompositePlatform(CommandExecutor executor, AppConfigurati
     public ITracer Tracer => tracer;
 
     public TimeProvider Time => executor.Time;
+
+    public CallerIdentity Caller => scope.Caller;
 
     public TResponse CallCommand<TCommand, TResponse>(TCommand command)
         where TCommand : ICommand<TResponse>

@@ -34,6 +34,9 @@ public sealed class CommandExecutor
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
 
+    /// <summary>Thân của POST command và tham số của reading function: tên thuộc tính không phân biệt hoa thường.</summary>
+    internal static readonly JsonSerializerOptions RequestJson = new() { PropertyNameCaseInsensitive = true };
+
     private readonly string _connectionString;
     private readonly SolutionConfiguration _solution;
     private readonly ITraceSink _traces;
@@ -59,24 +62,58 @@ public sealed class CommandExecutor
 
     public TimeProvider Time { get; }
 
-    /// <summary>Gọi command qua một app, như POST tới command trên OData của app đó.</summary>
-    public CommandResult Execute(string appName, object command)
+    public SolutionConfiguration Solution => _solution;
+
+    /// <summary>Gọi command theo tên công bố trên app, với thân JSON: đường POST tới OData.</summary>
+    public CommandResult Execute(string appName, string commandName, JsonElement body, CallerIdentity? caller = null)
+    {
+        if (!Registry.HasApp(appName))
+        {
+            return ServiceError(404, "AppNotFound", $"App '{appName}' does not exist.", CallInfo.Root());
+        }
+
+        if (Registry.CommandByPublicName(appName, commandName) is not { } model)
+        {
+            return ServiceError(404, "CommandNotPublished", $"Command '{commandName}' is not published by app '{appName}'.", CallInfo.Root());
+        }
+
+        object? command;
+        try
+        {
+            command = body.ValueKind == JsonValueKind.Undefined
+                ? Activator.CreateInstance(model.Type)
+                : body.Deserialize(model.Type, RequestJson);
+        }
+        catch (JsonException e)
+        {
+            return ServiceError(400, ValidationErrorCode, $"Model validation failed: {e.Message}", CallInfo.Root());
+        }
+
+        return Execute(appName, command ?? Activator.CreateInstance(model.Type)!, caller);
+    }
+
+    /// <summary>
+    /// Gọi command qua một app, như POST tới command trên OData của app đó. <c>correlationId</c> nối lời gọi vào một chuỗi có
+    /// sẵn (signal rule theo event); null là chuỗi mới.
+    /// </summary>
+    public CommandResult Execute(string appName, object command, CallerIdentity? caller = null, Guid? correlationId = null)
     {
         ArgumentNullException.ThrowIfNull(command);
-        var call = CallInfo.Root();
+        var call = correlationId is { } id ? new CallInfo(id, Guid.NewGuid(), null, id) : CallInfo.Root();
         var model = Registry.CommandOf(command.GetType());
-        var app = _solution.App(appName);
         var tracer = new CallTracer(_traces, Time, call, model.FullName);
         using var activity = CallTracer.Source.StartActivity(model.FullName);
         activity?.SetTag("nvm.correlation_id", call.CorrelationId);
         tracer.Platform(TraceLevel.Information, $"Received {model.FullName} via app {appName}");
 
-        var published = string.Equals(model.App, appName, StringComparison.Ordinal) || app.Commands.Contains(model.Type);
-        if (!published)
+        if (!Registry.HasApp(appName) || Registry.PublicNameIn(appName, model) is null)
         {
             tracer.Platform(TraceLevel.Warning, $"App {appName} does not publish {model.Name}");
             return ServiceError(404, "CommandNotPublished", $"Command '{model.Name}' is not published by app '{appName}'.", call);
         }
+
+        // Command settings (pre-check) là của app được gọi; composite của extension app chạy dưới base app.
+        var app = _solution.App(appName);
 
         if (MissingMandatory(model, command) is { } missing)
         {
@@ -84,7 +121,7 @@ public sealed class CommandExecutor
             return ServiceError(400, ValidationErrorCode, $"Model validation failed: '{missing}' is required.", call);
         }
 
-        using var scope = new ExecutionScope(_connectionString, Registry, Time);
+        using var scope = new ExecutionScope(_connectionString, Registry, Time, caller ?? CallerIdentity.System);
         try
         {
             var response = model.IsComposite
@@ -166,6 +203,44 @@ public sealed class CommandExecutor
         }
     }
 
+    /// <summary>Mở phiên đọc ngoài transaction cho OData: entity set và reading function.</summary>
+    public ReadSession OpenRead(CallerIdentity? caller = null) =>
+        new(this, new ExecutionScope(_connectionString, Registry, Time, caller ?? CallerIdentity.System));
+
+    /// <summary>Chạy một event handler ở worker: transaction riêng theo domain của handler, nối vào chuỗi trace của event.</summary>
+    /// <returns><c>false</c> nếu handler lỗi hoặc commit hỏng; transaction đã rollback.</returns>
+    public bool RunEventSubscriber(EventSubscriberModel handler, IFoundationEvent domainEvent, Guid correlationId)
+    {
+        ArgumentNullException.ThrowIfNull(handler);
+        ArgumentNullException.ThrowIfNull(domainEvent);
+        var call = new CallInfo(correlationId, Guid.NewGuid(), null, correlationId);
+        var tracer = new CallTracer(_traces, Time, call, handler.Block.Name + "." + handler.Type.Name);
+        using var activity = CallTracer.Source.StartActivity(handler.Subscription);
+        tracer.Platform(TraceLevel.Information,
+            $"Subscription {handler.Subscription} handling {Registry.EventOf(handler.EventType).Name}");
+
+        using var scope = new ExecutionScope(_connectionString, Registry, Time, CallerIdentity.System);
+        using var transaction = new DomainTransaction(_connectionString, Registry, Time, handler.Block.Domain);
+        try
+        {
+            var instance = Activator.CreateInstance(handler.Type)!;
+            typeof(IEventSubscriber<>).MakeGenericType(handler.EventType).GetMethod("Handle")!
+                .Invoke(instance, BindingFlags.DoNotWrapExceptions, null,
+                    [domainEvent, new Platform(this, transaction, scope, tracer)], CultureInfo.InvariantCulture);
+        }
+#pragma warning disable CA1031 // lỗi của handler không lọt ra worker: ghi trace, rollback, message vẫn được xác nhận
+        catch (Exception e)
+#pragma warning restore CA1031
+        {
+            tracer.Platform(TraceLevel.Error, $"Event handler failed: {e.GetType().Name}: {e.Message}");
+            transaction.Rollback();
+            tracer.Platform(TraceLevel.Error, "Transaction rolled back");
+            return false;
+        }
+
+        return CommitAndPublish(transaction, tracer) is null;
+    }
+
     private CommandResponse RunComposite(CommandModel model, object command, AppConfiguration app, ExecutionScope scope, CallTracer tracer)
     {
         tracer.Platform(TraceLevel.Information, $"Composite {model.FullName} started");
@@ -210,6 +285,19 @@ public sealed class CommandExecutor
                 : response;
         }
 
+        if (CommitAndPublish(transaction, tracer) is { } failure)
+        {
+            return _solution.CommitFailureReporting == CommitFailureReporting.Failure
+                ? Failure(model, failure.HResult, "The changes could not be saved. See the trace for details.")
+                : response;
+        }
+
+        return response;
+    }
+
+    /// <summary>Commit rồi phát event. Trả lỗi commit (đã rollback) hoặc null.</summary>
+    private Exception? CommitAndPublish(DomainTransaction transaction, CallTracer tracer)
+    {
         IReadOnlyList<PublishedEvent> events;
         try
         {
@@ -224,18 +312,21 @@ public sealed class CommandExecutor
             tracer.Platform(TraceLevel.Error, $"Commit failed: {e.GetType().Name}: {e.Message}");
             transaction.Rollback();
             tracer.Platform(TraceLevel.Error, "Transaction rolled back");
-            return _solution.CommitFailureReporting == CommitFailureReporting.Failure
-                ? Failure(model, e.HResult, "The changes could not be saved. See the trace for details.")
-                : response;
+            return e;
+        }
+
+        foreach (var e in events)
+        {
+            // Dòng publish có cả khi không ai subscribe: event không có subscription vẫn phát, chỉ là không ai nhận (lab L04).
+            tracer.Platform(TraceLevel.Information, $"Event {e.EventType} v{e.Version} published ({e.EventId})");
         }
 
         if (events.Count > 0)
         {
             _events.Publish(events);
-            tracer.Platform(TraceLevel.Verbose, $"Published {events.Count} event(s)");
         }
 
-        return response;
+        return null;
     }
 
     private CommandResponse RunInTransaction(
@@ -290,7 +381,7 @@ public sealed class CommandExecutor
 #pragma warning restore CA1031
         {
             tracer.Platform(TraceLevel.Error, $"Handler failed: {e.GetType().Name}: {e.Message}");
-            response = Failure(model, e.HResult, e.Message);
+            response = Failure(model, CodeOf(e), e.Message);
         }
 
         if (response.Succeeded)
@@ -314,7 +405,7 @@ public sealed class CommandExecutor
                 catch (Exception e)
 #pragma warning restore CA1031
                 {
-                    response = Failure(model, e.HResult, e.Message);
+                    response = Failure(model, CodeOf(e), e.Message);
                 }
 
                 if (!response.Succeeded)
@@ -336,6 +427,9 @@ public sealed class CommandExecutor
         return (CommandResponse)contract.MakeGenericType(model.Type, model.ResponseType).GetMethod(method)!
             .Invoke(handler, BindingFlags.DoNotWrapExceptions, null, [command, platform], CultureInfo.InvariantCulture)!;
     }
+
+    /// <summary>Mã lỗi khi handler ném exception: mã riêng của exception nền nếu có, không thì <c>HResult</c>.</summary>
+    private static int CodeOf(Exception e) => e is StatusTransitionException transition ? transition.ErrorCode : e.HResult;
 
     private static CommandResponse Failure(CommandModel model, int code, string message)
     {

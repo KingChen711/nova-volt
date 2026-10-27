@@ -98,9 +98,12 @@ internal sealed class DomainTransaction : IDisposable
     }
 }
 
-/// <summary>Tài nguyên sống suốt một lời gọi từ service layer: kết nối đọc ngoài transaction của ProjectionQuery.</summary>
-internal sealed class ExecutionScope(string connectionString, ModelRegistry registry, TimeProvider time) : IDisposable
+/// <summary>Tài nguyên sống suốt một lời gọi từ service layer: người gọi, kết nối đọc ngoài transaction của ProjectionQuery.</summary>
+internal sealed class ExecutionScope(string connectionString, ModelRegistry registry, TimeProvider time, CallerIdentity caller)
+    : IDisposable
 {
+    public CallerIdentity Caller => caller;
+
     private SqlConnection? _connection;
     private FoundationDbContext? _projection;
 

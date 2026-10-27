@@ -67,6 +67,12 @@ internal sealed class FoundationDbContext : DbContext
             }
         }
 
+        foreach (var reading in _registry.ReadingModels)
+        {
+            // View SQL cùng tên: không do Update Database tạo, nên có thể chưa cài.
+            modelBuilder.Entity(reading.Type).HasNoKey().ToView(reading.ViewName, "dbo");
+        }
+
         foreach (var table in _registry.FacetTables)
         {
             // Mọi facet của một entity chung một bảng: TPH với gốc Facet<TEntity>, cột phân biệt FacetType.

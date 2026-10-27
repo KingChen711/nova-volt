@@ -91,6 +91,7 @@ ADR-051 dựng lại dự án; code v1 nằm ở tag `v1.0`. ADR 001–050 giữ
 | [052](ADR-052-clean-room.md) | Clean-room: repo public không chứa tên, mã, code của dự án thật; kiểm bằng HMAC | **Accepted** 2026-10-27 | v2 · R0 |
 | [053](ADR-053-giao-dien-nextjs.md) | Giao diện v2 bằng Next.js, thay Mendix | **Accepted** 2026-10-27 | v2 · R0 |
 | [054](ADR-054-foundation-model-va-pipeline.md) | Foundation: model khai bằng attribute, handler đồng bộ, EF Core bên trong, schema sinh từ model | **Accepted** 2026-10-27 | v2 · R1 |
+| [055](ADR-055-app-odata-bus-r2.md) | App và POM khai trong model, OData tự viết một tập con, bus bằng RabbitMQ.Client | **Accepted** 2026-10-28 | v2 · R2 |
 
 Cột **Ra ở** là milestone dự kiến, không phải cam kết. Quyết định đến sớm hơn thì viết sớm hơn.
 

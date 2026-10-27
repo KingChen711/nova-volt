@@ -24,7 +24,8 @@ v1 (MES pin "trung tính", M0–M13) nằm ở tag [`v1.0`](https://github.com/K
 | **Docker Desktop** | quota RAM ≥ 8 GB | Settings → Resources |
 | **.NET SDK** | 10.0.300 trở lên | `dotnet --version` |
 | **GNU Make**, **`sh`** | bất kỳ (`sh` đi cùng Git trên Windows) | `make --version` |
-| **Python 3** | bất kỳ | dùng cho kiểm clean-room |
+| **Python 3** | bất kỳ | dùng cho kiểm clean-room, đặt mật khẩu user thử |
+| **Node.js** | 24 | web Next.js (`web/`) |
 
 ### Các bước
 
@@ -34,6 +35,19 @@ make up                       # 2. hạ tầng + tạo database, chờ tới khi
 make hooks                    # 3. bật pre-commit hook (format + clean-room); Git không tự bật khi clone
 make ci                       # 4. clean-room -> restore -> format -> build -> test
 ```
+
+### Chạy MOM và web
+
+```bash
+make update-db                # 5. Update Database: căn schema DB MOM theo model
+make keycloak-users           # 6. đặt mật khẩu user thử (NVM_DEMO_USER_PASSWORD) cho realm novavolt
+make mom                      # 7. host MOM ở http://localhost:5080 (OData, worker event, signal rule)
+npm ci --prefix web           # 8. lần đầu
+make web                      # 9. web ở http://localhost:3100, đăng nhập bằng admin.nv1, op.nv1, qa.nv1…
+```
+
+OData của một app: `http://localhost:5080/mom/NV1/Application/<App>/odata/<EntitySet>`, token lấy ở realm
+`novavolt` (client `nvm-cli`, sống 600 giây).
 
 Máy từng chạy v1: dừng stack cũ trước (`docker compose down --remove-orphans`). Volume dữ liệu v1 không bị xóa.
 
@@ -48,7 +62,9 @@ Máy từng chạy v1: dừng stack cũ trước (`docker compose down --remove-
 | 8081 | Keycloak | `NVM_KEYCLOAK_ADMIN` |
 | 5432 | LineDB (Postgres phía xưởng) | `NVM_LINEDB_USER` |
 | 19092 | Redpanda (Kafka API) | — |
-| 1025 / 8025 | Mailpit SMTP / giao diện xem email | — |
+| 25025 / 8025 | Mailpit SMTP / giao diện xem email | — |
+| 5080 | Host MOM (`make mom`) | token Keycloak |
+| 3100 | Web Next.js (`make web`) | user thử của realm `novavolt` |
 
 Mật khẩu nằm trong `.env`; không chép vào tài liệu.
 
@@ -80,8 +96,10 @@ Mật khẩu nằm trong `.env`; không chép vào tài liệu.
 │  ├─ Product/          Vai sản phẩm của nhà cung cấp
 │  ├─ Project/          Vai team dự án
 │  ├─ Shopfloor/        LineDB, line simulator, relay
-│  └─ Integration/      Gateway, hệ ngoài giả lập
-├─ tests/               Unit · Architecture · Analyzers
+│  ├─ Integration/      Gateway, hệ ngoài giả lập
+│  └─ Solution/         Host MOM của một plant: ghép model các lớp, OData, worker
+├─ web/                 Giao diện Next.js; thiết kế ở web/DESIGN.md
+├─ tests/               Unit · Architecture · Analyzers · Integration (SQL Server, RabbitMQ thật)
 ├─ tools/               Analyzer, kiểm clean-room
 └─ deploy/              Script khởi tạo SQL Server, realm Keycloak
 ```

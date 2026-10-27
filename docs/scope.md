@@ -37,7 +37,7 @@ MQTT/Sparkplug, TimescaleDB, saga formation, grading/matching, DPP, B2MML (đã 
 | Lớp | Đóng vai | Nội dung |
 |---|---|---|
 | **Foundation** | Nền của nhà cung cấp | Khai báo model, command pipeline, transaction, event và subscription, OData theo app, reading function, signal rule, configuration key, state machine dạng dữ liệu |
-| **Product** | Sản phẩm của nhà cung cấp | Base app `Production` và các app Equipment, Material, Reference, Document, Defect: WO, MTU, NC, containment, buffer, logistic request |
+| **Product** | Sản phẩm của nhà cung cấp | Base app `Production` gộp cả Equipment, Material, Defect (ADR-056): BoP, WO, MTU, NC, containment, buffer, logistic request |
 | **Project** | Team dự án | Extension app `NvProductionExt` và FB của team; app nghiệp vụ `MapApp`, `YardApp`, `ShipApp`, `PullApp`; gateway |
 | **Solution** | Cấu hình và deploy | Manifest: app, extension app, FB, command settings, subscription, worker role, signal rule; gói; deploy theo bước |
 

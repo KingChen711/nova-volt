@@ -66,7 +66,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const initials = session.user.split(/[.\-_]/).map((p) => p[0]?.toUpperCase()).join("").slice(0, 2);
 
   const sidebar = (
-    <div className="flex h-full flex-col bg-nav text-nav-ink">
+    <div className="scroll-nav flex h-full flex-col bg-nav text-nav-ink">
       <div className="flex h-16 items-center gap-3 px-5">
         <span className="inline-flex size-9 items-center justify-center rounded-lg bg-nav-active text-nav shadow-[0_0_0_4px_rgb(245_158_11/0.15)]">
           <Zap aria-hidden className="size-5" strokeWidth={2.5} />

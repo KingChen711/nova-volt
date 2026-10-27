@@ -55,6 +55,11 @@ Thêm khái niệm mới vào đây cùng lúc thêm vào model (AGENTS.md §5.8
 | **NC** | Non-conformance: bản ghi "hàng không đạt" gắn với MTU; OPEN, SCRAP, USE AS IS |
 | **Cấu hình hủy** | Operation nào nhận mã status nào thì NC xử lý thế nào: kết luận, lượng tách, mã scrap |
 | **Containment** | Yêu cầu giữ cả một nhóm hàng nghi lỗi, gửi từ hệ chất lượng ngoài |
+| **In Containment** | Cờ trên MTU: MTU đang nằm trong một containment chưa nhả. Close không bỏ cờ, Release mới bỏ |
+| **Lịch sử MTU** | Dòng chỉ thêm, không sửa: `Create`, `Assemble` (vào vật chứa, hoặc nguyên liệu trừ cho sản phẩm), `Edit` |
+| **`n/a`** | Equipment đặc biệt của hàng chưa có vị trí cụ thể |
+| **Buffer** | Chỗ chứa hàng thật đặt tại một equipment; mỗi lô chỉ thuộc một buffer, có thể giới hạn material bằng whitelist |
+| **Logistic request** | Yêu cầu chở một MTU tới equipment đích qua các chặng của luồng |
 | **EOLV** | Bước đo cuối của thành phẩm họ A, làm sau khi kit đã lên tote và pallet |
 | **Họ A / Họ B** | Hai họ thành phẩm theo khách: kit hai module / một module mỗi tote |
 

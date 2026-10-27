@@ -35,6 +35,48 @@ hành vi; chưa có test thì chưa tính là xong.
 
 Test nằm ở `tests/Integration/Nvm.FoundationTests` (SQL Server, RabbitMQ thật qua Testcontainers), trừ NVM004.
 
+## Lớp Product
+
+Hành vi của lớp nhà cung cấp (R3, [ADR-056](adr/ADR-056-lop-product-r3.md)). Test ở `tests/Integration/Nvm.ProductTests`;
+`Every_published_command_is_exercised_by_a_test` ép mỗi command của app `Production` có test gọi nó,
+`Every_entity_set_of_the_production_app_is_readable` ép mọi entity đọc được qua đường OData.
+
+| Hành vi | Nguồn | Test |
+|---|---|---|
+| Cây thiết bị nhiều cấp, con sâu hơn cha; property và nhóm (logical dock) | `load-register`, plan §4.3 | `Equipment_child_must_sit_deeper_than_its_parent`, `Equipment_property_and_group_are_upserted_by_key` |
+| Material có cờ serial; một revision hiện hành | `material-mtu-vat-chua` | `Only_one_material_revision_is_current`, `Serialized_material_gives_quantity_one_and_batch_keeps_its_quantity` |
+| BoP/Process/Operation: thứ tự, máy được phép, định mức | `ban-thiet-ke-va-ca` | `Process_defaults_its_bop_to_its_own_name_and_orders_operations_by_sequence` |
+| MTU serial số lượng 1, lô có số lượng; hàng chưa có chỗ ở `n/a` | `material-mtu-vat-chua` | `Serialized_material_gives_quantity_one_and_batch_keeps_its_quantity` |
+| Lịch sử MTU ghi Create, Assemble, Edit | `ban-thiet-ke-va-ca` (As Built), plan R3 DoD | `History_records_create_assemble_and_edit_in_order` |
+| Trong vật chứa thì ô equipment trống, vị trí là của tầng ngoài | `material-mtu-vat-chua` | `Location_inside_a_container_is_the_equipment_of_the_outermost_container`, `Removing_from_a_container_puts_the_item_on_equipment_and_move_records_an_edit` |
+| Gắn MTU thẳng vào pallet có tote: lớp Product chỉ gắn | `Báo cáo thực hành pallet có NC 2026-10-27` (plan R3) | `Assembling_an_mtu_straight_onto_a_pallet_with_totes_only_attaches_it` |
+| Tách lô ra MTU con `.N` | `hang-loi` | `Split_creates_child_dot_n_with_the_split_quantity` |
+| WO từ process: bước WO, máy dự kiến, nguyên liệu định sẵn | `ban-thiet-ke-va-ca` | `Work_order_from_process_copies_operations_planned_machines_and_materials` |
+| Trạng thái WO theo dữ liệu; thêm Frozen, role cho Frozen → Aborted | `ban-thiet-ke-va-ca` | `Status_follows_the_data_driven_machine_and_raises_an_event_after_commit`, `Frozen_added_as_data_and_abort_from_frozen_needs_the_assigned_role` |
+| Ép trạng thái WO; sửa, xóa WO | plan §4.3 | `Forced_status_skips_transitions_but_not_unknown_statuses`, `Edit_changes_plan_and_delete_is_soft_so_the_name_can_be_reused` |
+| Ghi sản phẩm vào WO không tự cộng số lượng | plan R3 | `Recording_output_does_not_add_to_the_produced_quantity_unless_an_increment_is_given` |
+| Tiến độ bước WO; trừ nguyên liệu ghi Assemble (genealogy) | `ban-thiet-ke-va-ca`, `hang-loi` | `Operation_progress_sets_the_step_status_and_machine`, `Consumption_lowers_the_lot_and_writes_assemble_genealogy_on_the_product` |
+| NC OPEN giữ MTU; SCRAP hủy; chỉ OPEN đổi được | `hang-loi` | `Open_nc_holds_the_mtu_and_scrap_disposition_scraps_it` |
+| USE AS IS thả MTU khi NC OPEN cuối cùng đóng | `hang-loi` | `Use_as_is_releases_the_mtu_only_when_its_last_open_nc_closes` |
+| Hủy hàng loạt tạo NC SCRAP, NC OPEN cũ vẫn mở | `hang-loi` | `Scrap_at_creation_scraps_the_list_and_leaves_the_existing_open_nc_open` |
+| MTU đã Scrapped bị từ chối | `hang-loi` | `Scrapped_mtu_is_rejected_by_a_new_nc_and_by_hold` |
+| Containment: số tự sinh, OnHold + In Containment, Scrapped giữ nguyên, Ready/Editing, event lúc nhập | `containment-request` | `Importing_containment_numbers_it_holds_and_flags_the_mtus_and_raises_an_event` |
+| Release nhả cả nhóm; Close không nhả, CR Closed không Release được | `containment-request` | `Release_frees_the_group_but_close_keeps_the_goods_held` |
+| Một lô chỉ thuộc một buffer, gỡ trước khi gắn chỗ khác | `load-register` | `A_lot_belongs_to_one_buffer_and_must_be_detached_before_moving_to_another` |
+
+### Giả định của lớp Product
+
+| Chỗ chưa rõ | Lớp Product làm |
+|---|---|
+| Trừ nguyên liệu khi lô không đủ | Từ chối (`7303`); nguồn chỉ cho biết code của team nâng số lượng lô trước khi trừ |
+| Thả danh sách MTU (`ReleaseMtus`) khi MTU còn NC OPEN hoặc đang bị khoanh | Từ chối cả lệnh (`7504`) |
+| Release containment với MTU còn NC OPEN | MTU giữ OnHold, chỉ bỏ cờ In Containment |
+| Định dạng số CR | `ContainmentRequest_` + 6 chữ số, tiếp nối số CR đang sống |
+| Whitelist của buffer | Buffer không có dòng whitelist thì nhận mọi material |
+| Yêu cầu vận chuyển | Created → Released → InTransit (mỗi chặng chuyển MTU) → Completed (MTU tới đích); R10 đọc nguồn kỹ hơn |
+| Cấp của cây thiết bị | Tám cấp Enterprise, Site, Plant, Area, Subarea, WorkCenter, WorkUnit, Machine; con chỉ cần sâu hơn cha |
+| Trạng thái MTU | Hằng số, không phải dữ liệu (ADR-056) |
+
 ## Giả định chưa xác minh trên hệ thật
 
 Dựng theo scope §7: chỗ nào chưa quan sát được thì ghi ra đây, và nếu có hai cách hợp lý thì cả hai

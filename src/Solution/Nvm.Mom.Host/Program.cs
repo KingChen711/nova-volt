@@ -4,13 +4,14 @@ using Nvm.Foundation.Runtime;
 using Nvm.Foundation.Web;
 using Nvm.Hosting;
 using Nvm.Mom.Host;
+using Nvm.Product;
 
 var builder = WebApplication.CreateBuilder(args);
 DotEnvLoader.Load(builder.Environment.ContentRootPath);
 
 var plant = Environment.GetEnvironmentVariable("NVM_PLANT") ?? "NV1";
 var sqlPort = DotEnvLoader.Required("NVM_PORT_MSSQL");
-var registry = ModelRegistry.Build(typeof(FoundationApp).Assembly);
+var registry = ModelRegistry.Build(typeof(FoundationApp).Assembly, typeof(ProductionApp).Assembly);
 
 if (args.Contains("--update-database"))
 {

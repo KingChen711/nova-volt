@@ -8,7 +8,7 @@ test và số đo tương ứng (AGENTS.md §1.3). Agent làm theo lô lớn, kh
 | R0 Đóng v1, khung v2, clean-room | **đạt** (2026-10-27) | Tag `r0`; mục R0 bên dưới |
 | R1 Foundation: model, command, transaction | **đạt** (2026-10-27) | Tag `r1`; mục R1 bên dưới |
 | R2 Foundation: App/OData, event, rule, key, state machine; khung web | **đạt** (2026-10-28) | Tag `r2`; mục R2 bên dưới |
-| R3 Product | chưa làm | |
+| R3 Product | **đạt** (2026-10-28) | Tag `r3`; mục R3 bên dưới |
 | R4 Runner suite, master data, WO theo ca | chưa làm | |
 | R5 Tin từ xưởng | chưa làm | |
 | R6 Hàng lỗi | chưa làm | |
@@ -64,6 +64,21 @@ test và số đo tương ứng (AGENTS.md §1.3). Agent làm theo lô lớn, kh
   duyệt 2026-10-28: `admin.nv1` thấy mọi khu, đọc và ghi key, thấy lỗi `7001` nguyên văn; `op.nv1` chỉ thấy hai khu và
   bị chặn ở `/admin`. Job CI `Web` (kiểm kiểu, build).
 - Cổng web đổi 3000 → 3100: Windows trên máy giữ riêng dải 3000–3019. Next ghim 16.4.3 (vá ba advisory của ≤ 16.4.0).
+
+## R3
+
+- Lớp Product (`src/Product/Nvm.Product`): ba FB `FB_MS_Product`, `FB_OP_Product`, `FB_RF_Product`; base app
+  `Production` công bố 27 entity, 43 command. Equipment tám cấp (property, nhóm), material và revision, BoP/process/
+  operation (máy được phép, định mức), MTU và vật chứa lồng nhiều tầng, lịch sử MTU chỉ thêm dòng, WO từ process với
+  trạng thái theo dữ liệu (`InstallWorkOrderStates`, ép trạng thái, hủy theo role), ghi sản phẩm, tiến độ bước, trừ
+  nguyên liệu (genealogy), NC, giữ và thả danh sách MTU, containment, buffer, yêu cầu vận chuyển. Quyết định ở ADR-056;
+  hành vi, nguồn và giả định ở [bảng cơ chế](../oef-mapping.md#lớp-product).
+- DoD: 30 test hành vi trong `tests/Integration/Nvm.ProductTests` (SQL Server thật). Mọi command có test
+  (`Every_published_command_is_exercised_by_a_test`); mọi entity đọc được qua đường OData
+  (`Every_entity_set_of_the_production_app_is_readable`); lịch sử MTU ghi Create, Assemble, Edit
+  (`History_records_create_assemble_and_edit_in_order`).
+- Host nạp lớp Product cùng Foundation. R3 không có màn web (màn đi cùng luồng từ R4).
+- Web: thanh cuộn custom toàn cục (thumb mảnh theo token; sidebar tối có màu riêng).
 
 ## Nợ mở
 

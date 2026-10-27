@@ -35,6 +35,7 @@
   </Folder>
   <Folder Name="/tests/Integration/">
     <Project Path="tests/Integration/Nvm.FoundationTests/Nvm.FoundationTests.csproj" />
+    <Project Path="tests/Integration/Nvm.ProductTests/Nvm.ProductTests.csproj" />
   </Folder>
   <Folder Name="/tests/Unit/">
     <Project Path="tests/Unit/Nvm.UnitTests/Nvm.UnitTests.csproj" />

@@ -1,0 +1,55 @@
+{
+  "Name": "NvProductionExt_001_WorkOrderLifecycle",
+  "BreakOnError": true,
+  "TestDefinitions": [
+    {
+      "Name": "AddFrozen",
+      "TestSteps": [
+        {
+          "ID": "DefineFrozen",
+          "StepType": "Command",
+          "App": "Foundation",
+          "Name": "DefineStatus",
+          "Parameters": {
+            "Machine": "WorkOrder",
+            "Status": "Frozen"
+          }
+        }
+      ]
+    },
+    {
+      "Name": "AddTransitions",
+      "Csv": "transitions.csv",
+      "TestSteps": [
+        {
+          "ID": "DefineTransition",
+          "StepType": "Command",
+          "App": "Foundation",
+          "Name": "DefineTransition",
+          "Parameters": {
+            "Machine": "WorkOrder",
+            "FromStatus": "#TEST_CSV.FromStatus#",
+            "ToStatus": "#TEST_CSV.ToStatus#"
+          }
+        }
+      ]
+    },
+    {
+      "Name": "RestrictAbortFromFrozen",
+      "TestSteps": [
+        {
+          "ID": "AssignRole",
+          "StepType": "Command",
+          "App": "Foundation",
+          "Name": "AssignTransitionRole",
+          "Parameters": {
+            "Machine": "WorkOrder",
+            "FromStatus": "Frozen",
+            "ToStatus": "Aborted",
+            "Role": "planning-admin"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Test của solution NV1 trên SQL Server thật (Testcontainers): master data nạp bằng suite, WO theo ca qua timer, pre-check
+    và quyền của team, lab L06, L07, L08, L16. Dùng đúng manifest mà host dùng.
+  -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Nvm.SolutionTests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="Shouldly" />
+    <PackageReference Include="Testcontainers.MsSql" />
+    <PackageReference Include="Microsoft.Data.SqlClient" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../../src/Foundation/Nvm.Foundation/Nvm.Foundation.csproj" />
+    <ProjectReference Include="../../../src/Product/Nvm.Product/Nvm.Product.csproj" />
+    <ProjectReference Include="../../../src/Project/Nvm.Project/Nvm.Project.csproj" />
+    <ProjectReference Include="../../../src/Solution/Nvm.Solution/Nvm.Solution.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+    <Using Include="Shouldly" />
+  </ItemGroup>
+
+</Project>

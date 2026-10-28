@@ -1,0 +1,7 @@
+FromStatus,ToStatus
+Active,Frozen
+Pause,Frozen
+Frozen,Complete
+Frozen,Aborted
+Active,Edit
+Pause,Edit

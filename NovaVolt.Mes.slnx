@@ -22,6 +22,7 @@
   </Folder>
   <Folder Name="/src/Solution/">
     <Project Path="src/Solution/Nvm.Mom.Host/Nvm.Mom.Host.csproj" />
+    <Project Path="src/Solution/Nvm.Solution/Nvm.Solution.csproj" />
   </Folder>
   <Folder Name="/tools/">
     <Project Path="tools/analyzers/Nvm.Analyzers/Nvm.Analyzers.csproj" />
@@ -36,6 +37,7 @@
   <Folder Name="/tests/Integration/">
     <Project Path="tests/Integration/Nvm.FoundationTests/Nvm.FoundationTests.csproj" />
     <Project Path="tests/Integration/Nvm.ProductTests/Nvm.ProductTests.csproj" />
+    <Project Path="tests/Integration/Nvm.SolutionTests/Nvm.SolutionTests.csproj" />
   </Folder>
   <Folder Name="/tests/Unit/">
     <Project Path="tests/Unit/Nvm.UnitTests/Nvm.UnitTests.csproj" />

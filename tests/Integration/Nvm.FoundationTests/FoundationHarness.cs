@@ -1,5 +1,6 @@
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Time.Testing;
+using Nvm.Foundation;
 using Nvm.Foundation.Runtime;
 using Nvm.FoundationTests.LabModel;
 using Testcontainers.MsSql;
@@ -99,7 +100,7 @@ internal sealed class FoundationHarness
         return new FoundationHarness(connectionString, solution, publisher);
     }
 
-    public CommandResult Run(object command, string app = LabApp.Name) => Executor.Execute(app, command);
+    public CommandResult Run(object command, string app = LabApp.Name, CallerIdentity? caller = null) => Executor.Execute(app, command, caller);
 
     /// <summary>SQL trực tiếp, như sổ tay SQL chỉ đọc: không qua bộ lọc <c>IsDeleted</c> của platform.</summary>
     public T Scalar<T>(string sql)

@@ -4,14 +4,16 @@ using Nvm.Foundation.Runtime;
 using Nvm.Foundation.Web;
 using Nvm.Hosting;
 using Nvm.Mom.Host;
-using Nvm.Product;
+using Nvm.Solution;
+using Nvm.Solution.Suites;
 
 var builder = WebApplication.CreateBuilder(args);
-DotEnvLoader.Load(builder.Environment.ContentRootPath);
+var envFile = DotEnvLoader.Load(builder.Environment.ContentRootPath);
 
 var plant = Environment.GetEnvironmentVariable("NVM_PLANT") ?? "NV1";
 var sqlPort = DotEnvLoader.Required("NVM_PORT_MSSQL");
-var registry = ModelRegistry.Build(typeof(FoundationApp).Assembly, typeof(ProductionApp).Assembly);
+var registry = SolutionManifest.BuildRegistry();
+var solution = SolutionManifest.Configure(plant);
 
 if (args.Contains("--update-database"))
 {
@@ -22,6 +24,27 @@ if (args.Contains("--update-database"))
 }
 
 var connectionString = Sql(sqlPort, "nvm_app", DotEnvLoader.Required("NVM_MSSQL_APP_PASSWORD"));
+
+if (args.Contains("--load-master-data"))
+{
+    // Bước deploy sau Update Database: chạy suite master data theo masterDataOrder, bỏ qua suite đã có trong lịch sử.
+    var root = Path.GetDirectoryName(envFile ?? throw new InvalidOperationException(".env not found above the host."))!;
+    var history = Path.Combine(root, "suites", ".history", $"{MasterDataDeployment.HistoryFileName.Replace(".txt", $".{plant}.txt", StringComparison.Ordinal)}");
+    Directory.CreateDirectory(Path.GetDirectoryName(history)!);
+    var executor = new CommandExecutor(connectionString, registry, solution, TimeProvider.System, new InMemoryTraceSink(), new InMemoryEventPublisher());
+    var report = MasterDataDeployment.Run(Path.Combine(root, "suites"), new InProcessTarget(executor, connectionString, CallerIdentity.System), history);
+    foreach (var suite in report)
+    {
+        Console.WriteLine($"{suite.Status,-8} {suite.App}/{suite.Suite}");
+        foreach (var line in suite.Log.Where(l => l.Contains("Failed", StringComparison.Ordinal)))
+        {
+            Console.WriteLine("         " + line);
+        }
+    }
+
+    Environment.ExitCode = report.Any(s => s.Status == SuiteStatus.Failed) ? 1 : 0;
+    return;
+}
 var rabbitUri = $"amqp://{DotEnvLoader.Required("NVM_RABBITMQ_USER")}:{Uri.EscapeDataString(DotEnvLoader.Required("NVM_RABBITMQ_PASSWORD"))}"
     + $"@127.0.0.1:{DotEnvLoader.Required("NVM_PORT_RABBITMQ")}/";
 var webOrigin = $"http://localhost:{Environment.GetEnvironmentVariable("NVM_PORT_WEB") ?? "3100"}";
@@ -31,7 +54,6 @@ var options = new MomWebOptions
     Authority = $"http://localhost:{DotEnvLoader.Required("NVM_PORT_KEYCLOAK")}/realms/novavolt",
 };
 
-var solution = new SolutionConfiguration { Plant = plant };
 var time = TimeProvider.System;
 builder.Services.AddSingleton(time);
 builder.Services.AddSingleton<ITraceSink, LoggingTraceSink>();

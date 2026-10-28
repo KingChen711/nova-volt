@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Solution của plant NV1: manifest (model nạp từ assembly nào, pre-check bật ở app nào, role được gọi command nào) và
+    runner suite kiểu Tester Tool dùng khi deploy để nạp master data (R4).
+  -->
+
+  <PropertyGroup>
+    <RootNamespace>Nvm.Solution</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.SqlClient" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Foundation/Nvm.Foundation/Nvm.Foundation.csproj" />
+    <ProjectReference Include="../../Foundation/Nvm.Foundation.Web/Nvm.Foundation.Web.csproj" />
+    <ProjectReference Include="../../Product/Nvm.Product/Nvm.Product.csproj" />
+    <ProjectReference Include="../../Project/Nvm.Project/Nvm.Project.csproj" />
+  </ItemGroup>
+
+</Project>

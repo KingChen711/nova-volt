@@ -30,6 +30,8 @@ hành vi; chưa có test thì chưa tính là xong.
 | Signal rule, timer | R2 | `xong` | `Timer_rule_fires_once_per_interval_including_missed_ticks`, `One_shot_timer_fires_once_and_disables_itself`, `Event_rule_maps_event_properties_into_the_command`, `Event_rule_calls_a_command_when_the_event_arrives` |
 | Configuration key | R2 | `xong` | `Configuration_key_is_stored_as_text_with_type_and_category` |
 | State machine dạng dữ liệu, role theo transition | R2 | `xong` | `Status_added_as_data_is_usable_without_code`, `Transition_with_roles_needs_one_of_them_and_one_without_roles_is_open`, `Transition_bound_to_a_role_nobody_has_blocks_everyone_lab_L06`, `Roles_in_the_token_reach_the_state_machine` |
+| Extension app công bố POM của nó dưới base app (tiền tố cho command) | R4 | `xong` | `Block_command_imported_by_an_extension_app_is_published_on_the_base_app_with_its_prefix` |
+| Quyền gọi command theo role ở service layer | R4 | `xong` | `Restricted_app_lets_a_command_through_only_for_its_roles_the_administrator_and_the_system`, `Commands_follow_the_roles_of_the_manifest_and_the_administrator_may_call_everything` |
 | Gửi tin ra ngoài đồng bộ và bất đồng bộ | R11 | `chưa làm` | |
 | Gói deploy, cập nhật database, master data theo thứ tự | R12 | `chưa làm` | |
 
@@ -63,6 +65,36 @@ Hành vi của lớp nhà cung cấp (R3, [ADR-056](adr/ADR-056-lop-product-r3.m
 | Containment: số tự sinh, OnHold + In Containment, Scrapped giữ nguyên, Ready/Editing, event lúc nhập | `containment-request` | `Importing_containment_numbers_it_holds_and_flags_the_mtus_and_raises_an_event` |
 | Release nhả cả nhóm; Close không nhả, CR Closed không Release được | `containment-request` | `Release_frees_the_group_but_close_keeps_the_goods_held` |
 | Một lô chỉ thuộc một buffer, gỡ trước khi gắn chỗ khác | `load-register` | `A_lot_belongs_to_one_buffer_and_must_be_detached_before_moving_to_another` |
+
+## R4: solution NV1
+
+Lớp Project, master data và WO theo ca ([ADR-057](adr/ADR-057-wo-theo-ca-va-suite-r4.md)). Test ở
+`tests/Integration/Nvm.SolutionTests`, dùng đúng manifest của host.
+
+| Hành vi | Nguồn | Test |
+|---|---|---|
+| Master data nạp bằng suite theo `masterDataOrder`, theo tên file; suite trong lịch sử thì bỏ qua | `master-data-suite` | `Master_data_loads_from_an_empty_database_and_the_next_deploy_skips_every_suite` |
+| Đọc theo khóa, `IfThisSkipNext` trước bước tạo: chạy lại không tạo trùng | `master-data-suite` | `Rerunning_every_suite_reads_by_key_first_and_creates_no_duplicates` |
+| `ExpectedSuccess = false` đạt với mọi lỗi; assert theo đường dẫn JSON; `#GET->…#` | `tester-tool-suite` | `Runner_passes_an_expected_failure_and_fails_on_a_wrong_assert` |
+| Timer đầu ca: mỗi ca một WO mỗi DWO, WO ca trước Frozen, Complete sau `MinimumFreezeHours`; tên WO = tiền tố BoP + thời điểm | `work-order-theo-ca`, `ban-thiet-ke-va-ca` | `Three_days_of_shifts_open_one_work_order_per_default_freeze_the_previous_shift_and_complete_after_the_bop_hours` |
+| Ngày đổi giờ với server UTC | plan R4 DoD | `Shift_windows_stay_contiguous_across_a_daylight_saving_change` |
+| Chặn hai WO Active cùng máy cùng bước | `ban-thiet-ke-va-ca` | `Second_work_order_cannot_go_active_on_a_machine_that_already_runs_the_same_operation` |
+| WO đã chạy không xóa được, về Edit thì xóa được | `tester-tool-suite` (suite 012) | `Started_work_order_cannot_be_deleted_until_it_is_back_in_edit` |
+| Timer chạy dưới người gọi hệ thống, lệnh con không qua pre-check | `work-order-theo-ca` | `Shift_timer_runs_under_the_system_caller_without_the_team_pre_checks` |
+| L06: role của Frozen → Aborted không có ở đâu, không ai hủy được | `role-huy-wo-frozen` | `L06_role_on_frozen_to_aborted_that_nobody_has_blocks_every_abort_until_an_existing_role_is_assigned` |
+| L07: suite lỗi vào lịch sử, lần deploy sau bỏ qua | `master-data-suite` | `L07_failed_suite_written_to_history_is_skipped_by_the_next_deploy_and_only_counting_data_shows_it`, đối chứng `L07_control_history_written_only_on_success_lets_the_next_deploy_retry` |
+| L08: timer theo giờ server, khung ca so theo UTC | `work-order-theo-ca` | `L08_shift_timer_uses_server_time_while_the_window_check_uses_utc` (hai biến thể) |
+| L16: tham số từ cột CSV không có bị bỏ, suite xanh mà đổi sai material | `suite-doc-sai-cot-csv` | `L16_suite_reading_a_missing_csv_column_stays_green_and_changes_only_the_first_material` |
+
+### Giả định của R4
+
+| Chỗ chưa rõ | v2 làm | Cấu hình |
+|---|---|---|
+| Vì sao suite lỗi vẫn vào lịch sử | Mặc định chỉ ghi khi suite đạt; biến thể luôn ghi | `HistoryPolicy` |
+| Múi giờ server thật | Mặc định UTC; lệch giờ cố định cho lab L08 | key `Nv.ServerUtcOffsetMinutes` |
+| Điều kiện "mọi MTU đã chạy hết hoặc có NC" khi tự hoàn tất | Chưa kiểm: chưa có tin từ xưởng (R5) | — |
+| Mã lỗi khi thiếu quyền gọi command | HTTP 403, `6403` | — |
+| WO New được kích hoạt khi nào | Khi giờ hiện tại nằm trong khung dự kiến của nó | — |
 
 ### Giả định của lớp Product
 

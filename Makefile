@@ -15,7 +15,7 @@ PYTHON   := $(shell python3 --version >/dev/null 2>&1 && echo python3 || echo py
 BACKUP_DIR := $(shell grep -E '^NVM_BACKUP_DIR=' .env 2>/dev/null | cut -d= -f2-)
 
 .DEFAULT_GOAL := help
-.PHONY: help up down down-v reset ps logs build test ci hooks format format-check clean backup secret-check cleanroom update-db keycloak-users mom web web-ci
+.PHONY: help up down down-v reset ps logs build test ci hooks format format-check clean backup secret-check cleanroom update-db master-data keycloak-users mom web web-ci lab-web
 
 help:
 	@echo "NovaVolt MOM v2"
@@ -35,9 +35,11 @@ help:
 	@echo ""
 	@echo "  Chay MOM"
 	@echo "    make update-db     Update Database: can schema DB MOM theo model (quyen sa)"
+	@echo "    make master-data   Nap master data bang suite (suites/), bo qua suite da co trong lich su"
 	@echo "    make keycloak-users Dat mat khau user thu cua realm tu NVM_DEMO_USER_PASSWORD"
 	@echo "    make mom           Chay host MOM (OData, worker event, signal rule) o NVM_PORT_MOM"
 	@echo "    make web           Chay web Next.js o NVM_PORT_WEB (lan dau: npm ci trong web/)"
+	@echo "    make lab-web       Lab giao dien Playwright (Edge) tren stack dang chay"
 	@echo "    make web-ci        Kiem kieu va build web, nhu job CI"
 	@echo ""
 	@echo "  Kiem tra"
@@ -89,7 +91,9 @@ ci: cleanroom
 	dotnet restore $(SOLUTION)
 	dotnet format $(SOLUTION) --verify-no-changes --no-restore
 	dotnet build $(SOLUTION) -c Release --no-restore --nologo
-	dotnet test --solution $(SOLUTION) -c Release --no-build
+	dotnet test --solution $(SOLUTION) -c Release --no-build --filter-not-trait "Category=Benchmark"
+	# Benchmark chay rieng, khong tranh CPU voi cac bo test tich hop khac.
+	dotnet test --project tests/Integration/Nvm.FoundationTests -c Release --no-build --filter-trait "Category=Benchmark"
 
 # Git không tự bật hook khi clone; core.hooksPath trỏ sang thư mục được version hoá.
 hooks:
@@ -117,6 +121,9 @@ backup:
 update-db:
 	dotnet run --project src/Solution/Nvm.Mom.Host --no-launch-profile -- --update-database
 
+master-data:
+	dotnet run --project src/Solution/Nvm.Mom.Host --no-launch-profile -- --load-master-data
+
 keycloak-users:
 	@$(PYTHON) -I -X utf8 scripts/keycloak-demo-users.py
 
@@ -125,6 +132,10 @@ mom:
 
 web:
 	npm run --prefix web dev
+
+# Lab giao dien tren stack dang chay that (up, update-db, master-data, keycloak-users, mom, web).
+lab-web:
+	npm run --prefix web lab
 
 web-ci:
 	npm ci --prefix web

@@ -1,0 +1,38 @@
+{
+  "Name": "NvProductionExt_005_InHouseMaterials",
+  "BreakOnError": true,
+  "TestDefinitions": [
+    {
+      "Name": "SetClass",
+      "Csv": "in-house-materials.csv",
+      "TestSteps": [
+        {
+          "ID": "GetMaterial",
+          "StepType": "Read",
+          "App": "Production",
+          "Name": "Material",
+          "Query": {
+            "$filter": "NId eq '#TEST_CSV.NId#'",
+            "$top": "1"
+          },
+          "Asserts": [
+            {
+              "Path": "value",
+              "Count": 1
+            }
+          ]
+        },
+        {
+          "ID": "SetClass",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "UpdateMaterial",
+          "Parameters": {
+            "NId": "#GET->GetMaterial.Result.value[0].NId#",
+            "MaterialClass": "#TEST_CSV.MaterialClass#"
+          }
+        }
+      ]
+    }
+  ]
+}

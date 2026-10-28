@@ -1,0 +1,33 @@
+{
+  "Name": "NvProductionExt_004_DefaultWorkOrders",
+  "BreakOnError": true,
+  "TestDefinitions": [
+    {
+      "Name": "CreateDefaultWorkOrder",
+      "Csv": "default-work-orders.csv",
+      "TestSteps": [
+        {
+          "ID": "GetDefault",
+          "StepType": "Read",
+          "App": "Production",
+          "Name": "DefaultWorkOrder",
+          "Query": {
+            "$filter": "NId eq '#TEST_CSV.ScheduleNId#|#TEST_CSV.ProcessNId#'",
+            "$top": "1"
+          },
+          "IfThisSkipNext": true
+        },
+        {
+          "ID": "CreateDefault",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_CreateDefaultWorkOrder",
+          "Parameters": {
+            "ScheduleNId": "#TEST_CSV.ScheduleNId#",
+            "ProcessNId": "#TEST_CSV.ProcessNId#"
+          }
+        }
+      ]
+    }
+  ]
+}

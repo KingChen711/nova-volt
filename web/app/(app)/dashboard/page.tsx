@@ -76,7 +76,7 @@ export default function DashboardPage() {
         <StatCard label="Subscription theo plant" value={subscriptions ?? "—"} loading={subscriptions === null} icon={Radio} tone="warn" hint="Không tính loại khai sẵn trong model" />
       </div>
 
-      <div className="mt-6 grid gap-6 xl:grid-cols-[1fr_26rem]">
+      <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_26rem]">
         <section>
           <h2 className="mb-3 text-sm font-semibold tracking-wide text-muted uppercase">Khu của bạn</h2>
           <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">

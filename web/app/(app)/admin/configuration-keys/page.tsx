@@ -32,7 +32,7 @@ export default function ConfigurationKeysPage() {
   return (
     <>
       <AdminHeader description="Giá trị luôn là chuỗi. Mỗi chỗ đọc tự quyết khi thiếu key: bỏ qua, dùng mặc định, hay báo lỗi." />
-      <div className="grid gap-5 xl:grid-cols-[1fr_24rem]">
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_24rem]">
         <Panel
           flush
           title={

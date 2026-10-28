@@ -9,6 +9,9 @@ public sealed class SolutionConfiguration
 
     public IList<AppConfiguration> Apps { get; } = [];
 
+    /// <summary>Role được gọi mọi command của mọi app. Rỗng: không role nào có quyền đó.</summary>
+    public string? AdministratorRole { get; set; }
+
     /// <summary>Post-action tùy chọn đã tắt (theo tên lớp). Post-action bắt buộc thì không tắt được.</summary>
     public ISet<string> DisabledPostActions { get; } = new HashSet<string>(StringComparer.Ordinal);
 
@@ -49,6 +52,32 @@ public sealed class AppConfiguration(string name)
 
     /// <summary>Pre-check bật ở app này (theo tên lớp). Cùng command gọi qua app khác thì pre-check không chạy.</summary>
     public ISet<string> EnabledPreChecks { get; } = new HashSet<string>(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Bật: người gọi phải có một role ghi cho command ở <see cref="CommandRoles"/> (hoặc role quản trị); command không ghi
+    /// gì thì chỉ quản trị gọi được. Tắt: ai có token hợp lệ cũng gọi được mọi command app công bố.
+    /// </summary>
+    public bool RestrictCommands { get; set; }
+
+    /// <summary>Role được gọi từng command, theo tên công bố trên app (kể cả tiền tố của extension app).</summary>
+    public IDictionary<string, ISet<string>> CommandRoles { get; } = new Dictionary<string, ISet<string>>(StringComparer.Ordinal);
+
+    /// <summary>Cho <paramref name="roles"/> gọi các command <paramref name="commands"/>.</summary>
+    public AppConfiguration Allow(IEnumerable<string> commands, params string[] roles)
+    {
+        ArgumentNullException.ThrowIfNull(commands);
+        foreach (var command in commands)
+        {
+            if (!CommandRoles.TryGetValue(command, out var set))
+            {
+                CommandRoles[command] = set = new HashSet<string>(StringComparer.Ordinal);
+            }
+
+            set.UnionWith(roles);
+        }
+
+        return this;
+    }
 }
 
 /// <summary>Worker role: số instance nhận event, và nhận tuần tự (một message một lúc) hay song song.</summary>

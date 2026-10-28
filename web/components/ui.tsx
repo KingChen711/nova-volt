@@ -159,11 +159,13 @@ export function Button({
   children,
   variant = "primary",
   ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement> & { busy?: boolean; variant?: "primary" | "secondary" | "ghost" }) {
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & { busy?: boolean; variant?: "primary" | "secondary" | "ghost" | "danger" }) {
   const look = {
     primary: "bg-primary text-primary-ink shadow-sm hover:brightness-110 active:brightness-95",
     secondary: "border border-line bg-surface text-ink shadow-sm hover:bg-raised",
     ghost: "text-muted hover:bg-raised hover:text-ink",
+    // Ghost cho lệnh phá hủy (hủy WO): chữ màu lỗi thay vì muted.
+    danger: "text-bad hover:bg-bad-soft",
   }[variant];
   return (
     <button
@@ -276,7 +278,7 @@ export function DataTable<T>({
         <thead>
           <tr className="border-b border-line bg-raised text-left">
             {columns.map((c) => (
-              <th key={c.key} scope="col" className="sticky top-0 h-row px-4 text-xs font-semibold tracking-wide text-muted uppercase">
+              <th key={c.key} scope="col" className="sticky top-0 h-row px-4 text-xs font-semibold tracking-wide whitespace-nowrap text-muted uppercase">
                 {c.label}
               </th>
             ))}

@@ -119,6 +119,35 @@ internal sealed class CreateMaterialHandler : ICommandHandler<CreateMaterial, Pr
     }
 }
 
+/// <summary>Sửa tên và class của material. Thuộc tính để rỗng thì giữ nguyên.</summary>
+[Command<ProductMasterBlock>]
+public sealed class UpdateMaterial : ICommand<ProductResponse>
+{
+    [Mandatory]
+    public string? NId { get; init; }
+
+    public string? Name { get; init; }
+
+    public string? MaterialClass { get; init; }
+}
+
+internal sealed class UpdateMaterialHandler : ICommandHandler<UpdateMaterial, ProductResponse>
+{
+    public ProductResponse Handle(UpdateMaterial command, IPlatform platform)
+    {
+        var material = platform.Query<Material>().SingleOrDefault(m => m.NId == command.NId);
+        if (material is null)
+        {
+            return ProductResponse.Fail(ProductErrors.UnknownMaterial, $"Material {command.NId} does not exist.");
+        }
+
+        material.Name = command.Name ?? material.Name;
+        material.MaterialClass = command.MaterialClass ?? material.MaterialClass;
+        platform.Submit(material);
+        return ProductResponse.Of(material);
+    }
+}
+
 /// <summary>Thêm revision. <see cref="IsCurrent"/> bật thì revision hiện hành cũ tắt cờ.</summary>
 [Command<ProductMasterBlock>]
 public sealed class CreateMaterialRevision : ICommand<ProductResponse>

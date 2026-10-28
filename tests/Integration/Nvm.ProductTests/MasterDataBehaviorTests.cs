@@ -42,6 +42,11 @@ public sealed class MasterDataBehaviorTests
 
         p.Read<MaterialRevision>(q => q.Where(r => r.IsCurrent)).ShouldHaveSingleItem().Revision.ShouldBe("V7");
         p.Fails(new CreateMaterial { NId = ProductHarness.Module, UnitOfMeasure = "pc" }, ProductErrors.DuplicateNId);
+
+        p.Ok(new UpdateMaterial { NId = ProductHarness.Module, MaterialClass = "Finished" });
+        var module = p.Read<Material>(q => q.Where(m => m.NId == ProductHarness.Module)).Single();
+        (module.MaterialClass, module.Name).ShouldBe(("Finished", ProductHarness.Module));
+        p.Fails(new UpdateMaterial { NId = "missing" }, ProductErrors.UnknownMaterial);
     }
 
     [Fact]

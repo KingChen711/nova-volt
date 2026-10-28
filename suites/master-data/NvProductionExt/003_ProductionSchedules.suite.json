@@ -1,0 +1,36 @@
+{
+  "Name": "NvProductionExt_003_ProductionSchedules",
+  "BreakOnError": true,
+  "TestDefinitions": [
+    {
+      "Name": "CreateProductionSchedule",
+      "Csv": "production-schedules.csv",
+      "TestSteps": [
+        {
+          "ID": "GetSchedule",
+          "StepType": "Read",
+          "App": "Production",
+          "Name": "ProductionSchedule",
+          "Query": {
+            "$filter": "NId eq '#TEST_CSV.NId#'",
+            "$top": "1"
+          },
+          "IfThisSkipNext": true
+        },
+        {
+          "ID": "CreateSchedule",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_CreateProductionSchedule",
+          "Parameters": {
+            "NId": "#TEST_CSV.NId#",
+            "AreaEquipmentNId": "#TEST_CSV.AreaEquipmentNId#",
+            "Shift": "#TEST_CSV.Shift#",
+            "StartTime": "#TEST_CSV.StartTime#",
+            "EndTime": "#TEST_CSV.EndTime#"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -14,7 +14,7 @@
     <ProjectReference Include="../../Foundation/Nvm.Foundation/Nvm.Foundation.csproj" />
     <ProjectReference Include="../../Foundation/Nvm.Foundation.Web/Nvm.Foundation.Web.csproj" />
     <ProjectReference Include="../../Foundation/Nvm.Hosting/Nvm.Hosting.csproj" />
-    <ProjectReference Include="../../Product/Nvm.Product/Nvm.Product.csproj" />
+    <ProjectReference Include="../Nvm.Solution/Nvm.Solution.csproj" />
   </ItemGroup>
 
 </Project>

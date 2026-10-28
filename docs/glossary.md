@@ -51,6 +51,12 @@ Thêm khái niệm mới vào đây cùng lúc thêm vào model (AGENTS.md §5.8
 | **PS (Production Schedule)** | Khung giờ một ca tại một khu, kèm timer hằng ngày |
 | **DWO (Default Work Order)** | Mẫu sinh WO: nối một BoP với một PS |
 | **Frozen** | Trạng thái WO của ca trước khi hết giờ; thêm vào state machine bằng dữ liệu |
+| **Timer đầu ca (`DAILY_WO`)** | Timer của từng PS, chạy mỗi ngày lúc đầu ca: tự Complete WO Frozen đủ giờ, đóng băng WO quá giờ, mở WO mới cho mỗi DWO |
+| **`MinimumFreezeHours`** | Thuộc tính lịch của BoP: WO Frozen đủ số giờ này thì tự Complete (24 giờ, Formation 264 giờ) |
+| **Suite** | Kịch bản kiểu Tester Tool (`*.suite.json`): test definition, step gọi command hoặc đọc dữ liệu, lặp theo CSV |
+| **`#TEST_CSV.<cột>#` / `#GET->…#`** | Tham chiếu trong suite: giá trị của dòng CSV đang chạy / kết quả của step trước |
+| **`IfThisSkipNext`** | Step "có kết quả" thì bỏ qua step kế tiếp; mẫu "đọc theo khóa → đã có thì bỏ qua → tạo" |
+| **File lịch sử master data** | Danh sách suite đã chạy; deploy bỏ qua suite có tên trong đó, không đếm dữ liệu |
 | **Genealogy** | Bản ghi một sản phẩm được làm từ những MTU nào (dòng Assemble) |
 | **NC** | Non-conformance: bản ghi "hàng không đạt" gắn với MTU; OPEN, SCRAP, USE AS IS |
 | **Cấu hình hủy** | Operation nào nhận mã status nào thì NC xử lý thế nào: kết luận, lượng tách, mã scrap |

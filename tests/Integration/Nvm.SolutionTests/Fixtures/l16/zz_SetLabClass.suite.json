@@ -1,0 +1,31 @@
+{
+  "Name": "zz_SetLabClass",
+  "BreakOnError": true,
+  "TestDefinitions": [
+    {
+      "Name": "SetClass",
+      "Csv": "lab-class.csv",
+      "TestSteps": [
+        {
+          "ID": "GetMaterial",
+          "StepType": "Read",
+          "App": "Production",
+          "Name": "Material",
+          "Query": {
+            "$filter": "NId eq '#TEST_CSV.NV-WIP-ELEC-A#'"
+          }
+        },
+        {
+          "ID": "SetClass",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "UpdateMaterial",
+          "Parameters": {
+            "NId": "#GET->GetMaterial.Result.value[0].NId#",
+            "MaterialClass": "Lab16"
+          }
+        }
+      ]
+    }
+  ]
+}

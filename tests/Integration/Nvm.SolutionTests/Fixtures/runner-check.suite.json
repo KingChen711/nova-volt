@@ -1,0 +1,35 @@
+{
+  "Name": "zz_RunnerCheck",
+  "BreakOnError": false,
+  "TestDefinitions": [
+    {
+      "Name": "Checks",
+      "TestSteps": [
+        {
+          "ID": "RejectedCreate",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "CreateMaterial",
+          "Parameters": { "NId": "NV-TEST-NO-UNIT" },
+          "ExpectedSuccess": false
+        },
+        {
+          "ID": "ReadModule",
+          "StepType": "Read",
+          "App": "Production",
+          "Name": "Material",
+          "Query": { "$filter": "NId eq 'NV-FG-MOD-A'" },
+          "Asserts": [ { "Path": "value", "Count": 1 }, { "Path": "value[0].Serialized", "Equals": true } ]
+        },
+        {
+          "ID": "WrongUnit",
+          "StepType": "Read",
+          "App": "Production",
+          "Name": "Material",
+          "Query": { "$filter": "NId eq '#GET->ReadModule.Result.value[0].NId#'" },
+          "Asserts": [ { "Path": "value[0].UnitOfMeasure", "Equals": "kg" } ]
+        }
+      ]
+    }
+  ]
+}

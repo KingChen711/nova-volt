@@ -31,8 +31,27 @@ public sealed class OtherAppDefinition : AppDefinition
 [App(LabApp.ExtensionName, BaseApp = typeof(LabAppDefinition))]
 public sealed class LabExtensionAppDefinition : AppDefinition
 {
-    protected override void Define(PomBuilder pom)
+    protected override void Define(PomBuilder pom) => pom.Command<FlagLabOrder>();
+}
+
+/// <summary>Command của FB "của team", import vào POM của extension app: công bố trên LabApp là <c>LabExt_FlagLabOrder</c>.</summary>
+[Command<LabExtensionBlock>]
+public sealed class FlagLabOrder : ICommand<LabResponse>
+{
+    [Mandatory]
+    public string? OrderNId { get; init; }
+}
+
+internal sealed class FlagLabOrderHandler : ICommandHandler<FlagLabOrder, LabResponse>
+{
+    public LabResponse Handle(FlagLabOrder command, IPlatform platform)
     {
+        var note = platform.Create<LabOrderNote>();
+        note.NId = note.Id.ToString();
+        note.OrderNId = command.OrderNId;
+        note.Text = "flagged";
+        platform.Submit(note);
+        return new LabResponse();
     }
 }
 

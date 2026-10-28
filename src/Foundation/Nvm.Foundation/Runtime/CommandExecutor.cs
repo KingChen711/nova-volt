@@ -29,6 +29,9 @@ public sealed class CommandExecutor
     /// <summary>Lỗi kiểm model ở service layer: thiếu tham số bắt buộc, handler không chạy.</summary>
     public const string ValidationErrorCode = "6400";
 
+    /// <summary>Người gọi không có role được gọi command. Mã tự đặt: chưa thấy mã của nền thật cho trường hợp này.</summary>
+    public const string ForbiddenErrorCode = "6403";
+
     private static readonly JsonSerializerOptions BodyJson = new()
     {
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
@@ -106,14 +109,20 @@ public sealed class CommandExecutor
         activity?.SetTag("nvm.correlation_id", call.CorrelationId);
         tracer.Platform(TraceLevel.Information, $"Received {model.FullName} via app {appName}");
 
-        if (!Registry.HasApp(appName) || Registry.PublicNameIn(appName, model) is null)
+        if (!Registry.HasApp(appName) || Registry.PublicNameIn(appName, model) is not { } publicName)
         {
             tracer.Platform(TraceLevel.Warning, $"App {appName} does not publish {model.Name}");
             return ServiceError(404, "CommandNotPublished", $"Command '{model.Name}' is not published by app '{appName}'.", call);
         }
 
-        // Command settings (pre-check) là của app được gọi; composite của extension app chạy dưới base app.
+        // Command settings (pre-check, quyền) là của app được gọi; composite của extension app chạy dưới base app.
         var app = _solution.App(appName);
+
+        if (!MayCall(app, publicName, caller))
+        {
+            tracer.Platform(TraceLevel.Warning, $"User {caller!.User} is not allowed to call {publicName} via app {appName}");
+            return ServiceError(403, ForbiddenErrorCode, $"User '{caller.User}' is not allowed to call '{publicName}' on app '{appName}'.", call);
+        }
 
         if (MissingMandatory(model, command) is { } missing)
         {
@@ -437,6 +446,12 @@ public sealed class CommandExecutor
         response.SetError(code, message);
         return response;
     }
+
+    /// <summary>Signal rule, event handler (người gọi hệ thống) và lời gọi trong tiến trình không mang người gọi thì luôn được.</summary>
+    private bool MayCall(AppConfiguration app, string publicName, CallerIdentity? caller) =>
+        caller is null || caller == CallerIdentity.System || !app.RestrictCommands
+        || (_solution.AdministratorRole is { } admin && caller.IsInRole(admin))
+        || (app.CommandRoles.TryGetValue(publicName, out var roles) && roles.Any(caller.IsInRole));
 
     private static string? MissingMandatory(CommandModel model, object command) =>
         model.Parameters.FirstOrDefault(p => p.Mandatory && p.Property.GetValue(command) is null or "")?.Name;

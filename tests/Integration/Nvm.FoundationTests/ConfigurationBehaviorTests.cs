@@ -24,6 +24,40 @@ public sealed class ConfigurationBehaviorTests
     }
 
     [Fact]
+    public async Task Block_command_imported_by_an_extension_app_is_published_on_the_base_app_with_its_prefix()
+    {
+        var h = await FoundationHarness.CreateAsync();
+        var flag = FoundationHarness.Registry.CommandOf(typeof(FlagLabOrder));
+
+        FoundationHarness.Registry.PublicNameIn(LabApp.Name, flag).ShouldBe("LabExt_FlagLabOrder");
+        FoundationHarness.Registry.PublicNameIn(LabApp.ExtensionName, flag).ShouldBeNull();
+        FoundationHarness.Registry.PublicNameIn(LabApp.OtherName, flag).ShouldBeNull();
+        h.Executor.Execute(LabApp.Name, "LabExt_FlagLabOrder", Json("""{"OrderNId":"ORD-1"}""")).StatusCode.ShouldBe(200);
+        h.Executor.Execute(LabApp.Name, "FlagLabOrder", Json("""{"OrderNId":"ORD-1"}""")).StatusCode.ShouldBe(404);
+    }
+
+    [Fact]
+    public async Task Restricted_app_lets_a_command_through_only_for_its_roles_the_administrator_and_the_system()
+    {
+        var h = await FoundationHarness.CreateAsync(solution =>
+        {
+            solution.AdministratorRole = "admin";
+            var lab = solution.App(LabApp.Name);
+            lab.RestrictCommands = true;
+            lab.Allow([nameof(CreateLabMaterial)], "planner");
+        });
+        var material = new CreateLabMaterial { NId = "MAT-1", UnitOfMeasure = "pc" };
+
+        var refused = h.Run(material, caller: Caller("operator"));
+        refused.StatusCode.ShouldBe(403);
+        refused.Body["error"]!["code"]!.GetValue<string>().ShouldBe("6403");
+        h.Run(new CreateLabMaterial { NId = "MAT-2", UnitOfMeasure = "pc" }, caller: Caller("planner")).StatusCode.ShouldBe(200);
+        h.Run(new CreateLabMaterial { NId = "MAT-3", UnitOfMeasure = "pc" }, caller: Caller("admin")).StatusCode.ShouldBe(200);
+        h.Run(new CreateLabOrder { NId = "ORD-1", MaterialNId = "MAT-2", Quantity = 1 }, caller: Caller("planner")).StatusCode.ShouldBe(403);
+        h.Run(new CreateLabMaterial { NId = "MAT-4", UnitOfMeasure = "pc" }, caller: CallerIdentity.System).StatusCode.ShouldBe(200);
+    }
+
+    [Fact]
     public void Extension_app_cannot_extend_an_extension_app()
     {
         Should.Throw<InvalidOperationException>(() =>

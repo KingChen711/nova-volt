@@ -92,7 +92,7 @@ public sealed class ProductionApp : AppDefinition
         .Entity<ContainmentRequest>().Entity<ContainmentItem>()
         .Entity<Buffer>().Entity<BufferWhitelist>().Entity<BufferAssignment>().Entity<LogisticRequest>()
         .Command<CreateEquipment>().Command<SetEquipmentProperty>().Command<AddEquipmentToGroup>()
-        .Command<CreateMaterial>().Command<CreateMaterialRevision>()
+        .Command<CreateMaterial>().Command<UpdateMaterial>().Command<CreateMaterialRevision>()
         .Command<CreateProcess>().Command<AddProcessOperation>().Command<AllowOperationEquipment>().Command<AddOperationMaterial>()
         .Command<CreateMtu>().Command<EditMtu>().Command<MoveMtu>().Command<SplitMtu>()
         .Command<CreateMtua>().Command<AssembleIntoMtua>().Command<RemoveFromMtua>()

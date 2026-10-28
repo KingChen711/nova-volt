@@ -70,7 +70,9 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          dotnet test --solution NovaVolt.Mes.slnx -c Release --no-build 2>&1 | tee test.log
+          dotnet test --solution NovaVolt.Mes.slnx -c Release --no-build --filter-not-trait "Category=Benchmark" 2>&1 | tee test.log
+          # Benchmark chạy riêng sau lượt chung: chạy chung thì p95 đo cả tranh CPU giữa các bộ test tích hợp.
+          dotnet test --project tests/Integration/Nvm.FoundationTests -c Release --no-build --filter-trait "Category=Benchmark" 2>&1 | tee -a test.log
 
       # Log của job cần đăng nhập mới đọc được; annotation thì đọc được qua API công khai.
       - name: Report failed tests

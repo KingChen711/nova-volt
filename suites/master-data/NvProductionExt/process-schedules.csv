@@ -1,0 +1,17 @@
+ProcessNId,WorkOrderPrefix,MinimumFreezeHours
+Coat_LN1,L1Coat,24
+Assy_LN1,L1Assy,24
+Form_LN1,L1Form,264
+Module_LN1,L1Module,24
+Coat_LN2,L2Coat,24
+Assy_LN2,L2Assy,24
+Form_LN2,L2Form,264
+Module_LN2,L2Module,24
+Coat_LN3,L3Coat,24
+Assy_LN3,L3Assy,24
+Form_LN3,L3Form,264
+Module_LN3,L3Module,24
+Coat_LN4,L4Coat,24
+Assy_LN4,L4Assy,24
+Form_LN4,L4Form,264
+Module_LN4,L4Module,24

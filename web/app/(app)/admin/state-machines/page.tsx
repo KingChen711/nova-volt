@@ -51,7 +51,7 @@ export default function StateMachinesPage() {
         <RefreshButton onClick={() => void reloadAll()} busy={transitions.loading} />
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[1fr_24rem]">
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_24rem]">
         <div className="flex flex-col gap-5">
           <Panel title="Trạng thái">
             {statuses.rows.length === 0 && !statuses.loading ? (

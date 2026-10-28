@@ -1,0 +1,23 @@
+{
+  "Name": "NvProductionExt_002_ProcessSchedules",
+  "BreakOnError": true,
+  "TestDefinitions": [
+    {
+      "Name": "SetProcessSchedule",
+      "Csv": "process-schedules.csv",
+      "TestSteps": [
+        {
+          "ID": "SetProcessSchedule",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_SetProcessSchedule",
+          "Parameters": {
+            "ProcessNId": "#TEST_CSV.ProcessNId#",
+            "WorkOrderPrefix": "#TEST_CSV.WorkOrderPrefix#",
+            "MinimumFreezeHours": "#TEST_CSV.MinimumFreezeHours#"
+          }
+        }
+      ]
+    }
+  ]
+}

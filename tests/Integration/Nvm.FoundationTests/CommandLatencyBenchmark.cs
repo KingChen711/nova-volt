@@ -11,7 +11,9 @@ public sealed class CommandLatencyBenchmark
     private const int Warmup = 50;
     private const int Measured = 1_000;
 
+    /// <summary>Chạy riêng sau lượt test chung (Makefile, CI): chung lượt với các bộ test tích hợp khác thì p95 đo cả tranh CPU.</summary>
     [Fact]
+    [Trait("Category", "Benchmark")]
     public async Task One_thousand_sequential_commands()
     {
         var h = await FoundationHarness.CreateAsync();

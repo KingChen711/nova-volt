@@ -96,3 +96,10 @@ tests/Mutation/**/obj/
 tests/Mutation/**/StrykerOutput/
 soak-*/
 soak-*.log
+
+# Lich su nap master data theo plant (sinh luc deploy)
+suites/.history/
+
+# Ket qua lab Playwright cua web
+web/test-results/
+web/playwright-report/

@@ -1,0 +1,18 @@
+{
+  "Name": "Production_004_WorkOrderStates",
+  "BreakOnError": true,
+  "TestDefinitions": [
+    {
+      "Name": "InstallStates",
+      "TestSteps": [
+        {
+          "ID": "InstallWorkOrderStates",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "InstallWorkOrderStates",
+          "Parameters": {}
+        }
+      ]
+    }
+  ]
+}

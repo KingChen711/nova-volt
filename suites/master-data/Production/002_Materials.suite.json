@@ -1,0 +1,36 @@
+{
+  "Name": "Production_002_Materials",
+  "BreakOnError": true,
+  "TestDefinitions": [
+    {
+      "Name": "CreateMaterial",
+      "Csv": "materials.csv",
+      "TestSteps": [
+        {
+          "ID": "GetMaterial",
+          "StepType": "Read",
+          "App": "Production",
+          "Name": "Material",
+          "Query": {
+            "$filter": "NId eq '#TEST_CSV.NId#'",
+            "$top": "1"
+          },
+          "IfThisSkipNext": true
+        },
+        {
+          "ID": "CreateMaterial",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "CreateMaterial",
+          "Parameters": {
+            "NId": "#TEST_CSV.NId#",
+            "Name": "#TEST_CSV.Name#",
+            "UnitOfMeasure": "#TEST_CSV.UnitOfMeasure#",
+            "Serialized": "#TEST_CSV.Serialized#",
+            "MaterialClass": "#TEST_CSV.MaterialClass#"
+          }
+        }
+      ]
+    }
+  ]
+}

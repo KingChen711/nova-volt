@@ -313,14 +313,29 @@ public sealed class ModelRegistry
     public ReadingModelModel? ReadingModelOf(Type type) => _readingModels.GetValueOrDefault(type);
 
     /// <summary>Tên mà <paramref name="app"/> công bố cho command, hoặc null nếu app không công bố nó.</summary>
-    /// <remarks>Command của FB: import vào POM. Composite: của chính app, hoặc của extension app gắn vào nó (có tiền tố).</remarks>
+    /// <remarks>
+    /// Command của FB: import vào POM của app, hoặc vào POM của extension app gắn vào nó (có tiền tố). Composite: của chính
+    /// app, hoặc của extension app gắn vào nó (có tiền tố).
+    /// </remarks>
     public string? PublicNameIn(string app, CommandModel command)
     {
         ArgumentNullException.ThrowIfNull(command);
         var model = AppOf(app);
+        if (model.IsExtension)
+        {
+            // Extension app không chạy riêng: mọi thứ nó có đều gọi qua base app.
+            return null;
+        }
+
         if (command.App is null)
         {
-            return model.Commands.Contains(command.Type) ? command.Name : null;
+            if (model.Commands.Contains(command.Type))
+            {
+                return command.Name;
+            }
+
+            var extension = ExtensionsOf(model).FirstOrDefault(e => e.Commands.Contains(command.Type));
+            return extension is null ? null : extension.Name + "_" + command.Name;
         }
 
         if (string.Equals(command.App, app, StringComparison.Ordinal) && !model.IsExtension)
@@ -348,8 +363,16 @@ public sealed class ModelRegistry
     }
 
     /// <summary>Entity set mà app công bố: entity, facet hoặc reading model đã import.</summary>
-    public Type? EntitySetIn(string app, string name) =>
-        AppOf(app).Objects.FirstOrDefault(t => string.Equals(t.Name, name, StringComparison.Ordinal));
+    /// <remarks>Entity và facet mà extension app import cũng đọc được trên base app, dưới tên của chúng.</remarks>
+    public Type? EntitySetIn(string app, string name)
+    {
+        var model = AppOf(app);
+        return model.Objects.Concat(ExtensionsOf(model).SelectMany(e => e.Objects))
+            .FirstOrDefault(t => string.Equals(t.Name, name, StringComparison.Ordinal));
+    }
+
+    /// <summary>Extension app gắn vào <paramref name="model"/>; rỗng với extension app (phẳng).</summary>
+    public IEnumerable<AppModel> ExtensionsOf(AppModel model) => _apps.Values.Where(a => a.BaseApp == model);
 
     private void BuildApps(Type[] types)
     {

@@ -35,7 +35,7 @@ export default function AreaPage() {
         </Badge>
       </PageHeader>
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_20rem]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <Panel title="Các màn của khu">
           <ol className="grid gap-3 sm:grid-cols-2">
             {area.screens.map((screen, i) => (

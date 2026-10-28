@@ -9,7 +9,7 @@ test và số đo tương ứng (AGENTS.md §1.3). Agent làm theo lô lớn, kh
 | R1 Foundation: model, command, transaction | **đạt** (2026-10-27) | Tag `r1`; mục R1 bên dưới |
 | R2 Foundation: App/OData, event, rule, key, state machine; khung web | **đạt** (2026-10-28) | Tag `r2`; mục R2 bên dưới |
 | R3 Product | **đạt** (2026-10-28) | Tag `r3`; mục R3 bên dưới |
-| R4 Runner suite, master data, WO theo ca | chưa làm | |
+| R4 Runner suite, master data, WO theo ca | **đạt** (2026-10-28) | Tag `r4`; mục R4 bên dưới |
 | R5 Tin từ xưởng | chưa làm | |
 | R6 Hàng lỗi | chưa làm | |
 | R7 Đóng gói, cất kho, trailer kho, kiểm pallet | chưa làm | |
@@ -80,12 +80,38 @@ test và số đo tương ứng (AGENTS.md §1.3). Agent làm theo lô lớn, kh
 - Host nạp lớp Product cùng Foundation. R3 không có màn web (màn đi cùng luồng từ R4).
 - Web: thanh cuộn custom toàn cục (thumb mảnh theo token; sidebar tối có màu riêng).
 
+## R4
+
+- Foundation: extension app công bố POM của nó dưới base app (`<ExtApp>_<Command>`); quyền gọi command theo role ở
+  service layer (`RestrictCommands`, role quản trị, HTTP 403 `6403`), đóng N-R2-1.
+- Lớp Project (`src/Project/Nvm.Project`): extension app `NvProductionExt` trên `Production`; PS, DWO, facet lịch trên
+  process (tiền tố tên WO, `MinimumFreezeHours`) và trên WO (PS, giờ đóng băng); timer đầu ca `DAILY_WO_<PS>` gọi
+  `NvProductionExt_HandleShiftTimer`; năm pre-check: role theo transition cho Abort, Release, đổi trạng thái; chặn hai WO
+  Active cùng máy; chặn xóa WO đã chạy.
+- Solution (`src/Solution/Nvm.Solution`): manifest dùng chung cho host và test; runner suite kiểu Tester Tool (Command,
+  Read, Function, Sql; CSV, `#GET->…#`, `ExpectedSuccess`, `IfThisSkipNext`, assert); bước deploy `make master-data`.
+  Lớp Product thêm `UpdateMaterial`.
+- Master data NV1 (`suites/`): 98 equipment (2 xưởng, 4 line, 16 khu, yard, dock, lưới sàn), 14 material hai họ, 16
+  process, 32 PS, 32 DWO, vòng đời WO của team (Frozen, role cho Frozen → Aborted như hệ thật). Quyết định ở ADR-057.
+- DoD: 16 test trong `tests/Integration/Nvm.SolutionTests`: nạp từ DB trống, chạy lại không tạo trùng; 3 ngày ca bằng giờ
+  giả (16 WO mỗi ca, ca trước Frozen, Complete đúng 24 giờ, Formation chưa Complete); hai ngày đổi giờ; lab L06, L07 (+đối
+  chứng), L08 (hai biến thể), L16. Deploy thật trên stack local: Update Database, 9/9 suite Executed, chạy lại 9/9 Skipped.
+- Web: màn "Lệnh theo ca" ở khu Xưởng (`/area/line`): ca và timer, DWO, WO theo khu; hủy và tạm dừng hiện nguyên thân lỗi.
+  Lab giao diện Playwright (`make lab-web`, Edge) cho N-R2-2.
+- Kiểm trên stack local 2026-10-28 (host bản R4): gọi `NvProductionExt_HandleShiftTimer` bằng tay dưới `lead.nv1` cho
+  16 khu → 16 WO Active ca S2; `op.nv1` gọi cùng lệnh → 403 `6403`. Màn `/area/line` sáng và tối đúng dữ liệu.
+  `make lab-web` 3/3 xanh, L06 chạy thật (WO đóng băng tay, hủy bị pre-check chặn, màn hiện HTTP 400 nguyên văn).
+  Lab tìm ra: nhãn ô chọn khu trùng `nav` "Khu" của sidebar (đổi thành "Khu sản xuất"); spec đếm WO Frozen trước khi
+  bảng nạp xong; DB local còn role `line-lead` trên Frozen → Aborted từ lần kiểm màn Quản trị ở R2, làm lead hủy được
+  (đã xóa mềm dòng đó; nền chưa có lệnh gỡ role theo transition).
+- Benchmark 1.000 command (DoD R1) chạy riêng sau lượt test chung, ở cả `make ci` và CI: chạy chung với ba bộ test tích
+  hợp thì p95 vượt 50 ms vì tranh CPU (53 ms hai lần), chạy riêng thì qua.
+
 ## Nợ mở
 
 | Mã | Nợ | Mốc xử lý |
 |---|---|---|
 | N-R0-3 | Observability stack chưa có trong compose v2. Trace hiện đi ra log của host và `ActivitySource`; dashboard theo `CorrelationId` thuộc bộ chẩn đoán | R12 |
 | N-R0-4 | Site tài liệu Mintlify vẫn mô tả v1; chưa chạy kiểm clean-room | R12 |
-| N-R2-1 | Service layer chưa kiểm quyền theo role cho từng command: ai có token hợp lệ cũng gọi được mọi command app công bố. Web chỉ ẩn menu và chặn route | R4 (trước khi có màn nghiệp vụ đầu tiên) |
-| N-R2-2 | Web chưa có test tự động; R2 kiểm tay trên trình duyệt. Lab Playwright theo scope | R4 |
+| N-R2-2 | Lab giao diện Playwright có từ R4 (`make lab-web`) nhưng cần cả stack chạy nên chưa vào CI | R12 |
 | N-R2-3 | Host chạy bằng `dotnet run`, chưa có trong compose | R12 |

@@ -1,0 +1,15 @@
+NId,Name,UnitOfMeasure,Serialized,MaterialClass
+NV-RM-ANODE,Anode powder,kg,false,Raw
+NV-RM-CATHODE,Cathode powder,kg,false,Raw
+NV-RM-SEP,Separator film,m,false,Raw
+NV-RM-CASE-A,Cell case A,pc,false,Component
+NV-RM-CASE-B,Cell case B,pc,false,Component
+NV-WIP-ELEC-A,Electrode coil A,m,false,n/a
+NV-WIP-CELL-A,Cell A,pc,true,n/a
+NV-WIP-FCELL-A,Formed cell A,pc,true,n/a
+NV-WIP-ELEC-B,Electrode coil B,m,false,n/a
+NV-WIP-CELL-B,Cell B,pc,true,n/a
+NV-WIP-FCELL-B,Formed cell B,pc,true,n/a
+NV-FG-MOD-A,Module family A,pc,true,Finished
+NV-FG-MOD-B60,Module family B 60 cells,pc,true,Finished
+NV-FG-MOD-B68,Module family B 68 cells,pc,true,Finished

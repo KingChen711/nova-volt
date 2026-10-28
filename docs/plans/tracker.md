@@ -10,7 +10,7 @@ test và số đo tương ứng (AGENTS.md §1.3). Agent làm theo lô lớn, kh
 | R2 Foundation: App/OData, event, rule, key, state machine; khung web | **đạt** (2026-10-28) | Tag `r2`; mục R2 bên dưới |
 | R3 Product | **đạt** (2026-10-28) | Tag `r3`; mục R3 bên dưới |
 | R4 Runner suite, master data, WO theo ca | **đạt** (2026-10-28) | Tag `r4`; mục R4 bên dưới |
-| R5 Tin từ xưởng | chưa làm | |
+| R5 Tin từ xưởng | **đạt** (2026-10-29) | Tag `r5`; mục R5 bên dưới |
 | R6 Hàng lỗi | chưa làm | |
 | R7 Đóng gói, cất kho, trailer kho, kiểm pallet | chưa làm | |
 | R8 Xuất hàng | chưa làm | |
@@ -107,6 +107,43 @@ test và số đo tương ứng (AGENTS.md §1.3). Agent làm theo lô lớn, kh
 - Benchmark 1.000 command (DoD R1) chạy riêng sau lượt test chung, ở cả `make ci` và CI: chạy chung với ba bộ test tích
   hợp thì p95 vượt 50 ms vì tranh CPU (53 ms hai lần), chạy riêng thì qua.
 
+## R5
+
+- LineDB (`src/Shopfloor/Nvm.Shopfloor/LineDb/Sql`, cài bằng `make linedb`): schema `elec`, `cell`, `form`, `mod` với bảng
+  máy và trigger viết tay mỗi bảng, ba dạng JSON (`unit`, `batch`, `shrink`); bảng trung gian `relay.line_message`, trạng
+  thái `NEW`/`SENT`/`DONE`/`NOTIFY_ERR`/`RETRY`/`FAILED` qua view `relay.message_status` với hai biến thể (cột theo môi
+  trường, bảng lịch riêng); chính sách gửi lại theo cặp (trạng thái, mã lỗi); hàm `claim`, `write_result`, `send_pending`;
+  role `nvm_mom` chỉ gọi được hai hàm trung gian (K11).
+- Foundation: endpoint ngoài theo môi trường (`IPlatform.Endpoint`), adapter phát event theo tên (`RaiseExternalEvent`).
+  Lớp Product: MTU có `Code` (serial, số lô).
+- Lớp Project: `MapApp` (bảng đối chiếu bước, máy, nguyên liệu, lỗi; suite `MapApp_001_LineCodes`); `ApplyLineResults`
+  (chọn bước WO, WO dự phòng trong khung ca, MTU sản phẩm, trừ nguyên liệu theo lô hoặc MTU tạm `Auto_…`, khóa
+  `<serial>|<mã bước>` chống ghi hai lần); handler `LineMessageHandler` (worker role tuần tự) ghi kết quả về LineDB với mã lỗi
+  ghép; đường poll `IngestLineMessages` + `SetLinePolling` (bước deploy `make line-polling`); đường relay là
+  `LineRelayListenerService` trong host. Giả định ở [bảng cơ chế](../oef-mapping.md#r5-tin-từ-xưởng).
+- Line simulator (`Nvm.Shopfloor.LineSimulator`): cả chuỗi điện cực → cell → formation → module cho một line, có KO, hao
+  hụt, lô quét được hay không; trả số liệu MOM phải có.
+- DoD đã có test (16 test mới, SQL Server và Postgres thật): 1 ca × 1 line khớp chính xác số MTU, dòng Assemble, số lượng WO
+  (hai biến thể lưu trạng thái); gửi lại không trừ thêm; ngoài khung ca → `RETRY` −6200; relay đứng yên, poll gửi lại 1
+  lần sau 10 phút; payload vượt giới hạn → `NOTIFY_ERR`; MOM dừng 30 phút rồi chạy lại: xả hết, không mất, không trùng (cả
+  hai đường); lab L09, L10 (+ đối chứng), L11. Toàn bộ `make ci` trên máy cá nhân 2026-10-28: clean-room, format, build
+  Release sạch, 204/204 test xanh.
+- Simulator có CLI (`src/Shopfloor/Nvm.LineSimulator`, verb `run`, `relay`, `load`, `report`; target `make line-sim`,
+  `line-relay`, `line-load`). Bước cài `make linedb` (biến `NVM_LINEDB_MOM_PASSWORD`, `NVM_LINEDB_STATE`, `NVM_ENVIRONMENT`
+  trong `.env`).
+- Kiểm trên stack local 2026-10-28: `make linedb` (biến thể bảng, môi trường qa), host nghe `line_messages`. Đường relay:
+  52/52 dòng DONE, MOM có 52 MTU sản phẩm, 48 MTU `Auto_`, 124 dòng trừ nguyên liệu, 52 `LineExecution`, khớp kịch bản.
+  Đường poll (`make line-polling`, line 3, 60 cell): 122/122 dòng DONE.
+- Tải gấp đôi 60 phút trên đường poll: 5.833/5.833 dòng DONE, 0 lỗi, p95 66,1 s, tồn đọng 50–112 dòng không tăng, xả
+  hết trong phút đầu sau khi ngừng sinh. Điều kiện và số ở [benchmarks](../benchmarks.md#r5--tin-từ-xưởng-tải-gấp-đôi).
+- Web: màn "Tin từ xưởng" (`/area/line/messages`, tab cạnh "Lệnh theo ca"): serial đã ghi theo bước, lọc serial và tin
+  KO, nguyên liệu đã trừ cho MTU sản phẩm, line-lead ghi tay một tin và thấy nguyên response. `make lab-web` 5/5 xanh (3
+  của R4, 2 mới, gồm L09 trên giao diện).
+- Kiểm lần cuối 2026-10-29 trên máy cá nhân: clean-room, format, build Release sạch, 204/204 test xanh, benchmark R1 chạy
+  riêng xanh, `tsc` của web sạch.
+- Lệch so với dự kiến: màn web không hiện trạng thái dòng LineDB (NEW, RETRY…), vì web chỉ đi qua OData của MOM (K10);
+  xem trạng thái bằng `make line-load`/`report` hoặc SQL trên LineDB. Ghi ở nợ N-R5-3.
+
 ## Nợ mở
 
 | Mã | Nợ | Mốc xử lý |
@@ -115,3 +152,6 @@ test và số đo tương ứng (AGENTS.md §1.3). Agent làm theo lô lớn, kh
 | N-R0-4 | Site tài liệu Mintlify vẫn mô tả v1; chưa chạy kiểm clean-room | R12 |
 | N-R2-2 | Lab giao diện Playwright có từ R4 (`make lab-web`) nhưng cần cả stack chạy nên chưa vào CI | R12 |
 | N-R2-3 | Host chạy bằng `dotnet run`, chưa có trong compose | R12 |
+| N-R5-1 | Line simulator 2 ngày × 4 line (tiêu chí "v2 xong") chưa chạy | R12 |
+| N-R5-2 | Đường relay chưa đo tải; tải R5 chỉ đo đường poll | R12 |
+| N-R5-3 | Trạng thái dòng LineDB chưa có trên web: cần một read model phía MOM hoặc API riêng của xưởng | R12 |

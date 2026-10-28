@@ -20,8 +20,9 @@ public sealed class NvProductionExtApp : AppDefinition
 
     protected override void Define(PomBuilder pom) => pom
         .Entity<ProductionSchedule>().Entity<DefaultWorkOrder>().Entity<ProcessSchedule>().Entity<WorkOrderShift>()
+        .Entity<LineExecution>()
         .Command<CreateProductionSchedule>().Command<CreateDefaultWorkOrder>().Command<SetProcessSchedule>()
-        .Command<HandleShiftTimer>();
+        .Command<HandleShiftTimer>().Command<ApplyLineResults>().Command<IngestLineMessages>().Command<SetLinePolling>();
 }
 
 public sealed class NvResponse : CommandResponse
@@ -48,6 +49,10 @@ public static class NvErrors
     public const int InvalidShiftTime = 9002;
     public const int UnknownSchedule = 9003;
     public const int UnknownProcess = 9004;
+    public const int UnknownOperation = 9005;
+    public const int UnknownMaterial = 9006;
+    public const int UnknownDefect = 9007;
+    public const int MissingEndpoint = 9008;
 }
 
 /// <summary>Trạng thái team thêm vào state machine WO bằng dữ liệu.</summary>
@@ -64,4 +69,20 @@ public static class NvKeys
     /// lúc tạo WO dùng giờ UTC (lab L08). Thiếu key: 0, tức server chạy UTC.
     /// </summary>
     public const string ServerUtcOffsetMinutes = "Nv.ServerUtcOffsetMinutes";
+
+    /// <summary>
+    /// Đường chuyển tin từ LineDB: <c>relay</c> (relay nghe notify, đường ban đầu) hoặc <c>poll</c> (signal rule gọi
+    /// <see cref="IngestLineMessages"/>). Thiếu key: <c>relay</c>, lệnh đọc tin không làm gì.
+    /// </summary>
+    public const string LineTransfer = "Nv.LineTransfer";
+
+    /// <summary>Số dòng tối đa mỗi lần lệnh đọc tin lấy từ LineDB cho một mã bước. Thiếu key: 50.</summary>
+    public const string LinePollBatchSize = "Nv.LinePollBatchSize";
+}
+
+/// <summary>Endpoint của môi trường mà code của team dùng.</summary>
+public static class NvEndpoints
+{
+    /// <summary>Chuỗi kết nối LineDB bằng role chỉ vào được schema trung gian (K11).</summary>
+    public const string LineDb = "LineDb";
 }

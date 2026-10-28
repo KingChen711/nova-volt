@@ -2,7 +2,7 @@
 
   <!--
     Test của solution NV1 trên SQL Server thật (Testcontainers): master data nạp bằng suite, WO theo ca qua timer, pre-check
-    và quyền của team, lab L06, L07, L08, L16. Dùng đúng manifest mà host dùng.
+    và quyền của team, lab L06, L07, L08, L16; tin từ xưởng qua LineDB (Postgres thật), lab L09, L10, L11. Dùng đúng manifest mà host dùng.
   -->
 
   <PropertyGroup>
@@ -14,6 +14,8 @@
     <PackageReference Include="xunit.v3" />
     <PackageReference Include="Shouldly" />
     <PackageReference Include="Testcontainers.MsSql" />
+    <PackageReference Include="Testcontainers.PostgreSql" />
+    <PackageReference Include="Npgsql" />
     <PackageReference Include="Microsoft.Data.SqlClient" />
     <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
   </ItemGroup>
@@ -23,6 +25,7 @@
     <ProjectReference Include="../../../src/Product/Nvm.Product/Nvm.Product.csproj" />
     <ProjectReference Include="../../../src/Project/Nvm.Project/Nvm.Project.csproj" />
     <ProjectReference Include="../../../src/Solution/Nvm.Solution/Nvm.Solution.csproj" />
+    <ProjectReference Include="../../../src/Shopfloor/Nvm.Shopfloor/Nvm.Shopfloor.csproj" />
   </ItemGroup>
 
   <ItemGroup>

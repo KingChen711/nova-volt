@@ -159,6 +159,29 @@ public sealed class CommandExecutor
         }
     }
 
+    /// <summary>
+    /// Adapter tích hợp phát một event của model theo tên (vd relay nghe notify của LineDB phát tin máy): event lưu trong
+    /// transaction riêng rồi lên bus như event của command. Không qua app nào, nên không có pre-check hay quyền.
+    /// </summary>
+    /// <returns><c>CorrelationId</c> của chuỗi mà event mở ra.</returns>
+    public Guid RaiseExternalEvent(string eventName, string payload, Guid? correlationId = null)
+    {
+        var model = Registry.EventByName(eventName) ?? throw new KeyNotFoundException($"Event {eventName} is not part of the model.");
+        var domainEvent = (IFoundationEvent)(JsonSerializer.Deserialize(payload, model.Type, RequestJson)
+            ?? throw new JsonException($"Event {eventName}: empty payload."));
+        var call = correlationId is { } id ? new CallInfo(id, Guid.NewGuid(), null, id) : CallInfo.Root();
+        var tracer = new CallTracer(_traces, Time, call, "Adapter." + model.Name);
+        tracer.Platform(TraceLevel.Information, $"Adapter raised {model.Name}");
+        using var transaction = new DomainTransaction(_connectionString, Registry, Time, model.Block.Domain);
+        transaction.AddEvent(domainEvent, call);
+        if (CommitAndPublish(transaction, tracer) is { } failure)
+        {
+            throw new InvalidOperationException($"Event {eventName} could not be stored.", failure);
+        }
+
+        return call.CorrelationId;
+    }
+
     /// <summary><c>CallCommand</c> trong handler: cùng domain thì chung transaction, khác domain thì transaction riêng.</summary>
     internal CommandResponse CallFromHandler(object command, DomainTransaction transaction, ExecutionScope scope, CallInfo parent)
     {

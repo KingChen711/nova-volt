@@ -10,6 +10,15 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Npgsql" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Script LineDB nhúng vào assembly: installer chạy theo thứ tự tên file. -->
+    <EmbeddedResource Include="LineDb/Sql/*.sql" LogicalName="LineDb.%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="../../Foundation/Nvm.Foundation/Nvm.Foundation.csproj" />
   </ItemGroup>
 

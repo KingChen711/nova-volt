@@ -1,0 +1,50 @@
+{
+  "Name": "LinePolling_001_SignalRules",
+  "BreakOnError": true,
+  "TestDefinitions": [
+    {
+      "Name": "UsePollPath",
+      "TestSteps": [
+        {
+          "ID": "SetTransfer",
+          "StepType": "Command",
+          "App": "Foundation",
+          "Name": "SetConfigurationKey",
+          "Parameters": {
+            "NId": "Nv.LineTransfer",
+            "Val": "poll",
+            "Type": "String",
+            "Category": "LineMessages"
+          }
+        }
+      ]
+    },
+    {
+      "Name": "SetLinePolling",
+      "Csv": "line-polling.csv",
+      "TestSteps": [
+        {
+          "ID": "GetRule",
+          "StepType": "Read",
+          "App": "Foundation",
+          "Name": "SignalRule",
+          "Query": {
+            "$filter": "NId eq 'LINE_POLL_#TEST_CSV.OperationCode#'",
+            "$top": "1"
+          },
+          "IfThisSkipNext": true
+        },
+        {
+          "ID": "SetPolling",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_SetLinePolling",
+          "Parameters": {
+            "OperationCode": "#TEST_CSV.OperationCode#",
+            "IntervalSeconds": "#TEST_CSV.IntervalSeconds#"
+          }
+        }
+      ]
+    }
+  ]
+}

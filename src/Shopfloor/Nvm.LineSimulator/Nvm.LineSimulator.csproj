@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Dòng lệnh phía xưởng (R5): cài LineDB đã có ở host; ở đây là máy (ghi bảng máy theo kịch bản hoặc theo nhịp), lịch gửi
+    của đường relay, và số đo của bảng trung gian. Chỉ thấy LineDB, không thấy MOM.
+  -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Nvm.LineSimulator</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Nvm.Shopfloor/Nvm.Shopfloor.csproj" />
+    <ProjectReference Include="../../Foundation/Nvm.Hosting/Nvm.Hosting.csproj" />
+  </ItemGroup>
+
+</Project>

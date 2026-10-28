@@ -17,7 +17,7 @@ public sealed class MasterDataSuiteTests
         first.Select(s => s.Status).ShouldAllBe(s => s == SuiteStatus.Executed);
         first.Select(s => s.Suite).ShouldBe([
             "Production_001_Equipment", "Production_002_Materials", "Production_003_Processes", "Production_004_WorkOrderStates",
-            "NvProductionExt_001_WorkOrderLifecycle", "NvProductionExt_002_ProcessSchedules", "NvProductionExt_003_ProductionSchedules",
+            "MapApp_001_LineCodes", "NvProductionExt_001_WorkOrderLifecycle", "NvProductionExt_002_ProcessSchedules", "NvProductionExt_003_ProductionSchedules",
             "NvProductionExt_004_DefaultWorkOrders", "NvProductionExt_005_InHouseMaterials",
         ]);
 
@@ -30,6 +30,9 @@ public sealed class MasterDataSuiteTests
         h.Read<DefaultWorkOrder>().Count.ShouldBe(32);
         h.Read<SystemTimer>(q => q.Where(t => t.NId.StartsWith("DAILY_WO_"))).Count.ShouldBe(32);
         h.Read<StatusTransition>(q => q.Where(t => t.ToStatus == NvWorkOrderStates.Frozen)).Count.ShouldBe(2);
+        h.Read<LineOperationCode>().Count.ShouldBe(4);
+        h.Read<LineEquipmentCode>().Count.ShouldBe(16);
+        h.Read<LineMaterialCode>().Count.ShouldBe(11);
 
         h.Deploy().Select(s => s.Status).ShouldAllBe(s => s == SuiteStatus.Skipped);
     }

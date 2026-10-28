@@ -69,7 +69,7 @@ internal sealed class HandleShiftTimerHandler : ICommandHandler<HandleShiftTimer
                 continue;
             }
 
-            CreateIfMissing(platform, process, matching, lifecycle.SingleOrDefault(f => f.EntityId == process.Id)?.WorkOrderPrefix, now);
+            ShiftWorkOrders.CreateIfMissing(platform, process, matching, lifecycle.SingleOrDefault(f => f.EntityId == process.Id)?.WorkOrderPrefix, now);
         }
 
         return NvResponse.Of(schedule);
@@ -83,7 +83,7 @@ internal sealed class HandleShiftTimerHandler : ICommandHandler<HandleShiftTimer
             var shift = platform.Query<WorkOrderShift>().SingleOrDefault(f => f.EntityId == workOrder.Id);
             if (shift?.FrozenOn is { } frozenOn && frozenOn.AddHours(hours) <= now)
             {
-                Change(platform, workOrder, WorkOrderStates.Complete);
+                ShiftWorkOrders.Change(platform, workOrder, WorkOrderStates.Complete);
             }
         }
     }
@@ -94,7 +94,7 @@ internal sealed class HandleShiftTimerHandler : ICommandHandler<HandleShiftTimer
             .Where(w => w.ProcessNId == process.NId && Running.Contains(w.Status!) && w.EstimatedEnd <= now).ToList();
         foreach (var workOrder in overdue)
         {
-            if (Change(platform, workOrder, NvWorkOrderStates.Frozen))
+            if (ShiftWorkOrders.Change(platform, workOrder, NvWorkOrderStates.Frozen))
             {
                 var shift = platform.Query<WorkOrderShift>().SingleOrDefault(f => f.EntityId == workOrder.Id) ?? platform.Create<WorkOrderShift>();
                 shift.EntityId = workOrder.Id;
@@ -110,11 +110,35 @@ internal sealed class HandleShiftTimerHandler : ICommandHandler<HandleShiftTimer
             .Where(w => w.ProcessNId == process.NId && w.Status == WorkOrderStates.New && w.EstimatedStart <= now && w.EstimatedEnd > now).ToList();
         foreach (var workOrder in due)
         {
-            Change(platform, workOrder, WorkOrderStates.Active);
+            ShiftWorkOrders.Change(platform, workOrder, WorkOrderStates.Active);
         }
     }
+}
 
-    private static void CreateIfMissing(IPlatform platform, Process process, ProductionSchedule schedule, string? prefix, DateTimeOffset now)
+/// <summary>Mở WO của ca cho một process: dùng chung cho timer đầu ca và WO dự phòng lúc tin từ xưởng tới.</summary>
+internal static class ShiftWorkOrders
+{
+    /// <summary>
+    /// WO dự phòng: process chưa có WO đang mở thì tạo, release, kích hoạt, nhưng chỉ khi giờ UTC hiện tại nằm trong khung ca
+    /// của một PS gắn với DWO của process. Không có khung nào khớp thì ghi trace và trả false, không báo lỗi.
+    /// </summary>
+    public static bool OpenSpare(IPlatform platform, Process process, DateTimeOffset now)
+    {
+        var scheduleNIds = platform.ProjectionQuery<DefaultWorkOrder>().Where(d => d.ProcessNId == process.NId).Select(d => d.ScheduleNId!).ToList();
+        var matching = platform.ProjectionQuery<ProductionSchedule>().Where(s => scheduleNIds.Contains(s.NId)).AsEnumerable()
+            .FirstOrDefault(s => ShiftTime.InWindow(now, ShiftTime.Minutes(s.StartTime), ShiftTime.Minutes(s.EndTime)));
+        if (matching is null)
+        {
+            platform.Tracer.Write(TraceLevel.Error, $"Matching BoP - Process relationship could not be found for {process.NId} at {now:O}.");
+            return false;
+        }
+
+        var prefix = platform.ProjectionQuery<ProcessSchedule>().Where(f => f.EntityId == process.Id).Select(f => f.WorkOrderPrefix).SingleOrDefault();
+        CreateIfMissing(platform, process, matching, prefix, now);
+        return true;
+    }
+
+    public static void CreateIfMissing(IPlatform platform, Process process, ProductionSchedule schedule, string? prefix, DateTimeOffset now)
     {
         string[] open = [WorkOrderStates.New, WorkOrderStates.Active];
         if (platform.Query<WorkOrder>().Any(w => w.ProcessNId == process.NId && open.Contains(w.Status!) && w.EstimatedEnd > now))
@@ -156,7 +180,7 @@ internal sealed class HandleShiftTimerHandler : ICommandHandler<HandleShiftTimer
         }
     }
 
-    private static bool Change(IPlatform platform, WorkOrder workOrder, string status)
+    public static bool Change(IPlatform platform, WorkOrder workOrder, string status)
     {
         var changed = platform.CallCommand<SetWorkOrderStatus, ProductResponse>(new SetWorkOrderStatus { NId = workOrder.NId, Status = status });
         if (!changed.Succeeded)

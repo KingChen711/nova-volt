@@ -1,0 +1,12 @@
+NId,MaterialNId
+Anode powder lot in use,NV-RM-ANODE
+Cathode powder lot in use,NV-RM-CATHODE
+Separator film lot in use,NV-RM-SEP
+Cell case A lot in use,NV-RM-CASE-A
+Cell case B lot in use,NV-RM-CASE-B
+Electrode coil A in use,NV-WIP-ELEC-A
+Electrode coil B in use,NV-WIP-ELEC-B
+Cell A in use,NV-WIP-CELL-A
+Cell B in use,NV-WIP-CELL-B
+Formed cell A in use,NV-WIP-FCELL-A
+Formed cell B in use,NV-WIP-FCELL-B

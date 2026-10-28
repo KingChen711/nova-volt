@@ -1,6 +1,7 @@
 {
   "masterDataOrder": [
     "Production",
+    "MapApp",
     "NvProductionExt"
   ]
 }

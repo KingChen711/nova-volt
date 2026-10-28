@@ -68,6 +68,8 @@ internal sealed class SolutionHarness
 
     public string HistoryFile { get; }
 
+    private int _delivered;
+
     public static string RepoRoot([CallerFilePath] string path = "")
     {
         var dir = new DirectoryInfo(Path.GetDirectoryName(path)!);
@@ -122,6 +124,28 @@ internal sealed class SolutionHarness
             Time.SetUtcNow(next < until ? next : until);
             Rules.RunDueTimers();
         }
+    }
+
+    /// <summary>
+    /// Vai worker role trong test: chạy subscriber Predefined cho mọi event đã phát mà chưa giao, theo thứ tự phát, kể cả event
+    /// do chính subscriber phát ra. Trả số event có subscriber nhận.
+    /// </summary>
+    public int DeliverEvents()
+    {
+        var delivered = 0;
+        while (_delivered < Events.Published.Count)
+        {
+            var published = Events.Published[_delivered++];
+            var subscribers = Registry.EventSubscribers.Where(s => s.Predefined && s.EventType == published.Event.GetType()).ToList();
+            foreach (var subscriber in subscribers)
+            {
+                Executor.RunEventSubscriber(subscriber, published.Event, published.CorrelationId);
+            }
+
+            delivered += subscribers.Count > 0 ? 1 : 0;
+        }
+
+        return delivered;
     }
 
     public static CallerIdentity Caller(string user, params string[] roles) => new(user, new HashSet<string>(roles, StringComparer.Ordinal));

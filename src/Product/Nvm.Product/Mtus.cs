@@ -13,6 +13,9 @@ public sealed class Mtu : Entity
     [Mandatory]
     public string? MaterialNId { get; set; }
 
+    /// <summary>Mã in trên hàng (serial, số lô). Tin từ xưởng chỉ biết mã này, nên MTU tạo từ tin mang nó.</summary>
+    public string? Code { get; set; }
+
     /// <summary><c>Serial</c> hoặc <c>Batch</c>, theo cờ <see cref="Material.Serialized"/> lúc tạo.</summary>
     public string? Kind { get; set; }
 
@@ -136,18 +139,20 @@ public sealed class CreateMtu : ICommand<ProductResponse>
 
     /// <summary>Rỗng: equipment <c>n/a</c>.</summary>
     public string? EquipmentNId { get; init; }
+
+    public string? Code { get; init; }
 }
 
 internal sealed class CreateMtuHandler : ICommandHandler<CreateMtu, ProductResponse>
 {
     public ProductResponse Handle(CreateMtu command, IPlatform platform) =>
-        Mtus.Create(platform, command.NId!, command.MaterialNId!, command.Quantity, command.EquipmentNId, workOrder: null);
+        Mtus.Create(platform, command.NId!, command.MaterialNId!, command.Quantity, command.EquipmentNId, workOrder: null, command.Code);
 }
 
 internal static class Mtus
 {
     public static ProductResponse Create(IPlatform platform, string nid, string materialNId, decimal? quantity, string? equipmentNId,
-        string? workOrder)
+        string? workOrder, string? code = null)
     {
         // Material, Equipment thuộc domain master data: đọc bằng ProjectionQuery, chỉ thấy bản đã commit.
         var material = platform.ProjectionQuery<Material>().SingleOrDefault(m => m.NId == materialNId);
@@ -180,6 +185,7 @@ internal static class Mtus
         var mtu = platform.Create<Mtu>();
         mtu.NId = nid;
         mtu.MaterialNId = materialNId;
+        mtu.Code = code;
         mtu.Kind = material.Serialized ? "Serial" : "Batch";
         mtu.Quantity = material.Serialized ? 1m : quantity ?? 0m;
         mtu.UnitOfMeasure = material.UnitOfMeasure;
@@ -312,6 +318,7 @@ internal sealed class SplitMtuHandler : ICommandHandler<SplitMtu, ProductRespons
         var child = platform.Create<Mtu>();
         child.NId = prefix + index.ToString(CultureInfo.InvariantCulture);
         child.MaterialNId = parent.MaterialNId;
+        child.Code = parent.Code;
         child.Kind = parent.Kind;
         child.Quantity = quantity;
         child.UnitOfMeasure = parent.UnitOfMeasure;

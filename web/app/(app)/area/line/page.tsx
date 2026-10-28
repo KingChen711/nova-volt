@@ -2,6 +2,7 @@
 
 import { CalendarClock, ClipboardList, Factory, Lock, Snowflake, TimerReset } from "lucide-react";
 import { useMemo, useState } from "react";
+import { AreaTabs } from "@/components/AreaTabs";
 import { Badge, Button, DataTable, EmptyState, PageHeader, Panel, RefreshButton, ResponsePanel, Toast, useToast } from "@/components/ui";
 import { areas, visibleAreas } from "@/lib/areas";
 import { useAuth } from "@/lib/auth";
@@ -121,6 +122,7 @@ export default function LineWorkOrdersPage() {
           />
         </div>
       </PageHeader>
+      <AreaTabs slug="line" label="Màn của khu Xưởng" />
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
         <Panel

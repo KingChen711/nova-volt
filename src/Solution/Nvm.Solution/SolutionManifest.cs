@@ -37,8 +37,12 @@ public static class SolutionManifest
     {
         var solution = new SolutionConfiguration { Plant = plant, AdministratorRole = AdministratorRole };
 
-        // Foundation (cấu hình nền): chỉ quản trị.
+        // Foundation (cấu hình nền) và bảng đối chiếu mã phía xưởng: chỉ quản trị.
         solution.Apps.Add(new AppConfiguration(FoundationAppName) { RestrictCommands = true });
+        solution.Apps.Add(new AppConfiguration(MapApp.Name) { RestrictCommands = true });
+
+        // Tin từ xưởng xử lý tuần tự: hai lô tin của cùng một serial không chạy chồng nhau.
+        solution.WorkerRoles[LineMessageHandler.WorkerRoleName] = new WorkerRoleConfiguration { Sequential = true };
 
         var production = new AppConfiguration(ProductionApp.Name) { RestrictCommands = true };
         production.EnabledPreChecks.UnionWith(ProductionPreChecks);
@@ -46,7 +50,7 @@ public static class SolutionManifest
         // Master data (equipment, material, BoP, PS, DWO, trạng thái): chỉ quản trị, nên không ghi ở đây.
         production.Allow(
             [nameof(ReleaseWorkOrder), nameof(SetWorkOrderStatus), nameof(AbortWorkOrder), nameof(EditWorkOrder), nameof(DeleteWorkOrder),
-             nameof(CreateWorkOrderFromProcess), Ext + nameof(HandleShiftTimer)],
+             nameof(CreateWorkOrderFromProcess), Ext + nameof(HandleShiftTimer), Ext + nameof(ApplyLineResults)],
             LineLead);
         production.Allow(
             [nameof(CreateMtu), nameof(EditMtu), nameof(MoveMtu), nameof(SplitMtu), nameof(CreateMtua), nameof(AssembleIntoMtua),

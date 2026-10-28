@@ -110,6 +110,8 @@ internal sealed class Platform(CommandExecutor executor, DomainTransaction trans
         CallTracer.Platform(TraceLevel.Verbose, $"Event {domainEvent.GetType().Name} registered for commit");
     }
 
+    public string? Endpoint(string name) => Executor.Solution.Endpoints.TryGetValue(name, out var value) ? value : null;
+
     private void RequireOwnDomain(ModelObject item, string operation)
     {
         var domain = Executor.Registry.DomainOf(item.GetType());

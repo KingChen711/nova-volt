@@ -59,6 +59,12 @@ public interface IPlatform : IReadOnlyPlatform
 
     /// <summary>Đăng ký event; chỉ phát nếu transaction commit thành công.</summary>
     void RaiseEventOnCommit(IFoundationEvent domainEvent);
+
+    /// <summary>
+    /// Endpoint của hệ ngoài theo tên (chuỗi kết nối, URL), lấy từ cấu hình của môi trường, không từ model. Null khi môi
+    /// trường không khai: mỗi chỗ gọi tự xử lý.
+    /// </summary>
+    string? Endpoint(string name);
 }
 
 /// <summary>Platform của composite command: không có transaction của riêng nó.</summary>

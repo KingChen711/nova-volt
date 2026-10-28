@@ -96,6 +96,42 @@ Lớp Project, master data và WO theo ca ([ADR-057](adr/ADR-057-wo-theo-ca-va-s
 | Mã lỗi khi thiếu quyền gọi command | HTTP 403, `6403` | — |
 | WO New được kích hoạt khi nào | Khi giờ hiện tại nằm trong khung dự kiến của nó | — |
 
+## R5: tin từ xưởng
+
+LineDB (Postgres) với bảng máy theo khu, bảng trung gian `relay`, hai đường chuyển tin; lớp Project xử lý tin bằng
+`ApplyLineResults`. Script LineDB ở `src/Shopfloor/Nvm.Shopfloor/LineDb/Sql`. Test ở `tests/Integration/Nvm.SolutionTests`
+(`LineMessageTests`, `LineLabTests`), SQL Server và Postgres thật.
+
+| Hành vi | Nguồn | Test |
+|---|---|---|
+| Tin chỉ mang mã phía xưởng; MOM dịch bước, máy (hậu tố số line), nguyên liệu qua bảng đối chiếu của `MapApp` | `tin-tu-xuong` | `One_shift_on_one_line_records_exactly_the_scenario` |
+| Chọn bước WO: serial đã thuộc WO → bước khớp bước và máy trong WO Active/New/Pause → WO dự phòng chỉ trong khung ca (UTC) | `tin-tu-xuong`, `serial-not-executed` | cùng test trên; `L09_…` |
+| MTU sản phẩm `<material>_<serial>`, `Code` = serial; trừ nguyên liệu theo định mức khi tin không có lượng; không có lô thì MTU tạm `Auto_…`; lô chưa có thì tạo | `tin-tu-xuong` | `One_shift_on_one_line_records_exactly_the_scenario` |
+| Response có `ExecutedSerialNumbers`, `NotExecutedOperations`; `Succeeded` chỉ nói lời gọi chạy xong | `serial-not-executed` | `L09_succeeded_response_still_lists_the_serial_as_not_executed` |
+| Trạng thái dòng `NEW`/`SENT`/`DONE`/`NOTIFY_ERR`/`RETRY`/`FAILED`; mã lỗi ghép = −(loại xử lý ‖ mã gốc), loại 6 ghi operation, 5 hao hụt, 4 hàng lỗi | `tin-may-toi-mom` | `Unknown_machine_code_is_not_executed_with_its_composite_code` |
+| Gửi lại theo cặp (trạng thái, mã lỗi): relay chỉ dòng có chính sách; poll mặc định thêm 1 lần sau 10 phút | `tin-may-ket-postgres` | `L10_rows_rejected_before_the_fix_stay_on_the_relay_path_until_set_back_to_new`, `L10_control_poll_path_…`, `Poll_path_recovers_by_itself_…` |
+| Notify vượt 8000 byte → `NOTIFY_ERR`, không tự gửi lại | `tin-may-toi-mom` | `L11_payload_over_the_notify_limit_marks_rows_notify_err_and_they_are_never_resent` |
+| Gửi lại không tạo MTU, không trừ nguyên liệu lần nữa (khóa `<serial>|<mã bước>`) | plan R5 DoD (K7) | `Rows_sent_again_do_not_create_or_consume_twice` |
+| MOM dừng: relay để dòng ở SENT rồi gửi lại; poll để dòng ở NEW | plan R5 DoD | `Relay_path_drains_the_backlog_…`, `Poll_path_waits_while_mom_is_down_…` |
+| Chỗ lưu trạng thái: cột theo môi trường hoặc bảng lịch riêng | `tin-may-ket-postgres` | `One_shift_…` (hai biến thể) |
+| Role MOM chỉ gọi được hàm trung gian (K11) | plan R5 | `Mom_role_reaches_only_the_relay_functions` |
+| Màn "Tin từ xưởng" (`/area/line/messages`): serial đã ghi, nguyên liệu đã trừ, ghi tay một tin và hiện nguyên response; trạng thái dòng LineDB không hiện vì web chỉ đi qua OData của MOM | `serial-not-executed` | `web/e2e/line-messages.spec.ts` (lab L09 trên giao diện) |
+| Tải gấp đôi 60 phút trên đường poll: không mất dòng, tồn đọng không tăng, p95 dưới 120 s | plan R5 DoD | đo bằng `make line-load`, số ở [benchmarks](benchmarks.md#r5--tin-từ-xưởng-tải-gấp-đôi) |
+
+### Giả định của R5
+
+| Chỗ chưa rõ | v2 làm | Cấu hình |
+|---|---|---|
+| Đường chuyển tin đang chạy | Cả hai; mặc định relay | key `Nv.LineTransfer` (`relay`/`poll`); bước deploy `--enable-line-polling` |
+| Chỗ lưu trạng thái dòng | Cả hai qua view `relay.message_status` | `NVM_LINEDB_STATE` (`table`/`columns`), `NVM_ENVIRONMENT` |
+| Bảng chính sách trên môi trường thật | Dòng lỗi chung −6999, −5999, −4999; thêm (SENT, 0) để dòng mất notify được gửi lại | dữ liệu `relay.retry_policy` |
+| Số đã làm của WO tăng ở bước nào | Bước cuối của process (mọi process NV1 một bước) | — |
+| Serial đã thuộc WO nhưng WO đó không còn mở | Vẫn dùng WO đó | — |
+| Lô trong tin thiếu lượng | Nâng lượng lô (`EditMtu`) rồi trừ, ghi trace Warning | — |
+| Kết quả ghi về LineDB trước commit của MOM | Đúng thứ tự đó; commit hỏng thì dòng DONE mà MOM không có dữ liệu | — |
+| Tin hao hụt | Tách riêng, R5 trả `FAILED` mã −5900; xử lý ở R6 | — |
+| Tin KO | Ghi như OK, serial vào `PendingNonConformance`; NC ở R6 | — |
+
 ### Giả định của lớp Product
 
 | Chỗ chưa rõ | Lớp Product làm |

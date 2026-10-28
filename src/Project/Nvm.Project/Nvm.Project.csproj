@@ -10,6 +10,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Lệnh đọc tin và handler tin máy gọi hàm của schema trung gian LineDB (R5). -->
+    <PackageReference Include="Npgsql" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="../../Foundation/Nvm.Foundation/Nvm.Foundation.csproj" />
     <ProjectReference Include="../../Product/Nvm.Product/Nvm.Product.csproj" />
   </ItemGroup>

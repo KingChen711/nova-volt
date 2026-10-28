@@ -15,7 +15,7 @@ PYTHON   := $(shell python3 --version >/dev/null 2>&1 && echo python3 || echo py
 BACKUP_DIR := $(shell grep -E '^NVM_BACKUP_DIR=' .env 2>/dev/null | cut -d= -f2-)
 
 .DEFAULT_GOAL := help
-.PHONY: help up down down-v reset ps logs build test ci hooks format format-check clean backup secret-check cleanroom update-db master-data keycloak-users mom web web-ci lab-web
+.PHONY: help up down down-v reset ps logs build test ci hooks format format-check clean backup secret-check cleanroom update-db master-data line-polling linedb line-sim line-relay line-load keycloak-users mom web web-ci lab-web
 
 help:
 	@echo "NovaVolt MOM v2"
@@ -36,6 +36,11 @@ help:
 	@echo "  Chay MOM"
 	@echo "    make update-db     Update Database: can schema DB MOM theo model (quyen sa)"
 	@echo "    make master-data   Nap master data bang suite (suites/), bo qua suite da co trong lich su"
+	@echo "    make linedb        Cai schema LineDB (bang may, bang trung gian, role MOM); RESET=1 xoa sach"
+	@echo "    make line-polling  Bat duong poll cho tin tu xuong (signal rule moi phut, key Nv.LineTransfer)"
+	@echo "    make line-sim      May ghi mot ca cua mot line vao LineDB: LINE=1 CELLS=24"
+	@echo "    make line-relay    Lich gui cua duong relay (send_pending moi phut)"
+	@echo "    make line-load     Do tai: TAKT=5 (gap doi danh dinh) MINUTES=60, RELAY=1 de chay kem lich relay"
 	@echo "    make keycloak-users Dat mat khau user thu cua realm tu NVM_DEMO_USER_PASSWORD"
 	@echo "    make mom           Chay host MOM (OData, worker event, signal rule) o NVM_PORT_MOM"
 	@echo "    make web           Chay web Next.js o NVM_PORT_WEB (lan dau: npm ci trong web/)"
@@ -123,6 +128,22 @@ update-db:
 
 master-data:
 	dotnet run --project src/Solution/Nvm.Mom.Host --no-launch-profile -- --load-master-data
+
+linedb:
+	dotnet run --project src/Solution/Nvm.Mom.Host --no-launch-profile -- --install-linedb $(if $(RESET),--reset,)
+
+line-polling:
+	dotnet run --project src/Solution/Nvm.Mom.Host --no-launch-profile -- --enable-line-polling
+
+LINESIM := dotnet run --project src/Shopfloor/Nvm.LineSimulator --
+line-sim:
+	$(LINESIM) run --line $(or $(LINE),1) --cells $(or $(CELLS),24)
+
+line-relay:
+	$(LINESIM) relay
+
+line-load:
+	$(LINESIM) load --takt $(or $(TAKT),5) --minutes $(or $(MINUTES),60) $(if $(RELAY),--relay,)
 
 keycloak-users:
 	@$(PYTHON) -I -X utf8 scripts/keycloak-demo-users.py

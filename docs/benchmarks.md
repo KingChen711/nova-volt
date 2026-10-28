@@ -40,3 +40,21 @@ khởi động không tính. SQL Server 2022 CU26 trong Testcontainers, cùng m�
 
 Ngưỡng của test chốt sau ba lần đo trên: **p95 < 50 ms**, khoảng ba lần số đo, để chừa runner CI
 chậm hơn máy cá nhân. Chưa đo trên runner GitHub.
+
+## R5 — Tin từ xưởng: tải gấp đôi
+
+Phép đo: `make line-load` (`Nvm.LineSimulator load --takt 5 --minutes 60`) trên stack local, host MOM
+chạy `dotnet run` (Debug) với suite `line-polling` đã nạp, tức đường **poll** (`Nv.LineTransfer=poll`,
+`Nv.LinePollBatchSize` mặc định 50). Bốn line, mỗi line một cell mỗi 5 s (gấp đôi nhịp danh định 10 s),
+kèm dòng cuộn điện cực, formation sau 2 phút và module khi đủ cell. Sinh tin 60 phút, sau đó chờ xả tối
+đa 10 phút. Độ trễ = `last_result_on − created_on` của dòng `DONE` ở LineDB, tức từ lúc máy ghi dòng tới
+lúc MOM ghi kết quả về; gồm cả thời gian chờ nhịp poll. Log đầy đủ từng phút không lưu trong repo.
+
+| Ngày | Commit | Chỉ số | Giá trị | Điều kiện đo |
+|---|---|---|---|---|
+| 2026-10-28 | tag `r5` | Dòng sinh / `DONE` / lỗi | **5.833 / 5.833 / 0** | Đường poll, 4 line, takt 5 s, 60 phút; lỗi = RETRY, FAILED, NOTIFY_ERR |
+| 2026-10-28 | tag `r5` | Độ trễ p50 / p95 / max | **37,2 / 66,1 / 75,2 s** | Như trên, tính trên cả 5.833 dòng `DONE` |
+| 2026-10-28 | tag `r5` | Tồn đọng (NEW + SENT) theo phút | **50 – 112 dòng, không tăng** | Như trên; dao động theo nhịp poll, phút 2 là 56, phút 60 là 50 |
+| 2026-10-28 | tag `r5` | Thời gian xả sau khi ngừng sinh | **≤ 1 phút** | Phút 61 tồn đọng 0 (báo cáo theo phút, không đo mịn hơn) |
+
+Đường **relay** chưa đo tải. Chưa đo trên runner GitHub.

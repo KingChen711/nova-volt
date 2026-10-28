@@ -28,6 +28,9 @@ public sealed class SolutionConfiguration
     /// </summary>
     public bool ChildFailureDoomsTransaction { get; set; }
 
+    /// <summary>Endpoint của hệ ngoài theo tên (vd chuỗi kết nối LineDB). Thuộc môi trường, không thuộc model hay gói.</summary>
+    public IDictionary<string, string> Endpoints { get; } = new Dictionary<string, string>(StringComparer.Ordinal);
+
     /// <summary>Command settings của app; app chưa cấu hình thì không bật pre-check nào.</summary>
     public AppConfiguration App(string name) =>
         Apps.FirstOrDefault(a => string.Equals(a.Name, name, StringComparison.Ordinal)) ?? new AppConfiguration(name);

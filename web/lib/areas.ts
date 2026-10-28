@@ -41,7 +41,11 @@ export const areas: Area[] = [
     slug: "line", label: "Xưởng", group: "Vận hành", href: "/area/line",
     description: "Chọn khu, lệnh đang chạy, nạp nguyên liệu, gọi hàng, giữ hàng", roles: ["line-operator", "line-lead"],
     icon: Factory, milestone: "R4–R6",
-    screens: ["Chọn khu và ca", "Lệnh đang chạy", "Nạp lô vào buffer", "Gọi hàng", "Giữ hàng nghi lỗi", "Dựng lại pallet"],
+    screens: ["Chọn khu và ca", "Lệnh đang chạy", "Tin từ xưởng", "Nạp lô vào buffer", "Gọi hàng", "Giữ hàng nghi lỗi", "Dựng lại pallet"],
+    links: [
+      { href: "/area/line", label: "Lệnh theo ca" },
+      { href: "/area/line/messages", label: "Tin từ xưởng" },
+    ],
   },
   {
     slug: "yard", label: "Cổng và dock", group: "Hậu cần", href: "/area/yard",

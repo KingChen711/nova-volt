@@ -15,6 +15,7 @@
     <Project Path="src/Project/Nvm.Project/Nvm.Project.csproj" />
   </Folder>
   <Folder Name="/src/Shopfloor/">
+    <Project Path="src/Shopfloor/Nvm.LineSimulator/Nvm.LineSimulator.csproj" />
     <Project Path="src/Shopfloor/Nvm.Shopfloor/Nvm.Shopfloor.csproj" />
   </Folder>
   <Folder Name="/src/Integration/">

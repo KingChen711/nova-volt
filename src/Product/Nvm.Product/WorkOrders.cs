@@ -432,6 +432,9 @@ public sealed class RecordWorkOrderOutput : ICommand<ProductResponse>
 
     public string? EquipmentNId { get; init; }
 
+    /// <summary>Mã in trên MTU mới (serial, số lô).</summary>
+    public string? Code { get; init; }
+
     public decimal? QuantityIncrement { get; init; }
 }
 
@@ -446,7 +449,8 @@ internal sealed class RecordWorkOrderOutputHandler : ICommandHandler<RecordWorkO
 
         if (command.CreateMtu)
         {
-            var created = Mtus.Create(platform, command.MtuNId!, workOrder.ProductMaterialNId!, command.Quantity, command.EquipmentNId, workOrder.NId);
+            var created = Mtus.Create(platform, command.MtuNId!, workOrder.ProductMaterialNId!, command.Quantity, command.EquipmentNId, workOrder.NId,
+                command.Code);
             if (!created.Succeeded)
             {
                 return created;

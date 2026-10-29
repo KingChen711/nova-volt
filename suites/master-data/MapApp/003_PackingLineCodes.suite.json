@@ -1,0 +1,88 @@
+{
+  "Name": "MapApp_003_PackingLineCodes",
+  "BreakOnError": true,
+  "TestDefinitions": [
+    {
+      "Name": "LineOperationCodes",
+      "Csv": "packing-line-operations.csv",
+      "TestSteps": [
+        {
+          "ID": "GetLineOperationCode",
+          "StepType": "Read",
+          "App": "MapApp",
+          "Name": "LineOperationCode",
+          "Query": {
+            "$filter": "NId eq '#TEST_CSV.NId#'",
+            "$top": "1"
+          },
+          "IfThisSkipNext": true
+        },
+        {
+          "ID": "SetLineOperationCode",
+          "StepType": "Command",
+          "App": "MapApp",
+          "Name": "SetLineOperationCode",
+          "Parameters": {
+            "NId": "#TEST_CSV.NId#",
+            "OperationNId": "#TEST_CSV.OperationNId#"
+          }
+        }
+      ]
+    },
+    {
+      "Name": "LineEquipmentCodes",
+      "Csv": "packing-line-equipment.csv",
+      "TestSteps": [
+        {
+          "ID": "GetLineEquipmentCode",
+          "StepType": "Read",
+          "App": "MapApp",
+          "Name": "LineEquipmentCode",
+          "Query": {
+            "$filter": "NId eq '#TEST_CSV.NId#'",
+            "$top": "1"
+          },
+          "IfThisSkipNext": true
+        },
+        {
+          "ID": "SetLineEquipmentCode",
+          "StepType": "Command",
+          "App": "MapApp",
+          "Name": "SetLineEquipmentCode",
+          "Parameters": {
+            "NId": "#TEST_CSV.NId#",
+            "EquipmentNId": "#TEST_CSV.EquipmentNId#",
+            "LineNumber": "#TEST_CSV.LineNumber#"
+          }
+        }
+      ]
+    },
+    {
+      "Name": "LineMaterialCodes",
+      "Csv": "packing-line-materials.csv",
+      "TestSteps": [
+        {
+          "ID": "GetLineMaterialCode",
+          "StepType": "Read",
+          "App": "MapApp",
+          "Name": "LineMaterialCode",
+          "Query": {
+            "$filter": "NId eq '#TEST_CSV.NId#'",
+            "$top": "1"
+          },
+          "IfThisSkipNext": true
+        },
+        {
+          "ID": "SetLineMaterialCode",
+          "StepType": "Command",
+          "App": "MapApp",
+          "Name": "SetLineMaterialCode",
+          "Parameters": {
+            "NId": "#TEST_CSV.NId#",
+            "MaterialNId": "#TEST_CSV.MaterialNId#"
+          }
+        }
+      ]
+    }
+  ]
+}

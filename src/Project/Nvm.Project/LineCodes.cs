@@ -16,8 +16,9 @@ public sealed class MapApp : AppDefinition
     public const string Name = "MapApp";
 
     protected override void Define(PomBuilder pom) => pom
-        .Entity<LineOperationCode>().Entity<LineEquipmentCode>().Entity<LineMaterialCode>().Entity<LineFailureCode>()
-        .Command<SetLineOperationCode>().Command<SetLineEquipmentCode>().Command<SetLineMaterialCode>().Command<SetLineFailureCode>();
+        .Entity<LineOperationCode>().Entity<LineEquipmentCode>().Entity<LineMaterialCode>().Entity<LineFailureCode>().Entity<PartAddress>()
+        .Command<SetLineOperationCode>().Command<SetLineEquipmentCode>().Command<SetLineMaterialCode>().Command<SetLineFailureCode>()
+        .Command<SetPartAddress>();
 }
 
 /// <summary>Mã bước phía xưởng (NId) → bước của process. Một mã dùng chung cho mọi line: chỉ mã máy mang số line.</summary>
@@ -156,4 +157,53 @@ internal sealed class SetLineFailureCodeHandler : ICommandHandler<SetLineFailure
         platform.ProjectionQuery<Defect>().Any(d => d.NId == command.DefectNId)
             ? LineCodeTables.Upsert<LineFailureCode>(platform, command.NId!, r => r.DefectNId = command.DefectNId)
             : MapResponse.Fail(NvErrors.UnknownDefect, $"Defect {command.DefectNId} does not exist.");
+}
+
+/// <summary>
+/// Địa chỉ của một part: ô kho cất thành phẩm (store address) theo kanban. Màn cất kho chỉ nhận ô có trong bảng này. NId =
+/// <c>&lt;material&gt;|&lt;store address&gt;</c>. Kanban và route đầy đủ thuộc phần gọi hàng (R10).
+/// </summary>
+[Entity<MapMasterBlock>]
+public sealed class PartAddress : Entity
+{
+    [Mandatory]
+    public string? MaterialNId { get; set; }
+
+    public string? KanbanNId { get; set; }
+
+    /// <summary>Equipment của ô kho.</summary>
+    [Mandatory]
+    public string? StoreAddress { get; set; }
+}
+
+[Command<MapMasterBlock>]
+public sealed class SetPartAddress : ICommand<MapResponse>
+{
+    [Mandatory]
+    public string? MaterialNId { get; init; }
+
+    [Mandatory]
+    public string? StoreAddress { get; init; }
+
+    public string? KanbanNId { get; init; }
+}
+
+internal sealed class SetPartAddressHandler : ICommandHandler<SetPartAddress, MapResponse>
+{
+    public MapResponse Handle(SetPartAddress command, IPlatform platform)
+    {
+        if (!platform.Query<Material>().Any(m => m.NId == command.MaterialNId))
+        {
+            return MapResponse.Fail(NvErrors.UnknownMaterial, $"Material {command.MaterialNId} does not exist.");
+        }
+
+        return platform.Query<Equipment>().Any(e => e.NId == command.StoreAddress)
+            ? LineCodeTables.Upsert<PartAddress>(platform, command.MaterialNId + "|" + command.StoreAddress, r =>
+            {
+                r.MaterialNId = command.MaterialNId;
+                r.StoreAddress = command.StoreAddress;
+                r.KanbanNId = command.KanbanNId;
+            })
+            : MapResponse.Fail(NvErrors.UnknownEquipment, $"Equipment {command.StoreAddress} does not exist.");
+    }
 }

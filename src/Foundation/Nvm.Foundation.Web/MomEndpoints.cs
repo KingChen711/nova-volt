@@ -82,7 +82,16 @@ public static partial class MomEndpoints
         }
         else if (registry.ReadingFunctionByPublicName(app, name) is { } function)
         {
-            source = session.Invoke(function, FunctionArguments(args.Success ? args.Value : string.Empty));
+            try
+            {
+                source = session.Invoke(function, FunctionArguments(args.Success ? args.Value : string.Empty));
+            }
+#pragma warning disable CA1031 // lỗi do code của reading function ném lúc gọi (chưa ghi gì ra response): trả nguyên câu lỗi
+            catch (Exception e) when (e is not OperationCanceledException)
+#pragma warning restore CA1031
+            {
+                return Error(500, "ReadingFunctionFailed", e.Message);
+            }
         }
         else
         {

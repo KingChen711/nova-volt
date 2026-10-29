@@ -100,6 +100,10 @@ internal static class LineMessageParser
         Materials = body.TryGetProperty(materialsProperty, out var list) && list.ValueKind == JsonValueKind.Array
             ? [.. list.EnumerateArray().Select(m => new LineMaterialUse { MaterialCode = Text(m, "item"), Lot = Text(m, "lot"), Quantity = Number(m, "qty") })]
             : [],
+        ContainerCode = Text(body, "container"),
+        Contents = body.TryGetProperty("contents", out var contents) && contents.ValueKind == JsonValueKind.Array
+            ? [.. contents.EnumerateArray().Where(c => c.ValueKind == JsonValueKind.String).Select(c => c.GetString()!)]
+            : null,
     };
 
     private static LineShrinkDetail Shrink(JsonElement row, JsonElement body) => new()

@@ -42,6 +42,8 @@ GO
 ALTER ROLE db_datareader ADD MEMBER nvm_app;
 ALTER ROLE db_datawriter ADD MEMBER nvm_app;
 ALTER ROLE db_ddladmin ADD MEMBER nvm_app;
+-- Code thành phẩm gọi stored procedure của team bằng chính user này (key Nv.SqlConnection, R7).
+GRANT EXECUTE ON SCHEMA::dbo TO nvm_app;
 GO
 
 PRINT 'NovaVolt init completed';

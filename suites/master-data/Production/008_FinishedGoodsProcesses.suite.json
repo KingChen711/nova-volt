@@ -1,0 +1,118 @@
+{
+  "Name": "Production_008_FinishedGoodsProcesses",
+  "BreakOnError": true,
+  "TestDefinitions": [
+    {
+      "Name": "CreateProcess",
+      "Csv": "finished-goods-processes.csv",
+      "TestSteps": [
+        {
+          "ID": "GetProcess",
+          "StepType": "Read",
+          "App": "Production",
+          "Name": "Process",
+          "Query": {
+            "$filter": "NId eq '#TEST_CSV.NId#'",
+            "$top": "1"
+          },
+          "IfThisSkipNext": true
+        },
+        {
+          "ID": "CreateProcess",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "CreateProcess",
+          "Parameters": {
+            "NId": "#TEST_CSV.NId#",
+            "BopNId": "#TEST_CSV.BopNId#",
+            "ProductMaterialNId": "#TEST_CSV.ProductMaterialNId#"
+          }
+        }
+      ]
+    },
+    {
+      "Name": "AddOperation",
+      "Csv": "finished-goods-operations.csv",
+      "TestSteps": [
+        {
+          "ID": "GetOperation",
+          "StepType": "Read",
+          "App": "Production",
+          "Name": "ProcessOperation",
+          "Query": {
+            "$filter": "NId eq '#TEST_CSV.ProcessNId#:#TEST_CSV.OperationNId#'",
+            "$top": "1"
+          },
+          "IfThisSkipNext": true
+        },
+        {
+          "ID": "AddOperation",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "AddProcessOperation",
+          "Parameters": {
+            "ProcessNId": "#TEST_CSV.ProcessNId#",
+            "OperationNId": "#TEST_CSV.OperationNId#",
+            "Sequence": "#TEST_CSV.Sequence#",
+            "Name": "#TEST_CSV.Name#"
+          }
+        }
+      ]
+    },
+    {
+      "Name": "AllowMachine",
+      "Csv": "finished-goods-operation-machines.csv",
+      "TestSteps": [
+        {
+          "ID": "GetMachine",
+          "StepType": "Read",
+          "App": "Production",
+          "Name": "OperationEquipment",
+          "Query": {
+            "$filter": "NId eq '#TEST_CSV.ProcessNId#:#TEST_CSV.OperationNId#|#TEST_CSV.EquipmentNId#'",
+            "$top": "1"
+          },
+          "IfThisSkipNext": true
+        },
+        {
+          "ID": "AllowMachine",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "AllowOperationEquipment",
+          "Parameters": {
+            "ProcessOperationNId": "#TEST_CSV.ProcessNId#:#TEST_CSV.OperationNId#",
+            "EquipmentNId": "#TEST_CSV.EquipmentNId#"
+          }
+        }
+      ]
+    },
+    {
+      "Name": "AddMaterialNorm",
+      "Csv": "finished-goods-operation-materials.csv",
+      "TestSteps": [
+        {
+          "ID": "GetNorm",
+          "StepType": "Read",
+          "App": "Production",
+          "Name": "OperationMaterial",
+          "Query": {
+            "$filter": "NId eq '#TEST_CSV.ProcessNId#:#TEST_CSV.OperationNId#|#TEST_CSV.MaterialNId#'",
+            "$top": "1"
+          },
+          "IfThisSkipNext": true
+        },
+        {
+          "ID": "AddNorm",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "AddOperationMaterial",
+          "Parameters": {
+            "ProcessOperationNId": "#TEST_CSV.ProcessNId#:#TEST_CSV.OperationNId#",
+            "MaterialNId": "#TEST_CSV.MaterialNId#",
+            "Quantity": "#TEST_CSV.Quantity#"
+          }
+        }
+      ]
+    }
+  ]
+}

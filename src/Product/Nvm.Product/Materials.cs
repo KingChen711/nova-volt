@@ -30,6 +30,56 @@ public sealed class MaterialRevision : Entity
     public bool IsCurrent { get; set; }
 }
 
+/// <summary>
+/// Property của material (vd số tote một pallet, cờ cần bước đo cuối). Giá trị là chuỗi; mỗi chỗ đọc tự xử lý khi thiếu.
+/// NId = <c>&lt;Material&gt;|&lt;Name&gt;</c>.
+/// </summary>
+[Entity<ProductMasterBlock>]
+public sealed class MaterialProperty : Entity
+{
+    [Mandatory]
+    public string? MaterialNId { get; set; }
+
+    [Mandatory]
+    public string? Name { get; set; }
+
+    [TextLength(-1)]
+    public string? Value { get; set; }
+}
+
+/// <summary>Tạo hoặc sửa một property của material.</summary>
+[Command<ProductMasterBlock>]
+public sealed class SetMaterialProperty : ICommand<ProductResponse>
+{
+    [Mandatory]
+    public string? MaterialNId { get; init; }
+
+    [Mandatory]
+    public string? Name { get; init; }
+
+    public string? Value { get; init; }
+}
+
+internal sealed class SetMaterialPropertyHandler : ICommandHandler<SetMaterialProperty, ProductResponse>
+{
+    public ProductResponse Handle(SetMaterialProperty command, IPlatform platform)
+    {
+        if (!platform.Query<Material>().Any(m => m.NId == command.MaterialNId))
+        {
+            return ProductResponse.Fail(ProductErrors.UnknownMaterial, $"Material {command.MaterialNId} does not exist.");
+        }
+
+        var nid = command.MaterialNId + "|" + command.Name;
+        var property = platform.Query<MaterialProperty>().SingleOrDefault(p => p.NId == nid) ?? platform.Create<MaterialProperty>();
+        property.NId = nid;
+        property.MaterialNId = command.MaterialNId;
+        property.Name = command.Name;
+        property.Value = command.Value;
+        platform.Submit(property);
+        return ProductResponse.Of(property);
+    }
+}
+
 /// <summary>Process của một BoP: sinh ra <see cref="ProductMaterialNId"/>. Dữ liệu dự án thường đặt BoP và Process trùng tên.</summary>
 [Entity<ProductMasterBlock>]
 public sealed class Process : Entity

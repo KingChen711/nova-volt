@@ -25,6 +25,7 @@ hành vi; chưa có test thì chưa tính là xong.
 | Event phát sau commit | R1–R2 | `xong` | `Event_is_stored_and_published_after_commit`, `Commit_failure_publishes_no_event_and_keeps_nothing`, `Plant_subscription_runs_the_handler_after_the_response`, `Relay_publishes_events_left_behind_while_the_bus_was_down` |
 | Subscription, worker role | R2 | `xong` | `Event_without_subscription_is_published_and_nobody_handles_it_lab_L04`, `Plant_subscription_runs_the_handler_after_the_response`, `Worker_role_sets_how_many_consumers_take_events` |
 | Reading function, reading model là view | R2 | `xong` | `Reading_function_returns_a_deferred_query_that_odata_keeps_filtering`, `Missing_view_gives_http_200_with_a_cut_body_lab_L15` |
+| Reading function ném lỗi lúc gọi (trước khi ghi dòng nào): HTTP 500 kèm câu lỗi | R7 | `xong` | `Reading_function_that_throws_when_called_is_a_500_carrying_its_message` |
 | App, POM, OData theo app, token có hạn | R2 | `xong` | `Entity_set_applies_filter_order_top_and_count`, `Single_entity_is_read_by_its_id`, `Command_is_posted_by_its_published_name`, `Expired_token_is_refused_with_6401_lab_L05`, `Another_plant_in_the_url_is_not_served` |
 | Extension app: tiền tố, phẳng | R2 | `xong` | `Extension_app_command_runs_under_the_base_app_with_its_prefix`, `Extension_app_cannot_extend_an_extension_app` |
 | Signal rule, timer | R2 | `xong` | `Timer_rule_fires_once_per_interval_including_missed_ticks`, `One_shot_timer_fires_once_and_disables_itself`, `Event_rule_maps_event_properties_into_the_command`, `Event_rule_calls_a_command_when_the_event_arrives` |
@@ -65,6 +66,10 @@ Hành vi của lớp nhà cung cấp (R3, [ADR-056](adr/ADR-056-lop-product-r3.m
 | Containment: số tự sinh, OnHold + In Containment, Scrapped giữ nguyên, Ready/Editing, event lúc nhập | `containment-request` | `Importing_containment_numbers_it_holds_and_flags_the_mtus_and_raises_an_event` |
 | Release nhả cả nhóm; Close không nhả, CR Closed không Release được | `containment-request` | `Release_frees_the_group_but_close_keeps_the_goods_held` |
 | Một lô chỉ thuộc một buffer, gỡ trước khi gắn chỗ khác | `load-register` | `A_lot_belongs_to_one_buffer_and_must_be_detached_before_moving_to_another` |
+| Vật chứa có trạng thái theo state machine dạng dữ liệu của người dùng sản phẩm; ép trạng thái cần trạng thái có trong máy (R7) | `tu-dien-cuc-toi-pallet` (PalletStateMachine của team) | `Container_status_follows_its_data_driven_machine_and_forcing_needs_a_defined_status` |
+| Số lượng và material của vật chứa do người gọi đặt; gắn, gỡ không đếm (R7) | `go-hang-khoi-pallet`, `kiem-tra-pallet` | `Container_quantity_and_material_are_set_by_the_caller_and_never_counted_by_the_product_layer` |
+| Chuyển vật chứa tới equipment gỡ nó khỏi vật chứa cha; xóa mềm chỉ khi rỗng, tạo lại cùng mã được (R7) | `thuc-hanh-storage-trailer` (dỡ một pallet) | `Moving_a_container_takes_it_out_of_its_parent_and_deleting_needs_it_empty_then_the_code_is_free_again` |
+| Property của material theo khóa (material, tên), giá trị là chuỗi (R7) | `cat-kho-thanh-pham` (property bật bước đo cuối của part) | `Material_property_is_upserted_by_key_and_kept_as_text` |
 
 ## R4: solution NV1
 
@@ -175,6 +180,53 @@ chạy bằng `QualityTests`.
 | Tin hao hụt: mã trạng thái | Cột `loss_code` của bảng hao hụt, mặc định `50` | dữ liệu LineDB |
 | Tháo ra một thành phần | Xóa mềm dòng genealogy giữa thành phần và cha; hoàn tác tạo lại dòng đó | — |
 
+## R7: đóng gói, cất kho, trailer kho, kiểm pallet
+
+Lớp Project: bước đóng gói từ tin máy và dựng lại pallet (`Packing.cs`, extension app `NvProductionExt`), app thành phẩm
+`ShipApp` (`FinishedGoods.cs`, procedure ở `FinishedGoodsSql.cs`), app hậu cần `YardApp` cho trailer kho
+(`StorageTrailers.cs`), bảng địa chỉ part ở `MapApp`. Test ở `tests/Integration/Nvm.SolutionTests` (`PackingLineTests` với
+LineDB thật, `FinishedGoodsTests`, `StorageTrailerTests`, `PalletCheckBenchmark`).
+
+| Hành vi | Nguồn | Test |
+|---|---|---|
+| Bước đóng gói theo bảng cấu hình: tin đóng tote (họ A ghi WO kit ghép hai module; họ B chỉ đóng gói) tạo tote New và nạp sản phẩm; tin xếp pallet tạo pallet Full rồi nạp các tote; post-action đặt số lượng = số con và ghi ngày đóng pallet | `tu-dien-cuc-toi-pallet` | `One_shift_of_line_messages_packs_totes_and_a_full_pallet_with_the_standard_number_of_totes` (hai họ) |
+| Tin xếp pallet tới trước tin đóng tote của nó: không ghi gì, `RETRY` −6500, gửi lại thì xong | đường poll đọc theo mã bước (R5) | `Pallet_message_before_its_tote_messages_waits_with_its_packing_code_and_goes_through_on_the_resend` |
+| Gắn MTU thẳng vào pallet đang chứa tote: post-action của team tháo hết tote | plan R3, R7 | `Loading_an_mtu_straight_onto_a_pallet_takes_its_totes_off_in_the_team_post_action` |
+| Tin đo cuối: ghi bước đo cho kit (kit giữ MTU), tote rời pallet; pallet hết tote thì Empty, mất part, giữ vị trí | `cat-kho-thanh-pham` (đo cho pallet mô phỏng) | `End_of_line_test_messages_take_each_tested_tote_off_the_pallet_and_leave_it_empty_where_it_stood` |
+| Dựng lại pallet: tote nhận khi mọi sản phẩm đã đo đạt, không giữ hay hủy, cùng part; tote đầu đặt part, tối đa số chuẩn; Completed khi đủ thì Full | `cat-kho-thanh-pham` (lab dựng lại pallet) | `Part_needing_the_end_of_line_test_blocks_storing_until_kits_are_tested_and_the_pallet_rebuilt` |
+| Cất kho: pallet Full, ô là store address của part (không có địa chỉ thì báo riêng); post-action trên lệnh chuyển vật chứa chặn pallet có hàng chưa đo (key tắt được), rồi hẹn event; subscriber ghi bản ghi FIFO sau commit | `cat-kho-thanh-pham`, `thanh-pham-fifo` | `Storing_needs_a_full_pallet_and_a_store_address_of_its_part_then_a_fifo_record_follows_the_commit`, `Part_needing_…` |
+| Đề xuất FIFO: pallet Full ở ô kho của part, theo ngày đóng pallet rồi mã; procedure quên `IsDeleted` của bảng pallet thì pallet đã xóa mềm cùng mã làm đề xuất hai lần (L03) | `thanh-pham-fifo`, `entity-va-bang` | `L03_suggestion_join_without_IsDeleted_lists_a_pallet_twice_once_an_older_pallet_with_its_code_was_deleted` (có đối chứng) |
+| Kiểm pallet: cây thành phần tới 13 tầng chỉ liệt kê MTU OnHold, Scrapped kèm NC mở; năm điều kiểm số liệu; QA Check từ chối pallet có hàng bị giữ ở tầng sâu | `kiem-tra-pallet`, `FG - pallet có NC` | `Pallet_checks_list_held_items_deep_in_the_tree_score_five_rules_and_block_the_qa_check` |
+| Procedure giữ mã pallet, tote trong cột 16 ký tự: mã dài hơn thì lỗi cắt chuỗi | `kiem-tra-pallet` (lỗi cắt chuỗi) | `Held_items_procedure_keeps_pallet_and_tote_codes_in_16_characters_so_a_longer_tote_code_fails_with_truncation` |
+| L17: procedure là phần cài tay; deploy và Update Database không cài, lệnh báo không tìm thấy procedure | `thieu-stored-procedure` | `L17_procedure_missing_after_deploy_fails_the_qa_check_until_the_manual_sql_step_runs` |
+| L18: thiếu key kết nối thì mọi màn và lệnh dùng procedure hỏng, màn không dùng procedure vẫn chạy | `config-key` | `L18_missing_connection_key_breaks_every_screen_and_command_that_calls_a_procedure` |
+| Gỡ pallet: tote về `n/a`, pallet số lượng 0, mất part, ép Empty; không kiểm NC, không đổi vị trí | `go-hang-khoi-pallet` | `Clearing_a_pallet_moves_every_tote_out_and_forces_it_empty_without_moving_it` |
+| Gói lẻ: mã theo tiền tố và độ dài trong key; một part; tối đa số chuẩn; Full ngay khi có hàng; sản phẩm trong tote thì tote rời pallet | `go-hang-khoi-pallet`, `config-key` | `Package_code_follows_the_keys_takes_one_material_up_to_the_standard_quantity_and_takes_the_tote_off_its_pallet` |
+| Timer hằng ngày đánh dấu pallet đo cuối quá số ngày của key; thiếu key thì chỉ có dòng trace, lệnh vẫn thành công | note riêng về bước đo cuối (signal rule mỗi ngày, key thiếu không báo lỗi) | `Daily_retest_check_marks_pallets_whose_end_of_line_test_is_older_than_the_key_and_skips_without_the_key` |
+| Trailer kho: đặt loại kho khi Empty (MTUA mang barcode); gọi vào dock tạo lịch ToBeLoaded và yêu cầu kéo; nạp → Tapped; Complete Load → Full, lịch chờ giao; dỡ cả trailer đưa pallet về cửa dock, giữ loại kho; gỡ loại kho phải ra khỏi cửa dock | `cat-kho-thanh-pham`, `thuc-hanh-storage-trailer` | `Finished_goods_storage_trailer_goes_from_empty_to_tapped_to_full_then_unloads_back_and_unsets_only_away_from_the_dock` |
+| Luật nạp theo thứ tự: hàng bị giữ (procedure, key tắt được) → pallet Full → chưa nằm trong vật chứa khác → cùng part với pallet đầu → không trộn đã đo và chưa đo | `cat-kho-thanh-pham`, `thuc-hanh-storage-trailer` | `Load_rules_hold_in_order` (9 ca đúng và sai) |
+| Trailer kho có pallet chưa đo: Complete Load đặt lịch chờ đo | `cat-kho-thanh-pham` | `Storage_trailer_needs_a_dock_and_a_finished_goods_type_and_waits_for_the_test_when_pallets_are_untested` |
+| Kho chung: khai đầy và dỡ bằng ghi chú, không nạp pallet | `thuc-hanh-storage-trailer` | `Generic_storage_trailer_is_declared_full_and_unloaded_with_comments_and_tracks_no_pallet` |
+| Yêu cầu kéo xe: đích có thật, khác vị trí, chưa có xe hay yêu cầu; một yêu cầu mở mỗi trailer; đi từng bước; Dropped thì trailer và pallet trong nó ở đích | `thuc-hanh-storage-trailer` | `Movement_requests_go_one_step_at_a_time_refuse_a_busy_destination_and_carry_the_pallets_along` |
+| Dỡ pallet cuối bằng lệnh dỡ một pallet: pallet rời trailer, trailer vẫn Full, số lượng cũ | `cat-kho-thanh-pham` (máy ảo 21/10) | `Lab_unloading_the_last_pallet_one_by_one_leaves_the_trailer_full_with_its_old_quantity` |
+| Kiểm hàng lỗi đệ quy trên dữ liệu 30 ngày mô phỏng: p95 < 1 s (cần index cài cùng procedure) | plan R7 DoD | `Recursive_held_item_check_on_thirty_days_of_line_data` ([benchmarks](benchmarks.md#r7--kiểm-pallet-đệ-quy)) |
+
+### Giả định của R7
+
+| Chỗ chưa rõ | v2 làm | Cấu hình |
+|---|---|---|
+| Bước xếp pallet có ghi WO không | Không: bước chỉ đóng gói (không có trong bảng đối chiếu bước) chỉ ghi vật chứa và dòng chống ghi hai lần. Nguồn cho thấy tin của trạm xếp pallet cũng đi qua lệnh ghi operation | bảng `PackingOperation` |
+| Họ B đóng tote ở mã bước nào | Mã riêng `mo025`, không ghi WO | dữ liệu |
+| Số tote một pallet | Họ A 8, họ B 6 (đổi giá trị) | property `PalletQty` |
+| Kiểm đo cuối chạy ở lệnh nào | Post-action trên lệnh chuyển vật chứa của lớp Product, nên chạy cả khi dỡ pallet khỏi trailer kho, không chỉ khi cất kho | key `Nv.EolvValidation` |
+| Hàng nào bị đòi đo cuối | Hàng ra từ chuyền (`Code` khác NId) của part có property `EolvRequired`; hàng tạo bằng suite không bị đòi | property `EolvRequired` |
+| Đo cuối trên hệ thật là một màn có phiên đo, kit không quét thành NC | Thay bằng tin đo từ LineDB như bài thực hành (mỗi kit một tin, OK); NC cho kit không đo chưa dựng | — |
+| Nạp pallet đang nằm trong trailer kho khác | Từ chối | — |
+| Bản ghi FIFO: hệ thật có một handler mỗi app | Một subscriber Predefined | — |
+| Index cho procedure lần cây | Cài cùng bước SQL tay (`make views`); Update Database chỉ tạo khóa `(IsDeleted, NId)` | — |
+| Lỗi do reading function ném lúc gọi trả mã gì | HTTP 500, mã `ReadingFunctionFailed`, câu lỗi nguyên văn | — |
+| Chuỗi kết nối của code thành phẩm | Key `Nv.SqlConnection`, đặt bằng bước tay `make sql-key` từ `.env`, không nằm trong suite (K13) | key `Nv.SqlConnection` |
+
 ### Giả định của lớp Product
 
 | Chỗ chưa rõ | Lớp Product làm |
@@ -187,6 +239,8 @@ chạy bằng `QualityTests`.
 | Yêu cầu vận chuyển | Created → Released → InTransit (mỗi chặng chuyển MTU) → Completed (MTU tới đích); R10 đọc nguồn kỹ hơn |
 | Cấp của cây thiết bị | Tám cấp Enterprise, Site, Plant, Area, Subarea, WorkCenter, WorkUnit, Machine; con chỉ cần sâu hơn cha |
 | Trạng thái MTU | Hằng số, không phải dữ liệu (ADR-056) |
+| Trạng thái vật chứa | State machine dạng dữ liệu của người dùng sản phẩm; vật chứa không khai state machine thì không có trạng thái (R7) |
+| Chuyển vật chứa đang ở trong vật chứa khác | Gỡ ra rồi đặt ở equipment; vật chứa cha không đếm lại (R7) |
 
 ## Giả định chưa xác minh trên hệ thật
 

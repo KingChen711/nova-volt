@@ -12,7 +12,7 @@ test và số đo tương ứng (AGENTS.md §1.3). Agent làm theo lô lớn, kh
 | R4 Runner suite, master data, WO theo ca | **đạt** (2026-10-28) | Tag `r4`; mục R4 bên dưới |
 | R5 Tin từ xưởng | **đạt** (2026-10-29) | Tag `r5`; mục R5 bên dưới |
 | R6 Hàng lỗi | **đạt** (2026-10-29) | Tag `r6`; mục R6 bên dưới |
-| R7 Đóng gói, cất kho, trailer kho, kiểm pallet | chưa làm | |
+| R7 Đóng gói, cất kho, trailer kho, kiểm pallet | **đạt** (2026-10-29) | Tag `r7`; mục R7 bên dưới |
 | R8 Xuất hàng | chưa làm | |
 | R9 Xe linh kiện, bãi, dock, skid | chưa làm | |
 | R10 Kanban, gọi hàng, bảng gọi hàng, nạp nguyên liệu | chưa làm | |
@@ -172,6 +172,38 @@ test và số đo tương ứng (AGENTS.md §1.3). Agent làm theo lô lớn, kh
   thân lỗi) và "NC hàng loạt" (`/area/bulk-nc`); lab Playwright `web/e2e/quality.spec.ts`.
 - Chưa làm: màn Containment (khu `containment` vẫn là màn hẹn), in scrap tag, báo scrap ra hệ ngoài (thuộc R11).
 
+## R7
+
+- Lớp Product: vật chứa (`Mtua`) có state machine dạng dữ liệu, số lượng, material do người gọi đặt; lệnh `SetMtuaStatus`,
+  `SetMtuaStatusForced`, `UpdateMtua`, `MoveMtua`, `DeleteMtua`; property của material. Quyết định ở ADR-058.
+- Đóng gói (`Packing.cs`): bảng `PackingOperation` (đóng tote, xếp pallet, gỡ tote sau bước đo cuối); tin đóng tote của họ A ghi
+  WO kit (`Kit_LN1/2`) rồi nạp kit vào tote, tote họ B và pallet chỉ đóng gói; post-action `UpdatePalletBuild` đếm tote, pallet,
+  gói lẻ, ghi `BuildDate`, tháo hết tote khi gắn thẳng MTU vào pallet; dựng lại pallet sau bước đo cuối.
+- `ShipApp` (`FinishedGoods.cs`): cất kho theo store address của part (`PartAddress` ở `MapApp`), post-action trên lệnh chuyển
+  vật chứa kiểm bước đo cuối và hẹn event, subscriber ghi `FifoPallet`; kiểm pallet (cây 13 tầng, năm điều kiểm, QA Check),
+  đề xuất FIFO, gỡ pallet, gói lẻ, timer hết hạn đo hằng ngày. Ba procedure và một index cài cùng bước SQL tay (`make views`);
+  code gọi chúng qua kết nối riêng lấy từ key `Nv.SqlConnection` (`make sql-key`).
+- `YardApp` (`StorageTrailers.cs`): trailer, lịch chất hàng của trailer kho, yêu cầu kéo xe; đặt và gỡ loại kho, gọi vào dock,
+  nạp theo luật, Complete Load (chờ giao hoặc chờ đo), dỡ cả trailer, dỡ một pallet, kho chung khai bằng ghi chú.
+- LineDB: bảng `mod.pack_result`, `mod.pallet_result`, `mod.eolv_result` và trigger; chính sách gửi lại (RETRY, −6500). Line
+  simulator chạy tới tote, pallet, đo cuối (`make line-sim PACK=1 EOLV=1`).
+- Master data thêm bằng suite mới (không sửa CSV của suite đã chạy): 31 equipment đóng gói, đo cuối, kho; material kit; 4
+  process (`Kit`, `Eolv` của line 1–2) và 8 DWO; property `PalletQty`, `EolvRequired`; property `LocationType` của dock, yard;
+  mã xưởng `mo020`, `mo025`, `mo030`, `eo010`; địa chỉ part; state machine của pallet, tote, gói lẻ, trailer kho, trailer; key
+  gói lẻ và hết hạn đo; timer `EOLV_RETEST`; đường poll cho bốn mã bước mới (`line-polling/002`).
+- Foundation: reading function ném lỗi lúc gọi trả HTTP 500 `ReadingFunctionFailed` kèm câu lỗi.
+- DoD, kiểm 2026-10-29 trên máy cá nhân:
+  - Chuỗi tin của line ra pallet Full đúng số tote: `PackingLineTests` (LineDB thật), họ A 8 tote, họ B 6 tote; tin xếp pallet
+    tới trước tote thì RETRY −6500 rồi xong khi gửi lại; tin đo cuối gỡ tote, pallet về Empty.
+  - Luật nạp trailer kho đủ ca đúng và sai: `StorageTrailerTests.Load_rules_hold_in_order` (9 ca) cùng 5 test vòng đời.
+  - Kiểm NC đệ quy p95 636 / 701 / 758 ms (ba lần) trên dữ liệu 30 ngày mô phỏng (919 nghìn MTU, 2,23 triệu dòng genealogy); không có index thì
+    một lần kiểm vượt 120 s ([benchmarks](../benchmarks.md#r7--kiểm-pallet-đệ-quy)).
+  - Lab L03, L17, L18, lab cắt chuỗi ở procedure, lab dỡ pallet cuối: `FinishedGoodsTests`, `StorageTrailerTests`, có đối chứng.
+  - `make ci` 2026-10-29: clean-room, format, build Release sạch, 249/249 test xanh, hai benchmark (R1, R7) chạy riêng xanh; `tsc` của web sạch.
+  - Web: màn Cất kho, Kiểm pallet, Gỡ pallet và gói lẻ (`/area/finished-goods`), Trailer kho (`/area/yard`), Dựng lại pallet (`/area/line/rebuild`); lab `web/e2e/finished-goods.spec.ts` 3/3 xanh trên stack local (cần pallet mới từ `make line-sim PACK=1`), 7 spec cũ vẫn xanh. Lab bắt được lỗi mà test tích hợp (chạy bằng `sa`) không thấy: user ứng dụng thiếu quyền EXECUTE procedure; đã cấp trong `deploy/mssql/init/01-database.sql`.
+- Kiểm trên stack local 2026-10-29: deploy tăng dần (suite cũ bỏ qua, 12 suite R7 chạy), `make views`, `make sql-key`,
+  `make linedb RESET=1`; đường poll, line 3 (360 cell) và line 1 (192 cell) với `PACK=1`: 2 pallet Full.
+
 ## Nợ mở
 
 | Mã | Nợ | Mốc xử lý |
@@ -183,3 +215,5 @@ test và số đo tương ứng (AGENTS.md §1.3). Agent làm theo lô lớn, kh
 | N-R5-1 | Line simulator 2 ngày × 4 line (tiêu chí "v2 xong") chưa chạy | R12 |
 | N-R5-2 | Đường relay chưa đo tải; tải R5 chỉ đo đường poll | R12 |
 | N-R5-3 | Trạng thái dòng LineDB chưa có trên web: cần một read model phía MOM hoặc API riêng của xưởng | R12 |
+| N-R7-2 | Timer đầu ca chạy bù lúc host khởi động tranh ghi với WO dự phòng do tin máy mở cùng lúc: commit của timer hỏng, lần chạy đó mất, không thử lại (thấy trên stack local 2026-10-29, khu Module line 3) | R12 |
+| N-R7-3 | Đo cuối dựng bằng tin LineDB; màn phiên đo của hệ thật (kit không quét thành NC) chưa dựng | R13 |

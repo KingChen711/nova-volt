@@ -1,0 +1,5 @@
+ProcessNId,WorkOrderPrefix,MinimumFreezeHours
+Kit_LN1,L1Kit,24
+Kit_LN2,L2Kit,24
+Eolv_LN1,L1Eolv,24
+Eolv_LN2,L2Eolv,24

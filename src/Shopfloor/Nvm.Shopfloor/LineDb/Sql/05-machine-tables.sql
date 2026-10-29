@@ -172,3 +172,91 @@ END $$;
 
 CREATE TRIGGER module_result_relay AFTER INSERT ON mod.module_result
     FOR EACH ROW EXECUTE FUNCTION mod.module_result_to_relay();
+
+-- Đóng gói: trạm đóng tote. Họ A ghép hai module thành kit rồi cho kit vào tote (module là nguyên liệu); họ B cho thẳng module
+-- vào tote (module_ids rỗng). Tin mang mã tote ở trường container.
+CREATE TABLE mod.pack_result (
+    id          bigserial PRIMARY KEY,
+    line_no     integer     NOT NULL,
+    machine     text        NOT NULL,
+    op_code     text        NOT NULL,
+    unit_id     text        NOT NULL,
+    tote_id     text        NOT NULL,
+    module_item text,
+    module_ids  text[],
+    started_at  timestamptz NOT NULL,
+    finished_at timestamptz NOT NULL,
+    result      text        NOT NULL,
+    result_code text        NOT NULL,
+    run_class   smallint    NOT NULL DEFAULT 1
+);
+
+CREATE FUNCTION mod.pack_result_to_relay() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = mod, pg_temp AS $$
+BEGIN
+    INSERT INTO relay.line_message (area, source_table, operation_code, equipment_code, serial, payload, produced_on)
+    VALUES ('mod', 'mod.pack_result', NEW.op_code, NEW.machine || '_' || NEW.line_no, NEW.unit_id,
+            jsonb_build_object('kind', 'unit', 'serial', NEW.unit_id, 'qty', 1, 'start', NEW.started_at,
+                               'end', NEW.finished_at, 'result', NEW.result, 'code', NEW.result_code,
+                               'class', NEW.run_class, 'container', NEW.tote_id,
+                               'materials', (SELECT COALESCE(jsonb_agg(jsonb_build_object('item', NEW.module_item, 'lot', m) ORDER BY o), '[]')
+                                             FROM unnest(COALESCE(NEW.module_ids, '{}')) WITH ORDINALITY AS u(m, o))),
+            NEW.finished_at);
+    RETURN NEW;
+END $$;
+
+CREATE TRIGGER pack_result_relay AFTER INSERT ON mod.pack_result
+    FOR EACH ROW EXECUTE FUNCTION mod.pack_result_to_relay();
+
+-- Đóng gói: trạm xếp pallet. Một dòng một pallet đủ, kèm danh sách tote; serial của tin là mã pallet.
+CREATE TABLE mod.pallet_result (
+    id          bigserial PRIMARY KEY,
+    line_no     integer     NOT NULL,
+    machine     text        NOT NULL,
+    op_code     text        NOT NULL,
+    pallet_id   text        NOT NULL,
+    tote_ids    text[]      NOT NULL,
+    finished_at timestamptz NOT NULL
+);
+
+CREATE FUNCTION mod.pallet_result_to_relay() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = mod, pg_temp AS $$
+BEGIN
+    INSERT INTO relay.line_message (area, source_table, operation_code, equipment_code, serial, payload, produced_on)
+    VALUES ('mod', 'mod.pallet_result', NEW.op_code, NEW.machine || '_' || NEW.line_no, NEW.pallet_id,
+            jsonb_build_object('kind', 'unit', 'serial', NEW.pallet_id, 'qty', 1, 'start', NEW.finished_at,
+                               'end', NEW.finished_at, 'result', 'OK', 'code', '00', 'contents', to_jsonb(NEW.tote_ids)),
+            NEW.finished_at);
+    RETURN NEW;
+END $$;
+
+CREATE TRIGGER pallet_result_relay AFTER INSERT ON mod.pallet_result
+    FOR EACH ROW EXECUTE FUNCTION mod.pallet_result_to_relay();
+
+-- Bước đo cuối của họ A: đo từng kit sau khi kit đã lên pallet.
+CREATE TABLE mod.eolv_result (
+    id          bigserial PRIMARY KEY,
+    line_no     integer      NOT NULL,
+    machine     text         NOT NULL,
+    op_code     text         NOT NULL,
+    kit_id      text         NOT NULL,
+    started_at  timestamptz  NOT NULL,
+    finished_at timestamptz  NOT NULL,
+    result      text         NOT NULL,
+    result_code text         NOT NULL,
+    voltage_mv  numeric(9,2)
+);
+
+CREATE FUNCTION mod.eolv_result_to_relay() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = mod, pg_temp AS $$
+BEGIN
+    INSERT INTO relay.line_message (area, source_table, operation_code, equipment_code, serial, payload, produced_on)
+    VALUES ('mod', 'mod.eolv_result', NEW.op_code, NEW.machine || '_' || NEW.line_no, NEW.kit_id,
+            jsonb_build_object('kind', 'unit', 'serial', NEW.kit_id, 'qty', 1, 'start', NEW.started_at,
+                               'end', NEW.finished_at, 'result', NEW.result, 'code', NEW.result_code),
+            NEW.finished_at);
+    RETURN NEW;
+END $$;
+
+CREATE TRIGGER eolv_result_relay AFTER INSERT ON mod.eolv_result
+    FOR EACH ROW EXECUTE FUNCTION mod.eolv_result_to_relay();

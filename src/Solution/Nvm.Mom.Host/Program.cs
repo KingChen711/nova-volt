@@ -42,6 +42,18 @@ if (args.Contains("--install-views"))
 
 var connectionString = Sql(sqlPort, "nvm_app", DotEnvLoader.Required("NVM_MSSQL_APP_PASSWORD"));
 
+if (args.Contains("--set-sql-connection-key"))
+{
+    // Bước cài tay của môi trường: key giữ chuỗi kết nối mà code thành phẩm dùng gọi procedure. Giá trị lấy từ .env, không
+    // nằm trong suite hay repo (K13); thiếu bước này thì màn và lệnh dùng procedure báo thiếu key (lab L18).
+    var keyExecutor = new CommandExecutor(connectionString, registry, solution, TimeProvider.System, new InMemoryTraceSink(), new InMemoryEventPublisher());
+    var set = keyExecutor.Execute(SolutionManifest.FoundationAppName,
+        new SetConfigurationKey { NId = NvKeys.SqlConnection, Val = connectionString, Type = "String", Category = "FinishedGoods" }, CallerIdentity.System);
+    Console.WriteLine($"{NvKeys.SqlConnection}: HTTP {set.StatusCode}.");
+    Environment.ExitCode = set.StatusCode == 200 ? 0 : 1;
+    return;
+}
+
 if (args.Contains("--load-master-data") || args.Contains("--enable-line-polling") || args.Contains("--load-quality-config"))
 {
     // Bước deploy sau Update Database: chạy suite theo masterDataOrder, bỏ qua suite đã có trong lịch sử. --enable-line-polling

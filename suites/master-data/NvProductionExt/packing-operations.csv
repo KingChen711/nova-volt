@@ -1,0 +1,5 @@
+OperationCode,Action,InitialStatus
+mo020,Tote,New
+mo025,Tote,New
+mo030,Pallet,Full
+eo010,Test,

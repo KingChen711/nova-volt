@@ -33,6 +33,19 @@ public sealed class MasterDataBehaviorTests
     }
 
     [Fact]
+    public async Task Material_property_is_upserted_by_key_and_kept_as_text()
+    {
+        var p = await ProductHarness.CreateAsync();
+
+        p.Ok(new SetMaterialProperty { MaterialNId = ProductHarness.Module, Name = "PalletQty", Value = "16" });
+        p.Ok(new SetMaterialProperty { MaterialNId = ProductHarness.Module, Name = "PalletQty", Value = "8" });
+
+        var property = p.Read<MaterialProperty>().ShouldHaveSingleItem();
+        (property.NId, property.Value).ShouldBe((ProductHarness.Module + "|PalletQty", "8"));
+        p.Fails(new SetMaterialProperty { MaterialNId = "missing", Name = "x" }, ProductErrors.UnknownMaterial);
+    }
+
+    [Fact]
     public async Task Only_one_material_revision_is_current()
     {
         var p = await ProductHarness.CreateAsync();

@@ -1,0 +1,23 @@
+{
+  "Name": "NvProductionExt_010_PackingOperations",
+  "BreakOnError": true,
+  "TestDefinitions": [
+    {
+      "Name": "NvProductionExt_SetPackingOperation",
+      "Csv": "packing-operations.csv",
+      "TestSteps": [
+        {
+          "ID": "NvProductionExt_SetPackingOperation",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_SetPackingOperation",
+          "Parameters": {
+            "OperationCode": "#TEST_CSV.OperationCode#",
+            "Action": "#TEST_CSV.Action#",
+            "InitialStatus": "#TEST_CSV.InitialStatus#"
+          }
+        }
+      ]
+    }
+  ]
+}

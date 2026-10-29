@@ -170,6 +170,20 @@ public sealed class HttpBehaviorTests
     }
 
     [Fact]
+    public async Task Reading_function_that_throws_when_called_is_a_500_carrying_its_message()
+    {
+        var (_, client) = await StartAsync();
+
+        var response = await client.GetAsync(Url("LabApp/odata/FailingOrders(MaterialNId='MAT-1')"), Cancel);
+
+        // Lỗi ném trước khi có dòng nào được ghi: chưa gửi 200, nên còn trả được mã lỗi và câu lỗi (khác lab L15).
+        response.StatusCode.ShouldBe(HttpStatusCode.InternalServerError);
+        var body = JsonNode.Parse(await response.Content.ReadAsStringAsync(Cancel))!;
+        body["error"]!["code"]!.GetValue<string>().ShouldBe("ReadingFunctionFailed");
+        body["error"]!["message"]!.GetValue<string>().ShouldBe("Configuration key Lab.Connection is missing.");
+    }
+
+    [Fact]
     public async Task Invalid_filter_is_a_400()
     {
         var (_, client) = await StartAsync();

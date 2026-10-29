@@ -29,5 +29,7 @@ INSERT INTO relay.retry_policy (status, error_code, max_attempts, retry_interval
     ('RETRY', -6999, 5, interval '10 minutes'),
     ('RETRY', -5999, 3, interval '10 minutes'),
     ('RETRY', -4999, 3, interval '10 minutes'),
+    -- Đóng gói: tin xếp pallet tới trước tin đóng tote của nó (đường poll đọc theo mã bước) thì chờ rồi gửi lại.
+    ('RETRY', -6500, 5, interval '10 minutes'),
     -- Giả định (ghi ở oef-mapping): dòng đã gửi mà không có kết quả (MOM dừng, relay mất notify) được gửi lại.
     ('SENT', 0, 3, interval '10 minutes');

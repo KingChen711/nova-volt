@@ -6,18 +6,19 @@ using Nvm.Project;
 namespace Nvm.Solution;
 
 /// <summary>
-/// Bước cài view của reading model, chạy riêng sau Update Database (<c>make views</c>). Không chạy bước này thì reading
-/// function vẫn trả HTTP 200 nhưng không có dòng nào (lab L15).
+/// Bước cài SQL tay của team, chạy riêng sau Update Database (<c>make views</c>): view của reading model và stored procedure
+/// của phần thành phẩm. Không chạy bước này thì reading function của view trả HTTP 200 mà không có dòng nào (lab L15), lệnh
+/// gọi procedure báo không tìm thấy procedure (lab L17).
 /// </summary>
 public static partial class ReadingViews
 {
-    /// <summary>Cài (hoặc thay) mọi view của team. Trả tên các view đã cài.</summary>
+    /// <summary>Cài (hoặc thay) mọi view và procedure của team. Trả tên những gì đã cài.</summary>
     public static IReadOnlyList<string> Install(string connectionString, ModelRegistry registry)
     {
         ArgumentNullException.ThrowIfNull(registry);
         using var connection = new SqlConnection(connectionString);
         connection.Open();
-        foreach (var template in NvViews.Templates.Values)
+        foreach (var template in NvViews.Templates.Values.Concat(NvProcedures.Templates.Values))
         {
             // SQL là template trong code của team, tên bảng lấy từ registry; không có dữ liệu người dùng.
 #pragma warning disable CA2100
@@ -26,7 +27,7 @@ public static partial class ReadingViews
             command.ExecuteNonQuery();
         }
 
-        return [.. NvViews.Templates.Keys];
+        return [.. NvViews.Templates.Keys, .. NvProcedures.Templates.Keys];
     }
 
     /// <summary>Thay <c>{{table:Lớp}}</c> và <c>{{id:Facet}}</c> bằng tên thật trong registry.</summary>

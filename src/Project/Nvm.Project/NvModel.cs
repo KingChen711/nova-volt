@@ -24,6 +24,7 @@ public sealed class NvProductionExtApp : AppDefinition
         .Entity<QualityCode>().Entity<MaterialSupplier>().Entity<OperationScrapConfig>().Entity<NonConformanceDetail>().Entity<MtuRunMode>()
         .Entity<NvCounter>().Entity<LineShrinkExecution>().Entity<NonConformanceOperation>().Entity<NonConformanceReasonLink>()
         .Entity<ContainmentIdentifier>().Entity<DisassemblyPart>().Entity<DisassemblyLog>().Entity<NonConformanceListRow>()
+        .Entity<PackingOperation>().Entity<PackingDetail>()
         .Command<CreateProductionSchedule>().Command<CreateDefaultWorkOrder>().Command<SetProcessSchedule>()
         .Command<HandleShiftTimer>().Command<ApplyLineResults>().Command<IngestLineMessages>().Command<SetLinePolling>()
         .Command<CreateQualityCode>().Command<UpdateQualityCode>().Command<DeleteQualityCode>().Command<SetMaterialSupplier>()
@@ -33,6 +34,7 @@ public sealed class NvProductionExtApp : AppDefinition
         .Command<AddMtuToNonConformance>().Command<TraceNonConformance>().Command<SetNonConformanceOperation>()
         .Command<LinkNonConformanceReason>().Command<NextQualityIdentifier>().Command<SetNonConformanceSupplier>()
         .Command<SetDisassemblyPart>().Command<ListDisassemblyComponents>().Command<DisassembleProduct>().Command<UndoDisassembly>()
+        .Command<SetPackingOperation>().Command<StartPalletRebuild>().Command<AddToteToRebuiltPallet>().Command<CompletePalletRebuild>()
         .ReadingFunction<NonConformanceList>();
 }
 
@@ -85,6 +87,33 @@ public static class NvErrors
     public const int UnknownDisassembly = 9123;
 
     public const int InvalidIdentifierType = 9130;
+
+    public const int InvalidPackingAction = 9201;
+    public const int InvalidPallet = 9202;
+    public const int UnknownContainer = 9203;
+    public const int NotTested = 9204;
+    public const int HeldOrScrapped = 9205;
+    public const int MaterialMismatch = 9206;
+    public const int MissingPalletQuantity = 9207;
+    public const int PalletFull = 9208;
+    public const int PalletNotComplete = 9209;
+    public const int NoStoreAddress = 9210;
+    public const int NotAStoreAddress = 9211;
+    public const int MissingConfigurationKey = 9212;
+    public const int InvalidPackageCode = 9213;
+    public const int AlreadyPacked = 9214;
+
+    public const int UnknownTrailer = 9301;
+    public const int InvalidTrailerState = 9302;
+    public const int TrailerAtDock = 9303;
+    public const int TrailerNotAtDock = 9304;
+    public const int NoStorageType = 9305;
+    public const int UnknownLocation = 9306;
+    public const int LocationBusy = 9307;
+    public const int MovementOpen = 9308;
+    public const int InvalidMovement = 9309;
+    public const int MixedTestState = 9310;
+    public const int NotInTrailer = 9311;
 }
 
 /// <summary>Trạng thái team thêm vào state machine WO bằng dữ liệu.</summary>
@@ -110,6 +139,27 @@ public static class NvKeys
 
     /// <summary>Số dòng tối đa mỗi lần lệnh đọc tin lấy từ LineDB cho một mã bước. Thiếu key: 50.</summary>
     public const string LinePollBatchSize = "Nv.LinePollBatchSize";
+
+    /// <summary>
+    /// Chuỗi kết nối SQL mà code thành phẩm dùng để gọi stored procedure. Giá trị là của từng môi trường, không nằm trong repo
+    /// (K13). Thiếu key: lệnh và màn dùng procedure báo lỗi (lab L18).
+    /// </summary>
+    public const string SqlConnection = "Nv.SqlConnection";
+
+    /// <summary>Kiểm bước đo cuối khi chuyển pallet (cất kho). <c>false</c>: bỏ kiểm. Thiếu key: kiểm.</summary>
+    public const string EolvValidation = "Nv.EolvValidation";
+
+    /// <summary>Số ngày một lần đo cuối còn hiệu lực; timer hằng ngày đánh dấu pallet quá hạn. Thiếu key: không đánh dấu.</summary>
+    public const string EolvRetestAfterDays = "Nv.EolvRetestAfterDays";
+
+    /// <summary>Kiểm hàng bị giữ, bị hủy khi nạp pallet vào trailer kho. <c>false</c>: bỏ kiểm. Thiếu key: kiểm.</summary>
+    public const string StorageTrailerHeldCheck = "Nv.StorageTrailerHeldCheck";
+
+    /// <summary>Tiền tố mã gói lẻ. Thiếu key: không kiểm mã.</summary>
+    public const string CkdPrefix = "Nv.CkdPrefix";
+
+    /// <summary>Độ dài mã gói lẻ, kể cả tiền tố.</summary>
+    public const string CkdLength = "Nv.CkdLength";
 }
 
 /// <summary>Endpoint của môi trường mà code của team dùng.</summary>

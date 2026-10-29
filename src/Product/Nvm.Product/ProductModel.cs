@@ -47,6 +47,8 @@ public static class ProductErrors
     public const int ContainerCycle = 7305;
     public const int InsideContainer = 7306;
     public const int InvalidQuantity = 7307;
+    public const int InvalidContainerStatus = 7308;
+    public const int ContainerNotEmpty = 7309;
 
     public const int UnknownWorkOrder = 7401;
     public const int UnknownWorkOrderOperation = 7402;
@@ -83,7 +85,7 @@ public sealed class ProductionApp : AppDefinition
 
     protected override void Define(PomBuilder pom) => pom
         .Entity<Equipment>().Entity<EquipmentProperty>().Entity<EquipmentGroupMember>()
-        .Entity<Material>().Entity<MaterialRevision>()
+        .Entity<Material>().Entity<MaterialRevision>().Entity<MaterialProperty>()
         .Entity<Process>().Entity<ProcessOperation>().Entity<OperationEquipment>().Entity<OperationMaterial>()
         .Entity<Mtu>().Entity<Mtua>().Entity<MtuHistory>()
         .Entity<WorkOrder>().Entity<WorkOrderOperation>().Entity<WorkOrderOperationEquipment>()
@@ -92,10 +94,11 @@ public sealed class ProductionApp : AppDefinition
         .Entity<ContainmentRequest>().Entity<ContainmentItem>()
         .Entity<Buffer>().Entity<BufferWhitelist>().Entity<BufferAssignment>().Entity<LogisticRequest>()
         .Command<CreateEquipment>().Command<SetEquipmentProperty>().Command<AddEquipmentToGroup>()
-        .Command<CreateMaterial>().Command<UpdateMaterial>().Command<CreateMaterialRevision>()
+        .Command<CreateMaterial>().Command<UpdateMaterial>().Command<CreateMaterialRevision>().Command<SetMaterialProperty>()
         .Command<CreateProcess>().Command<AddProcessOperation>().Command<AllowOperationEquipment>().Command<AddOperationMaterial>()
         .Command<CreateMtu>().Command<EditMtu>().Command<MoveMtu>().Command<SplitMtu>()
-        .Command<CreateMtua>().Command<AssembleIntoMtua>().Command<RemoveFromMtua>()
+        .Command<CreateMtua>().Command<AssembleIntoMtua>().Command<RemoveFromMtua>().Command<SetMtuaStatus>().Command<SetMtuaStatusForced>()
+        .Command<UpdateMtua>().Command<MoveMtua>().Command<DeleteMtua>()
         .Command<InstallWorkOrderStates>().Command<CreateWorkOrderFromProcess>().Command<EditWorkOrder>()
         .Command<ReleaseWorkOrder>().Command<SetWorkOrderStatus>().Command<SetWorkOrderStatusForced>()
         .Command<AbortWorkOrder>().Command<DeleteWorkOrder>()

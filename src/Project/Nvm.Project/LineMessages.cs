@@ -53,6 +53,7 @@ public static class LineErrors
     public const int UnknownMtu = 400;
     public const int SplitFailed = 410;
     public const int NonConformanceFailed = 420;
+    public const int PackingFailed = 500;
     public const int NotInstalled = 900;
     public const int Unexpected = 999;
 
@@ -125,6 +126,12 @@ public sealed class LineOperationDetail
     public string? RunMode { get; init; }
 
     public IReadOnlyList<LineMaterialUse>? Materials { get; init; }
+
+    /// <summary>Mã vật chứa nhận sản phẩm ở bước đóng tote.</summary>
+    public string? ContainerCode { get; init; }
+
+    /// <summary>Mã các vật chứa nằm trong vật chứa của tin (tin xếp pallet: các tote).</summary>
+    public IReadOnlyList<string>? Contents { get; init; }
 }
 
 /// <summary>Nguyên liệu máy báo đã dùng. Không có lô: trừ từ MTU tạm <c>Auto_…</c>. Không có lượng: theo định mức.</summary>
@@ -180,9 +187,10 @@ internal sealed class ApplyLineResultsHandler : ICommandHandler<ApplyLineResults
     {
         var response = new ApplyLineResultsResponse();
         var codes = LineCodeSet.Load(platform);
+        var packing = platform.ProjectionQuery<PackingOperation>().ToDictionary(p => p.NId, StringComparer.Ordinal);
         foreach (var detail in command.Operations!)
         {
-            var error = Apply(platform, codes, detail, response);
+            var error = Apply(platform, codes, packing.GetValueOrDefault(detail.OperationCode ?? string.Empty), detail, response);
             if (error is null)
             {
                 response.ExecutedSerialNumbers.Add(detail.Serial!);
@@ -196,14 +204,16 @@ internal sealed class ApplyLineResultsHandler : ICommandHandler<ApplyLineResults
         return response;
     }
 
-    private static LineError? Apply(IPlatform platform, LineCodeSet codes, LineOperationDetail detail, ApplyLineResultsResponse response)
+    private static LineError? Apply(IPlatform platform, LineCodeSet codes, PackingOperation? packing, LineOperationDetail detail,
+        ApplyLineResultsResponse response)
     {
         if (string.IsNullOrEmpty(detail.Serial))
         {
             return new LineError(LineErrors.Malformed, "Message has no serial number.");
         }
 
-        if (codes.Operation(detail.OperationCode) is not { } operationNId)
+        var operationNId = codes.Operation(detail.OperationCode);
+        if (operationNId is null && packing is null)
         {
             return new LineError(LineErrors.UnknownOperationCode, $"Line operation code {detail.OperationCode} has no mapping.");
         }
@@ -217,7 +227,29 @@ internal sealed class ApplyLineResultsHandler : ICommandHandler<ApplyLineResults
         if (platform.Query<LineExecution>().SingleOrDefault(e => e.NId == executionNId) is { } recorded)
         {
             platform.Tracer.Write(TraceLevel.Information, $"Serial {detail.Serial} at {detail.OperationCode} is already recorded; nothing to do.");
-            response.NonConformanceData.Add(LineNonConformanceData.Of(detail, recorded.ProductMtuNId!, operationNId, equipmentNId));
+            if (operationNId is not null)
+            {
+                response.NonConformanceData.Add(LineNonConformanceData.Of(detail, recorded.ProductMtuNId!, operationNId, equipmentNId));
+            }
+
+            return null;
+        }
+
+        if (packing?.Action == PackingActions.Tote && string.IsNullOrEmpty(detail.ContainerCode))
+        {
+            return new LineError(LineErrors.PackingFailed, $"Message for {detail.Serial} at {detail.OperationCode} has no tote code.");
+        }
+
+        if (operationNId is null)
+        {
+            // Bước chỉ đóng gói (vd xếp pallet): không ghi WO, chỉ vật chứa và dòng chống ghi hai lần.
+            var packed = packing!.Action == PackingActions.Pallet ? null : LinePacking.ProductBySerial(platform, detail.Serial);
+            if (LinePacking.Apply(platform, packing, detail, packed, equipmentNId) is { } packingError)
+            {
+                return packingError;
+            }
+
+            Record(platform, executionNId, detail, workOrder: null, step: null, packed, detail.Quantity ?? 1m);
             return null;
         }
 
@@ -334,13 +366,31 @@ internal sealed class ApplyLineResultsHandler : ICommandHandler<ApplyLineResults
             return new LineError(LineErrors.ProgressFailed, progress.Error!.ErrorMessage);
         }
 
+        if (packing is not null && LinePacking.Apply(platform, packing, detail, productNId, equipmentNId) is { } packError)
+        {
+            return packError;
+        }
+
+        Record(platform, executionNId, detail, workOrder.NId, step.NId, productNId, quantity);
+        if (string.Equals(detail.StatusId, "KO", StringComparison.Ordinal))
+        {
+            response.PendingNonConformance.Add(detail.Serial);
+        }
+
+        response.NonConformanceData.Add(LineNonConformanceData.Of(detail, productNId, operationNId, equipmentNId));
+        return null;
+    }
+
+    private static void Record(IPlatform platform, string executionNId, LineOperationDetail detail, string? workOrder, string? step,
+        string? productNId, decimal quantity)
+    {
         var execution = platform.Create<LineExecution>();
         execution.NId = executionNId;
         execution.Serial = detail.Serial;
         execution.OperationCode = detail.OperationCode;
         execution.EquipmentCode = detail.EquipmentCode;
-        execution.WorkOrderNId = workOrder.NId;
-        execution.WorkOrderOperationNId = step.NId;
+        execution.WorkOrderNId = workOrder;
+        execution.WorkOrderOperationNId = step;
         execution.ProductMtuNId = productNId;
         execution.Quantity = quantity;
         execution.StartTime = detail.StartTime;
@@ -350,14 +400,6 @@ internal sealed class ApplyLineResultsHandler : ICommandHandler<ApplyLineResults
         execution.RunMode = detail.RunMode;
         execution.SequenceId = detail.SequenceId;
         platform.Submit(execution);
-
-        if (string.Equals(detail.StatusId, "KO", StringComparison.Ordinal))
-        {
-            response.PendingNonConformance.Add(detail.Serial);
-        }
-
-        response.NonConformanceData.Add(LineNonConformanceData.Of(detail, productNId, operationNId, equipmentNId));
-        return null;
     }
 
     /// <summary>

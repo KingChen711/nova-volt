@@ -58,3 +58,21 @@ lúc MOM ghi kết quả về; gồm cả thời gian chờ nhịp poll. Log đ�
 | 2026-10-28 | tag `r5` | Thời gian xả sau khi ngừng sinh | **≤ 1 phút** | Phút 61 tồn đọng 0 (báo cáo theo phút, không đo mịn hơn) |
 
 Đường **relay** chưa đo tải. Chưa đo trên runner GitHub.
+
+## R7 — Kiểm pallet đệ quy
+
+Phép đo: `PalletCheckBenchmark.Recursive_held_item_check_on_thirty_days_of_line_data` (build Release, chạy riêng như benchmark
+R1). Dữ liệu sinh thẳng bằng SQL theo hình dạng chuỗi tin: 30 ngày × 2 ca × 4 line; họ A (line 1–2) mỗi ca-line 8 pallet × 8
+tote, tote một kit, kit hai module, module 12 cell; họ B (line 3–4) mỗi ca-line 6 pallet × 6 tote, tote một module, module 60
+cell; cell ← cuộn (một cuộn mỗi 100 cell), lô màng ngăn và vỏ (mỗi ca-line một lô); khoảng 0,1 % cell đã formation OnHold kèm
+NC mở. Tổng 1.680 pallet, 919.317 MTU, 2.232.960 dòng trừ nguyên liệu. Mỗi lần đo gọi `nv_PalletHeldItems` cho 50 pallet chọn
+ngẫu nhiên, qua `SqlCommand` như code của team. SQL Server 2022 CU26 trong Testcontainers, cùng máy; DB mới mỗi lần chạy.
+
+| Ngày | Commit | Chỉ số | Giá trị | Điều kiện đo |
+|---|---|---|---|---|
+| 2026-10-29 | tag `r7` | Một lần kiểm, không có index trên cột cha của bảng trừ nguyên liệu | **> 120 s** (timeout) | Lần gọi đầu; Update Database chỉ có khóa `(IsDeleted, NId)` nên mỗi tầng của cây quét cả bảng; test dừng ở timeout 120 s, không đo tiếp |
+| 2026-10-29 | tag `r7` | p95 / p50 / max, 50 lần kiểm | **636 / 473 / 2.199 ms** | Lần 1 có index `IX_MaterialConsumption_Product (ProductMtuNId, IsDeleted) INCLUDE (ComponentMtuNId)`; sinh dữ liệu 79 s; 10 dòng bị giữ trong 50 pallet; max là lần gọi đầu |
+| 2026-10-29 | tag `r7` | p95 / p50 / max, 50 lần kiểm | **701 / 477 / 1.641 ms** | Lần 2, như trên; sinh dữ liệu 88 s; 18 dòng bị giữ |
+| 2026-10-29 | tag `r7` | p95 / p50 / max, 50 lần kiểm | **758 / 550 / 1.476 ms** | Lần 3, như trên; sinh dữ liệu 80 s; 13 dòng bị giữ |
+
+Ngưỡng của test là ngưỡng DoD: **p95 < 1 s**. Chưa đo trên runner GitHub.

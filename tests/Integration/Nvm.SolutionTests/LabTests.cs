@@ -53,13 +53,15 @@ public sealed class LabTests
         // Sửa CSV rồi deploy lại: suite bị bỏ qua, dữ liệu vẫn thiếu. Lịch sử không nói lên gì; đếm dữ liệu mới thấy.
         WriteLines(materials, good);
         h.Deploy(root, HistoryPolicy.Always).Single(s => s.Suite == "Production_002_Materials").Status.ShouldBe(SuiteStatus.Skipped);
-        h.Read<Material>().ShouldBeEmpty();
+        // Chỉ còn kit của suite thành phẩm (suite riêng, không lỗi).
+        h.Read<Material>().Select(m => m.NId).ShouldBe(["NV-FG-KIT-A"]);
 
-        // Sửa: bỏ tên suite khỏi lịch sử rồi chạy lại.
-        WriteLines(h.HistoryFile, Lines(h.HistoryFile).Where(l => !l.Contains("_002_Materials", StringComparison.Ordinal)
-            && !l.Contains("_003_Processes", StringComparison.Ordinal) && !l.StartsWith("NvProductionExt_", StringComparison.Ordinal)));
+        // Sửa: bỏ khỏi lịch sử tên suite lỗi và các suite lỗi theo vì thiếu material, rồi chạy lại.
+        string[] retry = ["_002_Materials", "_003_Processes", "_008_FinishedGoodsProcesses", "_009_MaterialProperties"];
+        WriteLines(h.HistoryFile, Lines(h.HistoryFile).Where(l => !retry.Any(r => l.Contains(r, StringComparison.Ordinal))
+            && !l.StartsWith("NvProductionExt_", StringComparison.Ordinal)));
         h.Deploy(root, HistoryPolicy.Always).Where(s => s.Status == SuiteStatus.Failed).ShouldBeEmpty();
-        h.Read<Material>().Count.ShouldBe(14);
+        h.Read<Material>().Count.ShouldBe(15);
     }
 
     [Fact]
@@ -76,7 +78,7 @@ public sealed class LabTests
 
         WriteLines(materials, good);
         h.Deploy(root).Single(s => s.Suite == "Production_002_Materials").Status.ShouldBe(SuiteStatus.Executed);
-        h.Read<Material>().Count.ShouldBe(14);
+        h.Read<Material>().Count.ShouldBe(15);
     }
 
     [Theory]

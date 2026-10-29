@@ -5,7 +5,7 @@ using Nvm.Shopfloor;
 using Nvm.Shopfloor.LineDb;
 
 // Dòng lệnh phía xưởng. Kết nối LineDB bằng owner (vai máy và lịch phía xưởng), lấy từ .env.
-//   run    --line N [--cells 24] [--coils 2] [--ko-every 0] [--shrink 0] [--prefix P] [--start ISO]
+//   run    --line N [--cells 24] [--coils 2] [--ko-every 0] [--shrink 0] [--prefix P] [--start ISO] [--pack] [--eolv]
 //   relay  [--rows 5] [--interval 60]                     lịch gửi của đường relay (send_pending mỗi nhịp)
 //   load   [--takt 5] [--minutes 60] [--lines 1,2,3,4] [--relay] [--rows 5] [--drain 10]
 //   report --since ISO
@@ -36,19 +36,24 @@ switch (verb)
     case "run":
         {
             var line = Int("--line", 1);
+            var cells = Int("--cells", 24);
             var scenario = new LineScenario
             {
                 Line = line,
                 Start = Option("--start") is { } start ? DateTimeOffset.Parse(start, CultureInfo.InvariantCulture) : clock.GetUtcNow(),
                 Prefix = Option("--prefix") ?? "R" + clock.GetUtcNow().ToString("MMddHHmm", CultureInfo.InvariantCulture),
-                Coils = Int("--coils", 2),
-                Cells = Int("--cells", 24),
+                // Mặc định đủ cuộn cho số cell (100 cell một cuộn 120 m): thiếu thì cell trừ quá lượng cuộn, cuộn còn 0 m.
+                Coils = Int("--coils", Math.Max(2, (cells + 99) / 100)),
+                Cells = cells,
                 KoEvery = Int("--ko-every", 0),
                 ShrinkLogs = Int("--shrink", 0),
+                Pack = args.Contains("--pack") || args.Contains("--eolv"),
+                EolvTest = args.Contains("--eolv"),
             };
             var expected = new LineSimulator(owner).Run(scenario);
             Console.WriteLine($"Line {line}, prefix {scenario.Prefix}: {expected.UnitRows} unit rows ({expected.Coils} coils, {expected.Cells} cells, "
-                + $"{expected.KoCells} KO, {expected.FormedCells} formed, {expected.Modules} modules), {expected.ShrinkRows} shrink rows.");
+                + $"{expected.KoCells} KO, {expected.FormedCells} formed, {expected.Modules} modules, {expected.Kits} kits, {expected.Totes} totes, "
+                + $"{expected.Pallets} pallets, {expected.EolvRows} end-of-line tests), {expected.ShrinkRows} shrink rows.");
             Console.WriteLine($"MOM should get {expected.ProductMtus} product MTUs, {expected.Consumptions} consumptions, "
                 + $"{expected.TemporaryMtus} Auto_ MTUs, {expected.LotMtus} lot MTUs.");
             break;

@@ -1,0 +1,4 @@
+NId,Val,Type,Category
+Nv.CkdPrefix,PK,String,FinishedGoods
+Nv.CkdLength,10,Int32,FinishedGoods
+Nv.EolvRetestAfterDays,30,Int32,FinishedGoods

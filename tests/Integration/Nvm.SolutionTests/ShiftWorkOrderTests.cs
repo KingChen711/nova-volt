@@ -27,24 +27,24 @@ public sealed class ShiftWorkOrderTests
             h.RunClockUntil(start);
 
             var active = h.Read<WorkOrder>(q => q.Where(w => w.Status == WorkOrderStates.Active));
-            active.Count.ShouldBe(16, $"shift {shift}");
+            active.Count.ShouldBe(20, $"shift {shift}");
             active.ShouldAllBe(w => w.EstimatedStart == start && w.EstimatedEnd == start.AddHours(12));
             h.Read<WorkOrder>(q => q.Where(w => w.EstimatedEnd == start && w.Status == WorkOrderStates.Active)).ShouldBeEmpty();
             if (shift > 0)
             {
                 // WO của ca trước bị đóng băng đúng lúc ca này bắt đầu.
                 var previous = h.Read<WorkOrder>(q => q.Where(w => w.EstimatedEnd == start));
-                previous.Count.ShouldBe(16);
+                previous.Count.ShouldBe(20);
                 previous.ShouldAllBe(w => w.Status == NvWorkOrderStates.Frozen);
             }
         }
 
         h.RunClockUntil(Monday.AddDays(3).AddHours(6));
         var all = h.Read<WorkOrder>();
-        all.Count.ShouldBe(96);
-        all.Count(w => w.Status == WorkOrderStates.Complete).ShouldBe(36);
-        all.Count(w => w.Status == NvWorkOrderStates.Frozen).ShouldBe(44);
-        all.Count(w => w.Status == WorkOrderStates.Active).ShouldBe(16);
+        all.Count.ShouldBe(120);
+        all.Count(w => w.Status == WorkOrderStates.Complete).ShouldBe(48);
+        all.Count(w => w.Status == NvWorkOrderStates.Frozen).ShouldBe(52);
+        all.Count(w => w.Status == WorkOrderStates.Active).ShouldBe(20);
         all.Where(w => w.ProcessNId!.StartsWith("Form_", StringComparison.Ordinal)).ShouldNotContain(w => w.Status == WorkOrderStates.Complete);
         all.Where(w => w.EstimatedStart == mondayMorning).Where(w => !w.ProcessNId!.StartsWith("Form_", StringComparison.Ordinal))
             .ShouldAllBe(w => w.Status == WorkOrderStates.Complete);

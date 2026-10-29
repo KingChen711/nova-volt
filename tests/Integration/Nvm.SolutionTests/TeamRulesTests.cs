@@ -67,7 +67,7 @@ public sealed class TeamRulesTests
 
         h.RunClockUntil(new DateTimeOffset(2026, 10, 26, 7, 0, 0, TimeSpan.Zero));
 
-        h.Read<WorkOrder>(q => q.Where(w => w.Status == WorkOrderStates.Active)).Count.ShouldBe(16);
+        h.Read<WorkOrder>(q => q.Where(w => w.Status == WorkOrderStates.Active)).Count.ShouldBe(20);
         h.Traces.Records.ShouldNotContain(r => r.Message.Contains("Pre-check", StringComparison.Ordinal));
     }
 }

@@ -269,7 +269,7 @@ Vi phạm những điều dưới đây là bug, không phải lựa chọn phon
 | K6 | Event lên bus và hợp đồng của gateway có `[EventVersion(n)]`. Không sửa golden file cũ | Bên nhận năm sau phải đọc được tin năm nay |
 | K7 | Đường tin máy idempotent theo cách hệ thật: trạng thái dòng tin, khóa tự nhiên, không trừ nguyên liệu hai lần. Command khác theo đúng hành vi của nền, có test khẳng định hành vi khi gửi lại | Tin máy là at-least-once; command thì giữ đúng ngữ nghĩa nền tảng |
 | K8 | Phụ thuộc chỉ đi xuống: Project → Product → Foundation; Shopfloor và Integration chỉ thấy Foundation. Cùng domain dùng `Query`, khác domain dùng `ProjectionQuery`; pre-check cùng domain với command; extension app không extend extension app | Ranh giới như nền tảng thật; ép bằng test kiến trúc |
-| K9 | Handler chỉ dùng `IPlatform` của Foundation; không reference EF Core, Npgsql, client bus | Testability; giống handler của nền thật chỉ thấy `platform` |
+| K9 | Handler chỉ dùng `IPlatform` của Foundation để đọc, ghi model; không reference EF Core, client bus. Ngoại lệ: kết nối ra hệ ngoài hoặc SQL tay mà code của team thật cũng mở (LineDB, stored procedure) được dùng driver (Npgsql, SqlClient), chuỗi kết nối lấy từ endpoint hoặc configuration key, ghi ở ADR (ADR-058, chủ repo chốt 2026-10-29) | Testability; giống handler của nền thật chỉ thấy `platform`, trừ đúng những chỗ code thật tự mở kết nối |
 | K10 | Giao diện chỉ gọi POM (OData) và command API; không nối thẳng DB, không giữ logic nghiệp vụ | Ranh giới app |
 | K11 | LineDB ở `ot-net`; chỉ relay và lệnh đọc tin có quyền vào schema trung gian | Ranh giới OT/IT |
 | K12 | Line không bao giờ chờ MOM: MOM chết thì dòng tin đứng ở trạng thái chờ và được gửi lại | Dây chuyền không dừng vì MOM |

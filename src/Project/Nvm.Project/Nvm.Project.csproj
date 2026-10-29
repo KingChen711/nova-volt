@@ -12,6 +12,8 @@
   <ItemGroup>
     <!-- Lệnh đọc tin và handler tin máy gọi hàm của schema trung gian LineDB (R5). -->
     <PackageReference Include="Npgsql" />
+    <!-- Code thành phẩm gọi stored procedure qua kết nối SQL riêng lấy từ configuration key, như code của team (R7). -->
+    <PackageReference Include="Microsoft.Data.SqlClient" />
   </ItemGroup>
 
   <ItemGroup>

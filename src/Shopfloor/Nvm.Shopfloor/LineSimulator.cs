@@ -30,6 +30,18 @@ public sealed record LineScenario
 
     /// <summary>Lô nguyên liệu bột trên tin phủ có kèm lượng thực dùng. Tắt: MOM trừ theo định mức.</summary>
     public bool ReportPowderQuantity { get; init; }
+
+    /// <summary>
+    /// Chạy tiếp tới đóng gói: họ A ghép hai module thành kit rồi cho vào tote, họ B cho module vào tote; đủ
+    /// <see cref="TotesPerPallet"/> tote thì xếp một pallet. Tote lẻ cuối ca không lên pallet.
+    /// </summary>
+    public bool Pack { get; init; }
+
+    /// <summary>Số tote một pallet; rỗng: số chuẩn của họ (A 8, B 6).</summary>
+    public int? TotesPerPallet { get; init; }
+
+    /// <summary>Họ A: đo cuối từng kit đã lên pallet (sau khi xếp pallet).</summary>
+    public bool EolvTest { get; init; }
 }
 
 /// <summary>Số liệu mà MOM phải có sau khi ghi hết tin của một kịch bản.</summary>
@@ -44,13 +56,18 @@ public sealed record LineScenarioExpectation(
     int TemporaryMtus,
     int Consumptions,
     decimal CoatedLength,
-    int ShrinkRows)
+    int ShrinkRows,
+    int Kits = 0,
+    int Totes = 0,
+    int Pallets = 0,
+    int TotesPerPallet = 0,
+    int EolvRows = 0)
 {
-    /// <summary>MTU sản phẩm: cuộn, cell, cell đã formation, module.</summary>
-    public int ProductMtus => Coils + Cells + FormedCells + Modules;
+    /// <summary>MTU sản phẩm: cuộn, cell, cell đã formation, module, kit.</summary>
+    public int ProductMtus => Coils + Cells + FormedCells + Modules + Kits;
 
-    /// <summary>Dòng tin sản phẩm (không kể hao hụt).</summary>
-    public int UnitRows => Coils + Cells + FormedCells + Modules;
+    /// <summary>Dòng tin sản phẩm (không kể hao hụt): mỗi tote một tin đóng tote, mỗi pallet một tin xếp pallet.</summary>
+    public int UnitRows => Coils + Cells + FormedCells + Modules + Totes + Pallets + EolvRows;
 }
 
 /// <summary>
@@ -67,6 +84,8 @@ public sealed class LineSimulator(string connectionString)
     };
 
     public static string Family(int line) => line <= 2 ? "A" : "B";
+
+    public static int TotesPerPallet(int line) => line <= 2 ? 8 : 6;
 
     public LineScenarioExpectation Run(LineScenario scenario)
     {
@@ -118,18 +137,54 @@ public sealed class LineSimulator(string connectionString)
         }
 
         var modules = good.Count / perModule;
+        var moduleIds = new List<string>();
         for (var j = 0; j < modules; j++)
         {
-            rows.Module(scenario.Line, family, $"{id}-M{j + 1:000}", good.Skip(j * perModule).Take(perModule).ToArray(),
+            moduleIds.Add($"{id}-M{j + 1:000}");
+            rows.Module(scenario.Line, family, moduleIds[j], good.Skip(j * perModule).Take(perModule).ToArray(),
                 scenario.Start.AddHours(8).AddMinutes(2 * j));
         }
 
+        var (kits, totes, pallets, eolv) = scenario.Pack ? Pack(rows, scenario, family, id, moduleIds) : (0, 0, 0, 0);
         transaction.Commit();
 
         var temporary = scenario.ScanComponentLots ? 0 : 2 * scenario.Cells;
         var lotMtus = (2 * scenario.Coils) + (scenario.ScanComponentLots ? 2 : 0);
-        var consumptions = (2 * scenario.Coils) + (3 * scenario.Cells) + good.Count + (modules * perModule);
+        var consumptions = (2 * scenario.Coils) + (3 * scenario.Cells) + good.Count + (modules * perModule) + (2 * kits);
         return new LineScenarioExpectation(scenario.Coils, scenario.Cells, ko, good.Count, modules, perModule, lotMtus, temporary,
-            consumptions, scenario.Coils * scenario.CoilLength, scenario.ShrinkLogs);
+            consumptions, scenario.Coils * scenario.CoilLength, scenario.ShrinkLogs, kits, totes, pallets,
+            scenario.TotesPerPallet ?? TotesPerPallet(scenario.Line), eolv);
+    }
+
+    /// <summary>Đóng tote (kit với họ A), xếp pallet đủ, rồi đo cuối kit đã lên pallet.</summary>
+    private static (int Kits, int Totes, int Pallets, int Eolv) Pack(LineRows rows, LineScenario scenario, string family, string id,
+        List<string> modules)
+    {
+        var perPallet = scenario.TotesPerPallet ?? TotesPerPallet(scenario.Line);
+        var start = scenario.Start.AddHours(9);
+        List<string> units = family == "A"
+            ? [.. Enumerable.Range(0, modules.Count / 2).Select(k => $"{id}-K{k + 1:000}")]
+            : modules;
+        var totes = new List<string>();
+        for (var t = 0; t < units.Count; t++)
+        {
+            totes.Add($"{id}-T{t + 1:000}");
+            rows.Pack(scenario.Line, family, units[t], totes[t], family == "A" ? [modules[2 * t], modules[(2 * t) + 1]] : null,
+                start.AddMinutes(t));
+        }
+
+        var pallets = totes.Count / perPallet;
+        for (var p = 0; p < pallets; p++)
+        {
+            rows.Pallet(scenario.Line, $"{id}-P{p + 1:00}", [.. totes.Skip(p * perPallet).Take(perPallet)], start.AddHours(1).AddMinutes(p));
+        }
+
+        var tested = family == "A" && scenario.EolvTest ? pallets * perPallet : 0;
+        for (var k = 0; k < tested; k++)
+        {
+            rows.Eolv(scenario.Line, units[k], start.AddHours(2).AddMinutes(k));
+        }
+
+        return (family == "A" ? units.Count : 0, totes.Count, pallets, tested);
     }
 }

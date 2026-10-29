@@ -46,6 +46,26 @@ internal sealed class LineRows(NpgsqlConnection connection, NpgsqlTransaction? t
         """, ("line", line), ("serial", module), ("item", $"Formed cell {family} in use"), ("cells", cells), ("start", end.AddMinutes(-1)),
         ("end", end));
 
+    /// <summary>Trạm đóng tote: họ A ghép hai module thành kit (<paramref name="modules"/>), họ B cho thẳng module vào tote.</summary>
+    public void Pack(int line, string family, string unit, string tote, string[]? modules, DateTimeOffset end) => Insert("""
+        INSERT INTO mod.pack_result (line_no, machine, op_code, unit_id, tote_id, module_item, module_ids, started_at, finished_at, result, result_code)
+        VALUES (@line, @machine, @op, @serial, @tote, @item, @modules, @start, @end, 'OK', '00');
+        """, ("line", line), ("machine", family == "A" ? "mo020_m1" : "mo025_m1"), ("op", family == "A" ? "mo020" : "mo025"),
+        ("serial", unit), ("tote", tote), ("item", modules is null ? null : $"Module {family} in use"), ("modules", modules),
+        ("start", end.AddSeconds(-40)), ("end", end));
+
+    /// <summary>Trạm xếp pallet: một pallet đủ, kèm các tote.</summary>
+    public void Pallet(int line, string pallet, string[] totes, DateTimeOffset end) => Insert("""
+        INSERT INTO mod.pallet_result (line_no, machine, op_code, pallet_id, tote_ids, finished_at)
+        VALUES (@line, 'mo030_m1', 'mo030', @pallet, @totes, @end);
+        """, ("line", line), ("pallet", pallet), ("totes", totes), ("end", end));
+
+    /// <summary>Bước đo cuối của một kit họ A.</summary>
+    public void Eolv(int line, string kit, DateTimeOffset end) => Insert("""
+        INSERT INTO mod.eolv_result (line_no, machine, op_code, kit_id, started_at, finished_at, result, result_code, voltage_mv)
+        VALUES (@line, 'eo010_m1', 'eo010', @kit, @start, @end, 'OK', '00', 44400);
+        """, ("line", line), ("kit", kit), ("start", end.AddSeconds(-30)), ("end", end));
+
     // SQL cố định; giá trị đi bằng tham số.
 #pragma warning disable CA2100
     private void Insert(string sql, params (string Name, object? Value)[] parameters)

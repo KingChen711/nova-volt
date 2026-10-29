@@ -34,15 +34,28 @@ public sealed class Mtu : Entity
     public bool InContainment { get; set; }
 }
 
-/// <summary>Vật chứa (tote, pallet, trailer kho): gom MTU và MTUA khác, lồng nhiều tầng.</summary>
+/// <summary>
+/// Vật chứa (tote, pallet, trailer kho): gom MTU và MTUA khác, lồng nhiều tầng. Trạng thái theo một state machine dạng dữ
+/// liệu do người dùng sản phẩm khai (vd pallet: Empty, Full, Picked…); số lượng và material do người dùng sản phẩm đặt, lớp
+/// Product không tự đếm.
+/// </summary>
 [Entity<ProductOperationBlock>]
-public sealed class Mtua : Entity
+public sealed class Mtua : Entity, IHasStatus
 {
     public string? ContainerType { get; set; }
 
     public string? EquipmentNId { get; set; }
 
     public string? ParentMtuaNId { get; set; }
+
+    /// <summary>Tên state machine của vật chứa; rỗng thì vật chứa không có trạng thái.</summary>
+    public string? StateMachine { get; set; }
+
+    public string? Status { get; set; }
+
+    public decimal Quantity { get; set; }
+
+    public string? MaterialNId { get; set; }
 }
 
 /// <summary>Lịch sử MTU: chỉ thêm dòng, không sửa (K4). Dòng Assemble của sản phẩm là genealogy.</summary>
@@ -349,6 +362,11 @@ public sealed class CreateMtua : ICommand<ProductResponse>
     public string? ContainerType { get; init; }
 
     public string? EquipmentNId { get; init; }
+
+    /// <summary>State machine của vật chứa; có thì <see cref="Status"/> là trạng thái đầu, đi qua transition từ trạng thái rỗng.</summary>
+    public string? StateMachine { get; init; }
+
+    public string? Status { get; init; }
 }
 
 internal sealed class CreateMtuaHandler : ICommandHandler<CreateMtua, ProductResponse>
@@ -365,12 +383,213 @@ internal sealed class CreateMtuaHandler : ICommandHandler<CreateMtua, ProductRes
             return ProductResponse.Fail(ProductErrors.UnknownEquipment, $"Equipment {command.EquipmentNId} does not exist.");
         }
 
+        if (string.IsNullOrEmpty(command.StateMachine) != string.IsNullOrEmpty(command.Status))
+        {
+            return ProductResponse.Fail(ProductErrors.InvalidContainerStatus, "State machine and status go together.");
+        }
+
         var container = platform.Create<Mtua>();
         container.NId = command.NId!;
         container.ContainerType = command.ContainerType;
         container.EquipmentNId = string.IsNullOrEmpty(command.EquipmentNId) ? EquipmentLevels.NotApplicable : command.EquipmentNId;
+        container.StateMachine = command.StateMachine;
+        if (string.IsNullOrEmpty(command.StateMachine))
+        {
+            platform.Submit(container);
+        }
+        else
+        {
+            platform.ChangeStatus(container, command.StateMachine, command.Status!);
+        }
+
+        return ProductResponse.Of(container);
+    }
+}
+
+/// <summary>Đổi trạng thái vật chứa theo state machine của nó: transition phải có trong dữ liệu.</summary>
+[Command<ProductOperationBlock>]
+public sealed class SetMtuaStatus : ICommand<ProductResponse>
+{
+    [Mandatory]
+    public string? NId { get; init; }
+
+    [Mandatory]
+    public string? Status { get; init; }
+}
+
+internal sealed class SetMtuaStatusHandler : ICommandHandler<SetMtuaStatus, ProductResponse>
+{
+    public ProductResponse Handle(SetMtuaStatus command, IPlatform platform)
+    {
+        if (Containers.Find(platform, command.NId!, out var container) is { } missing)
+        {
+            return missing;
+        }
+
+        if (string.IsNullOrEmpty(container.StateMachine))
+        {
+            return ProductResponse.Fail(ProductErrors.InvalidContainerStatus, $"MTUA {container.NId} has no state machine.");
+        }
+
+        if (container.Status == command.Status)
+        {
+            return ProductResponse.Of(container);
+        }
+
+        try
+        {
+            platform.ChangeStatus(container, container.StateMachine, command.Status!);
+        }
+        catch (StatusTransitionException e)
+        {
+            return ProductResponse.Fail(e.ErrorCode, e.Message);
+        }
+
+        return ProductResponse.Of(container);
+    }
+}
+
+/// <summary>Ép trạng thái vật chứa, bỏ qua transition; trạng thái phải có trong state machine của nó.</summary>
+[Command<ProductOperationBlock>]
+public sealed class SetMtuaStatusForced : ICommand<ProductResponse>
+{
+    [Mandatory]
+    public string? NId { get; init; }
+
+    [Mandatory]
+    public string? Status { get; init; }
+}
+
+internal sealed class SetMtuaStatusForcedHandler : ICommandHandler<SetMtuaStatusForced, ProductResponse>
+{
+    public ProductResponse Handle(SetMtuaStatusForced command, IPlatform platform)
+    {
+        if (Containers.Find(platform, command.NId!, out var container) is { } missing)
+        {
+            return missing;
+        }
+
+        var status = $"{container.StateMachine}.{command.Status}";
+        if (string.IsNullOrEmpty(container.StateMachine) || !platform.ProjectionQuery<StatusDefinition>().Any(s => s.NId == status))
+        {
+            return ProductResponse.Fail(ProductErrors.InvalidContainerStatus,
+                $"Status {command.Status} is not defined for the state machine of MTUA {container.NId}.");
+        }
+
+        container.Status = command.Status;
         platform.Submit(container);
         return ProductResponse.Of(container);
+    }
+}
+
+/// <summary>Đặt số lượng và material của vật chứa (giá trị mới). <see cref="ClearMaterial"/> bỏ material.</summary>
+[Command<ProductOperationBlock>]
+public sealed class UpdateMtua : ICommand<ProductResponse>
+{
+    [Mandatory]
+    public string? NId { get; init; }
+
+    public decimal? Quantity { get; init; }
+
+    public string? MaterialNId { get; init; }
+
+    public bool ClearMaterial { get; init; }
+}
+
+internal sealed class UpdateMtuaHandler : ICommandHandler<UpdateMtua, ProductResponse>
+{
+    public ProductResponse Handle(UpdateMtua command, IPlatform platform)
+    {
+        if (Containers.Find(platform, command.NId!, out var container) is { } missing)
+        {
+            return missing;
+        }
+
+        if (command.Quantity < 0)
+        {
+            return ProductResponse.Fail(ProductErrors.InvalidQuantity, "Quantity cannot be negative.");
+        }
+
+        if (!string.IsNullOrEmpty(command.MaterialNId) && !platform.ProjectionQuery<Material>().Any(m => m.NId == command.MaterialNId))
+        {
+            return ProductResponse.Fail(ProductErrors.UnknownMaterial, $"Material {command.MaterialNId} does not exist.");
+        }
+
+        container.Quantity = command.Quantity ?? container.Quantity;
+        container.MaterialNId = command.ClearMaterial ? null : command.MaterialNId ?? container.MaterialNId;
+        platform.Submit(container);
+        return ProductResponse.Of(container);
+    }
+}
+
+/// <summary>
+/// Đặt một vật chứa ở một equipment. Vật chứa đang nằm trong vật chứa khác thì được gỡ ra trước; vật chứa cha không được đếm
+/// lại (việc đó của người dùng sản phẩm).
+/// </summary>
+[Command<ProductOperationBlock>]
+public sealed class MoveMtua : ICommand<ProductResponse>
+{
+    [Mandatory]
+    public string? NId { get; init; }
+
+    [Mandatory]
+    public string? EquipmentNId { get; init; }
+}
+
+internal sealed class MoveMtuaHandler : ICommandHandler<MoveMtua, ProductResponse>
+{
+    public ProductResponse Handle(MoveMtua command, IPlatform platform)
+    {
+        if (Containers.Find(platform, command.NId!, out var container) is { } missing)
+        {
+            return missing;
+        }
+
+        if (command.EquipmentNId != EquipmentLevels.NotApplicable && !platform.ProjectionQuery<Equipment>().Any(e => e.NId == command.EquipmentNId))
+        {
+            return ProductResponse.Fail(ProductErrors.UnknownEquipment, $"Equipment {command.EquipmentNId} does not exist.");
+        }
+
+        container.ParentMtuaNId = null;
+        container.EquipmentNId = command.EquipmentNId;
+        platform.Submit(container);
+        return ProductResponse.Of(container);
+    }
+}
+
+/// <summary>Xóa mềm một vật chứa rỗng; tạo lại cùng NId được. Vật chứa còn hàng thì từ chối.</summary>
+[Command<ProductOperationBlock>]
+public sealed class DeleteMtua : ICommand<ProductResponse>
+{
+    [Mandatory]
+    public string? NId { get; init; }
+}
+
+internal sealed class DeleteMtuaHandler : ICommandHandler<DeleteMtua, ProductResponse>
+{
+    public ProductResponse Handle(DeleteMtua command, IPlatform platform)
+    {
+        if (Containers.Find(platform, command.NId!, out var container) is { } missing)
+        {
+            return missing;
+        }
+
+        if (platform.Query<Mtu>().Any(m => m.ParentMtuaNId == container.NId) || platform.Query<Mtua>().Any(c => c.ParentMtuaNId == container.NId))
+        {
+            return ProductResponse.Fail(ProductErrors.ContainerNotEmpty, $"MTUA {container.NId} still holds items.");
+        }
+
+        platform.Delete(container);
+        return ProductResponse.Of(container);
+    }
+}
+
+internal static class Containers
+{
+    public static ProductResponse? Find(IPlatform platform, string nid, out Mtua container)
+    {
+        container = platform.Query<Mtua>().SingleOrDefault(c => c.NId == nid)!;
+        return container is null ? ProductResponse.Fail(ProductErrors.UnknownContainer, $"MTUA {nid} does not exist.") : null;
     }
 }
 

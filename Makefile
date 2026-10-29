@@ -15,7 +15,7 @@ PYTHON   := $(shell python3 --version >/dev/null 2>&1 && echo python3 || echo py
 BACKUP_DIR := $(shell grep -E '^NVM_BACKUP_DIR=' .env 2>/dev/null | cut -d= -f2-)
 
 .DEFAULT_GOAL := help
-.PHONY: help up down down-v reset ps logs build test ci hooks format format-check clean backup secret-check cleanroom update-db master-data line-polling linedb line-sim line-relay line-load keycloak-users mom web web-ci lab-web views quality-config
+.PHONY: help up down down-v reset ps logs build test ci hooks format format-check clean backup secret-check cleanroom update-db master-data line-polling linedb line-sim line-relay line-load keycloak-users mom web web-ci lab-web views quality-config sql-key
 
 help:
 	@echo "NovaVolt MOM v2"
@@ -36,9 +36,12 @@ help:
 	@echo "  Chay MOM"
 	@echo "    make update-db     Update Database: can schema DB MOM theo model (quyen sa)"
 	@echo "    make master-data   Nap master data bang suite (suites/), bo qua suite da co trong lich su"
+	@echo "    make quality-config Nap cau hinh huy theo ca (suites/quality), sau master data"
+	@echo "    make views         Cai SQL tay cua team: view cua reading model, procedure thanh pham"
+	@echo "    make sql-key       Dat key Nv.SqlConnection (chuoi ket noi cho procedure) tu .env"
 	@echo "    make linedb        Cai schema LineDB (bang may, bang trung gian, role MOM); RESET=1 xoa sach"
 	@echo "    make line-polling  Bat duong poll cho tin tu xuong (signal rule moi phut, key Nv.LineTransfer)"
-	@echo "    make line-sim      May ghi mot ca cua mot line vao LineDB: LINE=1 CELLS=24"
+	@echo "    make line-sim      May ghi mot ca cua mot line vao LineDB: LINE=1 CELLS=24, PACK=1 dong tote va pallet, EOLV=1 do cuoi"
 	@echo "    make line-relay    Lich gui cua duong relay (send_pending moi phut)"
 	@echo "    make line-load     Do tai: TAKT=5 (gap doi danh dinh) MINUTES=60, RELAY=1 de chay kem lich relay"
 	@echo "    make keycloak-users Dat mat khau user thu cua realm tu NVM_DEMO_USER_PASSWORD"
@@ -99,6 +102,7 @@ ci: cleanroom
 	dotnet test --solution $(SOLUTION) -c Release --no-build --filter-not-trait "Category=Benchmark"
 	# Benchmark chay rieng, khong tranh CPU voi cac bo test tich hop khac.
 	dotnet test --project tests/Integration/Nvm.FoundationTests -c Release --no-build --filter-trait "Category=Benchmark"
+	dotnet test --project tests/Integration/Nvm.SolutionTests -c Release --no-build --filter-trait "Category=Benchmark"
 
 # Git không tự bật hook khi clone; core.hooksPath trỏ sang thư mục được version hoá.
 hooks:
@@ -137,6 +141,9 @@ quality-config:
 views:
 	dotnet run --project src/Solution/Nvm.Mom.Host --no-launch-profile -- --install-views
 
+sql-key:
+	dotnet run --project src/Solution/Nvm.Mom.Host --no-launch-profile -- --set-sql-connection-key
+
 linedb:
 	dotnet run --project src/Solution/Nvm.Mom.Host --no-launch-profile -- --install-linedb $(if $(RESET),--reset,)
 
@@ -145,7 +152,7 @@ line-polling:
 
 LINESIM := dotnet run --project src/Shopfloor/Nvm.LineSimulator --
 line-sim:
-	$(LINESIM) run --line $(or $(LINE),1) --cells $(or $(CELLS),24)
+	$(LINESIM) run --line $(or $(LINE),1) --cells $(or $(CELLS),24) $(if $(PACK),--pack) $(if $(EOLV),--eolv)
 
 line-relay:
 	$(LINESIM) relay

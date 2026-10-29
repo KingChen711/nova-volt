@@ -1,0 +1,23 @@
+{
+  "Name": "MapApp_004_PartAddresses",
+  "BreakOnError": true,
+  "TestDefinitions": [
+    {
+      "Name": "SetPartAddress",
+      "Csv": "part-addresses.csv",
+      "TestSteps": [
+        {
+          "ID": "SetPartAddress",
+          "StepType": "Command",
+          "App": "MapApp",
+          "Name": "SetPartAddress",
+          "Parameters": {
+            "MaterialNId": "#TEST_CSV.MaterialNId#",
+            "StoreAddress": "#TEST_CSV.StoreAddress#",
+            "KanbanNId": "#TEST_CSV.KanbanNId#"
+          }
+        }
+      ]
+    }
+  ]
+}

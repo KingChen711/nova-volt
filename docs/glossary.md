@@ -66,8 +66,18 @@ Thêm khái niệm mới vào đây cùng lúc thêm vào model (AGENTS.md §5.8
 | **`n/a`** | Equipment đặc biệt của hàng chưa có vị trí cụ thể |
 | **Buffer** | Chỗ chứa hàng thật đặt tại một equipment; mỗi lô chỉ thuộc một buffer, có thể giới hạn material bằng whitelist |
 | **Logistic request** | Yêu cầu chở một MTU tới equipment đích qua các chặng của luồng |
-| **EOLV** | Bước đo cuối của thành phẩm họ A, làm sau khi kit đã lên tote và pallet |
+| **EOLV** | Bước đo cuối của thành phẩm họ A, làm sau khi kit đã lên tote và pallet; tin đo gỡ tote chứa kit khỏi pallet |
 | **Họ A / Họ B** | Hai họ thành phẩm theo khách: kit hai module / một module mỗi tote |
+| **Kit** | Thành phẩm họ A: hai module ghép ở trạm đóng tote, là sản phẩm của WO `Kit_LN<n>` |
+| **Tote / pallet** | Vật chứa (MTUA) của thành phẩm: tote chứa một kit hoặc một module; pallet chứa đủ số tote chuẩn của part. Trạng thái theo state machine dạng dữ liệu của team (pallet: Empty, Full, Picked, Staged, Loaded) |
+| **Bước đóng gói (`PackingOperation`)** | Bảng cấu hình của team: tin ở mã bước nào thì đóng tote, xếp pallet, hay gỡ tote sau bước đo cuối. Bước không có trong bảng đối chiếu bước chỉ đóng gói, không ghi WO |
+| **Số chuẩn (`PalletQty`)** | Property của material: số tote một pallet đủ (họ A 8, họ B 6 ở NV1); cũng là sức chứa của gói lẻ |
+| **`BuildDate`** | Ngày đóng pallet, ghi mỗi lần nạp tote; đề xuất lấy hàng theo FIFO xếp theo ngày này, không theo ngày cất kho |
+| **Store address** | Ô kho cất thành phẩm của một part, trong bảng địa chỉ part (`PartAddress`) của `MapApp` |
+| **Bản ghi FIFO** | Dòng `FifoPallet`: pallet ở đâu, trạng thái, ngày đóng; subscriber ghi sau khi lệnh chuyển pallet commit |
+| **Dựng lại pallet** | Màn của xưởng sau bước đo cuối: nạp lại tote đã đo vào một pallet, Completed khi đủ số chuẩn |
+| **Kiểm pallet** | Hàng bị giữ hoặc hủy trong cây thành phần (tới 13 tầng), năm điều kiểm số liệu, QA Check (bước kiểm mà lấy hàng dùng) |
+| **Gói lẻ (CKD)** | Vật chứa đóng sản phẩm thẳng vào, không qua tote; mã theo tiền tố và độ dài trong configuration key |
 
 ## Phía xưởng và hậu cần
 
@@ -78,6 +88,9 @@ Thêm khái niệm mới vào đây cùng lúc thêm vào model (AGENTS.md §5.8
 | **Trạng thái dòng tin** | `NEW`, `SENT`, `DONE`, `NOTIFY_ERR`, `RETRY`, `FAILED` |
 | **Mã lỗi ghép** | Mã lỗi ghi về LineDB: tiền tố theo loại xử lý nối mã gốc |
 | **Trailer / lịch xe** | Thùng xe kéo; một chuyến dỡ hoặc chất của nó |
+| **Trailer kho** | Trailer đỗ trong nhà máy làm kho tạm: loại thành phẩm (`FGStorage`, theo dõi từng pallet, một part mỗi trailer) hoặc kho chung (`GenericStorage`, khai bằng ghi chú). Trạng thái Free → Empty → Tapped → Full |
+| **Complete Load** | Chốt trailer kho đầy: lịch sang chờ gọi đi giao, hoặc chờ đo nếu còn pallet chưa đo |
+| **Yêu cầu kéo xe** | Created → Accepted → Picked → Dropped; tới Dropped thì trailer (và pallet trong trailer kho) ở đích |
 | **Skid** | Kiện hàng: của nhà cung cấp khi nhận, của đơn bán khi xuất |
 | **Placard / yard pass** | Nhãn dán trailer cho biết chở gì / vé cho xe rời nhà máy |
 | **Logical dock** | Nhóm thiết bị mang mã dock của nhà cung cấp, gắn vào khu dock thật |

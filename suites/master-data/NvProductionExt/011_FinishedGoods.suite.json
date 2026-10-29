@@ -1,0 +1,65 @@
+{
+  "Name": "NvProductionExt_011_FinishedGoods",
+  "BreakOnError": true,
+  "TestDefinitions": [
+    {
+      "Name": "Keys",
+      "Csv": "finished-goods-keys.csv",
+      "TestSteps": [
+        {
+          "ID": "SetKey",
+          "StepType": "Command",
+          "App": "Foundation",
+          "Name": "SetConfigurationKey",
+          "Parameters": {
+            "NId": "#TEST_CSV.NId#",
+            "Val": "#TEST_CSV.Val#",
+            "Type": "#TEST_CSV.Type#",
+            "Category": "#TEST_CSV.Category#"
+          }
+        }
+      ]
+    },
+    {
+      "Name": "EolvRetestTimer",
+      "TestSteps": [
+        {
+          "ID": "GetTimer",
+          "StepType": "Read",
+          "App": "Foundation",
+          "Name": "SystemTimer",
+          "Query": {
+            "$filter": "NId eq 'EOLV_RETEST'",
+            "$top": "1"
+          },
+          "IfThisSkipNext": true
+        },
+        {
+          "ID": "CreateTimer",
+          "StepType": "Command",
+          "App": "Foundation",
+          "Name": "CreateTimer",
+          "Parameters": {
+            "NId": "EOLV_RETEST",
+            "FirstDueOn": "2026-10-26T10:00:00Z",
+            "IntervalSeconds": 86400
+          }
+        },
+        {
+          "ID": "DefineRule",
+          "StepType": "Command",
+          "App": "Foundation",
+          "Name": "DefineSignalRule",
+          "Parameters": {
+            "NId": "EOLV_RETEST",
+            "Trigger": "Timer",
+            "TimerNId": "EOLV_RETEST",
+            "App": "ShipApp",
+            "Command": "CheckEolvRetest",
+            "Parameters": "{}"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "Name": "NvProductionExt_012_FinishedGoodsSchedules",
+  "BreakOnError": true,
+  "TestDefinitions": [
+    {
+      "Name": "SetProcessSchedule",
+      "Csv": "finished-goods-process-schedules.csv",
+      "TestSteps": [
+        {
+          "ID": "SetProcessSchedule",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_SetProcessSchedule",
+          "Parameters": {
+            "ProcessNId": "#TEST_CSV.ProcessNId#",
+            "WorkOrderPrefix": "#TEST_CSV.WorkOrderPrefix#",
+            "MinimumFreezeHours": "#TEST_CSV.MinimumFreezeHours#"
+          }
+        }
+      ]
+    },
+    {
+      "Name": "CreateDefaultWorkOrder",
+      "Csv": "finished-goods-default-work-orders.csv",
+      "TestSteps": [
+        {
+          "ID": "GetDefault",
+          "StepType": "Read",
+          "App": "Production",
+          "Name": "DefaultWorkOrder",
+          "Query": {
+            "$filter": "NId eq '#TEST_CSV.ScheduleNId#|#TEST_CSV.ProcessNId#'",
+            "$top": "1"
+          },
+          "IfThisSkipNext": true
+        },
+        {
+          "ID": "CreateDefault",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_CreateDefaultWorkOrder",
+          "Parameters": {
+            "ScheduleNId": "#TEST_CSV.ScheduleNId#",
+            "ProcessNId": "#TEST_CSV.ProcessNId#"
+          }
+        }
+      ]
+    }
+  ]
+}

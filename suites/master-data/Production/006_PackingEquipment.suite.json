@@ -1,0 +1,35 @@
+{
+  "Name": "Production_006_PackingEquipment",
+  "BreakOnError": true,
+  "TestDefinitions": [
+    {
+      "Name": "CreateEquipment",
+      "Csv": "packing-equipment.csv",
+      "TestSteps": [
+        {
+          "ID": "GetEquipment",
+          "StepType": "Read",
+          "App": "Production",
+          "Name": "Equipment",
+          "Query": {
+            "$filter": "NId eq '#TEST_CSV.NId#'",
+            "$top": "1"
+          },
+          "IfThisSkipNext": true
+        },
+        {
+          "ID": "CreateEquipment",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "CreateEquipment",
+          "Parameters": {
+            "NId": "#TEST_CSV.NId#",
+            "Name": "#TEST_CSV.Name#",
+            "Level": "#TEST_CSV.Level#",
+            "ParentNId": "#TEST_CSV.ParentNId#"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,3 +1,4 @@
+using Nvm.Foundation;
 using Nvm.Product;
 
 namespace Nvm.ProductTests;
@@ -105,5 +106,70 @@ public sealed class MtuBehaviorTests
         p.Fails(new SplitMtu { NId = "LOT-1", Quantity = 0.91m }, ProductErrors.InvalidQuantity);
         p.Ok(new SplitMtu { NId = "LOT-1", Quantity = 0.9m }).NId.ShouldBe("LOT-1.3");
         p.Mtu("LOT-1").Quantity.ShouldBe(0m);
+    }
+
+    [Fact]
+    public async Task Container_status_follows_its_data_driven_machine_and_forcing_needs_a_defined_status()
+    {
+        // State machine của vật chứa là dữ liệu của người dùng sản phẩm, như của WO.
+        var p = await ProductHarness.CreateAsync();
+        foreach (var status in new[] { "Empty", "Full" })
+        {
+            p.Executor.Execute("Foundation", new DefineStatus { Machine = "LabPallet", Status = status });
+        }
+
+        p.Executor.Execute("Foundation", new DefineTransition { Machine = "LabPallet", FromStatus = "", ToStatus = "Empty" });
+        p.Executor.Execute("Foundation", new DefineTransition { Machine = "LabPallet", FromStatus = "Empty", ToStatus = "Full" });
+
+        p.Ok(new CreateMtua { NId = "PAL-S", ContainerType = "Pallet", StateMachine = "LabPallet", Status = "Empty" });
+        p.Fails(new CreateMtua { NId = "PAL-T", ContainerType = "Pallet", StateMachine = "LabPallet" }, ProductErrors.InvalidContainerStatus);
+        p.Fails(new CreateMtua { NId = "PAL-U", ContainerType = "Pallet", StateMachine = "LabPallet", Status = "Full" }, 7101);
+        p.Ok(new SetMtuaStatus { NId = "PAL-S", Status = "Full" });
+        p.Fails(new SetMtuaStatus { NId = "PAL-S", Status = "Empty" }, 7101);
+        p.Ok(new SetMtuaStatusForced { NId = "PAL-S", Status = "Empty" });
+        p.Fails(new SetMtuaStatusForced { NId = "PAL-S", Status = "Staged" }, ProductErrors.InvalidContainerStatus);
+
+        p.Read<Mtua>(q => q.Where(c => c.NId == "PAL-S")).Single().Status.ShouldBe("Empty");
+        p.Ok(new CreateMtua { NId = "BOX-1", ContainerType = "Box" });
+        p.Fails(new SetMtuaStatus { NId = "BOX-1", Status = "Full" }, ProductErrors.InvalidContainerStatus);
+    }
+
+    [Fact]
+    public async Task Container_quantity_and_material_are_set_by_the_caller_and_never_counted_by_the_product_layer()
+    {
+        var p = await ProductHarness.CreateAsync();
+        p.Ok(new CreateMtua { NId = "PAL-Q", ContainerType = "Pallet" });
+        p.Ok(new CreateMtua { NId = "TOTE-Q", ContainerType = "Tote" });
+        p.Ok(new AssembleIntoMtua { ChildNId = "TOTE-Q", ContainerNId = "PAL-Q" });
+
+        p.Read<Mtua>(q => q.Where(c => c.NId == "PAL-Q")).Single().Quantity.ShouldBe(0m);
+        p.Ok(new UpdateMtua { NId = "PAL-Q", Quantity = 1, MaterialNId = ProductHarness.Module });
+        p.Fails(new UpdateMtua { NId = "PAL-Q", Quantity = -1 }, ProductErrors.InvalidQuantity);
+        p.Fails(new UpdateMtua { NId = "PAL-Q", MaterialNId = "missing" }, ProductErrors.UnknownMaterial);
+        var pallet = p.Read<Mtua>(q => q.Where(c => c.NId == "PAL-Q")).Single();
+        (pallet.Quantity, pallet.MaterialNId).ShouldBe((1m, ProductHarness.Module));
+
+        p.Ok(new UpdateMtua { NId = "PAL-Q", ClearMaterial = true });
+        p.Read<Mtua>(q => q.Where(c => c.NId == "PAL-Q")).Single().MaterialNId.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task Moving_a_container_takes_it_out_of_its_parent_and_deleting_needs_it_empty_then_the_code_is_free_again()
+    {
+        var p = await ProductHarness.CreateAsync();
+        p.Ok(new CreateMtua { NId = "TRL-M", ContainerType = "StorageTrailer" });
+        p.Ok(new CreateMtua { NId = "PAL-M", ContainerType = "Pallet" });
+        p.Ok(new AssembleIntoMtua { ChildNId = "PAL-M", ContainerNId = "TRL-M" });
+
+        p.Fails(new DeleteMtua { NId = "TRL-M" }, ProductErrors.ContainerNotEmpty);
+        p.Fails(new MoveMtua { NId = "PAL-M", EquipmentNId = "missing" }, ProductErrors.UnknownEquipment);
+        p.Ok(new MoveMtua { NId = "PAL-M", EquipmentNId = ProductHarness.Dock });
+
+        var pallet = p.Read<Mtua>(q => q.Where(c => c.NId == "PAL-M")).Single();
+        (pallet.ParentMtuaNId, pallet.EquipmentNId).ShouldBe((null, ProductHarness.Dock));
+        p.Ok(new DeleteMtua { NId = "TRL-M" });
+        p.Read<Mtua>(q => q.Where(c => c.NId == "TRL-M")).ShouldBeEmpty();
+        p.Ok(new CreateMtua { NId = "TRL-M", ContainerType = "StorageTrailer" });
+        p.Fails(new MoveMtua { NId = "PAL-NONE", EquipmentNId = ProductHarness.Dock }, ProductErrors.UnknownContainer);
     }
 }

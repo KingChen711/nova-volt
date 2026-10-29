@@ -45,17 +45,24 @@ export const areas: Area[] = [
     links: [
       { href: "/area/line", label: "Lệnh theo ca" },
       { href: "/area/line/messages", label: "Tin từ xưởng" },
+      { href: "/area/line/rebuild", label: "Dựng lại pallet" },
     ],
   },
   {
     slug: "yard", label: "Cổng và dock", group: "Hậu cần", href: "/area/yard",
-    description: "Đăng ký xe, kéo xe, nhận skid, chuyển skid", roles: ["yard"], icon: Truck, milestone: "R9",
-    screens: ["Đăng ký xe ở cổng", "Yêu cầu kéo xe", "Nhận skid ở dock", "Chuyển skid giữa hai xe", "Bảng dỡ hàng"],
+    description: "Trailer kho, kéo xe; đăng ký xe, nhận skid, chuyển skid", roles: ["yard", "shipping"], icon: Truck, milestone: "R7, R9",
+    screens: ["Trailer kho", "Yêu cầu kéo xe", "Đăng ký xe ở cổng", "Nhận skid ở dock", "Chuyển skid giữa hai xe", "Bảng dỡ hàng"],
+    links: [{ href: "/area/yard", label: "Trailer kho" }],
   },
   {
     slug: "finished-goods", label: "Thành phẩm", group: "Hậu cần", href: "/area/finished-goods",
-    description: "Cất kho, đo cuối, kiểm pallet, picking, staging, chất xe", roles: ["shipping"], icon: PackageOpen,
-    milestone: "R7–R8", screens: ["Cất kho", "Đo cuối EOLV", "Kiểm pallet", "Picking", "Staging", "Chất xe"],
+    description: "Cất kho, kiểm pallet, gỡ pallet, gói lẻ; picking, staging, chất xe", roles: ["shipping", "quality"], icon: PackageOpen,
+    milestone: "R7–R8", screens: ["Cất kho", "Kiểm pallet", "Gỡ pallet và gói lẻ", "Picking", "Staging", "Chất xe"],
+    links: [
+      { href: "/area/finished-goods", label: "Cất kho" },
+      { href: "/area/finished-goods/checks", label: "Kiểm pallet" },
+      { href: "/area/finished-goods/repack", label: "Gỡ pallet và gói lẻ" },
+    ],
   },
   {
     slug: "andon", label: "Gọi hàng", group: "Hậu cần", href: "/area/andon",

@@ -15,7 +15,7 @@ public sealed class LabAppDefinition : AppDefinition
         .Command<CreateLabOrderWithNote>().Command<CreateLabOrderWithMaterial>().Command<SetLabOrderSupplier>()
         .Command<CreateAndCountLabOrders>().Command<ReadMaterialWithQuery>().Command<SetLabOrderStatus>()
         .Command<RecordLabTick>()
-        .ReadingFunction<OrdersOfMaterial>();
+        .ReadingFunction<OrdersOfMaterial>().ReadingFunction<FailingOrders>();
 }
 
 /// <summary>App thứ hai: cùng command, nhưng không bật pre-check nào; không import <see cref="LabOrderNote"/>.</summary>
@@ -165,4 +165,12 @@ public sealed class OrdersOfMaterial : IReadingFunction<OrdersOfMaterialParamete
 {
     public IQueryable<LabOrderSummary> Read(OrdersOfMaterialParameters parameters, IReadingPlatform platform) =>
         platform.ProjectionQuery<LabOrderSummary>().Where(s => s.MaterialNId == parameters.MaterialNId);
+}
+
+/// <summary>Reading function ném lỗi ngay lúc gọi, như code của team gặp configuration key thiếu (lab L18).</summary>
+[ReadingFunction(LabApp.Name)]
+public sealed class FailingOrders : IReadingFunction<OrdersOfMaterialParameters, LabOrderSummary>
+{
+    public IQueryable<LabOrderSummary> Read(OrdersOfMaterialParameters parameters, IReadingPlatform platform) =>
+        throw new InvalidOperationException("Configuration key Lab.Connection is missing.");
 }

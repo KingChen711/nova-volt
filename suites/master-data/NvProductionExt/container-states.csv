@@ -1,0 +1,17 @@
+Machine,Status
+PalletStateMachine,Empty
+PalletStateMachine,Full
+PalletStateMachine,Picked
+PalletStateMachine,Staged
+PalletStateMachine,Loaded
+ToteStateMachine,New
+ToteStateMachine,Full
+ToteStateMachine,Empty
+CkdStateMachine,Empty
+CkdStateMachine,Full
+StorageTrailerStateMachine,Empty
+StorageTrailerStateMachine,Full
+TrailerStateMachine,Free
+TrailerStateMachine,Empty
+TrailerStateMachine,Tapped
+TrailerStateMachine,Full

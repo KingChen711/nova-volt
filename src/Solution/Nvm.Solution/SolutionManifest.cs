@@ -19,6 +19,8 @@ public static class SolutionManifest
     public const string LineLead = "line-lead";
     public const string Quality = "quality";
     public const string Logistics = "logistics";
+    public const string Yard = "yard";
+    public const string Shipping = "shipping";
 
     private const string Ext = NvProductionExtApp.Name + "_";
 
@@ -73,7 +75,33 @@ public static class SolutionManifest
         production.Allow(
             [nameof(CreateLogisticRequest), nameof(ReleaseLogisticRequest), nameof(MoveLogisticRequestWithinFlow), nameof(CompleteLogisticRequest)],
             Logistics);
+
+        // Đóng gói: dựng lại pallet sau bước đo cuối là màn của xưởng.
+        production.Allow(
+            [Ext + nameof(StartPalletRebuild), Ext + nameof(AddToteToRebuiltPallet), Ext + nameof(CompletePalletRebuild)],
+            LineOperator, LineLead);
         solution.Apps.Add(production);
+
+        // Thành phẩm: cất kho, gỡ pallet, gói lẻ cho người kho; kiểm pallet cho chất lượng.
+        var ship = new AppConfiguration(ShipApp.Name) { RestrictCommands = true };
+        ship.Allow(
+            [nameof(StorePallet), nameof(UnloadTotesFromPallet), nameof(OpenCkdPackage), nameof(AddItemToCkdPackage),
+             nameof(RemoveItemFromCkdPackage)],
+            Shipping);
+        ship.Allow([nameof(PalletStatusValidation)], Quality, Shipping);
+        solution.Apps.Add(ship);
+
+        // Trailer kho: người ở dock nạp, chốt, dỡ; người điều phối và người kéo xe làm yêu cầu kéo.
+        var yard = new AppConfiguration(YardApp.Name) { RestrictCommands = true };
+        yard.Allow(
+            [nameof(CreateTrailer), nameof(ArriveEmptyTrailer), nameof(SetTrailerAsStorage), nameof(UnsetTrailerAsStorage),
+             nameof(CallStorageTrailer), nameof(CreateTrailerMovementRequest), nameof(UpdateTrailerMovement)],
+            Yard);
+        yard.Allow(
+            [nameof(LoadPalletIntoStorageTrailer), nameof(CompleteStorageTrailerLoad), nameof(UnloadStorageTrailer),
+             nameof(UnloadPalletFromStorageTrailer)],
+            Yard, Shipping);
+        solution.Apps.Add(yard);
         return solution;
     }
 }

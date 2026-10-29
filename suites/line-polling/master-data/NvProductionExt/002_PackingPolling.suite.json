@@ -1,0 +1,33 @@
+{
+  "Name": "LinePolling_002_PackingSignalRules",
+  "BreakOnError": true,
+  "TestDefinitions": [
+    {
+      "Name": "SetLinePolling",
+      "Csv": "packing-line-polling.csv",
+      "TestSteps": [
+        {
+          "ID": "GetRule",
+          "StepType": "Read",
+          "App": "Foundation",
+          "Name": "SignalRule",
+          "Query": {
+            "$filter": "NId eq 'LINE_POLL_#TEST_CSV.OperationCode#'",
+            "$top": "1"
+          },
+          "IfThisSkipNext": true
+        },
+        {
+          "ID": "SetPolling",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_SetLinePolling",
+          "Parameters": {
+            "OperationCode": "#TEST_CSV.OperationCode#",
+            "IntervalSeconds": "#TEST_CSV.IntervalSeconds#"
+          }
+        }
+      ]
+    }
+  ]
+}

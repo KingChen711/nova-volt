@@ -1,0 +1,33 @@
+{
+  "Name": "MapApp_002_LineFailureCodes",
+  "BreakOnError": true,
+  "TestDefinitions": [
+    {
+      "Name": "LineFailureCode",
+      "Csv": "line-failures.csv",
+      "TestSteps": [
+        {
+          "ID": "GetLineFailureCode",
+          "StepType": "Read",
+          "App": "MapApp",
+          "Name": "LineFailureCode",
+          "Query": {
+            "$filter": "NId eq '#TEST_CSV.NId#'",
+            "$top": "1"
+          },
+          "IfThisSkipNext": true
+        },
+        {
+          "ID": "SetLineFailureCode",
+          "StepType": "Command",
+          "App": "MapApp",
+          "Name": "SetLineFailureCode",
+          "Parameters": {
+            "NId": "#TEST_CSV.NId#",
+            "DefectNId": "#TEST_CSV.DefectNId#"
+          }
+        }
+      ]
+    }
+  ]
+}

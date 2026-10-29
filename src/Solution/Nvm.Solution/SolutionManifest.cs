@@ -57,7 +57,15 @@ public static class SolutionManifest
              nameof(RemoveFromMtua), nameof(RecordWorkOrderOutput), nameof(RecordOperationProgress), nameof(RecordConsumption),
              nameof(AttachMtuToBuffer), nameof(DetachMtuFromBuffer)],
             LineOperator, LineLead);
-        production.Allow([nameof(CreateNonConformance), nameof(HoldMtus)], LineOperator, LineLead, Quality);
+        production.Allow([nameof(CreateNonConformance), nameof(HoldMtus), Ext + nameof(SuspectHoldMtu)], LineOperator, LineLead, Quality);
+        production.Allow([Ext + nameof(HandleLineNonConformances), Ext + nameof(HandleLineShrink)], LineLead);
+        production.Allow(
+            [Ext + nameof(ValidateMtuList), Ext + nameof(CreateBulkNonConformance), Ext + nameof(SentenceNonConformances),
+             Ext + nameof(AddMtuToNonConformance), Ext + nameof(TraceNonConformance), Ext + nameof(SetNonConformanceOperation),
+             Ext + nameof(LinkNonConformanceReason), Ext + nameof(NextQualityIdentifier), Ext + nameof(ListDisassemblyComponents),
+             Ext + nameof(DisassembleProduct), Ext + nameof(UndoDisassembly), Ext + nameof(SetNonConformanceSupplier),
+             Ext + nameof(DeclareSupplierIssue)],
+            Quality);
         production.Allow(
             [nameof(SetNonConformanceStatus), nameof(ReleaseMtus), nameof(ImportContainmentRequest), nameof(ReleaseContainmentRequest),
              nameof(CloseContainmentRequest)],

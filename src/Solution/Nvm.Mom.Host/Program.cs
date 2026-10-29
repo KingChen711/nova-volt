@@ -32,16 +32,30 @@ if (args.Contains("--update-database"))
     return;
 }
 
+if (args.Contains("--install-views"))
+{
+    // Bước deploy riêng sau Update Database: view của reading model là phần cài tay, Update Database không tạo (lab L15).
+    var views = ReadingViews.Install(Sql(sqlPort, "sa", DotEnvLoader.Required("NVM_MSSQL_SA_PASSWORD")), registry);
+    Console.WriteLine($"Views: {string.Join(", ", views)}.");
+    return;
+}
+
 var connectionString = Sql(sqlPort, "nvm_app", DotEnvLoader.Required("NVM_MSSQL_APP_PASSWORD"));
 
-if (args.Contains("--load-master-data") || args.Contains("--enable-line-polling"))
+if (args.Contains("--load-master-data") || args.Contains("--enable-line-polling") || args.Contains("--load-quality-config"))
 {
     // Bước deploy sau Update Database: chạy suite theo masterDataOrder, bỏ qua suite đã có trong lịch sử. --enable-line-polling
     // là bước riêng của môi trường dùng đường poll cho tin từ xưởng (suites/line-polling), có lịch sử riêng.
+    // --load-quality-config nạp cấu hình hủy theo ca (suites/quality), chạy sau master data vì cần PS.
     var root = Path.GetDirectoryName(envFile ?? throw new InvalidOperationException(".env not found above the host."))!;
-    var polling = args.Contains("--enable-line-polling");
-    var suites = Path.Combine(root, "suites", polling ? "line-polling" : string.Empty);
-    var historyName = polling ? $"LinePollingHistory.{plant}.txt" : MasterDataDeployment.HistoryFileName.Replace(".txt", $".{plant}.txt", StringComparison.Ordinal);
+    var step = args.Contains("--enable-line-polling") ? "line-polling" : args.Contains("--load-quality-config") ? "quality" : null;
+    var suites = Path.Combine(root, "suites", step ?? string.Empty);
+    var historyName = step switch
+    {
+        "line-polling" => $"LinePollingHistory.{plant}.txt",
+        "quality" => $"QualityHistory.{plant}.txt",
+        _ => MasterDataDeployment.HistoryFileName.Replace(".txt", $".{plant}.txt", StringComparison.Ordinal),
+    };
     var history = Path.Combine(root, "suites", ".history", historyName);
     Directory.CreateDirectory(Path.GetDirectoryName(history)!);
     var executor = new CommandExecutor(connectionString, registry, solution, TimeProvider.System, new InMemoryTraceSink(), new InMemoryEventPublisher());

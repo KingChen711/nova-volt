@@ -15,7 +15,7 @@ PYTHON   := $(shell python3 --version >/dev/null 2>&1 && echo python3 || echo py
 BACKUP_DIR := $(shell grep -E '^NVM_BACKUP_DIR=' .env 2>/dev/null | cut -d= -f2-)
 
 .DEFAULT_GOAL := help
-.PHONY: help up down down-v reset ps logs build test ci hooks format format-check clean backup secret-check cleanroom update-db master-data line-polling linedb line-sim line-relay line-load keycloak-users mom web web-ci lab-web
+.PHONY: help up down down-v reset ps logs build test ci hooks format format-check clean backup secret-check cleanroom update-db master-data line-polling linedb line-sim line-relay line-load keycloak-users mom web web-ci lab-web views quality-config
 
 help:
 	@echo "NovaVolt MOM v2"
@@ -128,6 +128,14 @@ update-db:
 
 master-data:
 	dotnet run --project src/Solution/Nvm.Mom.Host --no-launch-profile -- --load-master-data
+
+# Cau hinh huy theo ca (suites/quality): sau master-data vi can production schedule.
+quality-config:
+	dotnet run --project src/Solution/Nvm.Mom.Host --no-launch-profile -- --load-quality-config
+
+# View cua reading model (danh sach NC): buoc rieng, Update Database khong tao.
+views:
+	dotnet run --project src/Solution/Nvm.Mom.Host --no-launch-profile -- --install-views
 
 linedb:
 	dotnet run --project src/Solution/Nvm.Mom.Host --no-launch-profile -- --install-linedb $(if $(RESET),--reset,)

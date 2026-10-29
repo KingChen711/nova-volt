@@ -3,6 +3,7 @@
 --   batch  một lô có lượng (cuộn điện cực); lô nguyên liệu kèm lượng (lots)
 --   shrink hao hụt của một lô nguyên liệu
 -- Mã máy gửi đi = mã máy phía xưởng + '_' + số line; mã bước dùng chung cho mọi line.
+-- run_class: chế độ máy làm ra đơn vị đó; 1 thường, 2 trial mode, 3 flow mode (hàng chạy thử).
 
 -- Điện cực: máy phủ ra cuộn điện cực.
 CREATE TABLE elec.coater_result (
@@ -16,7 +17,7 @@ CREATE TABLE elec.coater_result (
     finished_at timestamptz   NOT NULL,
     result      text          NOT NULL,
     result_code text          NOT NULL,
-    trial       boolean       NOT NULL DEFAULT false,
+    run_class   smallint      NOT NULL DEFAULT 1,
     lots        jsonb         NOT NULL DEFAULT '[]'
 );
 
@@ -27,7 +28,7 @@ BEGIN
     VALUES ('elec', 'elec.coater_result', NEW.op_code, NEW.machine || '_' || NEW.line_no, NEW.coil_id,
             jsonb_build_object('kind', 'batch', 'batch_id', NEW.coil_id, 'length', NEW.length_m,
                                'start', NEW.started_at, 'end', NEW.finished_at, 'result', NEW.result,
-                               'code', NEW.result_code, 'trial', NEW.trial, 'lots', NEW.lots),
+                               'code', NEW.result_code, 'class', NEW.run_class, 'lots', NEW.lots),
             NEW.finished_at);
     RETURN NEW;
 END $$;
@@ -45,6 +46,7 @@ CREATE TABLE elec.shrink_log (
     lot       text          NOT NULL,
     quantity  numeric(12,3) NOT NULL,
     unit      text          NOT NULL,
+    loss_code text          NOT NULL DEFAULT '50',
     logged_at timestamptz   NOT NULL
 );
 
@@ -54,7 +56,7 @@ BEGIN
     INSERT INTO relay.line_message (area, source_table, operation_code, equipment_code, serial, payload, produced_on)
     VALUES ('elec', 'elec.shrink_log', NEW.op_code, NEW.machine || '_' || NEW.line_no, NEW.lot,
             jsonb_build_object('kind', 'shrink', 'item', NEW.item, 'lot', NEW.lot, 'qty', NEW.quantity,
-                               'unit', NEW.unit, 'at', NEW.logged_at),
+                               'unit', NEW.unit, 'code', NEW.loss_code, 'at', NEW.logged_at),
             NEW.logged_at);
     RETURN NEW;
 END $$;
@@ -73,7 +75,7 @@ CREATE TABLE cell.assembly_result (
     finished_at    timestamptz NOT NULL,
     judge          text        NOT NULL,
     judge_code     text        NOT NULL,
-    trial          boolean     NOT NULL DEFAULT false,
+    run_class      smallint    NOT NULL DEFAULT 1,
     electrode_item text        NOT NULL,
     electrode_coil text        NOT NULL,
     separator_lot  text,
@@ -98,7 +100,7 @@ BEGIN
     VALUES ('cell', 'cell.assembly_result', NEW.op_code, NEW.machine || '_' || NEW.line_no, NEW.cell_id,
             jsonb_build_object('kind', 'unit', 'serial', NEW.cell_id, 'qty', 1, 'start', NEW.started_at,
                                'end', NEW.finished_at, 'result', NEW.judge, 'code', NEW.judge_code,
-                               'trial', NEW.trial, 'materials', materials),
+                               'class', NEW.run_class, 'materials', materials),
             NEW.finished_at);
     RETURN NEW;
 END $$;
@@ -118,7 +120,7 @@ CREATE TABLE form.charge_result (
     finished_at timestamptz NOT NULL,
     result      text        NOT NULL,
     result_code text        NOT NULL,
-    trial       boolean     NOT NULL DEFAULT false,
+    run_class   smallint    NOT NULL DEFAULT 1,
     ocv_mv      numeric(8,2)
 );
 
@@ -129,7 +131,7 @@ BEGIN
     VALUES ('form', 'form.charge_result', NEW.op_code, NEW.machine || '_' || NEW.line_no, NEW.cell_id,
             jsonb_build_object('kind', 'unit', 'serial', NEW.cell_id, 'qty', 1, 'start', NEW.started_at,
                                'end', NEW.finished_at, 'result', NEW.result, 'code', NEW.result_code,
-                               'trial', NEW.trial,
+                               'class', NEW.run_class,
                                'materials', jsonb_build_array(jsonb_build_object('item', NEW.cell_item, 'lot', NEW.cell_id))),
             NEW.finished_at);
     RETURN NEW;
@@ -151,7 +153,7 @@ CREATE TABLE mod.module_result (
     finished_at timestamptz NOT NULL,
     result      text        NOT NULL,
     result_code text        NOT NULL,
-    trial       boolean     NOT NULL DEFAULT false
+    run_class   smallint    NOT NULL DEFAULT 1
 );
 
 CREATE FUNCTION mod.module_result_to_relay() RETURNS trigger
@@ -161,7 +163,7 @@ BEGIN
     VALUES ('mod', 'mod.module_result', NEW.op_code, NEW.machine || '_' || NEW.line_no, NEW.module_id,
             jsonb_build_object('kind', 'unit', 'serial', NEW.module_id, 'qty', 1, 'start', NEW.started_at,
                                'end', NEW.finished_at, 'result', NEW.result, 'code', NEW.result_code,
-                               'trial', NEW.trial,
+                               'class', NEW.run_class,
                                'materials', (SELECT COALESCE(jsonb_agg(jsonb_build_object('item', NEW.cell_item, 'lot', c) ORDER BY o), '[]')
                                              FROM unnest(NEW.cell_ids) WITH ORDINALITY AS u(c, o))),
             NEW.finished_at);

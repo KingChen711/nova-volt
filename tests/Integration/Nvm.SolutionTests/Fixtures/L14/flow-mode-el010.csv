@@ -1,0 +1,2 @@
+NId,OperationCode,StatusCode,ScheduleNId,IsFlowMode,AutoDispositionStatus,ScrapCode,ProblemCode,ModelCode,CreatingCostCenter,ChargeToCostCenter
+OSC-L1-S1-el010-FM,el010,00,PS_NV1-B1-L1-ELEC-S1,true,SCRAP,S1,P01,STD,CC-L1,CC-L1

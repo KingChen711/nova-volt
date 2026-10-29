@@ -280,7 +280,10 @@ internal sealed class MoveMtuHandler : ICommandHandler<MoveMtu, ProductResponse>
     }
 }
 
-/// <summary>Tách một phần lô ra MTU con <c>&lt;NId&gt;.&lt;n&gt;</c> cùng material, cùng vị trí.</summary>
+/// <summary>
+/// Tách một phần lô ra MTU con <c>&lt;NId&gt;.&lt;n&gt;</c> cùng material, cùng vị trí. Tách hết được (lô mẹ còn 0), như tin hao hụt
+/// trên hệ thật; tách quá lượng thì từ chối.
+/// </summary>
 [Command<ProductOperationBlock>]
 public sealed class SplitMtu : ICommand<ProductResponse>
 {
@@ -301,10 +304,10 @@ internal sealed class SplitMtuHandler : ICommandHandler<SplitMtu, ProductRespons
         }
 
         var quantity = command.Quantity!.Value;
-        if (quantity <= 0 || quantity >= parent.Quantity)
+        if (quantity <= 0 || quantity > parent.Quantity)
         {
             return ProductResponse.Fail(ProductErrors.InvalidQuantity,
-                $"Split quantity must be between 0 and {History.Format(parent.Quantity)} (exclusive).");
+                $"Split quantity must be more than 0 and at most {History.Format(parent.Quantity)}.");
         }
 
         var prefix = parent.NId + ".";

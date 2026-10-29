@@ -21,8 +21,19 @@ public sealed class NvProductionExtApp : AppDefinition
     protected override void Define(PomBuilder pom) => pom
         .Entity<ProductionSchedule>().Entity<DefaultWorkOrder>().Entity<ProcessSchedule>().Entity<WorkOrderShift>()
         .Entity<LineExecution>()
+        .Entity<QualityCode>().Entity<MaterialSupplier>().Entity<OperationScrapConfig>().Entity<NonConformanceDetail>().Entity<MtuRunMode>()
+        .Entity<NvCounter>().Entity<LineShrinkExecution>().Entity<NonConformanceOperation>().Entity<NonConformanceReasonLink>()
+        .Entity<ContainmentIdentifier>().Entity<DisassemblyPart>().Entity<DisassemblyLog>().Entity<NonConformanceListRow>()
         .Command<CreateProductionSchedule>().Command<CreateDefaultWorkOrder>().Command<SetProcessSchedule>()
-        .Command<HandleShiftTimer>().Command<ApplyLineResults>().Command<IngestLineMessages>().Command<SetLinePolling>();
+        .Command<HandleShiftTimer>().Command<ApplyLineResults>().Command<IngestLineMessages>().Command<SetLinePolling>()
+        .Command<CreateQualityCode>().Command<UpdateQualityCode>().Command<DeleteQualityCode>().Command<SetMaterialSupplier>()
+        .Command<SetOperationScrapConfig>().Command<DeleteOperationScrapConfig>()
+        .Command<HandleLineNonConformances>().Command<HandleLineShrink>()
+        .Command<SuspectHoldMtu>().Command<ValidateMtuList>().Command<CreateBulkNonConformance>().Command<SentenceNonConformances>()
+        .Command<AddMtuToNonConformance>().Command<TraceNonConformance>().Command<SetNonConformanceOperation>()
+        .Command<LinkNonConformanceReason>().Command<NextQualityIdentifier>().Command<SetNonConformanceSupplier>()
+        .Command<SetDisassemblyPart>().Command<ListDisassemblyComponents>().Command<DisassembleProduct>().Command<UndoDisassembly>()
+        .ReadingFunction<NonConformanceList>();
 }
 
 public sealed class NvResponse : CommandResponse
@@ -53,6 +64,27 @@ public static class NvErrors
     public const int UnknownMaterial = 9006;
     public const int UnknownDefect = 9007;
     public const int MissingEndpoint = 9008;
+
+    public const int InvalidQualityCodeKind = 9101;
+    public const int DuplicateQualityCode = 9102;
+    public const int DuplicateQualityCodeName = 9103;
+    public const int UnknownQualityCode = 9104;
+    public const int InvalidScrapConfig = 9105;
+
+    public const int UnknownMtu = 9110;
+    public const int MtuScrapped = 9111;
+    public const int InvalidMtuList = 9112;
+    public const int UnknownNonConformance = 9113;
+    public const int NonConformanceClosed = 9114;
+    public const int MissingDispositionField = 9115;
+    public const int InvalidDisposition = 9116;
+
+    public const int NoNonConformance = 9120;
+    public const int PartNotAllowed = 9121;
+    public const int NotAComponent = 9122;
+    public const int UnknownDisassembly = 9123;
+
+    public const int InvalidIdentifierType = 9130;
 }
 
 /// <summary>Trạng thái team thêm vào state machine WO bằng dữ liệu.</summary>

@@ -55,8 +55,8 @@ internal static class LineDbClient
     }
 }
 
-/// <summary>Một dòng tin đã tách: tin sản phẩm thành <see cref="Detail"/>; tin hao hụt hoặc dòng hỏng thì kèm lý do.</summary>
-internal sealed record ParsedLineRow(long SequenceId, string Kind, LineOperationDetail? Detail, string? Error);
+/// <summary>Một dòng tin đã tách: tin sản phẩm thành <see cref="Detail"/>, tin hao hụt thành <see cref="Shrink"/>; dòng hỏng kèm lý do.</summary>
+internal sealed record ParsedLineRow(long SequenceId, string Kind, LineOperationDetail? Detail, LineShrinkDetail? Shrink, string? Error);
 
 /// <summary>
 /// Tách payload của LineDB. Trigger mỗi bảng máy ghi một trong ba dạng: <c>unit</c> (một sản phẩm, nguyên liệu kèm lô),
@@ -75,10 +75,10 @@ internal static class LineMessageParser
             var kind = Text(body, "kind") ?? "?";
             rows.Add(kind switch
             {
-                "unit" => new ParsedLineRow(sequenceId, kind, Detail(row, body, Text(body, "serial"), Number(body, "qty"), "materials"), null),
-                "batch" => new ParsedLineRow(sequenceId, kind, Detail(row, body, Text(body, "batch_id"), Number(body, "length"), "lots"), null),
-                "shrink" => new ParsedLineRow(sequenceId, kind, null, "Shrink messages are handled by the scrap step, which is not installed."),
-                _ => new ParsedLineRow(sequenceId, kind, null, $"Unknown message kind '{kind}'."),
+                "unit" => new ParsedLineRow(sequenceId, kind, Detail(row, body, Text(body, "serial"), Number(body, "qty"), "materials"), null, null),
+                "batch" => new ParsedLineRow(sequenceId, kind, Detail(row, body, Text(body, "batch_id"), Number(body, "length"), "lots"), null, null),
+                "shrink" => new ParsedLineRow(sequenceId, kind, null, Shrink(row, body), null),
+                _ => new ParsedLineRow(sequenceId, kind, null, null, $"Unknown message kind '{kind}'."),
             });
         }
 
@@ -96,10 +96,23 @@ internal static class LineMessageParser
         EndTime = Time(body, "end"),
         StatusId = Text(body, "result"),
         StatusCode = Text(body, "code"),
-        Trial = body.TryGetProperty("trial", out var trial) && trial.ValueKind == JsonValueKind.True,
+        RunMode = RunModes.FromClass(body.TryGetProperty("class", out var runClass) && runClass.ValueKind == JsonValueKind.Number ? runClass.GetInt32() : null),
         Materials = body.TryGetProperty(materialsProperty, out var list) && list.ValueKind == JsonValueKind.Array
             ? [.. list.EnumerateArray().Select(m => new LineMaterialUse { MaterialCode = Text(m, "item"), Lot = Text(m, "lot"), Quantity = Number(m, "qty") })]
             : [],
+    };
+
+    private static LineShrinkDetail Shrink(JsonElement row, JsonElement body) => new()
+    {
+        SequenceId = row.GetProperty("sequence_id").GetInt64(),
+        OperationCode = Text(row, "operation_code"),
+        EquipmentCode = Text(row, "equipment_code"),
+        MaterialCode = Text(body, "item"),
+        Lot = Text(body, "lot"),
+        Quantity = Number(body, "qty"),
+        UnitOfMeasure = Text(body, "unit"),
+        StatusCode = Text(body, "code"),
+        EventTime = Time(body, "at"),
     };
 
     private static string? Text(JsonElement element, string name) =>

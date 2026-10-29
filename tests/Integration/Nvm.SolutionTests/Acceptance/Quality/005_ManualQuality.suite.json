@@ -1,0 +1,884 @@
+{
+  "Name": "005_ManualQuality",
+  "BreakOnError": false,
+  "TestDefinitions": [
+    {
+      "Name": "Q21 Suspect/Hold: NC OPEN, MTU OnHold; defect tự hủy thì SCRAP; MTU đã Scrapped thì từ chối",
+      "TestSteps": [
+        {
+          "ID": "Apply1",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_ApplyLineResults",
+          "Parameters": {
+            "Operations": [
+              {
+                "OperationCode": "el010",
+                "EquipmentCode": "el010_m1_1",
+                "Serial": "AQ21-EC1",
+                "StatusId": "OK",
+                "StatusCode": "00",
+                "EndTime": "2026-10-26T08:00:00Z",
+                "Quantity": 120
+              },
+              {
+                "OperationCode": "ca010",
+                "EquipmentCode": "ca010_m1_1",
+                "Serial": "AQ21-C1",
+                "StatusId": "OK",
+                "StatusCode": "00",
+                "EndTime": "2026-10-26T08:10:00Z",
+                "Materials": [
+                  {
+                    "MaterialCode": "Electrode coil A in use",
+                    "Lot": "AQ21-EC1"
+                  }
+                ]
+              },
+              {
+                "OperationCode": "ca010",
+                "EquipmentCode": "ca010_m1_1",
+                "Serial": "AQ21-C2",
+                "StatusId": "OK",
+                "StatusCode": "00",
+                "EndTime": "2026-10-26T08:10:00Z",
+                "Materials": [
+                  {
+                    "MaterialCode": "Electrode coil A in use",
+                    "Lot": "AQ21-EC1"
+                  }
+                ]
+              }
+            ]
+          },
+          "Asserts": [
+            {
+              "Path": "NotExecutedOperations",
+              "Count": 0
+            }
+          ]
+        },
+        {
+          "ID": "Nc2",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_HandleLineNonConformances",
+          "Parameters": {
+            "Items": "#GET->Apply1.Result.NonConformanceData#"
+          },
+          "Asserts": [
+            {
+              "Path": "NotHandled",
+              "Count": 0
+            }
+          ]
+        },
+        {
+          "ID": "Cmd3",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_SuspectHoldMtu",
+          "Parameters": {
+            "MtuNId": "NV-WIP-CELL-A_AQ21-C1",
+            "DefectNId": "D-LEAK"
+          }
+        },
+        {
+          "ID": "Mtu4",
+          "StepType": "Read",
+          "App": "Production",
+          "Name": "Mtu",
+          "Query": {
+            "$filter": "NId eq 'NV-WIP-CELL-A_AQ21-C1'"
+          },
+          "Asserts": [
+            {
+              "Path": "value",
+              "Count": 1
+            },
+            {
+              "Path": "value[0].Status",
+              "Equals": "OnHold"
+            }
+          ]
+        },
+        {
+          "ID": "Cmd5",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_SuspectHoldMtu",
+          "Parameters": {
+            "MtuNId": "NV-WIP-CELL-A_AQ21-C2",
+            "DefectNId": "D-FOREIGN"
+          }
+        },
+        {
+          "ID": "Mtu6",
+          "StepType": "Read",
+          "App": "Production",
+          "Name": "Mtu",
+          "Query": {
+            "$filter": "NId eq 'NV-WIP-CELL-A_AQ21-C2'"
+          },
+          "Asserts": [
+            {
+              "Path": "value",
+              "Count": 1
+            },
+            {
+              "Path": "value[0].Status",
+              "Equals": "Scrapped"
+            }
+          ]
+        },
+        {
+          "ID": "Cmd7",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_SuspectHoldMtu",
+          "Parameters": {
+            "MtuNId": "NV-WIP-CELL-A_AQ21-C2",
+            "DefectNId": "D-LEAK"
+          },
+          "ExpectedSuccess": false
+        }
+      ]
+    },
+    {
+      "Name": "Q22 kiểm danh sách: trùng dòng, MTU không có, sai khu, đã Scrapped, khác material thì cả danh sách bị từ chối",
+      "TestSteps": [
+        {
+          "ID": "Apply1",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_ApplyLineResults",
+          "Parameters": {
+            "Operations": [
+              {
+                "OperationCode": "el010",
+                "EquipmentCode": "el010_m1_1",
+                "Serial": "AQ22-EC1",
+                "StatusId": "OK",
+                "StatusCode": "00",
+                "EndTime": "2026-10-26T08:00:00Z",
+                "Quantity": 120
+              },
+              {
+                "OperationCode": "ca010",
+                "EquipmentCode": "ca010_m1_1",
+                "Serial": "AQ22-C1",
+                "StatusId": "OK",
+                "StatusCode": "00",
+                "EndTime": "2026-10-26T08:10:00Z",
+                "Materials": [
+                  {
+                    "MaterialCode": "Electrode coil A in use",
+                    "Lot": "AQ22-EC1"
+                  }
+                ]
+              },
+              {
+                "OperationCode": "ca010",
+                "EquipmentCode": "ca010_m1_1",
+                "Serial": "AQ22-C2",
+                "StatusId": "OK",
+                "StatusCode": "00",
+                "EndTime": "2026-10-26T08:10:00Z",
+                "Materials": [
+                  {
+                    "MaterialCode": "Electrode coil A in use",
+                    "Lot": "AQ22-EC1"
+                  }
+                ]
+              },
+              {
+                "OperationCode": "ca010",
+                "EquipmentCode": "ca010_m1_1",
+                "Serial": "AQ22-C3",
+                "StatusId": "OK",
+                "StatusCode": "00",
+                "EndTime": "2026-10-26T08:10:00Z",
+                "Materials": [
+                  {
+                    "MaterialCode": "Electrode coil A in use",
+                    "Lot": "AQ22-EC1"
+                  }
+                ]
+              }
+            ]
+          },
+          "Asserts": [
+            {
+              "Path": "NotExecutedOperations",
+              "Count": 0
+            }
+          ]
+        },
+        {
+          "ID": "Nc2",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_HandleLineNonConformances",
+          "Parameters": {
+            "Items": "#GET->Apply1.Result.NonConformanceData#"
+          },
+          "Asserts": [
+            {
+              "Path": "NotHandled",
+              "Count": 0
+            }
+          ]
+        },
+        {
+          "ID": "Cmd3",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_ValidateMtuList",
+          "Parameters": {
+            "AreaEquipmentNId": "NV1-B1-L1-CELL",
+            "MtuNIds": [
+              "NV-WIP-CELL-A_AQ22-C1",
+              "NV-WIP-CELL-A_AQ22-C2"
+            ]
+          }
+        },
+        {
+          "ID": "Cmd4",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_ValidateMtuList",
+          "Parameters": {
+            "AreaEquipmentNId": "NV1-B1-L1-CELL",
+            "MtuNIds": [
+              "NV-WIP-CELL-A_AQ22-C1",
+              "NV-WIP-CELL-A_AQ22-C2",
+              "NV-WIP-CELL-A_AQ22-C1"
+            ]
+          },
+          "ExpectedSuccess": false
+        },
+        {
+          "ID": "Cmd5",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_ValidateMtuList",
+          "Parameters": {
+            "AreaEquipmentNId": "NV1-B1-L1-CELL",
+            "MtuNIds": [
+              "NV-WIP-CELL-A_AQ22-C1",
+              "NV-WIP-CELL-A_AQ22-C2",
+              "NV-WIP-CELL-A_NOPE"
+            ]
+          },
+          "ExpectedSuccess": false
+        },
+        {
+          "ID": "Cmd6",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_ValidateMtuList",
+          "Parameters": {
+            "AreaEquipmentNId": "NV1-B1-L2-CELL",
+            "MtuNIds": [
+              "NV-WIP-CELL-A_AQ22-C1",
+              "NV-WIP-CELL-A_AQ22-C2"
+            ]
+          },
+          "ExpectedSuccess": false
+        },
+        {
+          "ID": "Cmd7",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_ValidateMtuList",
+          "Parameters": {
+            "AreaEquipmentNId": "NV1-B1",
+            "MtuNIds": [
+              "NV-WIP-CELL-A_AQ22-C1",
+              "NV-WIP-CELL-A_AQ22-C2",
+              "NV-WIP-ELEC-A_AQ22-EC1"
+            ]
+          },
+          "ExpectedSuccess": false
+        },
+        {
+          "ID": "Cmd8",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_SuspectHoldMtu",
+          "Parameters": {
+            "MtuNId": "NV-WIP-CELL-A_AQ22-C3",
+            "DefectNId": "D-FOREIGN"
+          }
+        },
+        {
+          "ID": "Cmd9",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_ValidateMtuList",
+          "Parameters": {
+            "AreaEquipmentNId": "NV1-B1-L1-CELL",
+            "MtuNIds": [
+              "NV-WIP-CELL-A_AQ22-C1",
+              "NV-WIP-CELL-A_AQ22-C2",
+              "NV-WIP-CELL-A_AQ22-C3"
+            ]
+          },
+          "ExpectedSuccess": false
+        }
+      ]
+    },
+    {
+      "Name": "Q23 NC hàng loạt giữ hàng; hủy hàng loạt tạo NC SCRAP mới, NC OPEN cũ vẫn mở",
+      "TestSteps": [
+        {
+          "ID": "Apply1",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_ApplyLineResults",
+          "Parameters": {
+            "Operations": [
+              {
+                "OperationCode": "el010",
+                "EquipmentCode": "el010_m1_1",
+                "Serial": "AQ23-EC1",
+                "StatusId": "OK",
+                "StatusCode": "00",
+                "EndTime": "2026-10-26T08:00:00Z",
+                "Quantity": 120
+              },
+              {
+                "OperationCode": "ca010",
+                "EquipmentCode": "ca010_m1_1",
+                "Serial": "AQ23-C1",
+                "StatusId": "OK",
+                "StatusCode": "00",
+                "EndTime": "2026-10-26T08:10:00Z",
+                "Materials": [
+                  {
+                    "MaterialCode": "Electrode coil A in use",
+                    "Lot": "AQ23-EC1"
+                  }
+                ]
+              },
+              {
+                "OperationCode": "ca010",
+                "EquipmentCode": "ca010_m1_1",
+                "Serial": "AQ23-C2",
+                "StatusId": "OK",
+                "StatusCode": "00",
+                "EndTime": "2026-10-26T08:10:00Z",
+                "Materials": [
+                  {
+                    "MaterialCode": "Electrode coil A in use",
+                    "Lot": "AQ23-EC1"
+                  }
+                ]
+              }
+            ]
+          },
+          "Asserts": [
+            {
+              "Path": "NotExecutedOperations",
+              "Count": 0
+            }
+          ]
+        },
+        {
+          "ID": "Nc2",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_HandleLineNonConformances",
+          "Parameters": {
+            "Items": "#GET->Apply1.Result.NonConformanceData#"
+          },
+          "Asserts": [
+            {
+              "Path": "NotHandled",
+              "Count": 0
+            }
+          ]
+        },
+        {
+          "ID": "Cmd3",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_CreateBulkNonConformance",
+          "Parameters": {
+            "AreaEquipmentNId": "NV1-B1-L1-CELL",
+            "MtuNIds": [
+              "NV-WIP-CELL-A_AQ23-C1",
+              "NV-WIP-CELL-A_AQ23-C2"
+            ]
+          }
+        },
+        {
+          "ID": "Mtu4",
+          "StepType": "Read",
+          "App": "Production",
+          "Name": "Mtu",
+          "Query": {
+            "$filter": "NId eq 'NV-WIP-CELL-A_AQ23-C1'"
+          },
+          "Asserts": [
+            {
+              "Path": "value",
+              "Count": 1
+            },
+            {
+              "Path": "value[0].Status",
+              "Equals": "OnHold"
+            }
+          ]
+        },
+        {
+          "ID": "Cmd5",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_CreateBulkNonConformance",
+          "Parameters": {
+            "AreaEquipmentNId": "NV1-B1-L1-CELL",
+            "MtuNIds": [
+              "NV-WIP-CELL-A_AQ23-C2"
+            ],
+            "Status": "SCRAP"
+          }
+        },
+        {
+          "ID": "Mtu6",
+          "StepType": "Read",
+          "App": "Production",
+          "Name": "Mtu",
+          "Query": {
+            "$filter": "NId eq 'NV-WIP-CELL-A_AQ23-C2'"
+          },
+          "Asserts": [
+            {
+              "Path": "value",
+              "Count": 1
+            },
+            {
+              "Path": "value[0].Status",
+              "Equals": "Scrapped"
+            }
+          ]
+        },
+        {
+          "ID": "Read7",
+          "StepType": "Read",
+          "App": "Production",
+          "Name": "NonConformanceItem",
+          "Query": {
+            "$filter": "MtuNId eq 'NV-WIP-CELL-A_AQ23-C2'"
+          },
+          "Asserts": [
+            {
+              "Path": "value",
+              "Count": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Name": "Q24 kết luận SCRAP bằng tay: thiếu mã thì từ chối; đủ mã thì có scrap tag; kết luận lại thì từ chối",
+      "TestSteps": [
+        {
+          "ID": "Apply1",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_ApplyLineResults",
+          "Parameters": {
+            "Operations": [
+              {
+                "OperationCode": "el010",
+                "EquipmentCode": "el010_m1_1",
+                "Serial": "AQ24-EC1",
+                "StatusId": "OK",
+                "StatusCode": "00",
+                "EndTime": "2026-10-26T08:00:00Z",
+                "Quantity": 120
+              },
+              {
+                "OperationCode": "ca010",
+                "EquipmentCode": "ca010_m1_1",
+                "Serial": "AQ24-C1",
+                "StatusId": "KO",
+                "StatusCode": "41",
+                "EndTime": "2026-10-26T08:10:00Z",
+                "Materials": [
+                  {
+                    "MaterialCode": "Electrode coil A in use",
+                    "Lot": "AQ24-EC1"
+                  }
+                ]
+              }
+            ]
+          },
+          "Asserts": [
+            {
+              "Path": "NotExecutedOperations",
+              "Count": 0
+            }
+          ]
+        },
+        {
+          "ID": "Nc2",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_HandleLineNonConformances",
+          "Parameters": {
+            "Items": "#GET->Apply1.Result.NonConformanceData#"
+          },
+          "Asserts": [
+            {
+              "Path": "NotHandled",
+              "Count": 0
+            }
+          ]
+        },
+        {
+          "ID": "List3",
+          "StepType": "Function",
+          "App": "Production",
+          "Name": "NvProductionExt_NonConformanceList",
+          "Parameters": {},
+          "Query": {
+            "$filter": "Serial eq 'AQ24-C1'",
+            "$orderby": "StartDate,NId"
+          },
+          "Asserts": [
+            {
+              "Path": "value",
+              "Count": 1
+            }
+          ]
+        },
+        {
+          "ID": "Cmd4",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_SentenceNonConformances",
+          "Parameters": {
+            "NIds": [
+              "#GET->List3.Result.value[0].NId#"
+            ],
+            "Status": "SCRAP",
+            "CreatingCostCenter": "CC-QA",
+            "ChargeToCostCenter": "CC-L1",
+            "ScrapCode": "S2",
+            "ProblemCode": "P03"
+          },
+          "ExpectedSuccess": false
+        },
+        {
+          "ID": "Cmd5",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_SentenceNonConformances",
+          "Parameters": {
+            "NIds": [
+              "#GET->List3.Result.value[0].NId#"
+            ],
+            "Status": "SCRAP",
+            "CreatingCostCenter": "CC-QA",
+            "ChargeToCostCenter": "CC-L1",
+            "ScrapCode": "S2",
+            "ProblemCode": "P03",
+            "ModelCode": "NOPE"
+          },
+          "ExpectedSuccess": false
+        },
+        {
+          "ID": "Cmd6",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_SentenceNonConformances",
+          "Parameters": {
+            "NIds": [
+              "#GET->List3.Result.value[0].NId#"
+            ],
+            "Status": "SCRAP",
+            "CreatingCostCenter": "CC-QA",
+            "ChargeToCostCenter": "CC-L1",
+            "ScrapCode": "S2",
+            "ProblemCode": "P03",
+            "ModelCode": "HP"
+          }
+        },
+        {
+          "ID": "List7",
+          "StepType": "Function",
+          "App": "Production",
+          "Name": "NvProductionExt_NonConformanceList",
+          "Parameters": {},
+          "Query": {
+            "$filter": "Serial eq 'AQ24-C1'",
+            "$orderby": "StartDate,NId"
+          },
+          "Asserts": [
+            {
+              "Path": "value",
+              "Count": 1
+            },
+            {
+              "Path": "value[0].Status",
+              "Equals": "SCRAP"
+            },
+            {
+              "Path": "value[0].ScrapTag",
+              "Equals": "SC000001"
+            }
+          ]
+        },
+        {
+          "ID": "Mtu8",
+          "StepType": "Read",
+          "App": "Production",
+          "Name": "Mtu",
+          "Query": {
+            "$filter": "NId eq 'NV-WIP-CELL-A_AQ24-C1'"
+          },
+          "Asserts": [
+            {
+              "Path": "value",
+              "Count": 1
+            },
+            {
+              "Path": "value[0].Status",
+              "Equals": "Scrapped"
+            }
+          ]
+        },
+        {
+          "ID": "Cmd9",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_SentenceNonConformances",
+          "Parameters": {
+            "NIds": [
+              "#GET->List3.Result.value[0].NId#"
+            ],
+            "Status": "USE AS IS",
+            "CreatingCostCenter": "CC-QA",
+            "ChargeToCostCenter": "CC-L1",
+            "ScrapCode": "S2",
+            "ProblemCode": "P03",
+            "ModelCode": "HP"
+          },
+          "ExpectedSuccess": false
+        }
+      ]
+    },
+    {
+      "Name": "Q25 MTU có hai NC OPEN: USE AS IS một NC thì MTU vẫn OnHold, NC cuối cùng mới thả",
+      "TestSteps": [
+        {
+          "ID": "Apply1",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_ApplyLineResults",
+          "Parameters": {
+            "Operations": [
+              {
+                "OperationCode": "el010",
+                "EquipmentCode": "el010_m1_1",
+                "Serial": "AQ25-EC1",
+                "StatusId": "OK",
+                "StatusCode": "00",
+                "EndTime": "2026-10-26T08:00:00Z",
+                "Quantity": 120
+              },
+              {
+                "OperationCode": "ca010",
+                "EquipmentCode": "ca010_m1_1",
+                "Serial": "AQ25-C1",
+                "StatusId": "KO",
+                "StatusCode": "41",
+                "EndTime": "2026-10-26T08:10:00Z",
+                "Materials": [
+                  {
+                    "MaterialCode": "Electrode coil A in use",
+                    "Lot": "AQ25-EC1"
+                  }
+                ]
+              }
+            ]
+          },
+          "Asserts": [
+            {
+              "Path": "NotExecutedOperations",
+              "Count": 0
+            }
+          ]
+        },
+        {
+          "ID": "Nc2",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_HandleLineNonConformances",
+          "Parameters": {
+            "Items": "#GET->Apply1.Result.NonConformanceData#"
+          },
+          "Asserts": [
+            {
+              "Path": "NotHandled",
+              "Count": 0
+            }
+          ]
+        },
+        {
+          "ID": "Cmd3",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_SuspectHoldMtu",
+          "Parameters": {
+            "MtuNId": "NV-WIP-CELL-A_AQ25-C1",
+            "DefectNId": "D-LEAK"
+          }
+        },
+        {
+          "ID": "Read4",
+          "StepType": "Read",
+          "App": "Production",
+          "Name": "NonConformanceItem",
+          "Query": {
+            "$filter": "MtuNId eq 'NV-WIP-CELL-A_AQ25-C1'"
+          },
+          "Asserts": [
+            {
+              "Path": "value",
+              "Count": 2
+            }
+          ]
+        },
+        {
+          "ID": "Cmd5",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_SentenceNonConformances",
+          "Parameters": {
+            "NIds": [
+              "#GET->Read4.Result.value[0].NonConformanceNId#"
+            ],
+            "Status": "USE AS IS"
+          }
+        },
+        {
+          "ID": "Mtu6",
+          "StepType": "Read",
+          "App": "Production",
+          "Name": "Mtu",
+          "Query": {
+            "$filter": "NId eq 'NV-WIP-CELL-A_AQ25-C1'"
+          },
+          "Asserts": [
+            {
+              "Path": "value",
+              "Count": 1
+            },
+            {
+              "Path": "value[0].Status",
+              "Equals": "OnHold"
+            }
+          ]
+        },
+        {
+          "ID": "Cmd7",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_SentenceNonConformances",
+          "Parameters": {
+            "NIds": [
+              "#GET->Read4.Result.value[1].NonConformanceNId#"
+            ],
+            "Status": "USE AS IS"
+          }
+        },
+        {
+          "ID": "Mtu8",
+          "StepType": "Read",
+          "App": "Production",
+          "Name": "Mtu",
+          "Query": {
+            "$filter": "NId eq 'NV-WIP-CELL-A_AQ25-C1'"
+          },
+          "Asserts": [
+            {
+              "Path": "value",
+              "Count": 1
+            },
+            {
+              "Path": "value[0].Status",
+              "Equals": "Available"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Name": "Q26 mã NCM/PCR tăng theo số, lần đầu -0; loại khác thì từ chối",
+      "TestSteps": [
+        {
+          "ID": "Cmd1",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_NextQualityIdentifier",
+          "Parameters": {
+            "Type": "NCM",
+            "Number": "7101"
+          },
+          "Asserts": [
+            {
+              "Path": "NId",
+              "Equals": "NCM_7101-0"
+            }
+          ]
+        },
+        {
+          "ID": "Cmd2",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_NextQualityIdentifier",
+          "Parameters": {
+            "Type": "NCM",
+            "Number": "7101"
+          },
+          "Asserts": [
+            {
+              "Path": "NId",
+              "Equals": "NCM_7101-1"
+            }
+          ]
+        },
+        {
+          "ID": "Cmd3",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_NextQualityIdentifier",
+          "Parameters": {
+            "Type": "PCR",
+            "Number": "7101"
+          },
+          "Asserts": [
+            {
+              "Path": "NId",
+              "Equals": "PCR_7101-0"
+            }
+          ]
+        },
+        {
+          "ID": "Cmd4",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_NextQualityIdentifier",
+          "Parameters": {
+            "Type": "QRS",
+            "Number": "7101"
+          },
+          "ExpectedSuccess": false
+        }
+      ]
+    }
+  ]
+}

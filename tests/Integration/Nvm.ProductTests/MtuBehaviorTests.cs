@@ -102,6 +102,8 @@ public sealed class MtuBehaviorTests
         var child = p.Mtu("LOT-1.1");
         child.Quantity.ShouldBe(0.06m);
         child.EquipmentNId.ShouldBe(ProductHarness.Subarea);
-        p.Fails(new SplitMtu { NId = "LOT-1", Quantity = 0.9m }, ProductErrors.InvalidQuantity);
+        p.Fails(new SplitMtu { NId = "LOT-1", Quantity = 0.91m }, ProductErrors.InvalidQuantity);
+        p.Ok(new SplitMtu { NId = "LOT-1", Quantity = 0.9m }).NId.ShouldBe("LOT-1.3");
+        p.Mtu("LOT-1").Quantity.ShouldBe(0m);
     }
 }

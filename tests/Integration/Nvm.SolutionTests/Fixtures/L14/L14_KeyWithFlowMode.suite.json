@@ -1,0 +1,42 @@
+{
+  "Name": "L14_KeyWithFlowMode",
+  "BreakOnError": true,
+  "TestDefinitions": [
+    {
+      "Name": "FlowModeConfig",
+      "Csv": "flow-mode-el010.csv",
+      "TestSteps": [
+        {
+          "ID": "GetConfig",
+          "StepType": "Read",
+          "App": "Production",
+          "Name": "OperationScrapConfig",
+          "Query": {
+            "$filter": "OperationCode eq '#TEST_CSV.OperationCode#' and StatusCode eq '#TEST_CSV.StatusCode#' and ScheduleNId eq '#TEST_CSV.ScheduleNId#' and IsFlowMode eq #TEST_CSV.IsFlowMode#",
+            "$top": "1"
+          },
+          "IfThisSkipNext": true
+        },
+        {
+          "ID": "SetConfig",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_SetOperationScrapConfig",
+          "Parameters": {
+            "NId": "#TEST_CSV.NId#",
+            "OperationCode": "#TEST_CSV.OperationCode#",
+            "StatusCode": "#TEST_CSV.StatusCode#",
+            "ScheduleNId": "#TEST_CSV.ScheduleNId#",
+            "IsFlowMode": "#TEST_CSV.IsFlowMode#",
+            "AutoDispositionStatus": "#TEST_CSV.AutoDispositionStatus#",
+            "ScrapCode": "#TEST_CSV.ScrapCode#",
+            "ProblemCode": "#TEST_CSV.ProblemCode#",
+            "ModelCode": "#TEST_CSV.ModelCode#",
+            "CreatingCostCenter": "#TEST_CSV.CreatingCostCenter#",
+            "ChargeToCostCenter": "#TEST_CSV.ChargeToCostCenter#"
+          }
+        }
+      ]
+    }
+  ]
+}

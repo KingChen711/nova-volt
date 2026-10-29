@@ -17,8 +17,10 @@ public sealed class MasterDataSuiteTests
         first.Select(s => s.Status).ShouldAllBe(s => s == SuiteStatus.Executed);
         first.Select(s => s.Suite).ShouldBe([
             "Production_001_Equipment", "Production_002_Materials", "Production_003_Processes", "Production_004_WorkOrderStates",
-            "MapApp_001_LineCodes", "NvProductionExt_001_WorkOrderLifecycle", "NvProductionExt_002_ProcessSchedules", "NvProductionExt_003_ProductionSchedules",
-            "NvProductionExt_004_DefaultWorkOrders", "NvProductionExt_005_InHouseMaterials",
+            "Production_005_Defects", "MapApp_001_LineCodes", "MapApp_002_LineFailureCodes", "NvProductionExt_001_WorkOrderLifecycle",
+            "NvProductionExt_002_ProcessSchedules", "NvProductionExt_003_ProductionSchedules", "NvProductionExt_004_DefaultWorkOrders",
+            "NvProductionExt_005_InHouseMaterials", "NvProductionExt_006_QualityCodes", "NvProductionExt_007_MaterialSuppliers",
+            "NvProductionExt_008_DisassemblyParts",
         ]);
 
         h.Read<Equipment>().Count.ShouldBe(98);
@@ -33,6 +35,11 @@ public sealed class MasterDataSuiteTests
         h.Read<LineOperationCode>().Count.ShouldBe(4);
         h.Read<LineEquipmentCode>().Count.ShouldBe(16);
         h.Read<LineMaterialCode>().Count.ShouldBe(11);
+        h.Read<LineFailureCode>().Count.ShouldBe(4);
+        h.Read<Defect>().Count.ShouldBe(5);
+        h.Read<QualityCode>().Count.ShouldBe(15);
+        h.Read<MaterialSupplier>().Count.ShouldBe(14);
+        h.Read<DisassemblyPart>().Count.ShouldBe(4);
 
         h.Deploy().Select(s => s.Status).ShouldAllBe(s => s == SuiteStatus.Skipped);
     }

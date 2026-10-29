@@ -69,7 +69,7 @@ public sealed class LineMessageTests
     }
 
     [Fact]
-    public async Task Ko_cells_are_recorded_for_quality_and_shrink_rows_stop_with_their_own_code()
+    public async Task Ko_cells_get_a_non_conformance_and_shrink_rows_split_the_lot_under_one()
     {
         var line = await LineStack.CreateAsync();
         line.OpenDayShift();
@@ -77,15 +77,15 @@ public sealed class LineMessageTests
 
         line.Poll();
 
+        // R6: tin hao hụt không còn dừng ở -5900; cấu hình hủy theo ca không nạp ở đây nên NC là NC chung OPEN.
         expected.KoCells.ShouldBe(4);
-        line.Statuses().ShouldBe(new Dictionary<(string, int), int>
-        {
-            [(LineRowStatus.Done, 0)] = expected.UnitRows,
-            [(LineRowStatus.Failed, LineErrors.Composite(LineProcessType.Shrink, LineErrors.NotInstalled))] = 2,
-        });
+        line.Statuses().ShouldBe(new Dictionary<(string, int), int> { [(LineRowStatus.Done, 0)] = expected.UnitRows + expected.ShrinkRows });
         line.Mom.Read<LineExecution>(q => q.Where(e => e.StatusId == "KO")).Count.ShouldBe(expected.KoCells);
         Count(line.Mom, "NV-WIP-FCELL-A_").ShouldBe(12);
-        LineErrors.Composite(LineProcessType.Shrink, LineErrors.NotInstalled).ShouldBe(-5900);
+        var details = line.Mom.Read<NonConformanceDetail>();
+        details.Count(d => d.Origin == NonConformanceOrigins.Line).ShouldBe(expected.KoCells);
+        details.Count(d => d.Origin == NonConformanceOrigins.Shrink).ShouldBe(expected.ShrinkRows);
+        line.Mom.Read<LineShrinkExecution>().Count.ShouldBe(expected.ShrinkRows);
     }
 
     [Fact]

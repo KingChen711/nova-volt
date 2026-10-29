@@ -1,0 +1,161 @@
+{
+  "Name": "001_QualityCatalogs",
+  "BreakOnError": false,
+  "TestDefinitions": [
+    {
+      "Name": "Q01 tạo mã mới, trùng mã hoặc trùng tên thì từ chối",
+      "TestSteps": [
+        {
+          "ID": "Cmd1",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_CreateQualityCode",
+          "Parameters": {
+            "Kind": "ScrapCode",
+            "Code": "S9",
+            "Name": "Acceptance scrap"
+          }
+        },
+        {
+          "ID": "Cmd2",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_CreateQualityCode",
+          "Parameters": {
+            "Kind": "ScrapCode",
+            "Code": "S9",
+            "Name": "Other name"
+          },
+          "ExpectedSuccess": false
+        },
+        {
+          "ID": "Cmd3",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_CreateQualityCode",
+          "Parameters": {
+            "Kind": "ScrapCode",
+            "Code": "S8",
+            "Name": "Acceptance scrap"
+          },
+          "ExpectedSuccess": false
+        },
+        {
+          "ID": "Cmd4",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_CreateQualityCode",
+          "Parameters": {
+            "Kind": "ProblemCode",
+            "Code": "S9",
+            "Name": "Acceptance scrap"
+          }
+        }
+      ]
+    },
+    {
+      "Name": "Q02 sửa mã không có, đổi sang tên đã có thì từ chối",
+      "TestSteps": [
+        {
+          "ID": "Cmd1",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_UpdateQualityCode",
+          "Parameters": {
+            "Kind": "CostCenter",
+            "Code": "CC-NONE",
+            "Name": "Nowhere"
+          },
+          "ExpectedSuccess": false
+        },
+        {
+          "ID": "Cmd2",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_UpdateQualityCode",
+          "Parameters": {
+            "Kind": "CostCenter",
+            "Code": "CC-L1",
+            "Name": "Line 2"
+          },
+          "ExpectedSuccess": false
+        },
+        {
+          "ID": "Cmd3",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_UpdateQualityCode",
+          "Parameters": {
+            "Kind": "CostCenter",
+            "Code": "CC-L1",
+            "Name": "Line 1 renamed"
+          }
+        }
+      ]
+    },
+    {
+      "Name": "Q03 xóa lại bản đã xóa thì từ chối",
+      "TestSteps": [
+        {
+          "ID": "Cmd1",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_CreateQualityCode",
+          "Parameters": {
+            "Kind": "ModelCode",
+            "Code": "TMP",
+            "Name": "Temporary"
+          }
+        },
+        {
+          "ID": "Cmd2",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_DeleteQualityCode",
+          "Parameters": {
+            "Kind": "ModelCode",
+            "Code": "TMP"
+          }
+        },
+        {
+          "ID": "Cmd3",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_DeleteQualityCode",
+          "Parameters": {
+            "Kind": "ModelCode",
+            "Code": "TMP"
+          },
+          "ExpectedSuccess": false
+        }
+      ]
+    },
+    {
+      "Name": "Q04 gắn lý do vào NC: NC rỗng hoặc lý do không có thì từ chối",
+      "TestSteps": [
+        {
+          "ID": "Cmd1",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_LinkNonConformanceReason",
+          "Parameters": {
+            "NonConformanceNId": "",
+            "ReasonCode": "R01"
+          },
+          "ExpectedSuccess": false
+        },
+        {
+          "ID": "Cmd2",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_LinkNonConformanceReason",
+          "Parameters": {
+            "NonConformanceNId": "NC_NONE",
+            "ReasonCode": "R01"
+          },
+          "ExpectedSuccess": false
+        }
+      ]
+    }
+  ]
+}

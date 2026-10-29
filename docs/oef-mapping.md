@@ -129,8 +129,51 @@ LineDB (Postgres) với bảng máy theo khu, bảng trung gian `relay`, hai đ�
 | Serial đã thuộc WO nhưng WO đó không còn mở | Vẫn dùng WO đó | — |
 | Lô trong tin thiếu lượng | Nâng lượng lô (`EditMtu`) rồi trừ, ghi trace Warning | — |
 | Kết quả ghi về LineDB trước commit của MOM | Đúng thứ tự đó; commit hỏng thì dòng DONE mà MOM không có dữ liệu | — |
-| Tin hao hụt | Tách riêng, R5 trả `FAILED` mã −5900; xử lý ở R6 | — |
-| Tin KO | Ghi như OK, serial vào `PendingNonConformance`; NC ở R6 | — |
+| Tin hao hụt | Tách riêng; R5 trả `FAILED` mã −5900, từ R6 đi lệnh `HandleLineShrink` (loại xử lý 5) | — |
+| Tin KO | Ghi như OK, serial vào `PendingNonConformance`; từ R6 handler gọi tiếp `HandleLineNonConformances` (loại xử lý 4) | — |
+
+## R6: hàng lỗi
+
+Phần của team đặt trên NC của lớp Product: danh mục chất lượng, cấu hình hủy theo bước và ca, facet `NonConformanceDetail`,
+dấu chạy thử `MtuRunMode`. Code ở `src/Project/Nvm.Project` (`Quality.cs`, `LineQuality.cs`, `QualityManual.cs`,
+`Disassembly.cs`, `QualityViews.cs`). Bộ suite chấp nhận 26 luật ở `tests/Integration/Nvm.SolutionTests/Acceptance/Quality`,
+chạy bằng `QualityTests`.
+
+| Hành vi | Nguồn | Test |
+|---|---|---|
+| Danh mục scrap code, problem code, model code, cost center, lý do NC: trùng mã hoặc trùng tên thì từ chối; sửa mã không có, đổi sang tên đã có, xóa lại bản đã xóa thì từ chối | `Chất lượng - integration test của team` | suite `001_QualityCatalogs` (Q01–Q04) |
+| Tin OK quy về mã `00`; cấu hình chọn theo (mã bước, mã trạng thái, ca của PS chứa giờ trong tin, khu của PS chứa máy, cờ chạy thử) | `hang-loi`, `nc-tu-dong` | suite `002_LineNonConformances` |
+| Không cấu hình: tin KO tạo NC chung OPEN, MTU OnHold, defect theo bảng mã lỗi (chưa đối chiếu: `Z`); tin OK không tạo NC; KO lặp lại không tạo NC trùng | `hang-loi`, suite của team | Q05, Q06, Q08 |
+| Cấu hình SCRAP: NC hủy ngay, MTU Scrapped, mang nhà cung cấp (material có đúng một), mã và cost center của cấu hình | `hang-loi` | Q07 |
+| Cấu hình có bước kết luận: NC để mở, tin OK ở bước đó có giờ trong tin muộn hơn thì kết luận; tin đó tới trước thì kết luận ngay khi NC tạo; giờ sớm hơn thì giữ OPEN; nhiều KO rồi một OK đóng mọi NC; NC tạo tay không bị đóng | `Chất lượng - integration test của team` | Q09–Q13 |
+| Cấu hình không có kết luận: NC để mở, vẫn có mã và cost center | suite của team | Q14 |
+| Cấu hình có lượng tách: MTU con `.N` mang NC theo cấu hình, MTU mẹ dùng tiếp; tin OK cũng tách, NC không mang mã `00`; gửi lại không tách lần nữa | `hang-loi`, `nc-tu-dong` | Q15, Q16, `Ok_coil_split_…` |
+| Đơn vị tách so phân biệt hoa thường: lệch thì không NC, MTU giữ nguyên, người gọi chỉ thấy câu chung, lý do ở trace | `tach-hao-hut-don-vi` | `L12_…` |
+| Tin hao hụt: lô chưa có thì tạo, thiếu thì nâng, tách hết lượng hao hụt ra lô con, NC trên lô con theo cấu hình; cần WO đang mở ở máy | bài thực hành tin hao hụt | Q17, `Shrink_rows_…`, `Ko_cells_get_…` |
+| Chế độ máy 2 (trial) và 3 (flow) thành dấu `TM`/`FM` trên MTU, truyền xuôi genealogy; bước có dòng chạy thử hủy hàng mang dấu dù tin OK; tin tới không theo thứ tự thì NC tạo khi dấu tới | `hang-chay-thu`, `nc-tu-dong` | Q18–Q20 |
+| Khóa kiểm "đã có" của suite cấu hình chạy thử thiếu cột cờ: suite xanh mà bước có dòng mã `00` không có dòng chạy thử | `suite-thieu-flow-mode` | `L14_…` |
+| Suspect/Hold: NC QUALITY mức MEDIUM, MTU OnHold; defect tự hủy thì SCRAP; MTU đã Scrapped bị từ chối, lý do trong thân lỗi | `hang-loi`, `man-bao-bad-request` | Q21, `L13_…` |
+| Danh sách MTU (NC và hủy hàng loạt): trùng dòng, MTU không có, lượng 0, ngoài khu, đã Scrapped, khác material dòng đầu thì cả danh sách bị từ chối | `hang-loi`, suite của team | Q22 |
+| NC hàng loạt giữ hàng; hủy hàng loạt tạo NC SCRAP mới, NC OPEN cũ vẫn mở | `hang-loi` | Q23 |
+| Kết luận tay: SCRAP bắt buộc năm mã có trong danh mục, cấp scrap tag `SC` + cơ số 36 đủ 6 ký tự; NC đã có ngày kết thúc thì từ chối; USE AS IS chỉ thả MTU khi hết NC mở | `Chất lượng - kết luận NC` | Q24, Q25 |
+| Mã NCM/PCR `<loại>_<số>-<lần>` dùng chung bộ đếm; containment request nhập có `NCM_<số>` trong tên thì đổi tên theo mã, không có mã thì chỉ có dòng trace | `Chất lượng - containment request` | Q26, `Imported_containment_request_…` |
+| Composite báo lỗi ở bước sau, bước trước đã commit (NC và MTU OnHold còn đó) | `composite-va-reading-function` | `L01_…` |
+| Tháo rã: cần NC trên thành phẩm, cây thành phần đệ quy theo genealogy, chỉ material trong danh sách được phép, nhật ký và hoàn tác | `hang-loi` | `Disassembly_…` |
+| Danh sách NC đọc qua view SQL của reading model; view cài bằng `make views`, Update Database không tạo | `http-200-man-trong` | `L15_…` |
+
+### Giả định của R6
+
+| Chỗ chưa rõ | v2 làm | Cấu hình |
+|---|---|---|
+| Cấu hình hủy khóa theo bước nào | Mã bước phía xưởng (mọi process NV1 cùng một bước OP10) | — |
+| Cấu hình hủy nạp ở đâu | Deploy root riêng `suites/quality` sau master data, như suite theo ca của team chạy sau PS | `--load-master-data` với root `suites/quality` (test) |
+| Tin có dấu chạy thử ở bước có dòng chạy thử: so mã trạng thái không | Không; dòng chạy thử áp cho mọi mã | — |
+| Tin có dấu chạy thử, bước không có dòng chạy thử, tin KO | NC chung OPEN như hàng thường | — |
+| Bước kết luận đóng NC: tin ở bước đó phải OK không | Phải OK | — |
+| Scrap tag khi hủy tự động | Chỉ cấp khi kết luận SCRAP bằng tay (nguồn chỉ thấy ở lệnh kết luận) | — |
+| Tách hết lượng của lô | Được, lô mẹ còn 0 (lớp Product đổi theo, tin hao hụt trên hệ thật để lô mẹ 0) | — |
+| Tin hao hụt: mã trạng thái | Cột `loss_code` của bảng hao hụt, mặc định `50` | dữ liệu LineDB |
+| Tháo ra một thành phần | Xóa mềm dòng genealogy giữa thành phần và cha; hoàn tác tạo lại dòng đó | — |
 
 ### Giả định của lớp Product
 

@@ -1,0 +1,6 @@
+NId,Description,AutoScrap
+Z,Other,false
+D-COAT,Coating crack,false
+D-LEAK,Electrolyte leak,false
+D-SEAL,Seal failure,false
+D-FOREIGN,Foreign matter,true

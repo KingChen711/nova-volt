@@ -1,0 +1,311 @@
+{
+  "Name": "003_Splits",
+  "BreakOnError": false,
+  "TestDefinitions": [
+    {
+      "Name": "Q15 tin OK có cấu hình tách: MTU con .1 bị hủy, NC không mang mã 00, MTU mẹ dùng tiếp",
+      "TestSteps": [
+        {
+          "ID": "Apply1",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_ApplyLineResults",
+          "Parameters": {
+            "Operations": [
+              {
+                "OperationCode": "el010",
+                "EquipmentCode": "el010_m1_1",
+                "Serial": "AQ15-EC1",
+                "StatusId": "OK",
+                "StatusCode": "00",
+                "EndTime": "2026-10-26T08:00:00Z",
+                "Quantity": 120
+              }
+            ]
+          },
+          "Asserts": [
+            {
+              "Path": "NotExecutedOperations",
+              "Count": 0
+            }
+          ]
+        },
+        {
+          "ID": "Nc2",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_HandleLineNonConformances",
+          "Parameters": {
+            "Items": "#GET->Apply1.Result.NonConformanceData#"
+          },
+          "Asserts": [
+            {
+              "Path": "NotHandled",
+              "Count": 0
+            }
+          ]
+        },
+        {
+          "ID": "Mtu3",
+          "StepType": "Read",
+          "App": "Production",
+          "Name": "Mtu",
+          "Query": {
+            "$filter": "NId eq 'NV-WIP-ELEC-A_AQ15-EC1.1'"
+          },
+          "Asserts": [
+            {
+              "Path": "value",
+              "Count": 1
+            },
+            {
+              "Path": "value[0].Status",
+              "Equals": "Scrapped"
+            }
+          ]
+        },
+        {
+          "ID": "Mtu4",
+          "StepType": "Read",
+          "App": "Production",
+          "Name": "Mtu",
+          "Query": {
+            "$filter": "NId eq 'NV-WIP-ELEC-A_AQ15-EC1'"
+          },
+          "Asserts": [
+            {
+              "Path": "value",
+              "Count": 1
+            },
+            {
+              "Path": "value[0].Status",
+              "Equals": "Available"
+            }
+          ]
+        },
+        {
+          "ID": "List5",
+          "StepType": "Function",
+          "App": "Production",
+          "Name": "NvProductionExt_NonConformanceList",
+          "Parameters": {},
+          "Query": {
+            "$filter": "Serial eq 'AQ15-EC1'",
+            "$orderby": "StartDate,NId"
+          },
+          "Asserts": [
+            {
+              "Path": "value",
+              "Count": 1
+            },
+            {
+              "Path": "value[0].Status",
+              "Equals": "SCRAP"
+            },
+            {
+              "Path": "value[0].StatusCode",
+              "Equals": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Name": "Q16 tin gửi lại không tách lần nữa",
+      "TestSteps": [
+        {
+          "ID": "Apply1",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_ApplyLineResults",
+          "Parameters": {
+            "Operations": [
+              {
+                "OperationCode": "el010",
+                "EquipmentCode": "el010_m1_1",
+                "Serial": "AQ16-EC1",
+                "StatusId": "OK",
+                "StatusCode": "00",
+                "EndTime": "2026-10-26T08:00:00Z",
+                "Quantity": 120
+              }
+            ]
+          },
+          "Asserts": [
+            {
+              "Path": "NotExecutedOperations",
+              "Count": 0
+            }
+          ]
+        },
+        {
+          "ID": "Nc2",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_HandleLineNonConformances",
+          "Parameters": {
+            "Items": "#GET->Apply1.Result.NonConformanceData#"
+          },
+          "Asserts": [
+            {
+              "Path": "NotHandled",
+              "Count": 0
+            }
+          ]
+        },
+        {
+          "ID": "Apply3",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_ApplyLineResults",
+          "Parameters": {
+            "Operations": [
+              {
+                "OperationCode": "el010",
+                "EquipmentCode": "el010_m1_1",
+                "Serial": "AQ16-EC1",
+                "StatusId": "OK",
+                "StatusCode": "00",
+                "EndTime": "2026-10-26T08:00:00Z",
+                "Quantity": 120
+              }
+            ]
+          },
+          "Asserts": [
+            {
+              "Path": "NotExecutedOperations",
+              "Count": 0
+            }
+          ]
+        },
+        {
+          "ID": "Nc4",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_HandleLineNonConformances",
+          "Parameters": {
+            "Items": "#GET->Apply3.Result.NonConformanceData#"
+          },
+          "Asserts": [
+            {
+              "Path": "NotHandled",
+              "Count": 0
+            }
+          ]
+        },
+        {
+          "ID": "Read5",
+          "StepType": "Read",
+          "App": "Production",
+          "Name": "Mtu",
+          "Query": {
+            "$filter": "startswith(NId,'NV-WIP-ELEC-A_AQ16-EC1.')"
+          },
+          "Asserts": [
+            {
+              "Path": "value",
+              "Count": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "Name": "Q17 tin hao hụt: lô chưa có thì tạo, tách hết lượng hao hụt ra lô con, hủy lô con",
+      "TestSteps": [
+        {
+          "ID": "Cmd1",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_HandleLineShrink",
+          "Parameters": {
+            "Shrinks": [
+              {
+                "OperationCode": "el010",
+                "EquipmentCode": "el010_m1_1",
+                "MaterialCode": "Anode powder lot in use",
+                "Lot": "AQ17-AN",
+                "Quantity": 3.5,
+                "StatusCode": "50",
+                "EventTime": "2026-10-26T08:30:00Z"
+              }
+            ]
+          },
+          "Asserts": [
+            {
+              "Path": "NotHandled",
+              "Count": 0
+            }
+          ]
+        },
+        {
+          "ID": "Mtu2",
+          "StepType": "Read",
+          "App": "Production",
+          "Name": "Mtu",
+          "Query": {
+            "$filter": "NId eq 'NV-RM-ANODE_AQ17-AN'"
+          },
+          "Asserts": [
+            {
+              "Path": "value",
+              "Count": 1
+            },
+            {
+              "Path": "value[0].Status",
+              "Equals": "Available"
+            }
+          ]
+        },
+        {
+          "ID": "Mtu3",
+          "StepType": "Read",
+          "App": "Production",
+          "Name": "Mtu",
+          "Query": {
+            "$filter": "NId eq 'NV-RM-ANODE_AQ17-AN.1'"
+          },
+          "Asserts": [
+            {
+              "Path": "value",
+              "Count": 1
+            },
+            {
+              "Path": "value[0].Status",
+              "Equals": "Scrapped"
+            }
+          ]
+        },
+        {
+          "ID": "List4",
+          "StepType": "Function",
+          "App": "Production",
+          "Name": "NvProductionExt_NonConformanceList",
+          "Parameters": {},
+          "Query": {
+            "$filter": "Serial eq 'AQ17-AN'",
+            "$orderby": "StartDate,NId"
+          },
+          "Asserts": [
+            {
+              "Path": "value",
+              "Count": 1
+            },
+            {
+              "Path": "value[0].Status",
+              "Equals": "SCRAP"
+            },
+            {
+              "Path": "value[0].Origin",
+              "Equals": "Shrink"
+            },
+            {
+              "Path": "value[0].SupplierNId",
+              "Equals": "SUP-110"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

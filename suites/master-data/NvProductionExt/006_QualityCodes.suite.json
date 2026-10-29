@@ -1,0 +1,34 @@
+{
+  "Name": "NvProductionExt_006_QualityCodes",
+  "BreakOnError": true,
+  "TestDefinitions": [
+    {
+      "Name": "QualityCode",
+      "Csv": "quality-codes.csv",
+      "TestSteps": [
+        {
+          "ID": "GetQualityCode",
+          "StepType": "Read",
+          "App": "Production",
+          "Name": "QualityCode",
+          "Query": {
+            "$filter": "NId eq '#TEST_CSV.Kind#_#TEST_CSV.Code#'",
+            "$top": "1"
+          },
+          "IfThisSkipNext": true
+        },
+        {
+          "ID": "SetQualityCode",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_CreateQualityCode",
+          "Parameters": {
+            "Kind": "#TEST_CSV.Kind#",
+            "Code": "#TEST_CSV.Code#",
+            "Name": "#TEST_CSV.Name#"
+          }
+        }
+      ]
+    }
+  ]
+}

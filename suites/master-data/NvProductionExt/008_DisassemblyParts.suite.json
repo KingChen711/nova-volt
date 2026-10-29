@@ -1,0 +1,32 @@
+{
+  "Name": "NvProductionExt_008_DisassemblyParts",
+  "BreakOnError": true,
+  "TestDefinitions": [
+    {
+      "Name": "DisassemblyPart",
+      "Csv": "disassembly-parts.csv",
+      "TestSteps": [
+        {
+          "ID": "GetDisassemblyPart",
+          "StepType": "Read",
+          "App": "Production",
+          "Name": "DisassemblyPart",
+          "Query": {
+            "$filter": "NId eq '#TEST_CSV.MaterialNId#'",
+            "$top": "1"
+          },
+          "IfThisSkipNext": true
+        },
+        {
+          "ID": "SetDisassemblyPart",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_SetDisassemblyPart",
+          "Parameters": {
+            "MaterialNId": "#TEST_CSV.MaterialNId#"
+          }
+        }
+      ]
+    }
+  ]
+}

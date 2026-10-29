@@ -11,7 +11,7 @@ test và số đo tương ứng (AGENTS.md §1.3). Agent làm theo lô lớn, kh
 | R3 Product | **đạt** (2026-10-28) | Tag `r3`; mục R3 bên dưới |
 | R4 Runner suite, master data, WO theo ca | **đạt** (2026-10-28) | Tag `r4`; mục R4 bên dưới |
 | R5 Tin từ xưởng | **đạt** (2026-10-29) | Tag `r5`; mục R5 bên dưới |
-| R6 Hàng lỗi | chưa làm | |
+| R6 Hàng lỗi | **đạt** (2026-10-29) | Tag `r6`; mục R6 bên dưới |
 | R7 Đóng gói, cất kho, trailer kho, kiểm pallet | chưa làm | |
 | R8 Xuất hàng | chưa làm | |
 | R9 Xe linh kiện, bãi, dock, skid | chưa làm | |
@@ -143,6 +143,34 @@ test và số đo tương ứng (AGENTS.md §1.3). Agent làm theo lô lớn, kh
   riêng xanh, `tsc` của web sạch.
 - Lệch so với dự kiến: màn web không hiện trạng thái dòng LineDB (NEW, RETRY…), vì web chỉ đi qua OData của MOM (K10);
   xem trạng thái bằng `make line-load`/`report` hoặc SQL trên LineDB. Ghi ở nợ N-R5-3.
+
+## R6
+
+- Lớp Project (`src/Project/Nvm.Project`): danh mục chất lượng (scrap code, problem code, model code, cost center, lý do NC),
+  nhà cung cấp theo material, cấu hình hủy theo (mã bước phía xưởng, mã trạng thái, ca, cờ chạy thử) với kết luận tự động,
+  bước kết luận, lượng tách và mã báo scrap. Facet `NonConformanceDetail` trên NC của lớp Product, dấu chạy thử `MtuRunMode`,
+  bộ đếm scrap tag và mã NCM/PCR.
+- Tin máy: handler gọi tiếp `HandleLineNonConformances` sau `ApplyLineResults` (mã ghép loại 4) và `HandleLineShrink` cho tin
+  hao hụt (loại 5, thay cho −5900 của R5). LineDB thay cờ `trial` bằng cột `run_class` (2 trial, 3 flow); bảng hao hụt có
+  `loss_code`.
+- Người dùng: Suspect/Hold, kiểm danh sách MTU, NC và hủy hàng loạt, kết luận SCRAP/USE AS IS, thêm MTU vào NC, khai NC theo bước
+  WO, bước và lý do của NC, composite khai NC nhà cung cấp (lab L01), tháo rã có nhật ký và hoàn tác, containment request đổi
+  tên theo mã NCM trong tên.
+- Danh sách NC: reading model `NonConformanceListRow` trên view SQL, cài bằng `make views` (lab L15).
+- Deploy: master data thêm defect, mã lỗi máy, danh mục chất lượng, nhà cung cấp, part được tháo; cấu hình hủy theo ca ở root
+  riêng `suites/quality` (`make quality-config`). Lớp Product: tách được hết lượng của lô (lô mẹ còn 0).
+- DoD: 26 luật viết lại từ suite chất lượng của team, đổi giá trị, ở `tests/Integration/Nvm.SolutionTests/Acceptance/Quality`,
+  xanh (`QualityTests`). Lab L01, L12, L13, L14, L15 có test và đối chứng. Kiểm 2026-10-29 trên máy cá nhân: clean-room, format,
+  build Release sạch, 215/215 test xanh, benchmark R1 chạy riêng xanh, `tsc` của web sạch, `make lab-web` 7/7 xanh.
+- Kiểm trên stack local 2026-10-29: `make update-db`, `master-data`, `quality-config`, `views`, `linedb RESET=1`; đường poll,
+  line 2 mô phỏng 24 cell (4 KO, 1 tin hao hụt): 47/47 dòng DONE sau bản sửa thứ tự tin bên dưới. Line 1 chạy trước bản sửa
+  còn 1 dòng cuộn RETRY −4410: dữ liệu thử ghi sai lúc chưa sửa, gửi lại không sửa được vì bước ghi kết quả đã có.
+- Tìm ra khi chạy trên stack local: đường poll đọc tin theo từng mã bước, nên tin cell tới trước tin cuộn; cuộn được tạo như
+  lô tạm và giữ lượng 0 thay vì 120 m (lỗi có từ R5), rồi tách hao hụt hỏng −4410. Sửa: tin làm ra MTU tới sau thì đặt lượng =
+  lượng của tin trừ phần đã trừ; có test.
+- Web: màn "Kết luận NC" (`/area/quality`: danh sách theo trạng thái, kết luận SCRAP/USE AS IS, giữ hàng nghi lỗi hiện nguyên
+  thân lỗi) và "NC hàng loạt" (`/area/bulk-nc`); lab Playwright `web/e2e/quality.spec.ts`.
+- Chưa làm: màn Containment (khu `containment` vẫn là màn hẹn), in scrap tag, báo scrap ra hệ ngoài (thuộc R11).
 
 ## Nợ mở
 

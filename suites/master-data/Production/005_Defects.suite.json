@@ -1,0 +1,34 @@
+{
+  "Name": "Production_005_Defects",
+  "BreakOnError": true,
+  "TestDefinitions": [
+    {
+      "Name": "Defect",
+      "Csv": "defects.csv",
+      "TestSteps": [
+        {
+          "ID": "GetDefect",
+          "StepType": "Read",
+          "App": "Production",
+          "Name": "Defect",
+          "Query": {
+            "$filter": "NId eq '#TEST_CSV.NId#'",
+            "$top": "1"
+          },
+          "IfThisSkipNext": true
+        },
+        {
+          "ID": "SetDefect",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "DefineDefect",
+          "Parameters": {
+            "NId": "#TEST_CSV.NId#",
+            "Description": "#TEST_CSV.Description#",
+            "AutoScrap": "#TEST_CSV.AutoScrap#"
+          }
+        }
+      ]
+    }
+  ]
+}

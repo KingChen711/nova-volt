@@ -1,0 +1,16 @@
+Kind,Code,Name
+ScrapCode,S1,Mixed processes
+ScrapCode,S2,Supplier defect
+ScrapCode,S3,Handling damage
+ProblemCode,P01,Machine auto scrap
+ProblemCode,P02,Leak
+ProblemCode,P03,Scratch
+ModelCode,STD,Standard pack
+ModelCode,HP,High power pack
+CostCenter,CC-L1,Line 1
+CostCenter,CC-L2,Line 2
+CostCenter,CC-L3,Line 3
+CostCenter,CC-L4,Line 4
+CostCenter,CC-QA,Quality office
+NonConformanceReason,R01,Dimension out of tolerance
+NonConformanceReason,R02,Visual defect

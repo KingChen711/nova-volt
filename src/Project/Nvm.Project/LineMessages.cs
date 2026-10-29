@@ -50,6 +50,9 @@ public static class LineErrors
     public const int OutputFailed = 300;
     public const int ConsumptionFailed = 310;
     public const int ProgressFailed = 320;
+    public const int UnknownMtu = 400;
+    public const int SplitFailed = 410;
+    public const int NonConformanceFailed = 420;
     public const int NotInstalled = 900;
     public const int Unexpected = 999;
 
@@ -88,7 +91,8 @@ public sealed class LineExecution : Entity
 
     public string? StatusCode { get; set; }
 
-    public bool Trial { get; set; }
+    /// <summary>Dấu chạy thử trong tin (<c>TM</c>, <c>FM</c>), rỗng với hàng thường.</summary>
+    public string? RunMode { get; set; }
 
     /// <summary>Dòng ở bảng trung gian LineDB mang tin này.</summary>
     public long? SequenceId { get; set; }
@@ -117,7 +121,8 @@ public sealed class LineOperationDetail
 
     public string? StatusCode { get; init; }
 
-    public bool Trial { get; init; }
+    /// <summary>Chế độ máy: <c>TM</c> (trial), <c>FM</c> (flow), rỗng với hàng thường.</summary>
+    public string? RunMode { get; init; }
 
     public IReadOnlyList<LineMaterialUse>? Materials { get; init; }
 }
@@ -146,8 +151,14 @@ public sealed class ApplyLineResultsResponse : CommandResponse
 
     public IList<NotExecutedOperation> NotExecutedOperations { get; } = [];
 
-    /// <summary>Serial có tin KO, chờ bước xử lý hàng lỗi (R6).</summary>
+    /// <summary>Serial có tin KO.</summary>
     public IList<string> PendingNonConformance { get; } = [];
+
+    /// <summary>
+    /// Mọi serial đã ghi (kể cả tin gửi lại), đủ thông tin cho bước xử lý hàng lỗi <see cref="HandleLineNonConformances"/>:
+    /// tin OK cũng có thể tách hao hụt, mang dấu chạy thử, hay đóng NC ở bước kết luận.
+    /// </summary>
+    public IList<LineNonConformanceData> NonConformanceData { get; } = [];
 }
 
 /// <summary>
@@ -203,9 +214,10 @@ internal sealed class ApplyLineResultsHandler : ICommandHandler<ApplyLineResults
         }
 
         var executionNId = detail.Serial + "|" + detail.OperationCode;
-        if (platform.Query<LineExecution>().Any(e => e.NId == executionNId))
+        if (platform.Query<LineExecution>().SingleOrDefault(e => e.NId == executionNId) is { } recorded)
         {
             platform.Tracer.Write(TraceLevel.Information, $"Serial {detail.Serial} at {detail.OperationCode} is already recorded; nothing to do.");
+            response.NonConformanceData.Add(LineNonConformanceData.Of(detail, recorded.ProductMtuNId!, operationNId, equipmentNId));
             return null;
         }
 
@@ -258,6 +270,13 @@ internal sealed class ApplyLineResultsHandler : ICommandHandler<ApplyLineResults
         var isLast = !platform.Query<WorkOrderOperation>().Any(o => o.WorkOrderNId == workOrder.NId && o.Sequence > step.Sequence);
         var productNId = workOrder.ProductMaterialNId + "_" + detail.Serial;
         var exists = platform.Query<Mtu>().Any(m => m.NId == productNId);
+
+        // Tin của bước sau tới trước (đường poll đọc theo từng mã bước): MTU đã được tạo như lô nguyên liệu với lượng đủ trừ, chưa
+        // thuộc WO nào, lượng đã bị nâng tạm mỗi lần trừ. Tin làm ra nó tới thì lượng = lượng của tin trừ phần đã trừ, không thì
+        // lô giữ lượng tạm (vd cuộn 0 m thay vì 120 m).
+        // MTU có serial giữ lượng 1, nên chỉ lô (Batch) cần đặt lại.
+        var placeholder = exists && platform.Query<Mtu>().Any(m => m.NId == productNId && m.Kind == "Batch")
+            && !platform.Query<WorkOrderOutput>().Any(o => o.MtuNId == productNId);
         var output = platform.CallCommand<RecordWorkOrderOutput, ProductResponse>(new RecordWorkOrderOutput
         {
             WorkOrderNId = workOrder.NId,
@@ -271,6 +290,19 @@ internal sealed class ApplyLineResultsHandler : ICommandHandler<ApplyLineResults
         if (!output.Succeeded)
         {
             return new LineError(LineErrors.OutputFailed, output.Error!.ErrorMessage);
+        }
+
+        if (placeholder)
+        {
+            var consumed = platform.Query<MaterialConsumption>().Where(c => c.ComponentMtuNId == productNId).Sum(c => (decimal?)c.Quantity) ?? 0m;
+            var left = Math.Max(quantity - consumed, 0m);
+            platform.Tracer.Write(TraceLevel.Warning,
+                $"{productNId} was created by a later step before this message; produced {quantity}, {consumed} already consumed, {left} left.");
+            var raised = platform.CallCommand<EditMtu, ProductResponse>(new EditMtu { NId = productNId, Quantity = left });
+            if (!raised.Succeeded)
+            {
+                return new LineError(LineErrors.OutputFailed, raised.Error!.ErrorMessage);
+            }
         }
 
         foreach (var (material, lot, amount) in consumptions)
@@ -315,7 +347,7 @@ internal sealed class ApplyLineResultsHandler : ICommandHandler<ApplyLineResults
         execution.EndTime = detail.EndTime;
         execution.StatusId = detail.StatusId;
         execution.StatusCode = detail.StatusCode;
-        execution.Trial = detail.Trial;
+        execution.RunMode = detail.RunMode;
         execution.SequenceId = detail.SequenceId;
         platform.Submit(execution);
 
@@ -324,6 +356,7 @@ internal sealed class ApplyLineResultsHandler : ICommandHandler<ApplyLineResults
             response.PendingNonConformance.Add(detail.Serial);
         }
 
+        response.NonConformanceData.Add(LineNonConformanceData.Of(detail, productNId, operationNId, equipmentNId));
         return null;
     }
 
@@ -458,11 +491,17 @@ public sealed class LineMessageHandler : IEventSubscriber<LineMessageArrived>
         ArgumentNullException.ThrowIfNull(platform);
         var rows = LineMessageParser.Parse(domainEvent.Payload);
         var results = new List<LineRowResult>();
-        foreach (var row in rows.Where(r => r.Detail is null))
+        foreach (var row in rows.Where(r => r.Detail is null && r.Shrink is null))
         {
-            var (type, code) = row.Kind == "shrink" ? (LineProcessType.Shrink, LineErrors.NotInstalled) : (LineProcessType.Apply, LineErrors.Malformed);
             platform.Tracer.Write(TraceLevel.Error, $"Line row {row.SequenceId} ({row.Kind}) not processed: {row.Error}");
-            results.Add(new LineRowResult(row.SequenceId, LineRowStatus.Failed, LineErrors.Composite(type, code)));
+            results.Add(new LineRowResult(row.SequenceId, LineRowStatus.Failed, LineErrors.Composite(LineProcessType.Apply, LineErrors.Malformed)));
+        }
+
+        var shrinks = rows.Where(r => r.Shrink is not null).ToList();
+        if (shrinks.Count > 0)
+        {
+            var response = platform.CallCommand<HandleLineShrink, LineQualityResponse>(new HandleLineShrink { Shrinks = [.. shrinks.Select(s => s.Shrink!)] });
+            results.AddRange(shrinks.Select(s => Result(s.SequenceId, LineProcessType.Shrink, response)));
         }
 
         var units = rows.Where(r => r.Detail is not null).ToList();
@@ -471,13 +510,22 @@ public sealed class LineMessageHandler : IEventSubscriber<LineMessageArrived>
             var response = platform.CallCommand<ApplyLineResults, ApplyLineResultsResponse>(
                 new ApplyLineResults { Operations = [.. units.Select(u => u.Detail!)] });
             var notExecuted = response.NotExecutedOperations.Where(n => n.SequenceId is not null).ToDictionary(n => n.SequenceId!.Value);
+            LineQualityResponse? quality = null;
+            if (response.Succeeded && response.NonConformanceData.Count > 0)
+            {
+                quality = platform.CallCommand<HandleLineNonConformances, LineQualityResponse>(
+                    new HandleLineNonConformances { Items = [.. response.NonConformanceData] });
+            }
+
             foreach (var unit in units)
             {
                 results.Add(!response.Succeeded
                     ? new LineRowResult(unit.SequenceId, LineRowStatus.Retry, LineErrors.Composite(LineProcessType.Apply, LineErrors.Unexpected))
                     : notExecuted.TryGetValue(unit.SequenceId, out var failed)
                         ? new LineRowResult(unit.SequenceId, LineRowStatus.Retry, LineErrors.Composite(LineProcessType.Apply, failed.Error.Code))
-                        : new LineRowResult(unit.SequenceId, LineRowStatus.Done, 0));
+                        : quality is null
+                            ? new LineRowResult(unit.SequenceId, LineRowStatus.Done, 0)
+                            : Result(unit.SequenceId, LineProcessType.NonConformance, quality));
             }
         }
 
@@ -492,6 +540,13 @@ public sealed class LineMessageHandler : IEventSubscriber<LineMessageArrived>
             $"Line rows from {domainEvent.Source}: {results.Count(r => r.Status == LineRowStatus.Done)} done, "
             + $"{results.Count(r => r.Status != LineRowStatus.Done)} not done.");
     }
+
+    private static LineRowResult Result(long sequenceId, LineProcessType type, LineQualityResponse response) =>
+        !response.Succeeded
+            ? new LineRowResult(sequenceId, LineRowStatus.Retry, LineErrors.Composite(type, LineErrors.Unexpected))
+            : response.NotHandled.FirstOrDefault(n => n.SequenceId == sequenceId) is { } failed
+                ? new LineRowResult(sequenceId, LineRowStatus.Retry, LineErrors.Composite(type, failed.Error.Code))
+                : new LineRowResult(sequenceId, LineRowStatus.Done, 0);
 }
 
 /// <summary>Kết quả của một dòng tin, ghi về LineDB.</summary>

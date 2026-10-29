@@ -1,0 +1,33 @@
+{
+  "Name": "NvProductionExt_007_MaterialSuppliers",
+  "BreakOnError": true,
+  "TestDefinitions": [
+    {
+      "Name": "MaterialSupplier",
+      "Csv": "material-suppliers.csv",
+      "TestSteps": [
+        {
+          "ID": "GetMaterialSupplier",
+          "StepType": "Read",
+          "App": "Production",
+          "Name": "MaterialSupplier",
+          "Query": {
+            "$filter": "NId eq '#TEST_CSV.MaterialNId#|#TEST_CSV.SupplierNId#'",
+            "$top": "1"
+          },
+          "IfThisSkipNext": true
+        },
+        {
+          "ID": "SetMaterialSupplier",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "NvProductionExt_SetMaterialSupplier",
+          "Parameters": {
+            "MaterialNId": "#TEST_CSV.MaterialNId#",
+            "SupplierNId": "#TEST_CSV.SupplierNId#"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -33,7 +33,7 @@ hành vi; chưa có test thì chưa tính là xong.
 | State machine dạng dữ liệu, role theo transition | R2 | `xong` | `Status_added_as_data_is_usable_without_code`, `Transition_with_roles_needs_one_of_them_and_one_without_roles_is_open`, `Transition_bound_to_a_role_nobody_has_blocks_everyone_lab_L06`, `Roles_in_the_token_reach_the_state_machine` |
 | Extension app công bố POM của nó dưới base app (tiền tố cho command) | R4 | `xong` | `Block_command_imported_by_an_extension_app_is_published_on_the_base_app_with_its_prefix` |
 | Quyền gọi command theo role ở service layer | R4 | `xong` | `Restricted_app_lets_a_command_through_only_for_its_roles_the_administrator_and_the_system`, `Commands_follow_the_roles_of_the_manifest_and_the_administrator_may_call_everything` |
-| Gửi tin ra ngoài đồng bộ và bất đồng bộ | R11 | `chưa làm` | |
+| Gửi tin ra ngoài đồng bộ (chờ, timeout, trả lời cho handler) và bất đồng bộ (lỗi chỉ ở trace), theo adapter; tin đi ngay lúc gọi, ngoài transaction | R8 | `xong` | `Synchronous_send_without_a_gateway_is_an_error_the_handler_sees_and_asynchronous_send_only_leaves_a_trace`, `Message_goes_out_when_sent_so_a_command_failing_afterwards_keeps_no_row_but_the_message_is_gone`, `Routing_gateway_sends_by_adapter_name_and_the_file_adapter_writes_one_file_per_message` |
 | Gói deploy, cập nhật database, master data theo thứ tự | R12 | `chưa làm` | |
 
 Test nằm ở `tests/Integration/Nvm.FoundationTests` (SQL Server, RabbitMQ thật qua Testcontainers), trừ NVM004.
@@ -133,6 +133,7 @@ LineDB (Postgres) với bảng máy theo khu, bảng trung gian `relay`, hai đ�
 | Số đã làm của WO tăng ở bước nào | Bước cuối của process (mọi process NV1 một bước) | — |
 | Serial đã thuộc WO nhưng WO đó không còn mở | Vẫn dùng WO đó | — |
 | Lô trong tin thiếu lượng | Nâng lượng lô (`EditMtu`) rồi trừ, ghi trace Warning | — |
+| Nhiều MTU cùng mã lô (lô mẹ và lô con tách hao hụt) | Trừ vào MTU chưa hủy có lượng lớn nhất; lô con hao hụt đã hủy không bao giờ bị trừ (sửa 2026-10-30, lab R8 bắt được) | — |
 | Kết quả ghi về LineDB trước commit của MOM | Đúng thứ tự đó; commit hỏng thì dòng DONE mà MOM không có dữ liệu | — |
 | Tin hao hụt | Tách riêng; R5 trả `FAILED` mã −5900, từ R6 đi lệnh `HandleLineShrink` (loại xử lý 5) | — |
 | Tin KO | Ghi như OK, serial vào `PendingNonConformance`; từ R6 handler gọi tiếp `HandleLineNonConformances` (loại xử lý 4) | — |
@@ -227,6 +228,32 @@ LineDB thật, `FinishedGoodsTests`, `StorageTrailerTests`, `PalletCheckBenchmar
 | Lỗi do reading function ném lúc gọi trả mã gì | HTTP 500, mã `ReadingFunctionFailed`, câu lỗi nguyên văn | — |
 | Chuỗi kết nối của code thành phẩm | Key `Nv.SqlConnection`, đặt bằng bước tay `make sql-key` từ `.env`, không nằm trong suite (K13) | key `Nv.SqlConnection` |
 
+## R8: xuất hàng
+
+Lớp Project: đơn bán, nhóm đơn, picking, nhãn, staging (`Shipping.cs`), ngoại lệ, chất xe, xe của khách, ASN (`Loading.cs`), trên
+`ShipApp` và `YardApp`. Lớp Product thêm `ShipMtu`. Test ở `tests/Integration/Nvm.SolutionTests/ShipmentTests.cs`.
+
+| Hành vi | Nguồn | Test |
+|---|---|---|
+| Đơn bán JSON, Ack từng đơn (thiếu trường, không có route thì Ack lỗi, đơn khác vẫn vào); họ theo mã hãng vận tải; route họ A = 3 ký tự nơi nhận + giờ giao, họ B = route của khách hoặc tra dữ liệu đặt hàng; nhóm theo nơi nhận, route, giờ giao, bỏ nhóm đã giao | bài xuất hàng họ A, họ B, `thanh-pham-fifo` | `Family_a_runs_from_sales_order_to_shipped_and_sends_the_asn`, `Family_b_needs_the_box_order_…` |
+| Picking: pallet Full ở ô có bản ghi FIFO, đúng part còn thiếu; chặn hàng bị giữ (procedure), họ A chưa đo cuối, họ B hàng trẻ hơn key; lấy lệch đề xuất chỉ hạ cờ FIFO; vị trí giữ ô kho; bỏ pick về Full; đóng thiếu phải xác nhận | bài xuất hàng họ A, họ B, `thanh-pham-fifo` | `Picking_blocks_held_items_untested_family_a_pallets_and_too_young_family_b_items_by_key`, `Family_a_…` |
+| Nhãn skid: họ A một nhãn mỗi skid, bản ghi có từ lúc in; họ B hai mặt, bản ghi tạo lúc quét, mặt A hay B ra cùng skid, một skid dở mỗi chuyến; nhãn hộp = tổng số hộp; ra file qua adapter máy in | bài xuất hàng họ A, họ B | `Family_a_…`, `Family_b_…` |
+| Staging: chỉ nhận pallet đã lấy cho nhóm; pallet Staged, chuyển vào khu tập kết của nhóm route chính; họ A ghi hàng vào skid, họ B xong khi đủ hộp, hộp quét rồi thì chặn; cả nhóm xong thì email danh sách pallet | bài xuất hàng họ A, họ B, `thanh-pham-fifo` | `Family_a_…`, `Family_b_…` |
+| Ngoại lệ (họ B): tự khai mã tự động, rồi hỏi nhóm đầu tiên còn thiếu theo thứ tự SkidLevel → SkidBuild → Trailer, chỉ mã của nhóm đó; họ A không hỏi | bài xuất hàng họ B | `Loading_exceptions_are_asked_by_group_in_order_and_the_automatic_code_is_declared_without_asking` (6 ca) |
+| Chất xe họ B: tin SkidBuild rồi ShipLoad đồng bộ (mang ngoại lệ), chỉ chất khi có số xác nhận và số chuyến; không trả lời, trả thiếu, không có gateway thì pallet giữ Staged, xe chưa chất | bài xuất hàng họ B, `tich-hop-ra-ngoai` | `Customer_system_not_replying_keeps_pallets_staged_and_the_trailer_unloaded` |
+| Xe của khách: route pool trùng nơi nhận; vào dock rồi mới chất; ra bãi chỉ vào ô của nhóm route; yard pass; xe rời khi không còn yêu cầu kéo mở: đơn, nhóm Shipped (tên thêm hậu tố), pallet Empty ở `n/a`, tote Empty rời pallet, hàng Shipped, xe Free; ASN họ A sau commit, phản hồi thành email | bài xuất hàng họ A | `Family_a_…`, `Family_b_…` |
+
+### Giả định của R8
+
+| Chỗ chưa rõ | v2 làm | Cấu hình |
+|---|---|---|
+| Hai role của app thành phẩm (kho, dock) | Một role `shipping` | manifest |
+| Mã vạch skid, nhãn hộp của họ B | Bố cục riêng, độ dài 35 và 60, không theo bố cục thật | — |
+| Trạng thái xe của khách sau khi chất | `CustomerLoaded` | state machine `TrailerStateMachine` |
+| Ngoại lệ mức kiện khi chuyến gồm nhiều nhóm | Chưa dựng: một chuyến là một nhóm | — |
+| Mã tự khai | Đơn khách đã có dòng giao ở nhóm khác cùng route, chuyến này còn hàng staged của đơn đó | danh mục mã (`Automatic`) |
+| Email danh sách pallet, ASN | Ra file outbox qua adapter; thiếu người nhận thì staging vẫn xong, trả cảnh báo | `ShipToConfig` |
+
 ### Giả định của lớp Product
 
 | Chỗ chưa rõ | Lớp Product làm |
@@ -238,7 +265,7 @@ LineDB thật, `FinishedGoodsTests`, `StorageTrailerTests`, `PalletCheckBenchmar
 | Whitelist của buffer | Buffer không có dòng whitelist thì nhận mọi material |
 | Yêu cầu vận chuyển | Created → Released → InTransit (mỗi chặng chuyển MTU) → Completed (MTU tới đích); R10 đọc nguồn kỹ hơn |
 | Cấp của cây thiết bị | Tám cấp Enterprise, Site, Plant, Area, Subarea, WorkCenter, WorkUnit, Machine; con chỉ cần sâu hơn cha |
-| Trạng thái MTU | Hằng số, không phải dữ liệu (ADR-056) |
+| Trạng thái MTU | Hằng số, không phải dữ liệu (ADR-056); `Shipped` thêm ở R8 |
 | Trạng thái vật chứa | State machine dạng dữ liệu của người dùng sản phẩm; vật chứa không khai state machine thì không có trạng thái (R7) |
 | Chuyển vật chứa đang ở trong vật chứa khác | Gỡ ra rồi đặt ở equipment; vật chứa cha không đếm lại (R7) |
 

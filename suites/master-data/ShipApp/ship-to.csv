@@ -1,0 +1,3 @@
+ShipTo,Family,SkidLabel,BoxLabels,CarrierCode,StagedPalletRecipients,AsnRecipients
+KLN,A,SkidTag,false,NVCR,dock-a@novavolt.local,asn-kln@novavolt.local
+BRK1,B,SkidSheet,true,,dock-b@novavolt.local,

@@ -2,6 +2,7 @@
   "masterDataOrder": [
     "Production",
     "MapApp",
-    "NvProductionExt"
+    "NvProductionExt",
+    "ShipApp"
   ]
 }

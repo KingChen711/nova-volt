@@ -49,6 +49,7 @@ public static class ProductErrors
     public const int InvalidQuantity = 7307;
     public const int InvalidContainerStatus = 7308;
     public const int ContainerNotEmpty = 7309;
+    public const int MtuNotShippable = 7310;
 
     public const int UnknownWorkOrder = 7401;
     public const int UnknownWorkOrderOperation = 7402;
@@ -76,6 +77,9 @@ public static class MtuStatus
     public const string OnHold = "OnHold";
     public const string Scrapped = "Scrapped";
     public const string Repair = "Repair";
+
+    /// <summary>Đã giao cho khách: không còn ở nhà máy, không nhận NC hay giữ hàng nữa.</summary>
+    public const string Shipped = "Shipped";
 }
 
 [App(Name)]
@@ -96,7 +100,7 @@ public sealed class ProductionApp : AppDefinition
         .Command<CreateEquipment>().Command<SetEquipmentProperty>().Command<AddEquipmentToGroup>()
         .Command<CreateMaterial>().Command<UpdateMaterial>().Command<CreateMaterialRevision>().Command<SetMaterialProperty>()
         .Command<CreateProcess>().Command<AddProcessOperation>().Command<AllowOperationEquipment>().Command<AddOperationMaterial>()
-        .Command<CreateMtu>().Command<EditMtu>().Command<MoveMtu>().Command<SplitMtu>()
+        .Command<CreateMtu>().Command<EditMtu>().Command<MoveMtu>().Command<SplitMtu>().Command<ShipMtu>()
         .Command<CreateMtua>().Command<AssembleIntoMtua>().Command<RemoveFromMtua>().Command<SetMtuaStatus>().Command<SetMtuaStatusForced>()
         .Command<UpdateMtua>().Command<MoveMtua>().Command<DeleteMtua>()
         .Command<InstallWorkOrderStates>().Command<CreateWorkOrderFromProcess>().Command<EditWorkOrder>()

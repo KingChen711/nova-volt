@@ -1,0 +1,4 @@
+Machine,FromStatus,ToStatus
+TrailerStateMachine,Free,CustomerEmpty
+TrailerStateMachine,CustomerEmpty,CustomerLoaded
+TrailerStateMachine,CustomerLoaded,Free

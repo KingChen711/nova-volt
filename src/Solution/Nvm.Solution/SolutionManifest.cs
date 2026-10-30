@@ -89,6 +89,14 @@ public static class SolutionManifest
              nameof(RemoveItemFromCkdPackage)],
             Shipping);
         ship.Allow([nameof(PalletStatusValidation)], Quality, Shipping);
+
+        // Xuất hàng: người kho và người ở dock (một role ở NovaVolt). Nhận đơn, dữ liệu đặt hàng, phản hồi ASN là tin từ hệ ngoài,
+        // cấu hình nơi nhận và danh mục ngoại lệ là master data: chỉ quản trị.
+        ship.Allow(
+            [nameof(ReleasePickListGroup), nameof(PickPallet), nameof(UnpickPallet), nameof(CompletePickList), nameof(PrintSkidLabels),
+             nameof(PrintBoxLabels), nameof(ScanSkidLabel), nameof(StagePallet), nameof(ScanBoxLabel), nameof(CheckTruckLoading),
+             nameof(AddLoadingExceptionEntry), nameof(DeleteLoadingExceptionEntry), nameof(ConfirmTruckLoad)],
+            Shipping);
         solution.Apps.Add(ship);
 
         // Trailer kho: người ở dock nạp, chốt, dỡ; người điều phối và người kéo xe làm yêu cầu kéo.
@@ -100,6 +108,11 @@ public static class SolutionManifest
         yard.Allow(
             [nameof(LoadPalletIntoStorageTrailer), nameof(CompleteStorageTrailerLoad), nameof(UnloadStorageTrailer),
              nameof(UnloadPalletFromStorageTrailer)],
+            Yard, Shipping);
+
+        // Xe của khách: nhận ở cổng, kéo vào và ra dock, yard pass, cho xe rời.
+        yard.Allow(
+            [nameof(ArriveCustomerTrailer), nameof(MoveTrailerIn), nameof(MoveTrailerOut), nameof(IssueYardPass), nameof(DepartCustomerTrailer)],
             Yard, Shipping);
         solution.Apps.Add(yard);
         return solution;

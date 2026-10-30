@@ -1,0 +1,24 @@
+{
+  "Name": "ShipApp_002_LoadingExceptionCodes",
+  "BreakOnError": true,
+  "TestDefinitions": [
+    {
+      "Name": "SetLoadingExceptionCode",
+      "Csv": "loading-exception-codes.csv",
+      "TestSteps": [
+        {
+          "ID": "SetLoadingExceptionCode",
+          "StepType": "Command",
+          "App": "ShipApp",
+          "Name": "SetLoadingExceptionCode",
+          "Parameters": {
+            "Code": "#TEST_CSV.Code#",
+            "Group": "#TEST_CSV.Group#",
+            "Description": "#TEST_CSV.Description#",
+            "Automatic": "#TEST_CSV.Automatic#"
+          }
+        }
+      ]
+    }
+  ]
+}

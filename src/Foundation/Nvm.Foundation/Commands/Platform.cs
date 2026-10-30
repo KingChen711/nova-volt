@@ -65,6 +65,15 @@ public interface IPlatform : IReadOnlyPlatform
     /// trường không khai: mỗi chỗ gọi tự xử lý.
     /// </summary>
     string? Endpoint(string name);
+
+    /// <summary>
+    /// Gửi tin đồng bộ: chờ hệ nhận trả lời tối đa <paramref name="timeout"/>. Gửi ngay lúc gọi, nằm ngoài transaction: command
+    /// hỏng sau đó thì tin đã đi vẫn đã đi. Handler tự kiểm <see cref="MessageReply.Delivered"/> và nội dung trả lời.
+    /// </summary>
+    MessageReply SendMessage(OutboundMessage message, TimeSpan timeout);
+
+    /// <summary>Gửi tin bất đồng bộ: không chờ, không có trả lời; lỗi gửi chỉ có dòng trace.</summary>
+    void SendMessageAsync(OutboundMessage message);
 }
 
 /// <summary>Platform của composite command: không có transaction của riêng nó.</summary>

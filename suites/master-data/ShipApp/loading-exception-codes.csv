@@ -1,0 +1,15 @@
+Code,Group,Description,Automatic
+SL1,SkidLevel,Recovery of a missed skid,false
+SL2,SkidLevel,Recovery after a quality hold,false
+SL3,SkidLevel,Expedite requested by the customer,false
+SL4,SkidLevel,Expedite requested by the plant,false
+SL5,SkidLevel,Continuous load,false
+SL6,SkidLevel,Expedite by a second carrier,false
+SB1,SkidBuild,Customer revised quantity,false
+SB2,SkidBuild,Customer modified quantity,false
+SB3,SkidBuild,Supplier revised quantity,false
+SB4,SkidBuild,Non-standard packing,false
+TR1,Trailer,Trailer out of space or weight,false
+TR2,Trailer,Freight damage,false
+TR3,Trailer,Short shipment,false
+TR9,Trailer,Partial shipment declared by MOM,true

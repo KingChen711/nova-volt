@@ -111,11 +111,33 @@ var options = new MomWebOptions
 };
 
 var time = TimeProvider.System;
+
+// Đường ra của tin (R8): nhãn, email, ASN ghi file vào thư mục outbox (phần mềm in, hệ đọc file lấy ở đó); hai tin đồng bộ tới
+// CustomerShipSys đi qua client gateway nếu môi trường khai NVM_GATEWAY_URL. Không khai thì chất xe họ B báo lỗi gửi tin,
+// pallet giữ Staged, như môi trường thiếu gateway.
+var gateway = new RoutingMessageGateway();
+var outbox = Environment.GetEnvironmentVariable("NVM_OUTBOX_DIR")
+    ?? Path.Combine(Path.GetDirectoryName(envFile ?? builder.Environment.ContentRootPath)!, "output", "outbox");
+foreach (var adapter in new[] { ShipAdapters.LabelPrinter, ShipAdapters.Mail, ShipAdapters.Asn })
+{
+    gateway.Adapters[adapter] = new FileMessageAdapter(Path.Combine(outbox, adapter), time);
+}
+
+if (Environment.GetEnvironmentVariable("NVM_GATEWAY_URL") is { Length: > 0 } gatewayUrl)
+{
+    var http = new HttpClient();
+    foreach (var adapter in new[] { ShipAdapters.SkidBuild, ShipAdapters.ShipLoad })
+    {
+        gateway.Adapters[adapter] = new HttpMessageAdapter(new Uri(gatewayUrl.TrimEnd('/') + "/"), http);
+    }
+}
+
 builder.Services.AddSingleton(time);
 builder.Services.AddSingleton<ITraceSink, LoggingTraceSink>();
 builder.Services.AddSingleton(sp => new RabbitMqEventPublisher(rabbitUri, plant, connectionString, time, sp.GetRequiredService<ITraceSink>()));
 builder.Services.AddSingleton(sp => new CommandExecutor(connectionString, registry, solution, time,
-    sp.GetRequiredService<ITraceSink>(), sp.GetRequiredService<RabbitMqEventPublisher>()));
+    sp.GetRequiredService<ITraceSink>(), sp.GetRequiredService<RabbitMqEventPublisher>())
+{ Gateway = gateway });
 builder.Services.AddSingleton(sp => new SignalRuleEngine(sp.GetRequiredService<CommandExecutor>(), connectionString));
 builder.Services.AddSingleton(sp => new EventWorker(sp.GetRequiredService<CommandExecutor>(), sp.GetRequiredService<SignalRuleEngine>(), rabbitUri));
 builder.Services.AddHostedService<FoundationBackgroundService>();

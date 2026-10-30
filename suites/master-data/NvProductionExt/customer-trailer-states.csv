@@ -1,0 +1,3 @@
+Machine,Status
+TrailerStateMachine,CustomerEmpty
+TrailerStateMachine,CustomerLoaded

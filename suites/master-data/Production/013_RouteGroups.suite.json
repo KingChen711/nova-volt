@@ -1,0 +1,23 @@
+{
+  "Name": "Production_013_RouteGroups",
+  "BreakOnError": true,
+  "TestDefinitions": [
+    {
+      "Name": "AddEquipmentToGroup",
+      "Csv": "route-groups.csv",
+      "TestSteps": [
+        {
+          "ID": "AddEquipmentToGroup",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "AddEquipmentToGroup",
+          "Parameters": {
+            "GroupNId": "#TEST_CSV.GroupNId#",
+            "GroupType": "Route",
+            "EquipmentNId": "#TEST_CSV.EquipmentNId#"
+          }
+        }
+      ]
+    }
+  ]
+}

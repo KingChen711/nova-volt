@@ -14,7 +14,7 @@ public sealed class LabAppDefinition : AppDefinition
         .Command<CreateLabMaterial>().Command<CreateLabOrder>().Command<DeleteLabOrder>().Command<AddLabOrderNote>()
         .Command<CreateLabOrderWithNote>().Command<CreateLabOrderWithMaterial>().Command<SetLabOrderSupplier>()
         .Command<CreateAndCountLabOrders>().Command<ReadMaterialWithQuery>().Command<SetLabOrderStatus>()
-        .Command<RecordLabTick>()
+        .Command<RecordLabTick>().Command<SendLabNotice>()
         .ReadingFunction<OrdersOfMaterial>().ReadingFunction<FailingOrders>();
 }
 
@@ -76,6 +76,55 @@ public sealed class RecordLabTickHandler : ICommandHandler<RecordLabTick, LabRes
         tick.NId = tick.Id.ToString();
         tick.Source = command.Source;
         platform.Submit(tick);
+        return new LabResponse();
+    }
+}
+
+/// <summary>Gửi một tin ra ngoài (đồng bộ hay bất đồng bộ) rồi ghi một dòng; <see cref="FailAfterSend"/> làm command hỏng sau khi gửi.</summary>
+[Command<LabOperationBlock>]
+public sealed class SendLabNotice : ICommand<LabResponse>
+{
+    public bool Synchronous { get; init; }
+
+    public bool FailAfterSend { get; init; }
+
+    public string Adapter { get; init; } = "LabAdapter";
+}
+
+public sealed class SendLabNoticeHandler : ICommandHandler<SendLabNotice, LabResponse>
+{
+    public LabResponse Handle(SendLabNotice command, IPlatform platform)
+    {
+        var message = new OutboundMessage(command.Adapter, "LabNotice", """{"notice":1}""");
+        var source = "async";
+        if (command.Synchronous)
+        {
+            var reply = platform.SendMessage(message, TimeSpan.FromSeconds(5));
+            if (!reply.Delivered)
+            {
+                var failed = new LabResponse();
+                failed.SetError(9901, reply.Error!);
+                return failed;
+            }
+
+            source = reply.Content;
+        }
+        else
+        {
+            platform.SendMessageAsync(message);
+        }
+
+        var tick = platform.Create<LabTick>();
+        tick.NId = tick.Id.ToString();
+        tick.Source = source;
+        platform.Submit(tick);
+        if (command.FailAfterSend)
+        {
+            var failed = new LabResponse();
+            failed.SetError(9902, "Failed after the message was sent.");
+            return failed;
+        }
+
         return new LabResponse();
     }
 }

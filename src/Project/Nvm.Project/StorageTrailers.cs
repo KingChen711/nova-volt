@@ -4,7 +4,8 @@ using Nvm.Product;
 namespace Nvm.Project;
 
 // Trailer, phần của team (app hậu cần bên ngoài YardApp): ở R7 chỉ phần trailer kho, tức trailer đỗ trong nhà máy làm kho tạm
-// cho pallet thành phẩm, và yêu cầu kéo xe giữa yard và dock. Lịch xe, placard, nhận skid thuộc R9.
+// cho pallet thành phẩm, và yêu cầu kéo xe giữa yard và dock. Xe của khách cho xuất hàng (R8) ở Loading.cs. Lịch xe, placard,
+// nhận skid thuộc R9.
 
 [FunctionalBlock("FB_OP_Yard", ModelDomain.OperationalData)]
 public sealed class YardOperationBlock;
@@ -20,7 +21,10 @@ public sealed class YardApp : AppDefinition
         .Command<CreateTrailer>().Command<ArriveEmptyTrailer>().Command<SetTrailerAsStorage>().Command<UnsetTrailerAsStorage>()
         .Command<CallStorageTrailer>().Command<CreateTrailerMovementRequest>().Command<UpdateTrailerMovement>()
         .Command<LoadPalletIntoStorageTrailer>().Command<CompleteStorageTrailerLoad>().Command<UnloadStorageTrailer>()
-        .Command<UnloadPalletFromStorageTrailer>();
+        .Command<UnloadPalletFromStorageTrailer>()
+        .Command<ArriveCustomerTrailer>().Command<MoveTrailerIn>().Command<MoveTrailerOut>().Command<IssueYardPass>()
+        .Command<DepartCustomerTrailer>()
+        .ReadingFunction<DockableTrailers>();
 }
 
 public static class TrailerStates
@@ -30,6 +34,12 @@ public static class TrailerStates
     public const string Empty = "Empty";
     public const string Tapped = "Tapped";
     public const string Full = "Full";
+
+    /// <summary>Xe của hãng vận tải tới lấy thành phẩm, còn rỗng.</summary>
+    public const string CustomerEmpty = "CustomerEmpty";
+
+    /// <summary>Xe của hãng vận tải đã chất xong chuyến giao.</summary>
+    public const string CustomerLoaded = "CustomerLoaded";
 }
 
 /// <summary>Loại kho của trailer kho.</summary>
@@ -82,6 +92,11 @@ public sealed class Trailer : Entity, IHasStatus
 
     /// <summary>MTUA mang barcode của trailer, chứa các pallet; chỉ có khi trailer là trailer kho.</summary>
     public string? StorageMtuaNId { get; set; }
+
+    /// <summary>Nơi nhận mà xe phục vụ: chỉ xe có route pool trùng nơi nhận của chuyến mới vào dock chất hàng của chuyến đó.</summary>
+    public string? RoutePool { get; set; }
+
+    public string? YardPassNId { get; set; }
 }
 
 /// <summary>Lịch chất hàng của trailer kho ở một cửa dock. Mỗi trailer tối đa một lịch đang mở.</summary>
@@ -208,6 +223,8 @@ public sealed class CreateTrailer : ICommand<YardResponse>
     public string? Barcode { get; init; }
 
     public string? TrailerNo { get; init; }
+
+    public string? RoutePool { get; init; }
 }
 
 internal sealed class CreateTrailerHandler : ICommandHandler<CreateTrailer, YardResponse>
@@ -222,6 +239,7 @@ internal sealed class CreateTrailerHandler : ICommandHandler<CreateTrailer, Yard
         var trailer = platform.Create<Trailer>();
         trailer.NId = command.Barcode!;
         trailer.TrailerNo = command.TrailerNo ?? command.Barcode;
+        trailer.RoutePool = command.RoutePool;
         platform.ChangeStatus(trailer, TrailerStates.Machine, TrailerStates.Free);
         return YardResponse.Of(trailer);
     }

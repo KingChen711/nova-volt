@@ -114,6 +114,29 @@ public static class NvErrors
     public const int InvalidMovement = 9309;
     public const int MixedTestState = 9310;
     public const int NotInTrailer = 9311;
+    public const int WrongRoutePool = 9312;
+    public const int NoYardPass = 9313;
+
+    public const int InvalidSalesOrder = 9401;
+    public const int UnknownShipment = 9402;
+    public const int InvalidShipmentState = 9403;
+    public const int NotStored = 9404;
+    public const int ItemTooYoung = 9405;
+    public const int NotPicked = 9406;
+    public const int ShortPick = 9407;
+    public const int NoLabelConfig = 9408;
+    public const int NoBoxOrder = 9409;
+    public const int UnknownSkid = 9410;
+    public const int SkidInProgress = 9411;
+    public const int NoRouteArea = 9412;
+    public const int InvalidBoxLabel = 9413;
+    public const int BoxScanned = 9414;
+    public const int ExceptionRequired = 9415;
+    public const int UnknownExceptionCode = 9416;
+    public const int DuplicateException = 9417;
+    public const int NoTrailerAtDock = 9418;
+    public const int SkidNotStaged = 9419;
+    public const int NotConfirmed = 9420;
 }
 
 /// <summary>Trạng thái team thêm vào state machine WO bằng dữ liệu.</summary>
@@ -160,6 +183,12 @@ public static class NvKeys
 
     /// <summary>Độ dài mã gói lẻ, kể cả tiền tố.</summary>
     public const string CkdLength = "Nv.CkdLength";
+
+    /// <summary>
+    /// Số giờ tối thiểu từ lúc làm ra tới lúc hàng họ B được lấy: pallet có hàng trẻ hơn thì không pick được. Thiếu key hoặc 0: không
+    /// kiểm (môi trường thiếu key thì không thấy chặn).
+    /// </summary>
+    public const string MinimumItemAgeHours = "Nv.MinimumItemAgeHours";
 }
 
 /// <summary>Endpoint của môi trường mà code của team dùng.</summary>

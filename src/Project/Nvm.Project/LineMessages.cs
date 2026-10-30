@@ -460,7 +460,8 @@ internal sealed class ApplyLineResultsHandler : ICommandHandler<ApplyLineResults
             return (temp, created.Succeeded ? null : created.Error!.ErrorMessage);
         }
 
-        var existing = platform.Query<Mtu>().Where(m => m.Code == lot && m.MaterialNId == material)
+        // Lô con tách ra mang cùng mã với lô mẹ; phần hao hụt tách ra đã bị hủy thì không được trừ tiếp vào đó.
+        var existing = platform.Query<Mtu>().Where(m => m.Code == lot && m.MaterialNId == material && m.Status != MtuStatus.Scrapped)
             .OrderByDescending(m => m.Quantity).FirstOrDefault();
         if (existing is null)
         {

@@ -1,0 +1,27 @@
+{
+  "Name": "ShipApp_001_ShipTo",
+  "BreakOnError": true,
+  "TestDefinitions": [
+    {
+      "Name": "SetShipToConfig",
+      "Csv": "ship-to.csv",
+      "TestSteps": [
+        {
+          "ID": "SetShipToConfig",
+          "StepType": "Command",
+          "App": "ShipApp",
+          "Name": "SetShipToConfig",
+          "Parameters": {
+            "ShipTo": "#TEST_CSV.ShipTo#",
+            "Family": "#TEST_CSV.Family#",
+            "SkidLabel": "#TEST_CSV.SkidLabel#",
+            "BoxLabels": "#TEST_CSV.BoxLabels#",
+            "CarrierCode": "#TEST_CSV.CarrierCode#",
+            "StagedPalletRecipients": "#TEST_CSV.StagedPalletRecipients#",
+            "AsnRecipients": "#TEST_CSV.AsnRecipients#"
+          }
+        }
+      ]
+    }
+  ]
+}

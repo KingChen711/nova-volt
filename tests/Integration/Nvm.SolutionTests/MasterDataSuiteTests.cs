@@ -19,14 +19,16 @@ public sealed class MasterDataSuiteTests
             "Production_001_Equipment", "Production_002_Materials", "Production_003_Processes", "Production_004_WorkOrderStates",
             "Production_005_Defects", "Production_006_PackingEquipment", "Production_007_FinishedGoodsMaterials",
             "Production_008_FinishedGoodsProcesses", "Production_009_MaterialProperties", "Production_010_EquipmentProperties",
+            "Production_011_ShippingEquipment", "Production_012_ShippingEquipmentProperties", "Production_013_RouteGroups",
             "MapApp_001_LineCodes", "MapApp_002_LineFailureCodes", "MapApp_003_PackingLineCodes", "MapApp_004_PartAddresses",
             "NvProductionExt_001_WorkOrderLifecycle", "NvProductionExt_002_ProcessSchedules", "NvProductionExt_003_ProductionSchedules",
             "NvProductionExt_004_DefaultWorkOrders", "NvProductionExt_005_InHouseMaterials", "NvProductionExt_006_QualityCodes",
             "NvProductionExt_007_MaterialSuppliers", "NvProductionExt_008_DisassemblyParts", "NvProductionExt_009_ContainerStates",
             "NvProductionExt_010_PackingOperations", "NvProductionExt_011_FinishedGoods", "NvProductionExt_012_FinishedGoodsSchedules",
+            "NvProductionExt_013_CustomerTrailerStates", "ShipApp_001_ShipTo", "ShipApp_002_LoadingExceptionCodes",
         ]);
 
-        h.Read<Equipment>().Count.ShouldBe(129);
+        h.Read<Equipment>().Count.ShouldBe(132);
         h.Read<Equipment>(q => q.Where(e => e.Level == "Area" && e.NId.StartsWith("NV1-B"))).Count.ShouldBe(16);
         h.Read<Material>().Count.ShouldBe(15);
         h.Read<Material>(q => q.Where(m => m.MaterialClass == "InHouse")).Count.ShouldBe(6);
@@ -62,7 +64,7 @@ public sealed class MasterDataSuiteTests
         again.Select(s => s.Status).ShouldAllBe(s => s == SuiteStatus.Executed);
         again.Single(s => s.Suite == "Production_001_Equipment").Log.Count(l => l.EndsWith("Skipped", StringComparison.Ordinal)).ShouldBe(98);
         again.Single(s => s.Suite == "Production_006_PackingEquipment").Log.Count(l => l.EndsWith("Skipped", StringComparison.Ordinal)).ShouldBe(31);
-        h.Read<Equipment>().Count.ShouldBe(129);
+        h.Read<Equipment>().Count.ShouldBe(132);
         h.Read<DefaultWorkOrder>().Count.ShouldBe(40);
     }
 

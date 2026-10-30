@@ -294,6 +294,41 @@ internal sealed class MoveMtuHandler : ICommandHandler<MoveMtu, ProductResponse>
 }
 
 /// <summary>
+/// Giao MTU cho khách: Available → Shipped, rời vật chứa và equipment (vị trí <c>n/a</c>). Hàng bị giữ, bị hủy hay đã giao thì từ
+/// chối. Lớp Product không đếm lại vật chứa vừa mất hàng: người gọi tự làm.
+/// </summary>
+[Command<ProductOperationBlock>]
+public sealed class ShipMtu : ICommand<ProductResponse>
+{
+    [Mandatory]
+    public string? NId { get; init; }
+}
+
+internal sealed class ShipMtuHandler : ICommandHandler<ShipMtu, ProductResponse>
+{
+    public ProductResponse Handle(ShipMtu command, IPlatform platform)
+    {
+        if (Mtus.Find(platform, command.NId!, out var mtu) is { } missing)
+        {
+            return missing;
+        }
+
+        if (mtu.Status != MtuStatus.Available)
+        {
+            return ProductResponse.Fail(ProductErrors.MtuNotShippable, $"MTU {mtu.NId} is {mtu.Status}; only an available MTU is shipped.");
+        }
+
+        var parent = mtu.ParentMtuaNId;
+        mtu.Status = MtuStatus.Shipped;
+        mtu.ParentMtuaNId = null;
+        mtu.EquipmentNId = EquipmentLevels.NotApplicable;
+        platform.Submit(mtu);
+        History.Write(platform, mtu.NId, MtuHistoryActions.Edit, $"Status {MtuStatus.Available} -> {MtuStatus.Shipped}, out of {parent ?? "-"}");
+        return ProductResponse.Of(mtu);
+    }
+}
+
+/// <summary>
 /// Tách một phần lô ra MTU con <c>&lt;NId&gt;.&lt;n&gt;</c> cùng material, cùng vị trí. Tách hết được (lô mẹ còn 0), như tin hao hụt
 /// trên hệ thật; tách quá lượng thì từ chối.
 /// </summary>

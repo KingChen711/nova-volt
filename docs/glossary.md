@@ -97,6 +97,19 @@ Thêm khái niệm mới vào đây cùng lúc thêm vào model (AGENTS.md §5.8
 | **Tier / buffer / route** | Bốn cấp vị trí từ dock tới line / ô chứa trong một tier / đường đi qua các tier |
 | **Kanban / địa chỉ part** | Hồ sơ cung ứng của part / chỗ cất và chỗ giao của part |
 
+## Xuất hàng
+
+| Từ | Nghĩa |
+|---|---|
+| **Đơn bán / nhóm đơn** | Đơn của khách từ ERP / các đơn cùng nơi nhận, route, giờ giao chưa giao, đi chung một chuyến |
+| **Chuyến giao (delivery)** | Một lần giao của nhóm đơn: xe, số xác nhận của khách, vận đơn, yard pass |
+| **Họ A / họ B** | Họ khách: A có hãng vận tải trong đơn, nhãn SkidTag, đo cuối, ASN; B dùng dữ liệu đặt hàng, nhãn SkidSheet hai mặt, nhãn hộp, chờ `CustomerShipSys` xác nhận |
+| **Picking / staging** | Giữ pallet cho đơn, vị trí giữ ô kho / xác nhận pallet đã tới khu tập kết, gắn vào skid, đổi vị trí |
+| **Route chính** | Tên nhóm equipment của route: route từ 10 ký tự lấy 3 ký tự đầu, ngắn hơn bỏ 2 ký tự cuối; chỉ ra khu tập kết và ô yard |
+| **Ngoại lệ chất xe** | Mã giải thích vì sao chuyến lệch kế hoạch, theo nhóm SkidLevel, SkidBuild, Trailer; một mã do MOM tự khai |
+| **Vận đơn / ASN** | Chứng từ in khi chất xong / tin báo khách họ A chuyến vừa đi |
+| **Route pool** | Nơi nhận mà một xe của hãng vận tải phục vụ |
+
 ## Hệ bên ngoài (giả lập)
 
 | Tên | Vai |

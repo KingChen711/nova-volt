@@ -6,12 +6,12 @@ namespace Nvm.Project;
 
 // Thành phẩm, phần của team: app riêng ShipApp và FB của nó. Cất pallet vào ô kho theo địa chỉ của part, bản ghi FIFO (post-action
 // trên lệnh chuyển vật chứa của lớp Product phát event, subscriber ghi), kiểm pallet bằng procedure, gỡ hàng khỏi pallet, gói
-// lẻ, hết hạn bước đo cuối. Xuất hàng (đơn, picking, staging) thuộc R8.
+// lẻ, hết hạn bước đo cuối. Xuất hàng (R8) ở Shipping.cs và Loading.cs.
 
 [FunctionalBlock("FB_OP_Ship", ModelDomain.OperationalData)]
 public sealed class ShipOperationBlock;
 
-/// <summary>App thành phẩm của team: màn cất kho, kiểm pallet, gỡ pallet, gói lẻ. App độc lập, không gắn vào Production.</summary>
+/// <summary>App thành phẩm của team: cất kho, kiểm pallet, gỡ pallet, gói lẻ, xuất hàng. App độc lập, không gắn vào Production.</summary>
 [App(Name)]
 public sealed class ShipApp : AppDefinition
 {
@@ -19,10 +19,18 @@ public sealed class ShipApp : AppDefinition
 
     protected override void Define(PomBuilder pom) => pom
         .Entity<FifoPallet>().Entity<Mtua>().Entity<Mtu>().Entity<PackingDetail>().Entity<PartAddress>()
+        .Entity<ShipToConfig>().Entity<SalesOrder>().Entity<SalesOrderLine>().Entity<PickListGroup>().Entity<Delivery>()
+        .Entity<PickedPallet>().Entity<Skid>().Entity<SkidContent>().Entity<CustomerBoxOrder>().Entity<LoadingExceptionCode>()
+        .Entity<LoadingExceptionEntry>().Entity<AsnDocument>()
         .Command<StorePallet>().Command<PalletStatusValidation>().Command<UnloadTotesFromPallet>()
         .Command<OpenCkdPackage>().Command<AddItemToCkdPackage>().Command<RemoveItemFromCkdPackage>().Command<CheckEolvRetest>()
+        .Command<ReceiveSalesOrders>().Command<SetCustomerBoxOrder>().Command<SetShipToConfig>().Command<ReleasePickListGroup>()
+        .Command<PickPallet>().Command<UnpickPallet>().Command<CompletePickList>().Command<PrintSkidLabels>().Command<PrintBoxLabels>()
+        .Command<ScanSkidLabel>().Command<StagePallet>().Command<ScanBoxLabel>().Command<CheckTruckLoading>()
+        .Command<AddLoadingExceptionEntry>().Command<DeleteLoadingExceptionEntry>().Command<SetLoadingExceptionCode>().Command<ConfirmTruckLoad>()
+        .Command<RecordAsnResponse>()
         .ReadingFunction<PalletHeldItems>().ReadingFunction<PalletDataCheck>().ReadingFunction<SuggestedPallets>()
-        .ReadingFunction<StoreAddresses>();
+        .ReadingFunction<StoreAddresses>().ReadingFunction<GroupSuggestedPallets>();
 }
 
 /// <summary>

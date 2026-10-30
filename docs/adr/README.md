@@ -95,6 +95,7 @@ ADR-051 dựng lại dự án; code v1 nằm ở tag `v1.0`. ADR 001–050 giữ
 | [056](ADR-056-lop-product-r3.md) | Lớp Product: ba FB theo domain, một base app `Production`, trạng thái MTU cố định, trạng thái WO là dữ liệu | **Accepted** 2026-10-28 | v2 · R3 |
 | [057](ADR-057-wo-theo-ca-va-suite-r4.md) | Master data bằng suite kiểu Tester Tool, WO theo ca ở extension app, quyền gọi command theo role | **Accepted** 2026-10-28 | v2 · R4 |
 | [058](ADR-058-thanh-pham-r7.md) | Thành phẩm: vật chứa có trạng thái ở lớp Product, đóng gói theo bảng cấu hình, ShipApp và YardApp, procedure qua kết nối riêng | **Accepted** 2026-10-29 | v2 · R7 |
+| [059](ADR-059-xuat-hang-r8.md) | Xuất hàng: gửi tin ra ngoài ở Foundation, đơn bán và chuyến giao trên ShipApp, ngoại lệ theo thứ tự, xe của khách trên YardApp | **Accepted** 2026-10-30 | v2 · R8 |
 
 Cột **Ra ở** là milestone dự kiến, không phải cam kết. Quyết định đến sớm hơn thì viết sớm hơn.
 

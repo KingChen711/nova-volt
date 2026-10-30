@@ -251,6 +251,11 @@ public sealed class QualityTests
             Shrinks = [new LineShrinkDetail { OperationCode = "el010", EquipmentCode = "el010_m1_1", MaterialCode = "Cathode powder lot in use", Lot = "SH-1", Quantity = 4.2m, StatusCode = "50", EventTime = At("08:30") }],
         }, Lead).As<LineQualityResponse>().NotHandled.ShouldBeEmpty();
         h.Read<Mtu>(q => q.Where(m => m.NId.StartsWith("NV-RM-CATHODE_SH-1."))).Count.ShouldBe(1);
+
+        // Tin sau còn trừ lô SH-1: trừ vào lô mẹ (nâng số lượng), không vào phần hao hụt đã hủy dù nó còn số lượng lớn hơn.
+        Line(h, Unit("el010", "SH-C1", quantity: 120, materials: [("Cathode powder lot in use", "SH-1")]));
+        h.Read<MaterialConsumption>(q => q.Where(c => c.ProductMtuNId!.EndsWith("_SH-C1") && c.ComponentMtuNId!.StartsWith("NV-RM-CATHODE_SH-1")))
+            .Single().ComponentMtuNId.ShouldBe("NV-RM-CATHODE_SH-1");
     }
 
     internal static DateTimeOffset At(string hhmm) =>

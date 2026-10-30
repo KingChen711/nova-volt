@@ -112,6 +112,46 @@ internal sealed class Platform(CommandExecutor executor, DomainTransaction trans
 
     public string? Endpoint(string name) => Executor.Solution.Endpoints.TryGetValue(name, out var value) ? value : null;
 
+    public MessageReply SendMessage(OutboundMessage message, TimeSpan timeout)
+    {
+        ArgumentNullException.ThrowIfNull(message);
+        CallTracer.Platform(TraceLevel.Verbose, $"SendMessage {message.MessageType} via {message.Adapter}, waiting up to {timeout.TotalSeconds:0} s");
+        MessageReply reply;
+        try
+        {
+            reply = Executor.Gateway.Send(message, timeout);
+        }
+#pragma warning disable CA1031 // gateway là mã của môi trường; lỗi của nó thành trả lời lỗi, như lời gọi không tới được hệ nhận
+        catch (Exception ex)
+#pragma warning restore CA1031
+        {
+            reply = MessageReply.Failed(ex.Message);
+        }
+
+        if (!reply.Delivered)
+        {
+            CallTracer.Platform(TraceLevel.Warning, $"SendMessage {message.MessageType} via {message.Adapter} failed: {reply.Error}");
+        }
+
+        return reply;
+    }
+
+    public void SendMessageAsync(OutboundMessage message)
+    {
+        ArgumentNullException.ThrowIfNull(message);
+        try
+        {
+            Executor.Gateway.Post(message);
+            CallTracer.Platform(TraceLevel.Verbose, $"SendMessageAsync {message.MessageType} via {message.Adapter}");
+        }
+#pragma warning disable CA1031 // bất đồng bộ: người gửi không biết kết quả, lỗi chỉ ghi trace
+        catch (Exception ex)
+#pragma warning restore CA1031
+        {
+            CallTracer.Platform(TraceLevel.Warning, $"SendMessageAsync {message.MessageType} via {message.Adapter} failed: {ex.Message}");
+        }
+    }
+
     private void RequireOwnDomain(ModelObject item, string operation)
     {
         var domain = Executor.Registry.DomainOf(item.GetType());

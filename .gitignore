@@ -30,6 +30,8 @@ BenchmarkDotNet.Artifacts/
 # Browser verification artifacts (Playwright CLI skill)
 .playwright-cli/
 output/playwright/
+# Outbox của host (nhãn, email, ASN ghi file qua adapter): dữ liệu chạy, không commit
+output/outbox/
 
 # ─────────────────────────────────────────────────────────
 # IDE

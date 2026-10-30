@@ -13,7 +13,7 @@ test và số đo tương ứng (AGENTS.md §1.3). Agent làm theo lô lớn, kh
 | R5 Tin từ xưởng | **đạt** (2026-10-29) | Tag `r5`; mục R5 bên dưới |
 | R6 Hàng lỗi | **đạt** (2026-10-29) | Tag `r6`; mục R6 bên dưới |
 | R7 Đóng gói, cất kho, trailer kho, kiểm pallet | **đạt** (2026-10-29) | Tag `r7`; mục R7 bên dưới |
-| R8 Xuất hàng | chưa làm | |
+| R8 Xuất hàng | **đạt** (2026-10-30) | Tag `r8`; mục R8 bên dưới |
 | R9 Xe linh kiện, bãi, dock, skid | chưa làm | |
 | R10 Kanban, gọi hàng, bảng gọi hàng, nạp nguyên liệu | chưa làm | |
 | R11 Gateway, hệ ngoài giả lập | chưa làm | |
@@ -204,6 +204,43 @@ test và số đo tương ứng (AGENTS.md §1.3). Agent làm theo lô lớn, kh
 - Kiểm trên stack local 2026-10-29: deploy tăng dần (suite cũ bỏ qua, 12 suite R7 chạy), `make views`, `make sql-key`,
   `make linedb RESET=1`; đường poll, line 3 (360 cell) và line 1 (192 cell) với `PACK=1`: 2 pallet Full.
 
+## R8
+
+- Foundation: gửi tin ra ngoài (`IPlatform.SendMessage` đồng bộ có timeout, `SendMessageAsync`), theo adapter, đi ngay lúc gọi; gateway
+  gắn vào executor, mặc định không có gateway (gửi đồng bộ báo lỗi). Host: adapter file cho nhãn, email, ASN (`output/outbox`),
+  adapter HTTP tới client gateway khi khai `NVM_GATEWAY_URL`. Lớp Product: MTU `Shipped`, lệnh `ShipMtu`. Quyết định ở ADR-059.
+- `ShipApp` (`Shipping.cs`, `Loading.cs`): đơn bán JSON với Ack từng đơn, họ theo mã hãng vận tải, route họ A ghép từ nơi nhận và giờ
+  giao, họ B từ route của khách hoặc dữ liệu đặt hàng (`CustomerBoxOrder`); nhóm đơn và chuyến giao; Release; picking FIFO (cờ lấy
+  lệch, kiểm hàng giữ bằng procedure, đo cuối họ A, tuổi hàng họ B theo key `Nv.MinimumItemAgeHours`), bỏ pick, đóng pick list thiếu
+  phải xác nhận; nhãn skid họ A (SkidTag) và họ B (SkidSheet hai mặt), nhãn hộp, vận đơn ra file XML; staging vào khu tập kết của
+  nhóm route chính, email danh sách pallet; ngoại lệ theo thứ tự SkidLevel → SkidBuild → Trailer, mã tự khai; chất xe, họ B gửi
+  SkidBuild rồi ShipLoad đồng bộ tới `CustomerShipSys`; ASN họ A sau commit, phản hồi ASN thành email.
+- `YardApp`: xe của khách có route pool; nhận xe vào ô yard gắn chuyến, Move In, Move Out chỉ ra ô của nhóm route, yard pass `YP-…`,
+  xe rời (đơn, nhóm Shipped; pallet Empty ở `n/a`; tote Empty rời pallet; hàng Shipped; xe Free).
+- Master data bằng suite mới: khu tập kết A, B; nhóm route `KLN`, `ZR4K` (khu tập kết, ô yard); trạng thái xe `CustomerEmpty`,
+  `CustomerLoaded`; suite gốc `ShipApp` (nơi nhận, danh mục 14 mã ngoại lệ). Quyền: role `shipping` cho xuất hàng, `yard`/`shipping`
+  cho xe của khách; nhận đơn, dữ liệu đặt hàng, phản hồi ASN chỉ quản trị (tin từ hệ ngoài, R11).
+- DoD, test ở `tests/Integration/Nvm.SolutionTests/ShipmentTests.cs`:
+  - Hai họ chạy trọn tới Shipped: `Family_a_runs_from_sales_order_to_shipped_and_sends_the_asn`,
+    `Family_b_needs_the_box_order_scans_every_box_and_ships_after_the_customer_system_confirms`.
+  - Ma trận ngoại lệ 6 ca đúng nhóm, đúng thứ tự: `Loading_exceptions_are_asked_by_group_in_order_and_the_automatic_code_is_declared_without_asking`.
+  - Hệ của khách không trả lời (cả trả thiếu số, cả không có gateway) → pallet giữ Staged, xe chưa chất:
+    `Customer_system_not_replying_keeps_pallets_staged_and_the_trailer_unloaded`.
+  - Thêm: luật picking (`Picking_blocks_…`), cơ chế gửi tin ở Foundation (`MessageBehaviorTests`, 3 test), `ShipMtu` ở lớp Product.
+- `make ci` 2026-10-30 trên máy cá nhân: clean-room, format, build Release sạch (0 cảnh báo), 258/258 test xanh, hai benchmark (R1, R7)
+  chạy riêng xanh.
+- Test bắt được: mã skid họ B trùng giữa hai chuyến của cùng một đơn khách (giao một phần rồi giao tiếp); NId skid họ B gồm cả chuyến.
+- Web: màn "Đơn và picking", "Staging và chất xe" (`/area/finished-goods/orders`, `/staging`), "Xe của khách" (`/area/yard/customer`).
+- Kiểm trên stack local 2026-10-30: deploy tăng dần (6 suite R8 chạy, suite cũ bỏ qua), host ghi nhãn, email, ASN ra `output/outbox`.
+  Lab `web/e2e/shipping.spec.ts` 5/5 xanh: họ A từ đơn ERP tới Shipped trên màn (cất kho, Release, picking FIFO, nhãn skid, staging
+  từ chối pallet chưa lấy, xe sai route pool bị từ chối, chất xe, vận đơn, Move Out sai ô bị từ chối, yard pass, xe rời; pallet Empty ở
+  `n/a`, ASN ra file); họ B tới Confirm, không có hệ của khách nên báo lỗi gửi SkidBuild, pallet giữ Staged. Ba spec R7 xanh khi có
+  pallet mới từ simulator.
+- Lab bắt được: (1) form chất xe hai ô không có nút submit nên Enter ở ô quét skid không thêm skid (đã thêm nút); (2) lỗi có từ R5–R6:
+  trừ nguyên liệu theo mã lô chọn cả lô con hao hụt đã hủy (cùng mã với lô mẹ), làm cây thành phần của pallet có hàng Scrapped và
+  picking chặn đúng luật. Sửa: bỏ lô đã hủy khi chọn; test trong `QualityTests.Shrink_rows_from_linedb_are_split_from_the_lot_and_scrapped`.
+  Pallet tạo trước bản sửa trên stack local vẫn mang genealogy cũ.
+
 ## Nợ mở
 
 | Mã | Nợ | Mốc xử lý |
@@ -216,4 +253,9 @@ test và số đo tương ứng (AGENTS.md §1.3). Agent làm theo lô lớn, kh
 | N-R5-2 | Đường relay chưa đo tải; tải R5 chỉ đo đường poll | R12 |
 | N-R5-3 | Trạng thái dòng LineDB chưa có trên web: cần một read model phía MOM hoặc API riêng của xưởng | R12 |
 | N-R7-2 | Timer đầu ca chạy bù lúc host khởi động tranh ghi với WO dự phòng do tin máy mở cùng lúc: commit của timer hỏng, lần chạy đó mất, không thử lại (thấy trên stack local 2026-10-29, khu Module line 3) | R12 |
+| N-R8-1 | Stack local không có hệ của khách: chất xe họ B dừng ở Confirm như trên máy ảo, trừ khi trỏ `NVM_GATEWAY_URL` tới hệ giả | R11 |
+| N-R8-2 | Email (danh sách pallet, phản hồi ASN) ra file outbox, chưa qua SMTP | R11 |
+| N-R8-3 | Ngoại lệ mức kiện khi một chuyến gồm nhiều nhóm đơn chưa dựng: một chuyến là một nhóm | R12 |
+| N-R8-4 | Không có lệnh cho xe của khách rỗng rời đi (nguồn không nói hệ thật làm gì); lab họ B để xe lại cửa dock, stack local phải dọn tay | R9 |
+| N-R8-5 | Lab `line-messages.spec` tìm dòng `ca010` trong 50 dòng mới nhất: chạy simulator có đóng gói ngay trước thì dòng đó bị đẩy ra, spec hỏng dù màn đúng | R12 |
 | N-R7-3 | Đo cuối dựng bằng tin LineDB; màn phiên đo của hệ thật (kit không quét thành NC) chưa dựng | R13 |

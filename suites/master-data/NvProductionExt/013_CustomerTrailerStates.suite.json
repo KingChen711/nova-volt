@@ -1,0 +1,39 @@
+{
+  "Name": "NvProductionExt_013_CustomerTrailerStates",
+  "BreakOnError": true,
+  "TestDefinitions": [
+    {
+      "Name": "DefineStatus",
+      "Csv": "customer-trailer-states.csv",
+      "TestSteps": [
+        {
+          "ID": "DefineStatus",
+          "StepType": "Command",
+          "App": "Foundation",
+          "Name": "DefineStatus",
+          "Parameters": {
+            "Machine": "#TEST_CSV.Machine#",
+            "Status": "#TEST_CSV.Status#"
+          }
+        }
+      ]
+    },
+    {
+      "Name": "DefineTransition",
+      "Csv": "customer-trailer-transitions.csv",
+      "TestSteps": [
+        {
+          "ID": "DefineTransition",
+          "StepType": "Command",
+          "App": "Foundation",
+          "Name": "DefineTransition",
+          "Parameters": {
+            "Machine": "#TEST_CSV.Machine#",
+            "FromStatus": "#TEST_CSV.FromStatus#",
+            "ToStatus": "#TEST_CSV.ToStatus#"
+          }
+        }
+      ]
+    }
+  ]
+}

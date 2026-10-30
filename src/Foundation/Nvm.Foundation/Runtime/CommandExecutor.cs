@@ -67,6 +67,9 @@ public sealed class CommandExecutor
 
     public SolutionConfiguration Solution => _solution;
 
+    /// <summary>Đường ra của tin gửi hệ ngoài. Mặc định không có gateway: gửi đồng bộ trả lỗi, như môi trường thiếu client gateway.</summary>
+    public IMessageGateway Gateway { get; set; } = new MissingMessageGateway();
+
     /// <summary>Gọi command theo tên công bố trên app, với thân JSON: đường POST tới OData.</summary>
     public CommandResult Execute(string appName, string commandName, JsonElement body, CallerIdentity? caller = null)
     {

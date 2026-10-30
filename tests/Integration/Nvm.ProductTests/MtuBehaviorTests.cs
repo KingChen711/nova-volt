@@ -41,6 +41,26 @@ public sealed class MtuBehaviorTests
     }
 
     [Fact]
+    public async Task Shipping_an_available_mtu_takes_it_out_of_its_container_and_refuses_held_or_shipped_ones()
+    {
+        var p = await ProductHarness.CreateAsync();
+
+        p.Ok(new CreateMtu { NId = "KIT-1", MaterialNId = ProductHarness.Module });
+        p.Ok(new CreateMtu { NId = "KIT-2", MaterialNId = ProductHarness.Module });
+        p.Ok(new CreateMtua { NId = "TOTE-1", ContainerType = "Tote", EquipmentNId = ProductHarness.Subarea });
+        p.Ok(new AssembleIntoMtua { ChildNId = "KIT-1", ContainerNId = "TOTE-1" });
+        p.Ok(new HoldMtus { MtuNIds = ["KIT-2"] });
+
+        p.Ok(new ShipMtu { NId = "KIT-1" });
+        var shipped = p.Mtu("KIT-1");
+        (shipped.Status, shipped.ParentMtuaNId, shipped.EquipmentNId).ShouldBe((MtuStatus.Shipped, null, EquipmentLevels.NotApplicable));
+        p.Read<MtuHistory>(q => q.Where(h => h.MtuNId == "KIT-1").OrderBy(h => h.CreatedOn)).Last().Detail.ShouldContain("out of TOTE-1");
+
+        p.Fails(new ShipMtu { NId = "KIT-1" }, ProductErrors.MtuNotShippable);
+        p.Fails(new ShipMtu { NId = "KIT-2" }, ProductErrors.MtuNotShippable);
+    }
+
+    [Fact]
     public async Task Location_inside_a_container_is_the_equipment_of_the_outermost_container()
     {
         var p = await ProductHarness.CreateAsync();

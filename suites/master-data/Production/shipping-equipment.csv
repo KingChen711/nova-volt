@@ -1,0 +1,4 @@
+NId,Name,Level,ParentNId
+NV1-CMN-STG,Staging lanes,Area,NV1-CMN
+NV1-CMN-STG-A,Staging lane A,WorkCenter,NV1-CMN-STG
+NV1-CMN-STG-B,Staging lane B,WorkCenter,NV1-CMN-STG

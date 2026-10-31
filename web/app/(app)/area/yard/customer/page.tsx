@@ -1,6 +1,5 @@
 "use client";
 
-import { Inbox, Lock, Truck } from "lucide-react";
 import { useState } from "react";
 import { AreaTabs } from "@/components/AreaTabs";
 import { Badge, Button, DataTable, EmptyState, Field, PageHeader, Panel, RefreshButton, ResponsePanel, Toast, useToast } from "@/components/ui";
@@ -52,7 +51,7 @@ export default function CustomerTrailerPage() {
   if (!allowed) {
     return (
       <Panel>
-        <EmptyState icon={Lock} title="Role của bạn không được vào khu Cổng và dock">
+        <EmptyState title="Role của bạn không được vào khu Cổng và dock">
           Khu này dành cho role {area.roles.join(", ")}.
         </EmptyState>
       </Panel>
@@ -62,7 +61,7 @@ export default function CustomerTrailerPage() {
   const b = form.barcode.trim();
   return (
     <>
-      <PageHeader icon={Truck} title="Xe của khách" description="Nhận xe, vào và ra dock, yard pass, xe rời">
+      <PageHeader title="Xe của khách" description="Nhận xe, vào và ra dock, yard pass, xe rời">
         <RefreshButton busy={trailers.loading} onClick={() => void Promise.all([trailers.reload(), movements.reload()])} />
       </PageHeader>
       <AreaTabs slug="yard" label="Màn của khu Cổng và dock" />
@@ -114,12 +113,11 @@ export default function CustomerTrailerPage() {
         </div>
 
         <div className="flex flex-col gap-5">
-          <Panel flush title={<span className="flex items-center gap-2">Yêu cầu kéo đang mở <Badge>{movements.rows.length}</Badge></span>}>
+          <Panel flush title={<span className="flex items-center gap-2">Yêu cầu kéo đang mở <span className="font-normal text-muted">({movements.rows.length})</span></span>}>
             <DataTable
               rows={movements.rows}
               loading={movements.loading}
               empty="Không có yêu cầu kéo nào đang mở"
-              emptyIcon={Inbox}
               minWidth="36rem"
               columns={[
                 { key: "trailer", label: "Xe", mono: true, render: (m) => m.TrailerNId },
@@ -137,12 +135,11 @@ export default function CustomerTrailerPage() {
               ]}
             />
           </Panel>
-          <Panel flush title={<span className="flex items-center gap-2">Xe của hãng vận tải <Badge>{trailers.rows.length}</Badge></span>}>
+          <Panel flush title={<span className="flex items-center gap-2">Xe của hãng vận tải <span className="font-normal text-muted">({trailers.rows.length})</span></span>}>
             <DataTable
               rows={trailers.rows}
               loading={trailers.loading}
               empty="Chưa có xe nào khai route pool"
-              emptyIcon={Inbox}
               minWidth="40rem"
               columns={[
                 { key: "nid", label: "Xe", mono: true, render: (t) => t.NId },

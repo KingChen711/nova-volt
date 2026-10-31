@@ -1,6 +1,6 @@
 "use client";
 
-import { BellRing, Clock3, Radio, Timer } from "lucide-react";
+import { Radio, Timer } from "lucide-react";
 import { Badge, DataTable, Panel, RefreshButton, ResponsePanel } from "@/components/ui";
 import { useEntitySet } from "@/lib/hooks";
 import { AdminHeader } from "../AdminTabs";
@@ -24,7 +24,7 @@ export default function SignalRulesPage() {
           flush
           title={
             <span className="flex items-center gap-2">
-              Signal rule <Badge>{rules.rows.length}</Badge>
+              Signal rule <span className="font-normal text-muted">({rules.rows.length})</span>
             </span>
           }
           actions={<RefreshButton onClick={() => void rules.reload()} busy={rules.loading} />}
@@ -38,7 +38,6 @@ export default function SignalRulesPage() {
             rows={rules.rows}
             loading={rules.loading}
             empty="Chưa có signal rule"
-            emptyIcon={BellRing}
             columns={[
               { key: "nid", label: "NId", render: (r) => <span className="font-medium text-ink">{r.NId}</span>, mono: true },
               {
@@ -66,7 +65,7 @@ export default function SignalRulesPage() {
           flush
           title={
             <span className="flex items-center gap-2">
-              Timer <Badge>{timers.rows.length}</Badge>
+              Timer <span className="font-normal text-muted">({timers.rows.length})</span>
             </span>
           }
           actions={<RefreshButton onClick={() => void timers.reload()} busy={timers.loading} />}
@@ -75,7 +74,7 @@ export default function SignalRulesPage() {
             rows={timers.rows}
             loading={timers.loading}
             empty="Chưa có timer"
-            emptyIcon={Clock3}
+           
             columns={[
               { key: "nid", label: "NId", render: (t) => <span className="font-medium text-ink">{t.NId}</span>, mono: true },
               { key: "next", label: "Tới hạn kế (UTC)", render: (t) => t.NextDueOn?.slice(0, 16).replace("T", " ") ?? "—", mono: true },

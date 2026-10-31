@@ -1,0 +1,15 @@
+NId,Name,Level,ParentNId
+NV1-CMN-DOCK-D05,Dock 5,WorkCenter,NV1-CMN-DOCK
+NV1-CMN-DOCK-D06,Dock 6,WorkCenter,NV1-CMN-DOCK
+NV1-CMN-DOCK-D07,Dock 7,WorkCenter,NV1-CMN-DOCK
+NV1-CMN-DOCK-D08,Dock 8,WorkCenter,NV1-CMN-DOCK
+NV1-CMN-YARD-Y07,Yard slot 7,Subarea,NV1-CMN-YARD
+NV1-CMN-YARD-Y08,Yard slot 8,Subarea,NV1-CMN-YARD
+NV1-CMN-YARD-Y09,Yard slot 9,Subarea,NV1-CMN-YARD
+NV1-CMN-YARD-Y10,Yard slot 10,Subarea,NV1-CMN-YARD
+NV1-CMN-YARD-Y11,Yard slot 11,Subarea,NV1-CMN-YARD
+NV1-CMN-YARD-Y12,Yard slot 12,Subarea,NV1-CMN-YARD
+NV1-CMN-RCV,Receiving,Area,NV1-CMN
+NV1-CMN-RCV-R01,Receiving store 1,Subarea,NV1-CMN-RCV
+NV1-CMN-RCV-R02,Receiving store 2,Subarea,NV1-CMN-RCV
+NV1-CMN-RCV-R03,Receiving store 3,Subarea,NV1-CMN-RCV

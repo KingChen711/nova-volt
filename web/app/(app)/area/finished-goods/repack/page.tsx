@@ -1,6 +1,5 @@
 "use client";
 
-import { Inbox, Lock, PackageMinus } from "lucide-react";
 import { useState } from "react";
 import { AreaTabs } from "@/components/AreaTabs";
 import { Badge, Button, DataTable, EmptyState, Field, PageHeader, Panel, ResponsePanel, Toast, useToast } from "@/components/ui";
@@ -71,7 +70,7 @@ export default function RepackPage() {
   if (!allowed) {
     return (
       <Panel>
-        <EmptyState icon={Lock} title="Role của bạn không được vào khu Thành phẩm">
+        <EmptyState title="Role của bạn không được vào khu Thành phẩm">
           Khu này dành cho role {area.roles.join(", ")}.
         </EmptyState>
       </Panel>
@@ -82,7 +81,7 @@ export default function RepackPage() {
   const current = pkg.rows[0];
   return (
     <>
-      <PageHeader icon={PackageMinus} title="Gỡ pallet và gói lẻ" description="Gỡ mọi tote khỏi pallet; đóng sản phẩm thẳng vào gói lẻ" />
+      <PageHeader title="Gỡ pallet và gói lẻ" description="Gỡ mọi tote khỏi pallet; đóng sản phẩm thẳng vào gói lẻ" />
       <AreaTabs slug="finished-goods" label="Màn của khu Thành phẩm" />
 
       <div className="grid gap-5 xl:grid-cols-2">
@@ -102,7 +101,6 @@ export default function RepackPage() {
                 rows={totes.rows}
                 loading={totes.loading}
                 empty={`Pallet ${pallet} không có tote nào`}
-                emptyIcon={Inbox}
                 minWidth="24rem"
                 columns={[
                   { key: "tote", label: "Tote", mono: true, render: (t) => t.NId },

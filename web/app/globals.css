@@ -1,69 +1,53 @@
 @import "tailwindcss";
 
 /*
-  Token theo web/DESIGN.md: style Data-Dense Dashboard, nền xám trung tính (zinc), xanh dữ liệu + hổ phách nhấn, trạng thái đỏ/hổ phách/xanh lá.
+  Token theo web/DESIGN.md: AWS Console dark theme, giá trị lấy nguyên từ Cloudscape visual refresh, một theme duy nhất.
   Component chỉ dùng tên token (bg-surface, text-muted…), không dùng mã màu trực tiếp.
 */
 @theme {
-  --font-sans: var(--font-fira-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-fira-code), ui-monospace, monospace;
+  --font-sans: var(--font-open-sans), "Helvetica Neue", Roboto, Arial, sans-serif;
+  --font-mono: Monaco, Menlo, Consolas, "Courier New", monospace;
 
-  --color-bg: #f4f4f5;
-  --color-surface: #ffffff;
-  --color-raised: #fafafa;
-  --color-line: #e4e4e7;
-  --color-ink: #18181b;
-  --color-muted: #52525b;
-  --color-primary: #1e40af;
-  --color-primary-ink: #ffffff;
-  --color-primary-soft: #dbeafe;
-  --color-accent: #d97706;
-  --color-accent-soft: #fef3c7;
-  --color-ok: #15803d;
-  --color-ok-soft: #dcfce7;
-  --color-warn: #b45309;
-  --color-warn-soft: #fef3c7;
-  --color-bad: #b91c1c;
-  --color-bad-soft: #fee2e2;
+  --color-bg: #161d26;
+  --color-surface: #161d26;
+  --color-head: #131920;
+  --color-raised: #1b232d;
+  --color-badge: #232b37;
+  --color-line: #424650;
+  --color-line-soft: #232b37;
+  --color-field: #656871;
+  --color-disabled: #8c8c94;
+  --color-ink: #c6c6cd;
+  --color-title: #ebebf0;
+  --color-muted: #b4b4bb;
+  --color-primary: #42b4ff;
+  --color-primary-hover: #75cfff;
+  --color-primary-ink: #0f141a;
+  --color-primary-soft: #001129;
+  --color-ok: #2bb534;
+  --color-ok-soft: #001401;
+  --color-ok-flash: #00802f;
+  --color-flash-ink: #f9f9fa;
+  --color-warn: #fbd332;
+  --color-warn-soft: #191100;
+  --color-bad: #ff7a7a;
+  --color-bad-soft: #1f0000;
 
-  /* Sidebar xám than ở cả hai chế độ: vùng điều hướng tách hẳn khỏi vùng dữ liệu. Không dùng nền xanh đen. */
-  --color-nav: #1c1c1f;
-  --color-nav-raised: #2e2e33;
-  --color-nav-ink: #e4e4e7;
-  --color-nav-muted: #a1a1aa;
-  --color-nav-active: #f59e0b;
+  --color-nav: #161d26;
+  --color-nav-raised: #232b37;
+  --color-nav-ink: #ebebf0;
+  --color-nav-muted: #c6c6cd;
+
+  --radius-sm: 0.25rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 1rem;
 
   --spacing-row: 2.5rem;
-  --spacing-touch: 2.75rem;
-
-  --shadow-card: 0 1px 2px rgb(24 24 27 / 0.06), 0 1px 3px rgb(24 24 27 / 0.08);
-  --shadow-pop: 0 8px 24px rgb(24 24 27 / 0.18);
+  --spacing-touch: 2rem;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-bg: #111113;
-    --color-surface: #19191c;
-    --color-raised: #222226;
-    --color-line: #323238;
-    --color-ink: #e4e4e7;
-    --color-muted: #a1a1aa;
-    --color-primary: #60a5fa;
-    --color-primary-ink: #111113;
-    --color-primary-soft: #27272a;
-    --color-accent: #fbbf24;
-    --color-accent-soft: #451a03;
-    --color-ok: #4ade80;
-    --color-ok-soft: #052e16;
-    --color-warn: #fbbf24;
-    --color-warn-soft: #451a03;
-    --color-bad: #f87171;
-    --color-bad-soft: #450a0a;
-    --color-nav: #0b0b0d;
-    --color-nav-raised: #232327;
-    --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4);
-    --shadow-pop: 0 8px 24px rgb(0 0 0 / 0.5);
-  }
+html {
+  color-scheme: dark;
 }
 
 html,
@@ -72,23 +56,25 @@ body {
   color: var(--color-ink);
 }
 
-body {
-  font-size: 0.9375rem;
-  line-height: 1.5;
+h1,
+h2 {
+  color: var(--color-title);
 }
 
-/*
-  Thanh cuộn toàn cục: mảnh, thumb bo tròn theo token, track trong suốt. Vùng nền tối (sidebar) đổi màu thumb
-  bằng lớp .scroll-nav. Chrome, Edge, Firefox dùng scrollbar-color; Safari chưa hỗ trợ nên dùng ::-webkit-scrollbar.
-*/
+/* Bảng rộng cuộn trong khung của nó, không đẩy cột lưới tràn trang. */
+.grid > * {
+  min-width: 0;
+}
+
+body {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+/* Thanh cuộn mảnh theo token. Chrome, Edge, Firefox dùng scrollbar-color; Safari chưa hỗ trợ nên dùng ::-webkit-scrollbar. */
 :root {
   --scrollbar-thumb: color-mix(in oklab, var(--color-muted) 40%, transparent);
   --scrollbar-thumb-hover: var(--color-muted);
-}
-
-.scroll-nav {
-  --scrollbar-thumb: color-mix(in oklab, var(--color-nav-muted) 35%, transparent);
-  --scrollbar-thumb-hover: var(--color-nav-muted);
 }
 
 * {
@@ -127,17 +113,6 @@ body {
   outline-offset: 2px;
 }
 
-/* Lưới mảnh gợi bản vẽ mặt bằng xưởng, chỉ dùng ở mảng thương hiệu của trang đăng nhập. */
-.blueprint {
-  background-color: var(--color-nav);
-  background-image:
-    linear-gradient(rgb(161 161 170 / 0.08) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(161 161 170 / 0.08) 1px, transparent 1px),
-    radial-gradient(circle at 20% 15%, rgb(245 158 11 / 0.18), transparent 45%),
-    radial-gradient(circle at 85% 90%, rgb(161 161 170 / 0.1), transparent 50%);
-  background-size: 32px 32px, 32px 32px, auto, auto;
-}
-
 @keyframes shimmer {
   from {
     background-position: -200% 0;
@@ -148,7 +123,7 @@ body {
 }
 
 .skeleton {
-  background: linear-gradient(90deg, var(--color-raised) 25%, var(--color-line) 50%, var(--color-raised) 75%);
+  background: linear-gradient(90deg, var(--color-raised) 25%, var(--color-line-soft) 50%, var(--color-raised) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.4s ease-in-out infinite;
   border-radius: 0.25rem;
@@ -157,7 +132,7 @@ body {
 @keyframes toast-in {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(-8px);
   }
   to {
     opacity: 1;

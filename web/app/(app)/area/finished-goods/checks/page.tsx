@@ -1,6 +1,6 @@
 "use client";
 
-import { CircleCheck, CircleX, Inbox, Lock, SearchCheck } from "lucide-react";
+import { CircleCheck, CircleX } from "lucide-react";
 import { useState } from "react";
 import { AreaTabs } from "@/components/AreaTabs";
 import { Badge, Button, DataTable, EmptyState, Field, PageHeader, Panel, ResponsePanel } from "@/components/ui";
@@ -57,7 +57,7 @@ export default function PalletChecksPage() {
   if (!allowed) {
     return (
       <Panel>
-        <EmptyState icon={Lock} title="Role của bạn không được vào khu Thành phẩm">
+        <EmptyState title="Role của bạn không được vào khu Thành phẩm">
           Khu này dành cho role {area.roles.join(", ")}.
         </EmptyState>
       </Panel>
@@ -67,7 +67,7 @@ export default function PalletChecksPage() {
   const row = data.rows[0];
   return (
     <>
-      <PageHeader icon={SearchCheck} title="Kiểm pallet" description="Hàng bị giữ hoặc hủy trong cây thành phần, năm điều kiểm số liệu, QA Check">
+      <PageHeader title="Kiểm pallet" description="Hàng bị giữ hoặc hủy trong cây thành phần, năm điều kiểm số liệu, QA Check">
         <form
           className="flex items-end gap-2"
           onSubmit={(e) => {
@@ -85,11 +85,11 @@ export default function PalletChecksPage() {
 
       {!pallet ? (
         <Panel>
-          <EmptyState icon={SearchCheck} title="Quét một pallet để kiểm" />
+          <EmptyState title="Quét một pallet để kiểm" />
         </Panel>
       ) : (
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_24rem]">
-          <Panel flush title={<span className="flex items-center gap-2">Hàng bị giữ hoặc hủy <Badge>{held.rows.length}</Badge></span>}>
+          <Panel flush title={<span className="flex items-center gap-2">Hàng bị giữ hoặc hủy <span className="font-normal text-muted">({held.rows.length})</span></span>}>
             {held.error ? (
               <div className="p-4">
                 <ResponsePanel result={held.error} />
@@ -99,7 +99,6 @@ export default function PalletChecksPage() {
                 rows={held.rows}
                 loading={held.loading}
                 empty="Kiểm xong: không thành phần nào bị giữ hay bị hủy"
-                emptyIcon={Inbox}
                 minWidth="40rem"
                 columns={[
                   { key: "mtu", label: "MTU", mono: true, render: (h) => h.MtuNId },

@@ -1,0 +1,22 @@
+{
+  "Name": "YardApp_002_LocalSuppliers",
+  "BreakOnError": true,
+  "TestDefinitions": [
+    {
+      "Name": "SetLocalSupplier",
+      "Csv": "local-suppliers.csv",
+      "TestSteps": [
+        {
+          "ID": "SetLocalSupplier",
+          "StepType": "Command",
+          "App": "YardApp",
+          "Name": "SetLocalSupplier",
+          "Parameters": {
+            "SupplierCode": "#TEST_CSV.SupplierCode#",
+            "MaterialNId": "#TEST_CSV.MaterialNId#"
+          }
+        }
+      ]
+    }
+  ]
+}

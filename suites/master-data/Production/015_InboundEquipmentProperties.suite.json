@@ -1,0 +1,23 @@
+{
+  "Name": "Production_015_InboundEquipmentProperties",
+  "BreakOnError": true,
+  "TestDefinitions": [
+    {
+      "Name": "SetEquipmentProperty",
+      "Csv": "inbound-equipment-properties.csv",
+      "TestSteps": [
+        {
+          "ID": "SetEquipmentProperty",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "SetEquipmentProperty",
+          "Parameters": {
+            "EquipmentNId": "#TEST_CSV.EquipmentNId#",
+            "Name": "#TEST_CSV.Name#",
+            "Value": "#TEST_CSV.Value#"
+          }
+        }
+      ]
+    }
+  ]
+}

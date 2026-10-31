@@ -137,6 +137,21 @@ public static class NvErrors
     public const int NoTrailerAtDock = 9418;
     public const int SkidNotStaged = 9419;
     public const int NotConfirmed = 9420;
+
+    public const int InvalidDelivery = 9501;
+    public const int LocalSupplierRoute = 9502;
+    public const int WrongTrailer = 9503;
+    public const int InvalidPlacard = 9504;
+    public const int InvalidUnplannedType = 9505;
+    public const int InvalidSkidLabel = 9506;
+    public const int SkidNotDeclared = 9507;
+    public const int SkidAlreadyReceived = 9508;
+    public const int WrongLogicalDock = 9509;
+    public const int NotDefaultStorage = 9510;
+    public const int SkidsPending = 9511;
+    public const int InvalidReload = 9512;
+    public const int InvalidTransfer = 9513;
+    public const int SkidNotOnSource = 9514;
 }
 
 /// <summary>Trạng thái team thêm vào state machine WO bằng dữ liệu.</summary>

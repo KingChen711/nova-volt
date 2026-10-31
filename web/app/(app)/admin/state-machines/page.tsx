@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, CircleDot, GitBranch, Plus, ShieldCheck } from "lucide-react";
+import { ArrowRight, CircleDot, Plus, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { Badge, Button, DataTable, Field, Panel, RefreshButton, ResponsePanel, Toast, useToast } from "@/components/ui";
 import { useCommand, useEntitySet } from "@/lib/hooks";
@@ -71,7 +71,7 @@ export default function StateMachinesPage() {
             flush
             title={
               <span className="flex items-center gap-2">
-                Transition <Badge>{transitions.rows.length}</Badge>
+                Transition <span className="font-normal text-muted">({transitions.rows.length})</span>
               </span>
             }
           >
@@ -79,7 +79,6 @@ export default function StateMachinesPage() {
               rows={transitions.rows}
               loading={transitions.loading}
               empty="Chưa có transition"
-              emptyIcon={GitBranch}
               columns={[
                 {
                   key: "path",

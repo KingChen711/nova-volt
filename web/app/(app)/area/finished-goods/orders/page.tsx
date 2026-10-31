@@ -1,6 +1,5 @@
 "use client";
 
-import { ClipboardList, Inbox, Lock } from "lucide-react";
 import { useState } from "react";
 import { AreaTabs } from "@/components/AreaTabs";
 import { Badge, Button, DataTable, EmptyState, Field, PageHeader, Panel, RefreshButton, ResponsePanel, Toast, useToast } from "@/components/ui";
@@ -100,7 +99,7 @@ export default function OrdersPage() {
   if (!allowed) {
     return (
       <Panel>
-        <EmptyState icon={Lock} title="Role của bạn không được vào khu Thành phẩm">
+        <EmptyState title="Role của bạn không được vào khu Thành phẩm">
           Khu này dành cho role {area.roles.join(", ")}.
         </EmptyState>
       </Panel>
@@ -109,7 +108,7 @@ export default function OrdersPage() {
 
   return (
     <>
-      <PageHeader icon={ClipboardList} title="Đơn và picking" description="Nhóm đơn theo nơi nhận, route, giờ giao; lấy pallet theo FIFO">
+      <PageHeader title="Đơn và picking" description="Nhóm đơn theo nơi nhận, route, giờ giao; lấy pallet theo FIFO">
         <RefreshButton busy={groups.loading} onClick={() => void refresh()} />
       </PageHeader>
       <AreaTabs slug="finished-goods" label="Màn của khu Thành phẩm" />
@@ -117,7 +116,7 @@ export default function OrdersPage() {
       <div className="grid gap-5 xl:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]">
         <Panel
           flush
-          title={<span className="flex items-center gap-2">Nhóm đơn <Badge>{groups.rows.length}</Badge></span>}
+          title={<span className="flex items-center gap-2">Nhóm đơn <span className="font-normal text-muted">({groups.rows.length})</span></span>}
           actions={
             <label className="flex items-center gap-2 text-xs text-muted">
               <input type="checkbox" checked={showShipped} onChange={(e) => setShowShipped(e.target.checked)} />
@@ -157,7 +156,7 @@ export default function OrdersPage() {
         <div className="flex flex-col gap-5">
           {!group ? (
             <Panel>
-              <EmptyState icon={Inbox} title="Chọn một nhóm đơn">Pick list, đề xuất FIFO và nhãn của nhóm hiện ở đây.</EmptyState>
+              <EmptyState title="Chọn một nhóm đơn">Pick list, đề xuất FIFO và nhãn của nhóm hiện ở đây.</EmptyState>
             </Panel>
           ) : (
             <>
@@ -179,7 +178,6 @@ export default function OrdersPage() {
                   rows={lines.rows}
                   loading={lines.loading}
                   empty="Nhóm không có dòng đơn"
-                  emptyIcon={Inbox}
                   minWidth="52rem"
                   columns={[
                     { key: "line", label: "Dòng", mono: true, render: (l) => l.NId },

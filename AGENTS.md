@@ -329,7 +329,7 @@ Khi công cụ hỗ trợ và công việc có ranh giới độc lập, giao su
 ### 5.6 Giao diện web (Next.js)
 
 - Web nằm ở `web/`, chia khu theo cách hệ thật chia app; menu và quyền theo role trong token.
-- Việc thiết kế UI dùng skill `ui-ux-pro-max` (bản trong repo, `.claude/skills/ui-ux-pro-max`). **Không dùng nền xanh đen**: nền, panel, sidebar, dark mode dùng xám trung tính; xanh chỉ làm màu nhấn (`web/DESIGN.md`).
+- Giao diện theo AWS Console dark theme (`web/DESIGN.md`), màu lấy nguyên từ Cloudscape, không dùng skill thiết kế.
 - Chỉ gọi OData và command API (K10); hiện nguyên mã lỗi và câu lỗi trong thân response.
 - Mỗi mốc từ R4 làm màn của luồng mình; DoD của mốc gồm chạy luồng chính trên màn (lab Playwright).
 - Khi kiểm thử đã được giao, agent tự đăng nhập bằng tài khoản thử trong realm; không in mật khẩu hay token.

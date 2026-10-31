@@ -1,17 +1,3 @@
-import type { LucideIcon } from "lucide-react";
-import {
-  Boxes,
-  ClipboardCheck,
-  Factory,
-  LayoutDashboard,
-  ListChecks,
-  PackageOpen,
-  Settings2,
-  ShieldAlert,
-  Siren,
-  Truck,
-} from "lucide-react";
-
 export type AreaGroup = "Tổng quan" | "Vận hành" | "Chất lượng" | "Hậu cần" | "Quản trị";
 
 /**
@@ -24,7 +10,6 @@ export type Area = {
   group: AreaGroup;
   description: string;
   roles: string[];
-  icon: LucideIcon;
   milestone: string;
   screens: string[];
   href: string;
@@ -34,13 +19,13 @@ export type Area = {
 export const areas: Area[] = [
   {
     slug: "dashboard", label: "Tổng quan", group: "Tổng quan", href: "/dashboard",
-    description: "Tình trạng nền và lối vào từng khu", roles: [], icon: LayoutDashboard, milestone: "R2",
+    description: "Tình trạng nền và lối vào từng khu", roles: [], milestone: "R2",
     screens: ["Số liệu cấu hình nền", "Timer sắp tới hạn", "Lối vào các khu theo role"],
   },
   {
     slug: "line", label: "Xưởng", group: "Vận hành", href: "/area/line",
     description: "Chọn khu, lệnh đang chạy, nạp nguyên liệu, gọi hàng, giữ hàng", roles: ["line-operator", "line-lead"],
-    icon: Factory, milestone: "R4–R6",
+    milestone: "R4–R6",
     screens: ["Chọn khu và ca", "Lệnh đang chạy", "Tin từ xưởng", "Nạp lô vào buffer", "Gọi hàng", "Giữ hàng nghi lỗi", "Dựng lại pallet"],
     links: [
       { href: "/area/line", label: "Lệnh theo ca" },
@@ -50,16 +35,20 @@ export const areas: Area[] = [
   },
   {
     slug: "yard", label: "Cổng và dock", group: "Hậu cần", href: "/area/yard",
-    description: "Trailer kho, kéo xe, xe của khách; đăng ký xe, nhận skid, chuyển skid", roles: ["yard", "shipping"], icon: Truck, milestone: "R7–R9",
+    description: "Trailer kho, kéo xe, xe của khách; đăng ký xe, nhận skid, chuyển skid", roles: ["yard", "shipping"], milestone: "R7–R9",
     screens: ["Trailer kho", "Yêu cầu kéo xe", "Xe của khách", "Đăng ký xe ở cổng", "Nhận skid ở dock", "Chuyển skid giữa hai xe", "Bảng dỡ hàng"],
     links: [
+      { href: "/area/yard/inbound", label: "Xe đến" },
+      { href: "/area/yard/dock", label: "Điều xe" },
+      { href: "/area/yard/receive", label: "Nhận skid" },
+      { href: "/area/yard/transfer", label: "Chuyển skid" },
       { href: "/area/yard", label: "Trailer kho" },
       { href: "/area/yard/customer", label: "Xe của khách" },
     ],
   },
   {
     slug: "finished-goods", label: "Thành phẩm", group: "Hậu cần", href: "/area/finished-goods",
-    description: "Cất kho, kiểm pallet, gỡ pallet, gói lẻ; picking, staging, chất xe", roles: ["shipping", "quality"], icon: PackageOpen,
+    description: "Cất kho, kiểm pallet, gỡ pallet, gói lẻ; picking, staging, chất xe", roles: ["shipping", "quality"],
     milestone: "R7–R8", screens: ["Cất kho", "Kiểm pallet", "Gỡ pallet và gói lẻ", "Đơn và picking", "Staging và chất xe"],
     links: [
       { href: "/area/finished-goods", label: "Cất kho" },
@@ -71,32 +60,32 @@ export const areas: Area[] = [
   },
   {
     slug: "andon", label: "Gọi hàng", group: "Hậu cần", href: "/area/andon",
-    description: "Bảng gọi hàng theo tier: gấp, trễ, đúng hạn", roles: ["logistics", "line-lead"], icon: Siren,
+    description: "Bảng gọi hàng theo tier: gấp, trễ, đúng hạn", roles: ["logistics", "line-lead"],
     milestone: "R10", screens: ["Bảng gọi hàng", "Nhận việc chở", "Quét lô", "Hoàn tất chặng"],
   },
   {
     slug: "bulk-nc", label: "NC hàng loạt", group: "Chất lượng", href: "/area/bulk-nc",
-    description: "Tạo, giữ, hủy theo danh sách MTU", roles: ["quality"], icon: ListChecks, milestone: "R6",
+    description: "Tạo, giữ, hủy theo danh sách MTU", roles: ["quality"], milestone: "R6",
     screens: ["Nạp danh sách MTU", "Giữ hàng loạt", "Hủy hàng loạt"],
   },
   {
     slug: "quality", label: "Kết luận NC", group: "Chất lượng", href: "/area/quality",
-    description: "Kết luận tay, scrap tag, USE AS IS", roles: ["quality"], icon: ClipboardCheck, milestone: "R6",
+    description: "Kết luận tay, scrap tag, USE AS IS", roles: ["quality"], milestone: "R6",
     screens: ["Danh sách NC mở", "Kết luận NC", "In scrap tag"],
   },
   {
     slug: "containment", label: "Containment", group: "Chất lượng", href: "/area/containment",
-    description: "Yêu cầu giữ hàng từ hệ chất lượng ngoài", roles: ["quality"], icon: ShieldAlert, milestone: "R6",
+    description: "Yêu cầu giữ hàng từ hệ chất lượng ngoài", roles: ["quality"], milestone: "R6",
     screens: ["Danh sách yêu cầu", "Hàng trong containment", "Release, close"],
   },
   {
     slug: "disassembly", label: "Tháo rã", group: "Chất lượng", href: "/area/disassembly",
-    description: "Lần cây thành phần, tháo, hoàn tác", roles: ["quality"], icon: Boxes, milestone: "R6",
+    description: "Lần cây thành phần, tháo, hoàn tác", roles: ["quality"], milestone: "R6",
     screens: ["Cây thành phần", "Tháo part", "Hoàn tác"],
   },
   {
     slug: "admin", label: "Quản trị", group: "Quản trị", href: "/admin/configuration-keys",
-    description: "Configuration key, state machine, signal rule và timer", roles: ["mom-admin"], icon: Settings2,
+    description: "Configuration key, state machine, signal rule và timer", roles: ["mom-admin"],
     milestone: "R2", screens: ["Configuration key", "State machine", "Signal rule và timer"],
     links: [
       { href: "/admin/configuration-keys", label: "Configuration key" },

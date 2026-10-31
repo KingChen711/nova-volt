@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, BellRing, Clock3, GitBranch, KeyRound, LayoutDashboard, Radio, Timer } from "lucide-react";
+import { Timer } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Badge, DataTable, PageHeader, Panel, RefreshButton, StatCard } from "@/components/ui";
@@ -63,61 +63,52 @@ export default function DashboardPage() {
   return (
     <>
       <PageHeader
-        icon={LayoutDashboard}
         title={`Xin chào, ${hello}`}
         description="Tình trạng cấu hình nền của plant và lối vào các khu bạn được làm việc."
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <StatCard label="Configuration key" value={keys ?? "—"} loading={keys === null} icon={KeyRound} hint="Giá trị cấu hình dạng chuỗi" />
-        <StatCard label="Signal rule đang bật" value={rules ?? "—"} loading={rules === null} icon={BellRing} tone="accent" hint="Gọi command theo timer hoặc event" />
-        <StatCard label="Timer đang chạy" value={timers ?? "—"} loading={timers === null} icon={Timer} tone="ok" hint="Tạo lúc chạy, có mã định danh" />
-        <StatCard label="Transition" value={transitions ?? "—"} loading={transitions === null} icon={GitBranch} hint="State machine dạng dữ liệu" />
-        <StatCard label="Subscription theo plant" value={subscriptions ?? "—"} loading={subscriptions === null} icon={Radio} tone="warn" hint="Không tính loại khai sẵn trong model" />
-      </div>
+      <Panel title="Cấu hình nền">
+        <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-5">
+          <StatCard label="Configuration key" value={keys ?? "—"} loading={keys === null} hint="Giá trị cấu hình dạng chuỗi" />
+          <StatCard label="Signal rule đang bật" value={rules ?? "—"} loading={rules === null} hint="Gọi command theo timer hoặc event" />
+          <StatCard label="Timer đang chạy" value={timers ?? "—"} loading={timers === null} hint="Tạo lúc chạy, có mã định danh" />
+          <StatCard label="Transition" value={transitions ?? "—"} loading={transitions === null} hint="State machine dạng dữ liệu" />
+          <StatCard label="Subscription theo plant" value={subscriptions ?? "—"} loading={subscriptions === null} hint="Không tính loại khai sẵn trong model" />
+        </div>
+      </Panel>
 
-      <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_26rem]">
-        <section>
-          <h2 className="mb-3 text-sm font-semibold tracking-wide text-muted uppercase">Khu của bạn</h2>
-          <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
-            {areas.map((area) => {
-              const Icon = area.icon;
-              const ready = area.milestone === "R2";
-              return (
-                <Link
-                  key={area.slug}
-                  href={area.href}
-                  className="group flex flex-col rounded-xl border border-line bg-surface p-4 shadow-[var(--shadow-card)] transition duration-150 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-[var(--shadow-pop)]"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="inline-flex size-10 items-center justify-center rounded-lg bg-primary-soft text-primary">
-                      <Icon aria-hidden className="size-5" />
-                    </span>
-                    <Badge tone={ready ? "ok" : "neutral"} mono={!ready}>
-                      {ready ? "Đang dùng" : area.milestone}
-                    </Badge>
-                  </div>
-                  <p className="mt-3 font-semibold">{area.label}</p>
-                  <p className="mt-0.5 flex-1 text-sm text-muted">{area.description}</p>
-                  <span className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-primary">
-                    Mở khu <ArrowRight aria-hidden className="size-4 transition-transform duration-150 group-hover:translate-x-0.5" />
-                  </span>
-                </Link>
-              );
-            })}
-          </div>
-        </section>
+      <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_26rem]">
+        <Panel title={<>Khu của bạn <span className="font-normal text-muted">({areas.length})</span></>} flush>
+          <DataTable
+            rows={areas}
+            empty="Role của bạn chưa được vào khu nào"
+            columns={[
+              {
+                key: "area",
+                label: "Khu",
+                className: "whitespace-nowrap",
+                render: (a) => (
+                  <Link href={a.href} className="text-primary underline underline-offset-2 hover:text-primary-hover">
+                    {a.label}
+                  </Link>
+                ),
+              },
+              { key: "description", label: "Mô tả", render: (a) => a.description },
+              { key: "milestone", label: "Mốc", render: (a) => <Badge mono>{a.milestone}</Badge> },
+            ]}
+          />
+        </Panel>
 
         <Panel title="Timer sắp tới hạn" actions={<RefreshButton onClick={() => void upcoming.reload()} busy={upcoming.loading} />} flush>
           <DataTable
             rows={upcoming.rows}
             loading={upcoming.loading}
             empty="Chưa có timer nào đang chạy"
-            emptyIcon={Clock3}
+           
             minWidth="20rem"
             columns={[
               { key: "nid", label: "Timer", render: (t) => t.NId, mono: true },
-              { key: "due", label: "Tới hạn", render: (t) => <Badge tone="accent">{relative(t.NextDueOn)}</Badge> },
+              { key: "due", label: "Tới hạn", render: (t) => <Badge>{relative(t.NextDueOn)}</Badge> },
               { key: "interval", label: "Nhịp", render: (t) => every(t.IntervalSeconds) },
             ]}
           />

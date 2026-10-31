@@ -1,6 +1,5 @@
 "use client";
 
-import { Inbox, Lock, Warehouse } from "lucide-react";
 import { useState } from "react";
 import { AreaTabs } from "@/components/AreaTabs";
 import { Badge, Button, DataTable, EmptyState, Field, PageHeader, Panel, RefreshButton, ResponsePanel, Toast, useToast } from "@/components/ui";
@@ -64,7 +63,7 @@ export default function StoragePage() {
   if (!allowed) {
     return (
       <Panel>
-        <EmptyState icon={Lock} title="Role của bạn không được vào khu Thành phẩm">
+        <EmptyState title="Role của bạn không được vào khu Thành phẩm">
           Khu này dành cho role {area.roles.join(", ")}.
         </EmptyState>
       </Panel>
@@ -73,7 +72,7 @@ export default function StoragePage() {
 
   return (
     <>
-      <PageHeader icon={Warehouse} title="Cất kho" description="Quét pallet, quét ô kho theo địa chỉ của part; pallet đã cất có bản ghi FIFO">
+      <PageHeader title="Cất kho" description="Quét pallet, quét ô kho theo địa chỉ của part; pallet đã cất có bản ghi FIFO">
         <RefreshButton busy={fifo.loading} onClick={() => void Promise.all([fifo.reload(), suggested.reload()])} />
       </PageHeader>
       <AreaTabs slug="finished-goods" label="Màn của khu Thành phẩm" />
@@ -143,7 +142,7 @@ export default function StoragePage() {
             )}
           </Panel>
 
-          <Panel title={<span className="flex items-center gap-2">Pallet Full chưa cất <Badge>{waiting.rows.length}</Badge></span>}>
+          <Panel title={<span className="flex items-center gap-2">Pallet Full chưa cất <span className="font-normal text-muted">({waiting.rows.length})</span></span>}>
             {waiting.error ? (
               <ResponsePanel result={waiting.error} />
             ) : waiting.rows.length === 0 ? (
@@ -176,7 +175,7 @@ export default function StoragePage() {
                 aria-label="Part"
                 value={part}
                 onChange={(e) => setPart(e.target.value)}
-                className="min-h-9 rounded-lg border border-line bg-surface px-2 font-mono text-xs"
+                className="min-h-9 rounded-lg border border-field bg-surface px-2 font-mono text-xs"
               >
                 {parts.map((p) => (
                   <option key={p}>{p}</option>
@@ -205,7 +204,7 @@ export default function StoragePage() {
           </Panel>
         </div>
 
-        <Panel flush title={<span className="flex items-center gap-2">Bản ghi FIFO <Badge>{fifo.rows.length}</Badge></span>}>
+        <Panel flush title={<span className="flex items-center gap-2">Bản ghi FIFO <span className="font-normal text-muted">({fifo.rows.length})</span></span>}>
           {fifo.error ? (
             <div className="p-4">
               <ResponsePanel result={fifo.error} />
@@ -215,7 +214,6 @@ export default function StoragePage() {
               rows={fifo.rows}
               loading={fifo.loading}
               empty="Chưa có pallet nào được đặt chỗ. Cất xong mà không thấy dòng: subscriber ghi FIFO chạy sau response, tải lại sau một nhịp"
-              emptyIcon={Inbox}
               minWidth="44rem"
               columns={[
                 { key: "nid", label: "Pallet", mono: true, render: (f) => f.NId },

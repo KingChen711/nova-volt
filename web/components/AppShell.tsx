@@ -1,9 +1,10 @@
 "use client";
 
-import { ChevronRight, LogOut, Menu, X, Zap } from "lucide-react";
+import { ChevronRight, LogOut, Menu, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Badge } from "@/components/ui";
 import { areaOf, businessRoles, groups, visibleAreas } from "@/lib/areas";
 import { useAuth } from "@/lib/auth";
 
@@ -38,7 +39,7 @@ function useClock() {
   return now;
 }
 
-/** Khung của mọi màn sau đăng nhập: sidebar chỉ có khu mà role của người dùng được thấy. */
+/** Khung của mọi màn sau đăng nhập, kiểu console: thanh trên, side navigation theo role, breadcrumb trên nội dung. */
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { session, loading, signOut } = useAuth();
   const router = useRouter();
@@ -56,127 +57,109 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(() => setOpen(false), [pathname]);
 
   if (!session) {
-    return (
-      <div className="flex min-h-dvh items-center justify-center text-sm text-muted">Đang kiểm tra đăng nhập…</div>
-    );
+    return <div className="flex min-h-dvh items-center justify-center text-muted">Đang kiểm tra đăng nhập…</div>;
   }
 
   const visible = visibleAreas(session.roles);
   const current = areaOf(pathname);
-  const initials = session.user.split(/[.\-_]/).map((p) => p[0]?.toUpperCase()).join("").slice(0, 2);
 
   const sidebar = (
-    <div className="scroll-nav flex h-full flex-col bg-nav text-nav-ink">
-      <div className="flex h-16 items-center gap-3 px-5">
-        <span className="inline-flex size-9 items-center justify-center rounded-lg bg-nav-active text-nav shadow-[0_0_0_4px_rgb(245_158_11/0.15)]">
-          <Zap aria-hidden className="size-5" strokeWidth={2.5} />
-        </span>
-        <div className="leading-tight">
-          <p className="font-semibold tracking-tight">NovaVolt MOM</p>
-          <p className="text-xs text-nav-muted">
-            Plant <span className="font-mono">{plant}</span>
-          </p>
-        </div>
-      </div>
-      <nav aria-label="Khu" className="flex-1 overflow-y-auto px-3 pb-4">
-        {groups.map((group) => {
-          const items = visible.filter((a) => a.group === group);
-          if (items.length === 0) {
-            return null;
-          }
+    <nav aria-label="Khu" className="h-full overflow-y-auto border-r border-line bg-surface px-5 py-4">
+      {groups.map((group) => {
+        const items = visible.filter((a) => a.group === group);
+        if (items.length === 0) {
+          return null;
+        }
 
-          return (
-            <div key={group} className="mt-4 first:mt-1">
-              <p className="px-3 pb-1 text-[0.6875rem] font-semibold tracking-wider text-nav-muted uppercase">{group}</p>
-              {items.map((area) => {
-                const active = current?.slug === area.slug;
-                const Icon = area.icon;
-                return (
-                  <Link
-                    key={area.slug}
-                    href={area.href}
-                    aria-current={active ? "page" : undefined}
-                    className={`group relative flex min-h-touch items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors duration-150 ${
-                      active ? "bg-nav-raised text-white" : "text-nav-ink/80 hover:bg-nav-raised/60 hover:text-white"
-                    }`}
-                  >
-                    {active && <span aria-hidden className="absolute top-2 bottom-2 left-0 w-1 rounded-r bg-nav-active" />}
-                    <Icon aria-hidden className={`size-[1.125rem] shrink-0 ${active ? "text-nav-active" : "text-nav-muted group-hover:text-nav-ink"}`} />
-                    {area.label}
-                  </Link>
-                );
-              })}
-            </div>
-          );
-        })}
-      </nav>
-      <div className="border-t border-white/10 p-3">
-        <div className="flex items-center gap-3 rounded-lg px-2 py-2">
-          <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-semibold text-white">
-            {initials}
-          </span>
-          <div className="min-w-0 flex-1 leading-tight">
-            <p className="truncate text-sm font-medium">{session.user}</p>
-            <p className="truncate font-mono text-[0.6875rem] text-nav-muted">{businessRoles(session.roles).join(" · ")}</p>
+        return (
+          <div key={group} className="mt-5 first:mt-0">
+            {!(items.length === 1 && items[0].label === group) && <p className="pb-1 font-bold">{group}</p>}
+            {items.map((area) => {
+              const active = current?.slug === area.slug;
+              return (
+                <Link
+                  key={area.slug}
+                  href={area.href}
+                  aria-current={active ? "page" : undefined}
+                  className={`block py-1 transition-colors duration-150 ${active ? "font-bold text-primary" : "text-muted hover:text-primary-hover"}`}
+                >
+                  {area.label}
+                </Link>
+              );
+            })}
           </div>
+        );
+      })}
+    </nav>
+  );
+
+  return (
+    <div className="min-h-dvh">
+      <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b border-line bg-nav px-4 text-nav-ink lg:px-6">
+        <Link href={visible[0].href} className="text-lg font-bold whitespace-nowrap">
+          NovaVolt MOM
+        </Link>
+        <span className="hidden text-nav-muted sm:inline">
+          Plant <span className="font-mono">{plant}</span>
+        </span>
+        <div className="ml-auto flex items-center gap-4">
+          <span className="hidden items-center gap-2 text-nav-muted md:flex" title="Kết nối tới host MOM">
+            <span aria-hidden className={`size-2.5 rounded-full ${up === null ? "bg-nav-muted" : up ? "bg-ok" : "bg-bad"}`} />
+            {up === null ? "Đang kiểm" : up ? "MOM trực tuyến" : "Mất kết nối MOM"}
+          </span>
+          {now && <span className="hidden font-mono text-nav-muted tabular-nums sm:inline">{now.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}</span>}
+          <span className="min-w-0 border-l border-nav-raised pl-4 leading-tight">
+            <span className="block truncate font-bold">{session.user}</span>
+            <span className="hidden truncate text-xs text-nav-muted sm:block">{businessRoles(session.roles).join(" · ")}</span>
+          </span>
           <button
             type="button"
             onClick={() => signOut()}
             aria-label="Đăng xuất"
             title="Đăng xuất"
-            className="inline-flex size-touch cursor-pointer items-center justify-center rounded-lg text-nav-muted transition-colors duration-150 hover:bg-nav-raised hover:text-white"
+            className="inline-flex size-touch cursor-pointer items-center justify-center rounded-lg text-nav-muted transition-colors duration-150 hover:bg-nav-raised hover:text-nav-ink"
           >
             <LogOut aria-hidden className="size-4" />
           </button>
         </div>
-      </div>
-    </div>
-  );
+      </header>
 
-  return (
-    <div className="min-h-dvh lg:pl-64">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 lg:block">{sidebar}</aside>
+      <aside className="fixed top-14 bottom-0 left-0 z-20 hidden w-70 lg:block">{sidebar}</aside>
       {open && (
-        <div className="fixed inset-0 z-40 lg:hidden">
+        <div className="fixed inset-0 top-14 z-40 lg:hidden">
           <button type="button" aria-label="Đóng menu" className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
-          <aside className="relative h-full w-72 shadow-[var(--shadow-pop)]">{sidebar}</aside>
+          <aside className="relative h-full w-70">{sidebar}</aside>
         </div>
       )}
-      <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-line bg-surface/85 px-4 backdrop-blur lg:px-8">
-        <button
-          type="button"
-          className="inline-flex size-touch items-center justify-center rounded-lg hover:bg-raised lg:hidden"
-          aria-label={open ? "Đóng menu" : "Mở menu"}
-          aria-expanded={open}
-          onClick={() => setOpen(!open)}
-        >
-          {open ? <X aria-hidden className="size-5" /> : <Menu aria-hidden className="size-5" />}
-        </button>
-        <nav aria-label="Vị trí" className="flex min-w-0 items-center gap-1.5 text-sm">
-          {current && current.group !== current.label && (
-            <>
-              <span className="hidden text-muted sm:inline">{current.group}</span>
-              <ChevronRight aria-hidden className="hidden size-4 text-muted sm:inline" />
-            </>
-          )}
-          <span className="truncate font-semibold">{current?.label ?? "—"}</span>
-        </nav>
-        <div className="ml-auto flex items-center gap-4 text-sm">
-          <span className="hidden items-center gap-2 sm:flex" title="Kết nối tới host MOM">
-            <span
-              aria-hidden
-              className={`size-2.5 rounded-full ${up === null ? "bg-muted" : up ? "bg-ok shadow-[0_0_0_3px_rgb(34_197_94/0.2)]" : "bg-bad shadow-[0_0_0_3px_rgb(239_68_68/0.2)]"}`}
-            />
-            <span className="text-muted">{up === null ? "Đang kiểm" : up ? "MOM trực tuyến" : "Mất kết nối MOM"}</span>
-          </span>
-          {now && (
-            <span className="font-mono text-muted tabular-nums">
-              {now.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
+
+      <div className="lg:pl-70">
+        <div className="sticky top-14 z-10 flex h-10 items-center gap-2 border-b border-line bg-surface px-4 lg:px-6">
+          <button
+            type="button"
+            className="inline-flex size-touch cursor-pointer items-center justify-center rounded-lg hover:bg-raised lg:hidden"
+            aria-label={open ? "Đóng menu" : "Mở menu"}
+            aria-expanded={open}
+            onClick={() => setOpen(!open)}
+          >
+            {open ? <X aria-hidden className="size-5" /> : <Menu aria-hidden className="size-5" />}
+          </button>
+          <nav aria-label="Vị trí" className="flex min-w-0 items-center gap-1.5">
+            {current && current.group !== current.label && (
+              <>
+                <span className="hidden text-muted sm:inline">{current.group}</span>
+                <ChevronRight aria-hidden className="hidden size-4 text-muted sm:inline" />
+              </>
+            )}
+            <span className="truncate font-bold text-muted">{current?.label ?? "—"}</span>
+          </nav>
+          {up === false && (
+            <span className="ml-auto md:hidden">
+              <Badge tone="bad">Mất kết nối MOM</Badge>
             </span>
           )}
         </div>
-      </header>
-      <main className="mx-auto max-w-[96rem] p-4 lg:p-8">{children}</main>
+        <main className="mx-auto max-w-[96rem] p-4 lg:p-6">{children}</main>
+      </div>
     </div>
   );
 }

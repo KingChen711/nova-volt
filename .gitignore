@@ -105,3 +105,5 @@ suites/.history/
 # Ket qua lab Playwright cua web
 web/test-results/
 web/playwright-report/
+
+__pycache__/

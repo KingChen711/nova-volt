@@ -1,6 +1,6 @@
 "use client";
 
-import { KeyRound, Search, Send } from "lucide-react";
+import { Search, Send } from "lucide-react";
 import { useState } from "react";
 import { Badge, Button, DataTable, Field, Panel, RefreshButton, ResponsePanel, Toast, useToast } from "@/components/ui";
 import { useCommand, useEntitySet } from "@/lib/hooks";
@@ -37,7 +37,7 @@ export default function ConfigurationKeysPage() {
           flush
           title={
             <span className="flex items-center gap-2">
-              Danh sách <Badge>{keys.rows.length}</Badge>
+              Danh sách <span className="font-normal text-muted">({keys.rows.length})</span>
             </span>
           }
           actions={
@@ -49,7 +49,7 @@ export default function ConfigurationKeysPage() {
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
                   placeholder="Lọc theo Category"
-                  className="h-9 w-48 rounded-lg border border-line bg-surface pr-3 pl-9 text-sm"
+                  className="h-9 w-48 rounded-lg border border-field bg-surface pr-3 pl-9 text-sm"
                 />
               </label>
               <RefreshButton onClick={() => void keys.reload()} busy={keys.loading} />
@@ -65,7 +65,6 @@ export default function ConfigurationKeysPage() {
             rows={keys.rows}
             loading={keys.loading}
             empty={category ? `Không có key nào trong Category “${category}”` : "Chưa có key nào"}
-            emptyIcon={KeyRound}
             columns={[
               { key: "nid", label: "NId", render: (k) => <span className="font-medium text-ink">{k.NId}</span>, mono: true },
               { key: "val", label: "Val", render: (k) => k.Val ?? <span className="text-muted">null</span>, mono: true },

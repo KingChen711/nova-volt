@@ -4,8 +4,8 @@ using Nvm.Product;
 namespace Nvm.Project;
 
 // Trailer, phần của team (app hậu cần bên ngoài YardApp): ở R7 chỉ phần trailer kho, tức trailer đỗ trong nhà máy làm kho tạm
-// cho pallet thành phẩm, và yêu cầu kéo xe giữa yard và dock. Xe của khách cho xuất hàng (R8) ở Loading.cs. Lịch xe, placard,
-// nhận skid thuộc R9.
+// cho pallet thành phẩm, và yêu cầu kéo xe giữa yard và dock. Xe của khách cho xuất hàng (R8) ở Loading.cs. Xe linh kiện, lịch xe,
+// placard, nhận skid, chuyển skid (R9) ở Inbound.cs.
 
 [FunctionalBlock("FB_OP_Yard", ModelDomain.OperationalData)]
 public sealed class YardOperationBlock;
@@ -24,7 +24,14 @@ public sealed class YardApp : AppDefinition
         .Command<UnloadPalletFromStorageTrailer>()
         .Command<ArriveCustomerTrailer>().Command<MoveTrailerIn>().Command<MoveTrailerOut>().Command<IssueYardPass>()
         .Command<DepartCustomerTrailer>()
-        .ReadingFunction<DockableTrailers>();
+        .Entity<InboundSchedule>().Entity<InboundSkid>().Entity<SkidTransload>().Entity<TrailerPlacard>().Entity<TransferReason>()
+        .Entity<LocalSupplier>().Entity<LocalSupplierMaterial>().Entity<ShuntZone>()
+        .Command<ReceiveDeliverySchedule>().Command<ArriveComponentTrailer>().Command<RegisterUnplannedTrailer>().Command<GeneratePlacard>()
+        .Command<CallEmptyTrailer>().Command<ChangeMovementDestination>().Command<ReceiveSkid>().Command<CompleteUnloading>()
+        .Command<CompleteLocalSchedule>().Command<ReportTrailerReloaded>().Command<IssueTrailerYardPass>().Command<DepartTrailer>()
+        .Command<CheckTransferSkid>().Command<TransferSkids>().Command<SetTransferReason>().Command<SetLocalSupplier>().Command<AssignShuntZone>()
+        .ReadingFunction<DockableTrailers>().ReadingFunction<ArrivalSchedules>().ReadingFunction<TrailerSkids>()
+        .ReadingFunction<UnplannedLocations>().ReadingFunction<MyTrailerMovements>();
 }
 
 public static class TrailerStates
@@ -40,6 +47,12 @@ public static class TrailerStates
 
     /// <summary>Xe của hãng vận tải đã chất xong chuyến giao.</summary>
     public const string CustomerLoaded = "CustomerLoaded";
+
+    /// <summary>Xe không lịch chở thành phẩm trả về.</summary>
+    public const string FullReturned = "FullReturned";
+
+    /// <summary>Xe của hãng vận chuyển đã rời đi, không còn trong đội xe.</summary>
+    public const string Deleted = "Deleted";
 }
 
 /// <summary>Loại kho của trailer kho.</summary>
@@ -97,6 +110,15 @@ public sealed class Trailer : Entity, IHasStatus
     public string? RoutePool { get; set; }
 
     public string? YardPassNId { get; set; }
+
+    public string? Carrier { get; set; }
+
+    public string? PlacardNId { get; set; }
+
+    /// <summary>Route của các lịch đang mở, ghép bằng dấu phẩy.</summary>
+    public string? Route { get; set; }
+
+    public string? LastComment { get; set; }
 }
 
 /// <summary>Lịch chất hàng của trailer kho ở một cửa dock. Mỗi trailer tối đa một lịch đang mở.</summary>
@@ -245,7 +267,7 @@ internal sealed class CreateTrailerHandler : ICommandHandler<CreateTrailer, Yard
     }
 }
 
-/// <summary>Trailer rỗng tới và đỗ ở một ô yard: Free → Empty. Lịch xe và placard thuộc R9.</summary>
+/// <summary>Trailer rỗng tới và đỗ ở một ô yard: Free → Empty, cấp placard xe rỗng. Lịch chất hàng tạo khi gọi xe vào dock.</summary>
 [Command<YardOperationBlock>]
 public sealed class ArriveEmptyTrailer : ICommand<YardResponse>
 {
@@ -276,6 +298,7 @@ internal sealed class ArriveEmptyTrailerHandler : ICommandHandler<ArriveEmptyTra
         }
 
         trailer.LocationNId = command.LocationNId;
+        trailer.PlacardNId = Inbound.NewPlacard(platform, PlacardTypes.Empty, null, trailer.NId);
         Yard.SetStatus(platform, trailer, TrailerStates.Empty);
         return YardResponse.Of(trailer);
     }

@@ -1,6 +1,6 @@
 "use client";
 
-import { ClipboardCheck, Inbox, Lock, ShieldAlert } from "lucide-react";
+import { ShieldAlert } from "lucide-react";
 import { useState } from "react";
 import { Badge, Button, DataTable, EmptyState, Field, PageHeader, Panel, RefreshButton, ResponsePanel, Toast, useToast } from "@/components/ui";
 import { areas, visibleAreas } from "@/lib/areas";
@@ -98,7 +98,7 @@ export default function QualityPage() {
   if (!allowed) {
     return (
       <Panel>
-        <EmptyState icon={Lock} title="Role của bạn không được vào khu Chất lượng">
+        <EmptyState title="Role của bạn không được vào khu Chất lượng">
           Khu này dành cho role {area.roles.join(", ")}.
         </EmptyState>
       </Panel>
@@ -111,7 +111,7 @@ export default function QualityPage() {
 
   return (
     <>
-      <PageHeader icon={ClipboardCheck} title="Kết luận NC" description="NC theo trạng thái, kết luận SCRAP hoặc USE AS IS, giữ hàng nghi lỗi">
+      <PageHeader title="Kết luận NC" description="NC theo trạng thái, kết luận SCRAP hoặc USE AS IS, giữ hàng nghi lỗi">
         <div className="flex items-end gap-2">
           <label className="flex flex-col gap-1 text-sm font-medium">
             Trạng thái
@@ -121,7 +121,7 @@ export default function QualityPage() {
                 setStatus(e.target.value);
                 setPicked([]);
               }}
-              className="min-h-touch rounded-lg border border-line bg-surface px-3 font-mono text-sm"
+              className="min-h-touch rounded-lg border border-field bg-surface px-3 font-mono text-sm"
             >
               {statuses.map((s) => (
                 <option key={s} value={s}>
@@ -136,7 +136,7 @@ export default function QualityPage() {
       </PageHeader>
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_24rem]">
-        <Panel flush title={<span className="flex items-center gap-2">NC <Badge>{list.rows.length}</Badge></span>}>
+        <Panel flush title={<span className="flex items-center gap-2">NC <span className="font-normal text-muted">({list.rows.length})</span></span>}>
           {list.error ? (
             <div className="p-4">
               <ResponsePanel result={list.error} />
@@ -146,7 +146,6 @@ export default function QualityPage() {
               rows={list.rows}
               loading={list.loading}
               empty="Không có NC nào. Nếu chắc chắn có NC mà danh sách trống: kiểm view của reading model đã cài chưa (make views)"
-              emptyIcon={Inbox}
               minWidth="60rem"
               columns={[
                 {
@@ -196,7 +195,7 @@ export default function QualityPage() {
                 <select
                   value={form.status}
                   onChange={(e) => setForm({ ...form, status: e.target.value })}
-                  className="min-h-touch rounded-lg border border-line bg-surface px-3 font-mono text-sm"
+                  className="min-h-touch rounded-lg border border-field bg-surface px-3 font-mono text-sm"
                 >
                   <option value="SCRAP">SCRAP</option>
                   <option value="USE AS IS">USE AS IS</option>

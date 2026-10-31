@@ -1,0 +1,12 @@
+Machine,FromStatus,ToStatus
+TrailerStateMachine,Free,Full
+TrailerStateMachine,Full,Tapped
+TrailerStateMachine,Full,Free
+TrailerStateMachine,Full,Deleted
+TrailerStateMachine,Empty,Free
+TrailerStateMachine,Tapped,Deleted
+TrailerStateMachine,Free,FullReturned
+TrailerStateMachine,FullReturned,Free
+TrailerStateMachine,CustomerEmpty,Free
+TrailerStateMachine,Deleted,Full
+TrailerStateMachine,Deleted,Free

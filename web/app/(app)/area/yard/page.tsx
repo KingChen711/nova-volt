@@ -1,6 +1,5 @@
 "use client";
 
-import { Inbox, Lock, Truck } from "lucide-react";
 import { useState } from "react";
 import { AreaTabs } from "@/components/AreaTabs";
 import { Badge, Button, DataTable, EmptyState, Field, PageHeader, Panel, RefreshButton, ResponsePanel, Toast, useToast } from "@/components/ui";
@@ -55,7 +54,7 @@ export default function StorageTrailerPage() {
   if (!allowed) {
     return (
       <Panel>
-        <EmptyState icon={Lock} title="Role của bạn không được vào khu Cổng và dock">
+        <EmptyState title="Role của bạn không được vào khu Cổng và dock">
           Khu này dành cho role {area.roles.join(", ")}.
         </EmptyState>
       </Panel>
@@ -70,14 +69,14 @@ export default function StorageTrailerPage() {
 
   return (
     <>
-      <PageHeader icon={Truck} title="Trailer kho" description="Trailer làm kho tạm cho pallet thành phẩm: loại kho, gọi vào dock, nạp, chốt, dỡ">
+      <PageHeader title="Trailer kho" description="Trailer làm kho tạm cho pallet thành phẩm: loại kho, gọi vào dock, nạp, chốt, dỡ">
         <RefreshButton busy={trailers.loading} onClick={() => void Promise.all([trailers.reload(), movements.reload()])} />
       </PageHeader>
       <AreaTabs slug="yard" label="Màn của khu Cổng và dock" />
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_26rem]">
         <div className="flex flex-col gap-5">
-          <Panel flush title={<span className="flex items-center gap-2">Trailer <Badge>{trailers.rows.length}</Badge></span>}>
+          <Panel flush title={<span className="flex items-center gap-2">Trailer <span className="font-normal text-muted">({trailers.rows.length})</span></span>}>
             {trailers.error ? (
               <div className="p-4">
                 <ResponsePanel result={trailers.error} />
@@ -87,7 +86,6 @@ export default function StorageTrailerPage() {
                 rows={trailers.rows}
                 loading={trailers.loading}
                 empty="Chưa có trailer nào"
-                emptyIcon={Inbox}
                 minWidth="40rem"
                 columns={[
                   {
@@ -95,7 +93,7 @@ export default function StorageTrailerPage() {
                     label: "Barcode",
                     mono: true,
                     render: (t) => (
-                      <button type="button" className="cursor-pointer text-primary underline-offset-2 hover:underline" onClick={() => setPicked(t.NId)}>
+                      <button type="button" className="cursor-pointer text-primary underline underline-offset-2 hover:text-primary-hover" onClick={() => setPicked(t.NId)}>
                         {t.NId}
                       </button>
                     ),
@@ -108,12 +106,11 @@ export default function StorageTrailerPage() {
             )}
           </Panel>
 
-          <Panel flush title={<span className="flex items-center gap-2">Yêu cầu kéo xe đang mở <Badge>{movements.rows.length}</Badge></span>}>
+          <Panel flush title={<span className="flex items-center gap-2">Yêu cầu kéo xe đang mở <span className="font-normal text-muted">({movements.rows.length})</span></span>}>
             <DataTable
               rows={movements.rows}
               loading={movements.loading}
               empty="Không có yêu cầu kéo xe nào đang mở"
-              emptyIcon={Inbox}
               minWidth="40rem"
               columns={[
                 { key: "trailer", label: "Trailer", mono: true, render: (m) => m.TrailerNId },
@@ -164,7 +161,7 @@ export default function StorageTrailerPage() {
                 <div className="flex flex-wrap items-end gap-2">
                   <label className="flex flex-col gap-1 text-sm font-medium">
                     Loại kho
-                    <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} className="min-h-touch rounded-lg border border-line bg-surface px-3 font-mono text-sm">
+                    <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} className="min-h-touch rounded-lg border border-field bg-surface px-3 font-mono text-sm">
                       <option>FGStorage</option>
                       <option>GenericStorage</option>
                     </select>

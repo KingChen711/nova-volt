@@ -1,6 +1,6 @@
 "use client";
 
-import { CircleDashed, Lock, MapPinned, Milestone } from "lucide-react";
+import { Milestone } from "lucide-react";
 import { useParams } from "next/navigation";
 import { Badge, EmptyState, PageHeader, Panel } from "@/components/ui";
 import { areas, visibleAreas } from "@/lib/areas";
@@ -13,13 +13,13 @@ export default function AreaPage() {
   const area = areas.find((a) => a.slug === slug);
 
   if (!area) {
-    return <EmptyState icon={MapPinned} title={`Không có khu “${slug}”`} />;
+    return <EmptyState title={`Không có khu “${slug}”`} />;
   }
 
   if (session && !visibleAreas(session.roles).includes(area)) {
     return (
       <Panel>
-        <EmptyState icon={Lock} title={`Role của bạn không được vào khu ${area.label}`}>
+        <EmptyState title={`Role của bạn không được vào khu ${area.label}`}>
           Khu này dành cho role {area.roles.join(", ")}.
         </EmptyState>
       </Panel>
@@ -28,7 +28,7 @@ export default function AreaPage() {
 
   return (
     <>
-      <PageHeader icon={area.icon} title={area.label} description={area.description}>
+      <PageHeader title={area.label} description={area.description}>
         <Badge tone="accent">
           <Milestone aria-hidden className="size-3.5" />
           Mốc <span className="font-mono">{area.milestone}</span>
@@ -39,12 +39,9 @@ export default function AreaPage() {
         <Panel title="Các màn của khu">
           <ol className="grid gap-3 sm:grid-cols-2">
             {area.screens.map((screen, i) => (
-              <li key={screen} className="flex items-center gap-3 rounded-lg border border-dashed border-line bg-raised px-3 py-3">
-                <span className="inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-surface font-mono text-xs text-muted ring-1 ring-line">
-                  {i + 1}
-                </span>
-                <span className="flex-1 text-sm font-medium">{screen}</span>
-                <CircleDashed aria-label="Chưa dựng" className="size-4 text-muted" />
+              <li key={screen} className="flex items-center justify-between gap-3 border-b border-line-soft py-2">
+                {i + 1}. {screen}
+                <Badge>Chưa dựng</Badge>
               </li>
             ))}
           </ol>

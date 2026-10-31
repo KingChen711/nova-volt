@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarClock, ClipboardList, Factory, Lock, Snowflake, TimerReset } from "lucide-react";
+import { CalendarClock, Snowflake, TimerReset } from "lucide-react";
 import { useMemo, useState } from "react";
 import { AreaTabs } from "@/components/AreaTabs";
 import { Badge, Button, DataTable, EmptyState, PageHeader, Panel, RefreshButton, ResponsePanel, Toast, useToast } from "@/components/ui";
@@ -88,7 +88,7 @@ export default function LineWorkOrdersPage() {
   if (!allowed) {
     return (
       <Panel>
-        <EmptyState icon={Lock} title="Role của bạn không được vào khu Xưởng">
+        <EmptyState title="Role của bạn không được vào khu Xưởng">
           Khu này dành cho role {line.roles.join(", ")}.
         </EmptyState>
       </Panel>
@@ -99,7 +99,7 @@ export default function LineWorkOrdersPage() {
 
   return (
     <>
-      <PageHeader icon={Factory} title="Lệnh theo ca" description="Timer đầu ca đóng băng WO ca trước, mở WO mới cho mỗi DWO, tự hoàn tất WO đóng băng đủ giờ">
+      <PageHeader title="Lệnh theo ca" description="Timer đầu ca đóng băng WO ca trước, mở WO mới cho mỗi DWO, tự hoàn tất WO đóng băng đủ giờ">
         <div className="flex items-end gap-2">
           <label className="flex flex-col gap-1 text-xs font-medium text-muted">
             Khu
@@ -107,7 +107,7 @@ export default function LineWorkOrdersPage() {
               aria-label="Khu sản xuất"
               value={area}
               onChange={(e) => setPicked(e.target.value)}
-              className="min-h-touch rounded-lg border border-line bg-surface px-3 font-mono text-sm text-ink"
+              className="min-h-touch rounded-lg border border-field bg-surface px-3 font-mono text-sm text-ink"
             >
               {areaList.rows.map((a) => (
                 <option key={a.NId} value={a.NId}>
@@ -129,7 +129,7 @@ export default function LineWorkOrdersPage() {
           flush
           title={
             <span className="flex flex-wrap items-center gap-2">
-              Work order <Badge>{orders.rows.length}</Badge>
+              Work order <span className="font-normal text-muted">({orders.rows.length})</span>
               {Object.entries(counts).map(([status, n]) => (
                 <Badge key={status} tone={tone[status] ?? "neutral"}>
                   {status} {n}
@@ -142,7 +142,6 @@ export default function LineWorkOrdersPage() {
             rows={orders.rows}
             loading={orders.loading}
             empty="Khu này chưa có WO: timer đầu ca chưa chạy lần nào"
-            emptyIcon={ClipboardList}
             minWidth="44rem"
             columns={[
               { key: "nid", label: "WO", mono: true, render: (w) => w.NId },

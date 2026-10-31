@@ -14,11 +14,11 @@ test và số đo tương ứng (AGENTS.md §1.3). Agent làm theo lô lớn, kh
 | R6 Hàng lỗi | **đạt** (2026-10-29) | Tag `r6`; mục R6 bên dưới |
 | R7 Đóng gói, cất kho, trailer kho, kiểm pallet | **đạt** (2026-10-29) | Tag `r7`; mục R7 bên dưới |
 | R8 Xuất hàng | **đạt** (2026-10-30) | Tag `r8`; mục R8 bên dưới |
-| R9 Xe linh kiện, bãi, dock, skid | chưa làm | |
+| R9 Xe linh kiện, bãi, dock, skid | **đạt** (2026-10-31) | Tag `r9`; mục R9 bên dưới |
 | R10 Kanban, gọi hàng, bảng gọi hàng, nạp nguyên liệu | chưa làm | |
 | R11 Gateway, hệ ngoài giả lập | chưa làm | |
 | R12 Vận hành kiểu dự án | chưa làm | |
-| R13 Hoàn thiện web | chưa làm | |
+| R13 Hoàn thiện web | chưa làm | Giao diện đã đổi sang AWS Console dark theme (2026-10-30, `web/DESIGN.md`), nằm trong tag `r9` |
 
 ## R0
 
@@ -241,6 +241,21 @@ test và số đo tương ứng (AGENTS.md §1.3). Agent làm theo lô lớn, kh
   picking chặn đúng luật. Sửa: bỏ lô đã hủy khi chọn; test trong `QualityTests.Shrink_rows_from_linedb_are_split_from_the_lot_and_scrapped`.
   Pallet tạo trước bản sửa trên stack local vẫn mang genealogy cũ.
 
+## R9
+
+- `YardApp` (`Inbound.cs`): lịch xe từ `SupplierPortal` (JSON, khóa route + giờ dự kiến), đăng ký xe linh kiện ở cổng, placard `PL-C`, `PL-E`, `PL-R`, `PL-G`;
+  xe rỗng và gọi xe rỗng; năm loại xe không lịch (nguyên liệu đặt thẳng, loại ống, linh kiện đột xuất, xe rỗng của khách, thành phẩm trả về); đổi điểm thả, khu bãi của người
+  kéo xe; nhận skid (nhãn 40 ký tự cắt theo vị trí, logical dock theo property của cửa, mã phụ của vị trí, vị trí mặc định từ part address, MTU tên ghép);
+  dỡ xong (dỡ thiếu phải xác nhận, email skid chưa nhận); báo đã chất theo phần trăm; yard pass; xe rời (xe của hãng vận chuyển không cần yard pass, thành Deleted); chuyển skid giữa hai xe
+  có lý do và lịch sử; nhà cung cấp tại chỗ tự nhận material trong danh sách.
+- Master data bằng suite mới: 4 cửa dock, 6 ô yard, khu nhận hàng; trạng thái xe `FullReturned`, `Deleted`; lý do chuyển; nhà cung cấp tại chỗ.
+- Khác hệ thật có chủ đích: lịch giữ skid trực tiếp, không có tầng đơn và nhà cung cấp riêng (đủ cho bốn luồng); giữ nguyên nghĩa cột và thứ tự kiểm.
+- DoD, test ở `tests/Integration/Nvm.SolutionTests/InboundTrailerTests.cs` (13 test): bốn luồng trọn, trạng thái lịch và trailer khẳng định sau từng bước, gồm ca sai xe, sai vị trí, sai logical dock,
+  vị trí khác mặc định, dỡ thiếu, phần trăm 0, placard sai route, thiếu yard pass, còn yêu cầu kéo, chuyển sang xe rỗng, chuyển một phần. Lab L19 có đối chứng dương; skid đã nhận không chuyển được.
+- Kiểm 2026-10-30 trên máy cá nhân: clean-room, format, build Release sạch, 271/271 test xanh, hai benchmark chạy riêng xanh.
+- Web: "Xe đến", "Điều xe", "Nhận skid", "Chuyển skid" (`/area/yard/inbound`, `/dock`, `/receive`, `/transfer`). Lab `web/e2e/inbound.spec.ts` 3/3 xanh trên stack local: đăng ký, kéo xe, nhận skid,
+  nhãn lệch một ký tự, skid đã nhận không chuyển, chuyển rồi nhận trên xe đích, xe nguyên liệu đặt thẳng vào thẳng cửa rồi Deleted.
+
 ## Nợ mở
 
 | Mã | Nợ | Mốc xử lý |
@@ -256,6 +271,8 @@ test và số đo tương ứng (AGENTS.md §1.3). Agent làm theo lô lớn, kh
 | N-R8-1 | Stack local không có hệ của khách: chất xe họ B dừng ở Confirm như trên máy ảo, trừ khi trỏ `NVM_GATEWAY_URL` tới hệ giả | R11 |
 | N-R8-2 | Email (danh sách pallet, phản hồi ASN) ra file outbox, chưa qua SMTP | R11 |
 | N-R8-3 | Ngoại lệ mức kiện khi một chuyến gồm nhiều nhóm đơn chưa dựng: một chuyến là một nhóm | R12 |
-| N-R8-4 | Không có lệnh cho xe của khách rỗng rời đi (nguồn không nói hệ thật làm gì); lab họ B để xe lại cửa dock, stack local phải dọn tay | R9 |
+| N-R8-4 | Xe của khách rỗng đang gắn chuyến xuất hàng không có lệnh rời đi (nguồn không nói hệ thật làm gì); lab họ B để xe lại cửa dock, stack local phải dọn tay | R12 |
+| N-R9-1 | Chưa có lịch sử di chuyển trailer, ghi chú nhiều dòng (chỉ `LastComment`), màn in placard, Components Unload Dashboard | R13 |
+| N-R9-2 | Nhà cung cấp tại chỗ tự nhận: material thiếu địa chỉ kho thì để skid chưa nhận; hệ thật có thể báo lỗi cả đơn (chưa xác minh) | R11 |
 | N-R8-5 | Lab `line-messages.spec` tìm dòng `ca010` trong 50 dòng mới nhất: chạy simulator có đóng gói ngay trước thì dòng đó bị đẩy ra, spec hỏng dù màn đúng | R12 |
 | N-R7-3 | Đo cuối dựng bằng tin LineDB; màn phiên đo của hệ thật (kit không quét thành NC) chưa dựng | R13 |

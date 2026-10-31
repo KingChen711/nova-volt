@@ -114,6 +114,13 @@ public static class SolutionManifest
         yard.Allow(
             [nameof(ArriveCustomerTrailer), nameof(MoveTrailerIn), nameof(MoveTrailerOut), nameof(IssueYardPass), nameof(DepartCustomerTrailer)],
             Yard, Shipping);
+
+        // Xe linh kiện: cổng, dock, người kéo xe. Lịch từ cổng nhà cung cấp là tin từ hệ ngoài nên chỉ quản trị.
+        yard.Allow(
+            [nameof(ArriveComponentTrailer), nameof(RegisterUnplannedTrailer), nameof(GeneratePlacard), nameof(CallEmptyTrailer),
+             nameof(ChangeMovementDestination), nameof(ReceiveSkid), nameof(CompleteUnloading), nameof(CompleteLocalSchedule),
+             nameof(ReportTrailerReloaded), nameof(IssueTrailerYardPass), nameof(DepartTrailer), nameof(CheckTransferSkid), nameof(TransferSkids)],
+            Yard);
         solution.Apps.Add(yard);
         return solution;
     }

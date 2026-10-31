@@ -3,6 +3,7 @@
     "Production",
     "MapApp",
     "NvProductionExt",
-    "ShipApp"
+    "ShipApp",
+    "YardApp"
   ]
 }

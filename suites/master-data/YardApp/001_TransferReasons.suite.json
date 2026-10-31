@@ -1,0 +1,21 @@
+{
+  "Name": "YardApp_001_TransferReasons",
+  "BreakOnError": true,
+  "TestDefinitions": [
+    {
+      "Name": "SetTransferReason",
+      "Csv": "transfer-reasons.csv",
+      "TestSteps": [
+        {
+          "ID": "SetTransferReason",
+          "StepType": "Command",
+          "App": "YardApp",
+          "Name": "SetTransferReason",
+          "Parameters": {
+            "NId": "#TEST_CSV.NId#"
+          }
+        }
+      ]
+    }
+  ]
+}

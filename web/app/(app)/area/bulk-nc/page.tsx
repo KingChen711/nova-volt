@@ -1,6 +1,5 @@
 "use client";
 
-import { ListChecks, Lock } from "lucide-react";
 import { useState } from "react";
 import { Button, EmptyState, Field, PageHeader, Panel, ResponsePanel } from "@/components/ui";
 import { areas, visibleAreas } from "@/lib/areas";
@@ -42,7 +41,7 @@ export default function BulkNcPage() {
   if (!allowed) {
     return (
       <Panel>
-        <EmptyState icon={Lock} title="Role của bạn không được vào khu Chất lượng">
+        <EmptyState title="Role của bạn không được vào khu Chất lượng">
           Khu này dành cho role {area.roles.join(", ")}.
         </EmptyState>
       </Panel>
@@ -53,7 +52,7 @@ export default function BulkNcPage() {
 
   return (
     <>
-      <PageHeader icon={ListChecks} title="NC hàng loạt" description="Giữ hoặc hủy cả một danh sách MTU trong một khu" />
+      <PageHeader title="NC hàng loạt" description="Giữ hoặc hủy cả một danh sách MTU trong một khu" />
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_24rem]">
         <Panel title={`Danh sách (${mtus.length} MTU)`}>
           <div className="flex flex-col gap-3">
@@ -65,7 +64,7 @@ export default function BulkNcPage() {
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 rows={10}
-                className="rounded-lg border border-line bg-surface p-3 font-mono text-sm"
+                className="rounded-lg border border-field bg-surface p-3 font-mono text-sm"
               />
             </label>
             <div className="flex flex-wrap gap-2">

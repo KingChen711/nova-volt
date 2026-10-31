@@ -1,6 +1,6 @@
 "use client";
 
-import { Inbox, Lock, Radio, Send } from "lucide-react";
+import { Send } from "lucide-react";
 import { useState } from "react";
 import { AreaTabs } from "@/components/AreaTabs";
 import { Badge, Button, DataTable, EmptyState, Field, PageHeader, Panel, RefreshButton, ResponsePanel, Toast, useToast } from "@/components/ui";
@@ -82,7 +82,7 @@ export default function LineMessagesPage() {
   if (!allowed) {
     return (
       <Panel>
-        <EmptyState icon={Lock} title="Role của bạn không được vào khu Xưởng">
+        <EmptyState title="Role của bạn không được vào khu Xưởng">
           Khu này dành cho role {line.roles.join(", ")}.
         </EmptyState>
       </Panel>
@@ -91,7 +91,7 @@ export default function LineMessagesPage() {
 
   return (
     <>
-      <PageHeader icon={Radio} title="Tin từ xưởng" description="Kết quả máy đã ghi vào MOM: serial, bước, WO, nguyên liệu đã trừ">
+      <PageHeader title="Tin từ xưởng" description="Kết quả máy đã ghi vào MOM: serial, bước, WO, nguyên liệu đã trừ">
         <div className="flex items-end gap-2">
           <Field id="serial-filter" label="Tìm serial" value={serial} onChange={setSerial} mono placeholder="vd C0001" />
           <label className="flex min-h-touch items-center gap-2 text-sm">
@@ -104,7 +104,7 @@ export default function LineMessagesPage() {
       <AreaTabs slug="line" label="Màn của khu Xưởng" />
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_24rem]">
-        <Panel flush title={<span className="flex items-center gap-2">Đã ghi <Badge>{executions.rows.length}</Badge></span>}>
+        <Panel flush title={<span className="flex items-center gap-2">Đã ghi <span className="font-normal text-muted">({executions.rows.length})</span></span>}>
           {executions.error ? (
             <div className="p-4">
               <ResponsePanel result={executions.error} />
@@ -114,7 +114,6 @@ export default function LineMessagesPage() {
               rows={executions.rows}
               loading={executions.loading}
               empty="Chưa có tin nào được ghi: kiểm trạng thái dòng tin ở LineDB và đường chuyển tin đang bật"
-              emptyIcon={Inbox}
               minWidth="52rem"
               columns={[
                 {
@@ -122,7 +121,7 @@ export default function LineMessagesPage() {
                   label: "Serial",
                   mono: true,
                   render: (e) => (
-                    <button type="button" className="cursor-pointer text-left text-primary underline-offset-2 hover:underline" onClick={() => setPicked(e)}>
+                    <button type="button" className="cursor-pointer text-left text-primary underline underline-offset-2 hover:text-primary-hover" onClick={() => setPicked(e)}>
                       {e.Serial}
                     </button>
                   ),
@@ -186,7 +185,7 @@ export default function LineMessagesPage() {
                   <select
                     value={form.status}
                     onChange={(e) => setForm({ ...form, status: e.target.value })}
-                    className="min-h-touch rounded-lg border border-line bg-surface px-3 font-mono text-sm"
+                    className="min-h-touch rounded-lg border border-field bg-surface px-3 font-mono text-sm"
                   >
                     <option value="OK">OK 00</option>
                     <option value="KO">KO 99</option>

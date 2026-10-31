@@ -1,6 +1,5 @@
 "use client";
 
-import { Layers, Lock } from "lucide-react";
 import { useState } from "react";
 import { AreaTabs } from "@/components/AreaTabs";
 import { Badge, Button, EmptyState, Field, PageHeader, Panel, ResponsePanel } from "@/components/ui";
@@ -64,7 +63,7 @@ export default function RebuildPalletPage() {
   if (!allowed) {
     return (
       <Panel>
-        <EmptyState icon={Lock} title="Role của bạn không được vào khu Xưởng">
+        <EmptyState title="Role của bạn không được vào khu Xưởng">
           Khu này dành cho role {line.roles.join(", ")}.
         </EmptyState>
       </Panel>
@@ -74,7 +73,7 @@ export default function RebuildPalletPage() {
   const shown = { start: start.result, add: add.result, complete: complete.result }[last];
   return (
     <>
-      <PageHeader icon={Layers} title="Dựng lại pallet" description="Sau bước đo cuối: quét pallet, quét từng tote đã đo, Completed khi đủ số tote" />
+      <PageHeader title="Dựng lại pallet" description="Sau bước đo cuối: quét pallet, quét từng tote đã đo, Completed khi đủ số tote" />
       <AreaTabs slug="line" label="Màn của khu Xưởng" />
 
       <div className="grid max-w-3xl gap-5">

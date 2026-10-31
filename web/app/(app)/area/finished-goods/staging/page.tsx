@@ -1,6 +1,6 @@
 "use client";
 
-import { Inbox, Lock, ScanLine, Truck } from "lucide-react";
+import { Truck } from "lucide-react";
 import { useState } from "react";
 import { AreaTabs } from "@/components/AreaTabs";
 import { Badge, Button, DataTable, EmptyState, Field, PageHeader, Panel, RefreshButton, ResponsePanel, StatCard, Toast, useToast } from "@/components/ui";
@@ -113,7 +113,7 @@ export default function StagingPage() {
   if (!allowed) {
     return (
       <Panel>
-        <EmptyState icon={Lock} title="Role của bạn không được vào khu Thành phẩm">
+        <EmptyState title="Role của bạn không được vào khu Thành phẩm">
           Khu này dành cho role {area.roles.join(", ")}.
         </EmptyState>
       </Panel>
@@ -123,7 +123,7 @@ export default function StagingPage() {
   const step = !building ? "nhãn skid" : !building.PalletNId ? "pallet" : "nhãn hộp";
   return (
     <>
-      <PageHeader icon={ScanLine} title="Staging và chất xe" description="Quét nhãn skid, pallet, nhãn hộp; khai ngoại lệ; chất xe">
+      <PageHeader title="Staging và chất xe" description="Quét nhãn skid, pallet, nhãn hộp; khai ngoại lệ; chất xe">
         <RefreshButton busy={skids.loading} onClick={() => void refresh()} />
       </PageHeader>
       <AreaTabs slug="finished-goods" label="Màn của khu Thành phẩm" />
@@ -145,8 +145,8 @@ export default function StagingPage() {
             </form>
             {delivery && (
               <div className="mt-4 grid grid-cols-2 gap-3">
-                <StatCard label="Todo" icon={ScanLine} tone="warn" value={progress?.Todo ?? 0} />
-                <StatCard label="Completed" icon={Truck} tone="ok" value={progress?.Completed ?? 0} />
+                <StatCard label="Todo" value={progress?.Todo ?? 0} />
+                <StatCard label="Completed" value={progress?.Completed ?? 0} />
               </div>
             )}
           </Panel>
@@ -188,7 +188,7 @@ export default function StagingPage() {
                   </p>
                   <label className="flex flex-col gap-1.5 text-sm font-medium">
                     Mã ngoại lệ
-                    <select value={code} onChange={(e) => setCode(e.target.value)} className="min-h-touch rounded-lg border border-line bg-surface px-2 font-mono text-sm">
+                    <select value={code} onChange={(e) => setCode(e.target.value)} className="min-h-touch rounded-lg border border-field bg-surface px-2 font-mono text-sm">
                       {ask.Codes?.map((c) => (
                         <option key={c}>{c}</option>
                       ))}
@@ -235,12 +235,11 @@ export default function StagingPage() {
         </div>
 
         <div className="flex flex-col gap-5">
-          <Panel flush title={<span className="flex items-center gap-2">Skid của chuyến <Badge>{skids.rows.length}</Badge></span>}>
+          <Panel flush title={<span className="flex items-center gap-2">Skid của chuyến <span className="font-normal text-muted">({skids.rows.length})</span></span>}>
             <DataTable
               rows={skids.rows}
               loading={skids.loading}
               empty="Chưa có skid: quét nhãn skid để bắt đầu"
-              emptyIcon={Inbox}
               minWidth="36rem"
               columns={[
                 { key: "no", label: "Skid", mono: true, render: (s) => s.SkidNo.toString().padStart(3, "0") },
@@ -250,12 +249,11 @@ export default function StagingPage() {
               ]}
             />
           </Panel>
-          <Panel flush title={<span className="flex items-center gap-2">Ngoại lệ đã khai <Badge>{entries.rows.length}</Badge></span>}>
+          <Panel flush title={<span className="flex items-center gap-2">Ngoại lệ đã khai <span className="font-normal text-muted">({entries.rows.length})</span></span>}>
             <DataTable
               rows={entries.rows}
               loading={entries.loading}
               empty="Chưa khai ngoại lệ nào"
-              emptyIcon={Inbox}
               minWidth="36rem"
               columns={[
                 { key: "order", label: "Đơn", mono: true, render: (e) => e.OrderNId },

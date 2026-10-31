@@ -1,0 +1,9 @@
+NId,Name,Level,ParentNId
+NV1-CMN-PC,Parts cells,Area,NV1-CMN
+NV1-CMN-PC-T2-01,Staging cell 1,WorkCenter,NV1-CMN-PC
+NV1-CMN-PC-T2-02,Staging cell 2,WorkCenter,NV1-CMN-PC
+NV1-CMN-PC-T2-03,Staging cell 3,WorkCenter,NV1-CMN-PC
+NV1-CMN-PC-T3-01,Transition room 1,WorkCenter,NV1-CMN-PC
+NV1-CMN-PC-T4-01,Delivery cell 1,WorkCenter,NV1-CMN-PC
+NV1-CMN-PC-T4-02,Delivery cell 2,WorkCenter,NV1-CMN-PC
+NV1-CMN-PC-T4-03,Delivery cell 3,WorkCenter,NV1-CMN-PC

@@ -1,0 +1,24 @@
+{
+  "Name": "MapApp_008_UomConversions",
+  "BreakOnError": true,
+  "TestDefinitions": [
+    {
+      "Name": "SetUomConversion",
+      "Csv": "uom-conversions.csv",
+      "TestSteps": [
+        {
+          "ID": "SetUomConversion",
+          "StepType": "Command",
+          "App": "MapApp",
+          "Name": "SetUomConversion",
+          "Parameters": {
+            "MaterialNId": "#TEST_CSV.MaterialNId#",
+            "System": "#TEST_CSV.System#",
+            "DestinationUom": "#TEST_CSV.DestinationUom#",
+            "Factor": "#TEST_CSV.Factor#"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "Name": "PullApp_002_RouteMaterials",
+  "BreakOnError": true,
+  "TestDefinitions": [
+    {
+      "Name": "SetRouteMaterial",
+      "Csv": "route-materials.csv",
+      "TestSteps": [
+        {
+          "ID": "SetRouteMaterial",
+          "StepType": "Command",
+          "App": "PullApp",
+          "Name": "SetRouteMaterial",
+          "Parameters": {
+            "RouteNId": "#TEST_CSV.RouteNId#",
+            "MaterialNId": "#TEST_CSV.MaterialNId#",
+            "Quantity": "#TEST_CSV.Quantity#"
+          }
+        }
+      ]
+    }
+  ]
+}

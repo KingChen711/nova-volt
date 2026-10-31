@@ -1,0 +1,27 @@
+{
+  "Name": "MapApp_007_PullPartAddresses",
+  "BreakOnError": true,
+  "TestDefinitions": [
+    {
+      "Name": "SetPartAddress",
+      "Csv": "pull-part-addresses.csv",
+      "TestSteps": [
+        {
+          "ID": "SetPartAddress",
+          "StepType": "Command",
+          "App": "MapApp",
+          "Name": "SetPartAddress",
+          "Parameters": {
+            "MaterialNId": "#TEST_CSV.MaterialNId#",
+            "StoreAddress": "#TEST_CSV.StoreAddress#",
+            "KanbanNId": "#TEST_CSV.KanbanNId#",
+            "DeliveryAddress": "#TEST_CSV.DeliveryAddress#",
+            "DeliveryRouteNId": "#TEST_CSV.DeliveryRouteNId#",
+            "EffectiveFrom": "#TEST_CSV.EffectiveFrom#",
+            "EffectiveTo": "#TEST_CSV.EffectiveTo#"
+          }
+        }
+      ]
+    }
+  ]
+}

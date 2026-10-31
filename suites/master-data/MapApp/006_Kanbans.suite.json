@@ -1,0 +1,27 @@
+{
+  "Name": "MapApp_006_Kanbans",
+  "BreakOnError": true,
+  "TestDefinitions": [
+    {
+      "Name": "SetKanban",
+      "Csv": "kanbans.csv",
+      "TestSteps": [
+        {
+          "ID": "SetKanban",
+          "StepType": "Command",
+          "App": "MapApp",
+          "Name": "SetKanban",
+          "Parameters": {
+            "MaterialNId": "#TEST_CSV.MaterialNId#",
+            "DockCode": "#TEST_CSV.DockCode#",
+            "SupplierCode": "#TEST_CSV.SupplierCode#",
+            "KanbanNo": "#TEST_CSV.KanbanNo#",
+            "QuantityPerContainer": "#TEST_CSV.QuantityPerContainer#",
+            "EffectiveFrom": "#TEST_CSV.EffectiveFrom#",
+            "EffectiveTo": "#TEST_CSV.EffectiveTo#"
+          }
+        }
+      ]
+    }
+  ]
+}

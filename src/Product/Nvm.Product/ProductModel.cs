@@ -68,6 +68,7 @@ public static class ProductErrors
     public const int NotInBuffer = 7704;
     public const int UnknownLogisticRequest = 7705;
     public const int InvalidLogisticStatus = 7706;
+    public const int UnknownTransportOperation = 7707;
 }
 
 /// <summary>Trạng thái MTU có sẵn của nhà cung cấp. Không phải state machine dạng dữ liệu: NC và containment đổi trực tiếp.</summary>
@@ -96,7 +97,7 @@ public sealed class ProductionApp : AppDefinition
         .Entity<WorkOrderOperationMaterial>().Entity<WorkOrderOutput>().Entity<MaterialConsumption>()
         .Entity<Defect>().Entity<NonConformance>().Entity<NonConformanceItem>()
         .Entity<ContainmentRequest>().Entity<ContainmentItem>()
-        .Entity<Buffer>().Entity<BufferWhitelist>().Entity<BufferAssignment>().Entity<LogisticRequest>()
+        .Entity<Buffer>().Entity<BufferWhitelist>().Entity<BufferAssignment>().Entity<LogisticRequest>().Entity<TransportOperation>()
         .Command<CreateEquipment>().Command<SetEquipmentProperty>().Command<AddEquipmentToGroup>()
         .Command<CreateMaterial>().Command<UpdateMaterial>().Command<CreateMaterialRevision>().Command<SetMaterialProperty>()
         .Command<CreateProcess>().Command<AddProcessOperation>().Command<AllowOperationEquipment>().Command<AddOperationMaterial>()
@@ -110,7 +111,7 @@ public sealed class ProductionApp : AppDefinition
         .Command<DefineDefect>().Command<CreateNonConformance>().Command<SetNonConformanceStatus>()
         .Command<HoldMtus>().Command<ReleaseMtus>()
         .Command<ImportContainmentRequest>().Command<ReleaseContainmentRequest>().Command<CloseContainmentRequest>()
-        .Command<CreateBuffer>().Command<AddBufferWhitelist>().Command<AttachMtuToBuffer>().Command<DetachMtuFromBuffer>()
-        .Command<CreateLogisticRequest>().Command<ReleaseLogisticRequest>().Command<MoveLogisticRequestWithinFlow>()
-        .Command<CompleteLogisticRequest>();
+        .Command<CreateBuffer>().Command<AddBufferWhitelist>().Command<AttachMtuToBuffer>().Command<DetachMtuFromBuffer>().Command<LinkMtuToBuffer>()
+        .Command<CreateLogisticRequest>().Command<AcceptMaterialRequest>().Command<StartTransportOperation>()
+        .Command<CompleteTransportOperation>().Command<CancelTransportOperation>();
 }

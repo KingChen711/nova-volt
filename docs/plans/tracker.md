@@ -15,7 +15,7 @@ test và số đo tương ứng (AGENTS.md §1.3). Agent làm theo lô lớn, kh
 | R7 Đóng gói, cất kho, trailer kho, kiểm pallet | **đạt** (2026-10-29) | Tag `r7`; mục R7 bên dưới |
 | R8 Xuất hàng | **đạt** (2026-10-30) | Tag `r8`; mục R8 bên dưới |
 | R9 Xe linh kiện, bãi, dock, skid | **đạt** (2026-10-31) | Tag `r9`; mục R9 bên dưới |
-| R10 Kanban, gọi hàng, bảng gọi hàng, nạp nguyên liệu | chưa làm | |
+| R10 Kanban, gọi hàng, bảng gọi hàng, nạp nguyên liệu | **đạt** (2026-10-31) | Tag `r10`; mục R10 bên dưới |
 | R11 Gateway, hệ ngoài giả lập | chưa làm | |
 | R12 Vận hành kiểu dự án | chưa làm | |
 | R13 Hoàn thiện web | chưa làm | Giao diện đã đổi sang AWS Console dark theme (2026-10-30, `web/DESIGN.md`), nằm trong tag `r9` |
@@ -256,6 +256,16 @@ test và số đo tương ứng (AGENTS.md §1.3). Agent làm theo lô lớn, kh
 - Web: "Xe đến", "Điều xe", "Nhận skid", "Chuyển skid" (`/area/yard/inbound`, `/dock`, `/receive`, `/transfer`). Lab `web/e2e/inbound.spec.ts` 3/3 xanh trên stack local: đăng ký, kéo xe, nhận skid,
   nhãn lệch một ký tự, skid đã nhận không chuyển, chuyển rồi nhận trên xe đích, xe nguyên liệu đặt thẳng vào thẳng cửa rồi Deleted.
 
+## R10
+
+- Lớp Product: sửa yêu cầu vận chuyển theo quan sát (yêu cầu theo material và số lượng, việc chở riêng; `oef-mapping.md`), thêm `LinkMtuToBuffer` không xét whitelist.
+- `PullApp` (`Pull.cs`): route bốn tier có phút từng chặng, whitelist bắt buộc ở mọi tier khi gọi; gọi hàng sinh cả yêu cầu lẫn việc chở (post-action); nhận việc, quét lô (nhãn skid, nhãn đặt thẳng; chỉ ra lô đang thuộc buffer, cờ đúng nguồn, FEFO), ghi lô, hoàn tất; post-action dời xuống chặng dưới, picklist gửi `WMS` khi lấy từ tier 1; hạn chặng; bảng gọi hàng tính theo dòng đang chọn; nhận đặt thẳng (quy đổi hệ `Receiving`, hạn dùng theo batch, chặn vượt, gắn buffer); nạp lô, gỡ lô.
+- `MapApp`: kanban theo khóa part, dock, nhà cung cấp, ngày hiệu lực; part address có route và hiệu lực, màn lưu thì báo `SupplierPortal`; quy đổi đơn vị. Skid nhận xong gắn buffer của vị trí cất (R9).
+- Master data bằng suite mới: ô tier, thuộc tính khu, buffer, whitelist, kanban, part address, route.
+- DoD, test ở `tests/Integration/Nvm.SolutionTests/PullTests.cs`: chuỗi 4 → 3 → 2 rồi dừng, route trống tier 3, route chỉ có tier 4 (có yêu cầu, không có việc), ô không mã máy, kệ còn hàng vẫn bù, ma trận bảng gọi hàng, kanban hết hạn, nhập kanban sai ngày, nhận vượt, thiếu đơn, FEFO, sai part, sai nguồn, hủy, role. Lab L20 có đối chứng dương (gỡ rồi nạp được).
+- Kiểm 2026-10-31 trên máy cá nhân: clean-room, format, build Release sạch; bộ test đầy đủ không gồm benchmark 297/298, ca đỏ do hai lô cùng giờ trên đồng hồ giả nên thứ tự FEFO không cố định, đã thêm tiêu chí phụ theo tên lô rồi chạy lại cả `PullTests` 26/26. Sau bản sửa này chưa chạy lại toàn bộ.
+- Web: "Gọi hàng", "Nạp lô" ở khu Xưởng; "Bảng gọi hàng", "Việc chở", "Nhận đặt thẳng", "Kanban và route" ở khu Gọi hàng. Lab `web/e2e/pull.spec.ts` 2/2 xanh trên stack local.
+
 ## Nợ mở
 
 | Mã | Nợ | Mốc xử lý |
@@ -273,6 +283,8 @@ test và số đo tương ứng (AGENTS.md §1.3). Agent làm theo lô lớn, kh
 | N-R8-3 | Ngoại lệ mức kiện khi một chuyến gồm nhiều nhóm đơn chưa dựng: một chuyến là một nhóm | R12 |
 | N-R8-4 | Xe của khách rỗng đang gắn chuyến xuất hàng không có lệnh rời đi (nguồn không nói hệ thật làm gì); lab họ B để xe lại cửa dock, stack local phải dọn tay | R12 |
 | N-R9-1 | Chưa có lịch sử di chuyển trailer, ghi chú nhiều dòng (chỉ `LastComment`), màn in placard, Components Unload Dashboard | R13 |
+| N-R10-1 | Trạng thái picklist từ `WMS` về chưa xử lý (tự hoàn tất chặng); xe và lô nguyên liệu dạng ống chưa có nhánh riêng | R11 |
+| N-R10-2 | Màn sửa part address chưa có (`SavePartAddress` đã có, màn hiện chỉ đọc); in nhãn địa chỉ chưa làm | R13 |
 | N-R9-2 | Nhà cung cấp tại chỗ tự nhận: material thiếu địa chỉ kho thì để skid chưa nhận; hệ thật có thể báo lỗi cả đơn (chưa xác minh) | R11 |
 | N-R8-5 | Lab `line-messages.spec` tìm dòng `ca010` trong 50 dòng mới nhất: chạy simulator có đóng gói ngay trước thì dòng đó bị đẩy ra, spec hỏng dù màn đúng | R12 |
 | N-R7-3 | Đo cuối dựng bằng tin LineDB; màn phiên đo của hệ thật (kit không quét thành NC) chưa dựng | R13 |

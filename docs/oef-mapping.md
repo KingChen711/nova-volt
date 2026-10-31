@@ -263,7 +263,10 @@ Lớp Project: đơn bán, nhóm đơn, picking, nhãn, staging (`Shipping.cs`),
 | Release containment với MTU còn NC OPEN | MTU giữ OnHold, chỉ bỏ cờ In Containment |
 | Định dạng số CR | `ContainmentRequest_` + 6 chữ số, tiếp nối số CR đang sống |
 | Whitelist của buffer | Buffer không có dòng whitelist thì nhận mọi material |
-| Yêu cầu vận chuyển | Created → Released → InTransit (mỗi chặng chuyển MTU) → Completed (MTU tới đích); R10 đọc nguồn kỹ hơn |
+| Yêu cầu vận chuyển | Yêu cầu nói material, số lượng, buffer nguồn và đích, chưa nói lô; việc chở Released → Active → Complete hoặc Cancelled, Complete dời lô sang buffer và equipment đích (sửa ở R10, đọc từ quan sát trên hệ thật, thay mô hình "yêu cầu theo một MTU" của R3) |
+| Gắn lô vào buffer | Hai lệnh: `AttachMtuToBuffer` xét whitelist; `LinkMtuToBuffer` không xét, như lệnh của màn nạp lô. Cả hai từ chối lô còn ở buffer khác (R10) |
+| Thứ tự trạng thái bảng gọi hàng | Gấp, trễ, đúng hạn (chuẩn ≥ 0,2 lần đã qua), sắp trễ, chờ; hai nhánh cuối không tới được. Giữ nguyên ở R10. Khác có chủ đích: thời gian chuẩn là số phút × 60 nên ra đúng giây; hệ thật nhân thêm trên đơn vị tick nên gần như không bao giờ trễ khi route có thời gian |
+| Kiểm khi ghi lô | Đúng part, ở buffer nguồn, đúng FEFO nằm trong lệnh `RecordLot`; hệ thật kiểm ở màn. Hoàn tất khi chưa ghi lô bị từ chối là giả định |
 | Cấp của cây thiết bị | Tám cấp Enterprise, Site, Plant, Area, Subarea, WorkCenter, WorkUnit, Machine; con chỉ cần sâu hơn cha |
 | Trạng thái MTU | Hằng số, không phải dữ liệu (ADR-056); `Shipped` thêm ở R8 |
 | Trạng thái vật chứa | State machine dạng dữ liệu của người dùng sản phẩm; vật chứa không khai state machine thì không có trạng thái (R7) |

@@ -1,0 +1,22 @@
+{
+  "Name": "Production_019_PullBufferWhitelist",
+  "BreakOnError": true,
+  "TestDefinitions": [
+    {
+      "Name": "AddBufferWhitelist",
+      "Csv": "pull-buffer-whitelist.csv",
+      "TestSteps": [
+        {
+          "ID": "AddBufferWhitelist",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "AddBufferWhitelist",
+          "Parameters": {
+            "BufferNId": "#TEST_CSV.BufferNId#",
+            "MaterialNId": "#TEST_CSV.MaterialNId#"
+          }
+        }
+      ]
+    }
+  ]
+}

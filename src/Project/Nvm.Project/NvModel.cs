@@ -152,6 +152,22 @@ public static class NvErrors
     public const int InvalidReload = 9512;
     public const int InvalidTransfer = 9513;
     public const int SkidNotOnSource = 9514;
+
+    public const int UnknownRoute = 9601;
+    public const int MaterialNotOnTier = 9602;
+    public const int UnknownPullTask = 9603;
+    public const int InvalidPullTask = 9604;
+    public const int LotAlreadyRecorded = 9605;
+    public const int LotWrongMaterial = 9606;
+    public const int LotNotInSource = 9607;
+    public const int LotOutsideFefo = 9608;
+    public const int NoLotRecorded = 9609;
+    public const int InvalidDirectLabel = 9610;
+    public const int InvalidDirectDelivery = 9611;
+    public const int OverReceive = 9612;
+    public const int NoBufferOnEquipment = 9613;
+    public const int InvalidKanban = 9614;
+    public const int UnknownPartAddress = 9615;
 }
 
 /// <summary>Trạng thái team thêm vào state machine WO bằng dữ liệu.</summary>

@@ -1,0 +1,29 @@
+{
+  "Name": "PullApp_001_Routes",
+  "BreakOnError": true,
+  "TestDefinitions": [
+    {
+      "Name": "SetDeliveryRoute",
+      "Csv": "routes.csv",
+      "TestSteps": [
+        {
+          "ID": "SetDeliveryRoute",
+          "StepType": "Command",
+          "App": "PullApp",
+          "Name": "SetDeliveryRoute",
+          "Parameters": {
+            "NId": "#TEST_CSV.NId#",
+            "Area": "#TEST_CSV.Area#",
+            "Buffer1": "#TEST_CSV.Buffer1#",
+            "Buffer2": "#TEST_CSV.Buffer2#",
+            "Buffer3": "#TEST_CSV.Buffer3#",
+            "Buffer4": "#TEST_CSV.Buffer4#",
+            "Minutes1": "#TEST_CSV.Minutes1#",
+            "Minutes2": "#TEST_CSV.Minutes2#",
+            "Minutes3": "#TEST_CSV.Minutes3#"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -57,7 +57,7 @@ public static class SolutionManifest
         production.Allow(
             [nameof(CreateMtu), nameof(EditMtu), nameof(MoveMtu), nameof(SplitMtu), nameof(CreateMtua), nameof(AssembleIntoMtua),
              nameof(RemoveFromMtua), nameof(RecordWorkOrderOutput), nameof(RecordOperationProgress), nameof(RecordConsumption),
-             nameof(AttachMtuToBuffer), nameof(DetachMtuFromBuffer)],
+             nameof(AttachMtuToBuffer), nameof(DetachMtuFromBuffer), nameof(LinkMtuToBuffer)],
             LineOperator, LineLead);
         production.Allow([nameof(CreateNonConformance), nameof(HoldMtus), Ext + nameof(SuspectHoldMtu)], LineOperator, LineLead, Quality);
         production.Allow([Ext + nameof(HandleLineNonConformances), Ext + nameof(HandleLineShrink)], LineLead);
@@ -73,7 +73,7 @@ public static class SolutionManifest
              nameof(CloseContainmentRequest)],
             Quality);
         production.Allow(
-            [nameof(CreateLogisticRequest), nameof(ReleaseLogisticRequest), nameof(MoveLogisticRequestWithinFlow), nameof(CompleteLogisticRequest)],
+            [nameof(CreateLogisticRequest), nameof(AcceptMaterialRequest), nameof(StartTransportOperation), nameof(CompleteTransportOperation), nameof(CancelTransportOperation)],
             Logistics);
 
         // Đóng gói: dựng lại pallet sau bước đo cuối là màn của xưởng.
@@ -122,6 +122,13 @@ public static class SolutionManifest
              nameof(ReportTrailerReloaded), nameof(IssueTrailerYardPass), nameof(DepartTrailer), nameof(CheckTransferSkid), nameof(TransferSkids)],
             Yard);
         solution.Apps.Add(yard);
+
+        // Gọi hàng: khu gọi và nạp lô; người chở nhận, quét, hoàn tất; người nhận hàng nhận nguyên liệu đặt thẳng. Đơn từ ERP và route: chỉ quản trị.
+        var pull = new AppConfiguration(PullApp.Name) { RestrictCommands = true };
+        pull.Allow([nameof(CallMaterial), nameof(CancelPullTask), nameof(LoadLot), nameof(UnloadLot)], LineOperator, LineLead);
+        pull.Allow([nameof(AcceptPullTask), nameof(RecordLot), nameof(CompletePullTask)], Logistics);
+        pull.Allow([nameof(ReceiveDirectMaterial)], Logistics, Yard);
+        solution.Apps.Add(pull);
         return solution;
     }
 }

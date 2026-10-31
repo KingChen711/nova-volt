@@ -36,22 +36,42 @@ public sealed class LogisticsBehaviorTests
     }
 
     [Fact]
-    public async Task Logistic_request_moves_the_mtu_through_the_flow_to_its_target()
+    public async Task Link_ignores_the_whitelist_but_still_refuses_a_lot_in_another_buffer()
     {
         var p = await ProductHarness.CreateAsync();
-        p.Ok(new CreateMtu { NId = "LOT-1", MaterialNId = ProductHarness.Paste, Quantity = 1, EquipmentNId = ProductHarness.Dock });
-        p.Ok(new CreateLogisticRequest { NId = "LR-1", MtuNId = "LOT-1", ToEquipmentNId = ProductHarness.Subarea });
+        p.Ok(new CreateBuffer { NId = "B-1", EquipmentNId = ProductHarness.Subarea });
+        p.Ok(new CreateBuffer { NId = "B-2", EquipmentNId = ProductHarness.Dock });
+        p.Ok(new AddBufferWhitelist { BufferNId = "B-1", MaterialNId = ProductHarness.Module });
+        p.Ok(new CreateMtu { NId = "LOT-1", MaterialNId = ProductHarness.Paste, Quantity = 1 });
 
-        p.Fails(new MoveLogisticRequestWithinFlow { NId = "LR-1", EquipmentNId = ProductHarness.Area }, ProductErrors.InvalidLogisticStatus);
-        p.Ok(new ReleaseLogisticRequest { NId = "LR-1" });
-        p.Ok(new MoveLogisticRequestWithinFlow { NId = "LR-1", EquipmentNId = ProductHarness.Area });
-        p.Mtu("LOT-1").EquipmentNId.ShouldBe(ProductHarness.Area);
+        p.Ok(new LinkMtuToBuffer { BufferNId = "B-1", MtuNId = "LOT-1" });
+        p.Fails(new LinkMtuToBuffer { BufferNId = "B-2", MtuNId = "LOT-1" }, ProductErrors.AlreadyInBuffer);
+    }
 
-        p.Ok(new CompleteLogisticRequest { NId = "LR-1" });
+    [Fact]
+    public async Task Transport_operation_moves_the_lot_between_buffers_only_when_it_completes()
+    {
+        var p = await ProductHarness.CreateAsync();
+        p.Ok(new CreateBuffer { NId = "FROM", EquipmentNId = ProductHarness.Dock });
+        p.Ok(new CreateBuffer { NId = "TO", EquipmentNId = ProductHarness.Subarea });
+        p.Ok(new CreateMtu { NId = "LOT-1", MaterialNId = ProductHarness.Paste, Quantity = 5, EquipmentNId = ProductHarness.Dock });
+        p.Ok(new AttachMtuToBuffer { BufferNId = "FROM", MtuNId = "LOT-1" });
+
+        p.Fails(new CreateLogisticRequest { NId = "LR-0", MaterialNId = ProductHarness.Paste, Quantity = 0, DestinationBufferNId = "TO" }, ProductErrors.InvalidQuantity);
+        p.Fails(new CreateLogisticRequest { NId = "LR-0", MaterialNId = ProductHarness.Paste, Quantity = 1, DestinationBufferNId = "NONE" }, ProductErrors.UnknownBuffer);
+        p.Ok(new CreateLogisticRequest { NId = "LR-1", MaterialNId = ProductHarness.Paste, Quantity = 5, SourceBufferNId = "FROM", DestinationBufferNId = "TO" });
+        p.Fails(new AcceptMaterialRequest { LogisticRequestNId = "LR-9", TransportOperationNId = "TO-1" }, ProductErrors.UnknownLogisticRequest);
+        p.Ok(new AcceptMaterialRequest { LogisticRequestNId = "LR-1", TransportOperationNId = "TO-1" });
+        p.Read<TransportOperation>().Single().Status.ShouldBe(TransportStatus.Released);
+
+        p.Ok(new StartTransportOperation { NId = "TO-1" });
+        p.Fails(new CancelTransportOperation { NId = "TO-1" }, ProductErrors.InvalidLogisticStatus);
+        p.Mtu("LOT-1").EquipmentNId.ShouldBe(ProductHarness.Dock);
+
+        p.Ok(new CompleteTransportOperation { NId = "TO-1", MtuNId = "LOT-1" });
         p.Mtu("LOT-1").EquipmentNId.ShouldBe(ProductHarness.Subarea);
-        var request = p.Read<LogisticRequest>().Single();
-        request.Status.ShouldBe(LogisticStatus.Completed);
-        request.FromEquipmentNId.ShouldBe(ProductHarness.Dock);
-        p.Fails(new CompleteLogisticRequest { NId = "LR-1" }, ProductErrors.InvalidLogisticStatus);
+        p.Read<BufferAssignment>().ShouldHaveSingleItem().BufferNId.ShouldBe("TO");
+        p.Fails(new CompleteTransportOperation { NId = "TO-1" }, ProductErrors.InvalidLogisticStatus);
+        p.Fails(new CompleteTransportOperation { NId = "TO-9" }, ProductErrors.UnknownTransportOperation);
     }
 }

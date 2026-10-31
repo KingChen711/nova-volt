@@ -344,6 +344,7 @@ internal static class Inbound
         skid.MtuNId = nid;
         skid.ReceivedOn = platform.Time.GetUtcNow();
         platform.Submit(skid);
+        Pull.LinkReceived(platform, nid, location);
         return null;
     }
 

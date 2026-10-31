@@ -31,6 +31,8 @@ export const areas: Area[] = [
       { href: "/area/line", label: "Lệnh theo ca" },
       { href: "/area/line/messages", label: "Tin từ xưởng" },
       { href: "/area/line/rebuild", label: "Dựng lại pallet" },
+      { href: "/area/line/pull", label: "Gọi hàng" },
+      { href: "/area/line/load", label: "Nạp lô" },
     ],
   },
   {
@@ -61,7 +63,13 @@ export const areas: Area[] = [
   {
     slug: "andon", label: "Gọi hàng", group: "Hậu cần", href: "/area/andon",
     description: "Bảng gọi hàng theo tier: gấp, trễ, đúng hạn", roles: ["logistics", "line-lead"],
-    milestone: "R10", screens: ["Bảng gọi hàng", "Nhận việc chở", "Quét lô", "Hoàn tất chặng"],
+    milestone: "R10", screens: ["Bảng gọi hàng", "Việc chở", "Nhận đặt thẳng", "Kanban và route"],
+    links: [
+      { href: "/area/andon", label: "Bảng gọi hàng" },
+      { href: "/area/andon/tasks", label: "Việc chở" },
+      { href: "/area/andon/receive", label: "Nhận đặt thẳng" },
+      { href: "/area/andon/parts", label: "Kanban và route" },
+    ],
   },
   {
     slug: "bulk-nc", label: "NC hàng loạt", group: "Chất lượng", href: "/area/bulk-nc",

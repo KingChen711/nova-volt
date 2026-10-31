@@ -1,0 +1,33 @@
+{
+  "Name": "Production_018_PullBuffers",
+  "BreakOnError": true,
+  "TestDefinitions": [
+    {
+      "Name": "CreateBuffer",
+      "Csv": "pull-buffers.csv",
+      "TestSteps": [
+        {
+          "ID": "GetBuffer",
+          "StepType": "Read",
+          "App": "Production",
+          "Name": "Buffer",
+          "Query": {
+            "$filter": "NId eq '#TEST_CSV.NId#'",
+            "$top": "1"
+          },
+          "IfThisSkipNext": true
+        },
+        {
+          "ID": "CreateBuffer",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "CreateBuffer",
+          "Parameters": {
+            "NId": "#TEST_CSV.NId#",
+            "EquipmentNId": "#TEST_CSV.EquipmentNId#"
+          }
+        }
+      ]
+    }
+  ]
+}

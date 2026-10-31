@@ -1,0 +1,34 @@
+{
+  "out": [
+    { "name": "ErpProduction", "kind": "WebClient", "url": "{external}/erp/production" },
+    { "name": "ErpConsumption", "kind": "WebClient", "url": "{external}/erp/consumption" },
+    { "name": "ErpAck", "kind": "WebClient", "url": "{external}/erp/ack" },
+    { "name": "SupplierPortal", "kind": "WebClient", "url": "{external}/supplier/part-address" },
+    { "name": "PartsSupplier", "kind": "WebClient", "url": "{external}/supplier/parts" },
+    { "name": "CustomerShipSys_SkidBuild", "kind": "WebClient", "url": "{external}/customer/skid-build" },
+    { "name": "CustomerShipSys_ShipLoad", "kind": "WebClient", "url": "{external}/customer/ship-load" },
+    { "name": "WMS", "kind": "WebClient", "url": "{external}/wms/picklist" },
+    { "name": "QualityAck", "kind": "WebClient", "url": "{external}/quality/ack" },
+    { "name": "ScrapFile", "kind": "File", "directory": "output/gateway/scrap" },
+    { "name": "ReorderSvc", "kind": "File", "directory": "output/gateway/reorder" },
+    { "name": "AsnFile", "kind": "File", "directory": "output/gateway/asn" },
+    { "name": "Mail", "kind": "Smtp", "mailTo": "logistics@novavolt.local" },
+    { "name": "SupplierAck", "kind": "Kafka", "topic": "nv.supplier.ack" },
+    { "name": "BoxOrderAck", "kind": "Kafka", "topic": "nv.customer.box-order.ack" }
+  ],
+  "in": [
+    { "name": "supplier-schedules", "kind": "Kafka", "messageType": "DeliverySchedule", "topic": "nv.supplier.schedules", "ackAdapter": "SupplierAck" },
+    { "name": "customer-box-orders", "kind": "Kafka", "messageType": "CustomerBoxOrder", "topic": "nv.customer.box-orders", "ackAdapter": "BoxOrderAck" },
+    { "name": "direct-orders", "kind": "File", "messageType": "DirectDelivery", "directory": "output/gateway/in/direct-orders" },
+    { "name": "asn-responses", "kind": "File", "messageType": "AsnResponse", "directory": "output/gateway/in/asn-responses" }
+  ],
+  "workflows": [
+    { "messageType": "SalesOrder", "app": "ShipApp", "command": "ReceiveSalesOrders", "payloadField": "Payload", "ackAdapter": "ErpAck" },
+    { "messageType": "DeliverySchedule", "app": "YardApp", "command": "ReceiveDeliverySchedule", "payloadField": "Payload" },
+    { "messageType": "CustomerBoxOrder", "app": "ShipApp", "command": "SetCustomerBoxOrder", "payloadField": null },
+    { "messageType": "Containment", "app": "Production", "command": "ImportContainmentRequest", "payloadField": null, "ackAdapter": "QualityAck" },
+    { "messageType": "DirectDelivery", "app": "PullApp", "command": "ReceiveDirectDelivery", "payloadField": "Payload" },
+    { "messageType": "AsnResponse", "app": "ShipApp", "command": "RecordAsnResponse", "payloadField": null },
+    { "messageType": "PicklistStatus", "app": "PullApp", "command": "UpdateTaskFromWms", "payloadField": null }
+  ]
+}

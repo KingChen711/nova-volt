@@ -32,6 +32,7 @@ BenchmarkDotNet.Artifacts/
 output/playwright/
 # Outbox của host (nhãn, email, ASN ghi file qua adapter): dữ liệu chạy, không commit
 output/outbox/
+output/gateway/
 
 # ─────────────────────────────────────────────────────────
 # IDE

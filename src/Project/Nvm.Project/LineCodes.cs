@@ -21,7 +21,7 @@ public sealed class MapApp : AppDefinition
         .Entity<LineOperationCode>().Entity<LineEquipmentCode>().Entity<LineMaterialCode>().Entity<LineFailureCode>().Entity<PartAddress>()
         .Entity<Kanban>().Entity<UomConversion>()
         .Command<SetLineOperationCode>().Command<SetLineEquipmentCode>().Command<SetLineMaterialCode>().Command<SetLineFailureCode>()
-        .Command<SetPartAddress>().Command<SavePartAddress>().Command<DeletePartAddress>().Command<ImportKanbans>().Command<SetKanban>().Command<SetUomConversion>();
+        .Command<SetPartAddress>().Command<SavePartAddress>().Command<DeletePartAddress>().Command<ImportKanbans>().Command<RefreshKanbans>().Command<SetKanban>().Command<SetUomConversion>();
 }
 
 /// <summary>Mã bước phía xưởng (NId) → bước của process. Một mã dùng chung cho mọi line: chỉ mã máy mang số line.</summary>
@@ -356,6 +356,21 @@ internal sealed class ImportKanbansHandler : ICommandHandler<ImportKanbans, MapR
     }
 }
 
+/// <summary>Hỏi cổng nhà cung cấp danh sách kanban rồi nạp. Hệ không trả lời thì báo lỗi, không đổi dữ liệu.</summary>
+[Command<MapMasterBlock>]
+public sealed class RefreshKanbans : ICommand<MapResponse>;
+
+internal sealed class RefreshKanbansHandler : ICommandHandler<RefreshKanbans, MapResponse>
+{
+    public MapResponse Handle(RefreshKanbans command, IPlatform platform)
+    {
+        var reply = platform.SendMessage(new OutboundMessage(MapAdapters.PartsSupplier, "PartsInfo", """{"requestType":"partsinfo"}"""), TimeSpan.FromMinutes(1));
+        return reply.Delivered
+            ? platform.CallCommand<ImportKanbans, MapResponse>(new ImportKanbans { Payload = reply.Content })
+            : MapResponse.Fail(NvErrors.InvalidKanban, "Kanban refresh failed: " + reply.Error);
+    }
+}
+
 [Command<MapMasterBlock>]
 public sealed class SetKanban : ICommand<MapResponse>
 {
@@ -490,4 +505,5 @@ internal sealed class DeletePartAddressHandler : ICommandHandler<DeletePartAddre
 public static class MapAdapters
 {
     public const string SupplierPortal = "SupplierPortal";
+    public const string PartsSupplier = "PartsSupplier";
 }

@@ -1,0 +1,4 @@
+MessageClass,FirstDaysToSkip,WeekInstance,DayOfWeek
+Production,4,3,Sunday
+Consumption,4,3,Sunday
+Scrap,4,3,Sunday

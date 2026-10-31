@@ -142,7 +142,8 @@ internal sealed class SolutionHarness
                 Executor.RunEventSubscriber(subscriber, published.Event, published.CorrelationId);
             }
 
-            delivered += subscribers.Count > 0 ? 1 : 0;
+            // Báo cáo WO (R11) đi kèm mọi đổi trạng thái WO: không tính, để số trả về vẫn là số tin của luồng đang kiểm.
+            delivered += subscribers.Count > 0 && published.Event is not WorkOrderStatusChanged ? 1 : 0;
         }
 
         return delivered;

@@ -1,0 +1,24 @@
+{
+  "Name": "OutApp_001_MessageBlocks",
+  "BreakOnError": true,
+  "TestDefinitions": [
+    {
+      "Name": "SetMessageBlock",
+      "TestSteps": [
+        {
+          "ID": "SetMessageBlock",
+          "StepType": "Command",
+          "App": "OutApp",
+          "Name": "SetMessageBlock",
+          "Parameters": {
+            "MessageClass": "#TEST_CSV.MessageClass#",
+            "FirstDaysToSkip": "#TEST_CSV.FirstDaysToSkip#",
+            "WeekInstance": "#TEST_CSV.WeekInstance#",
+            "DayOfWeek": "#TEST_CSV.DayOfWeek#"
+          }
+        }
+      ],
+      "Csv": "message-blocks.csv"
+    }
+  ]
+}

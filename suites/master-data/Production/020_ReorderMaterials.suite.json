@@ -1,0 +1,22 @@
+{
+  "Name": "Production_020_ReorderMaterials",
+  "BreakOnError": true,
+  "TestDefinitions": [
+    {
+      "Name": "UpdateMaterial",
+      "Csv": "reorder-materials.csv",
+      "TestSteps": [
+        {
+          "ID": "UpdateMaterial",
+          "StepType": "Command",
+          "App": "Production",
+          "Name": "UpdateMaterial",
+          "Parameters": {
+            "NId": "#TEST_CSV.NId#",
+            "MaterialClass": "#TEST_CSV.MaterialClass#"
+          }
+        }
+      ]
+    }
+  ]
+}

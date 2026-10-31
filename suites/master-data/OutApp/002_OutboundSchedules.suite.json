@@ -1,0 +1,18 @@
+{
+  "Name": "OutApp_002_OutboundSchedules",
+  "BreakOnError": true,
+  "TestDefinitions": [
+    {
+      "Name": "InstallOutboundSchedules",
+      "TestSteps": [
+        {
+          "ID": "InstallOutboundSchedules",
+          "StepType": "Command",
+          "App": "OutApp",
+          "Name": "InstallOutboundSchedules",
+          "Parameters": {}
+        }
+      ]
+    }
+  ]
+}

@@ -118,7 +118,11 @@ var time = TimeProvider.System;
 var gateway = new RoutingMessageGateway();
 var outbox = Environment.GetEnvironmentVariable("NVM_OUTBOX_DIR")
     ?? Path.Combine(Path.GetDirectoryName(envFile ?? builder.Environment.ContentRootPath)!, "output", "outbox");
-foreach (var adapter in new[] { ShipAdapters.LabelPrinter, ShipAdapters.Mail, ShipAdapters.Asn })
+foreach (var adapter in new[]
+         {
+             ShipAdapters.LabelPrinter, ShipAdapters.Mail, ShipAdapters.Asn, PullAdapters.Wms, MapAdapters.SupplierPortal,
+             OutAdapters.ErpProduction, OutAdapters.ErpConsumption, OutAdapters.ScrapFile, OutAdapters.Reorder,
+         })
 {
     gateway.Adapters[adapter] = new FileMessageAdapter(Path.Combine(outbox, adapter), time);
 }
@@ -126,7 +130,13 @@ foreach (var adapter in new[] { ShipAdapters.LabelPrinter, ShipAdapters.Mail, Sh
 if (Environment.GetEnvironmentVariable("NVM_GATEWAY_URL") is { Length: > 0 } gatewayUrl)
 {
     var http = new HttpClient();
-    foreach (var adapter in new[] { ShipAdapters.SkidBuild, ShipAdapters.ShipLoad })
+
+    // Có gateway thì mọi tin đi qua gateway, trừ nhãn (phần mềm in lấy file trong outbox).
+    foreach (var adapter in new[]
+             {
+                 ShipAdapters.SkidBuild, ShipAdapters.ShipLoad, ShipAdapters.Mail, ShipAdapters.Asn, PullAdapters.Wms, MapAdapters.SupplierPortal,
+                 MapAdapters.PartsSupplier, OutAdapters.ErpProduction, OutAdapters.ErpConsumption, OutAdapters.ScrapFile, OutAdapters.Reorder,
+             })
     {
         gateway.Adapters[adapter] = new HttpMessageAdapter(new Uri(gatewayUrl.TrimEnd('/') + "/"), http);
     }

@@ -5,6 +5,7 @@
     "NvProductionExt",
     "ShipApp",
     "YardApp",
-    "PullApp"
+    "PullApp",
+    "OutApp"
   ]
 }

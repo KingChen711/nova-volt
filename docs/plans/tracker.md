@@ -16,7 +16,7 @@ test và số đo tương ứng (AGENTS.md §1.3). Agent làm theo lô lớn, kh
 | R8 Xuất hàng | **đạt** (2026-10-30) | Tag `r8`; mục R8 bên dưới |
 | R9 Xe linh kiện, bãi, dock, skid | **đạt** (2026-10-31) | Tag `r9`; mục R9 bên dưới |
 | R10 Kanban, gọi hàng, bảng gọi hàng, nạp nguyên liệu | **đạt** (2026-10-31) | Tag `r10`; mục R10 bên dưới |
-| R11 Gateway, hệ ngoài giả lập | chưa làm | |
+| R11 Gateway, hệ ngoài giả lập | **đạt** (2026-10-31) | Tag `r11`; mục R11 bên dưới; ADR-060 |
 | R12 Vận hành kiểu dự án | chưa làm | |
 | R13 Hoàn thiện web | chưa làm | Giao diện đã đổi sang AWS Console dark theme (2026-10-30, `web/DESIGN.md`), nằm trong tag `r9` |
 
@@ -266,6 +266,16 @@ test và số đo tương ứng (AGENTS.md §1.3). Agent làm theo lô lớn, kh
 - Kiểm 2026-10-31 trên máy cá nhân: clean-room, format, build Release sạch; bộ test đầy đủ không gồm benchmark 297/298, ca đỏ do hai lô cùng giờ trên đồng hồ giả nên thứ tự FEFO không cố định, đã thêm tiêu chí phụ theo tên lô rồi chạy lại cả `PullTests` 26/26. Sau bản sửa này chưa chạy lại toàn bộ.
 - Web: "Gọi hàng", "Nạp lô" ở khu Xưởng; "Bảng gọi hàng", "Việc chở", "Nhận đặt thẳng", "Kanban và route" ở khu Gọi hàng. Lab `web/e2e/pull.spec.ts` 2/2 xanh trên stack local.
 
+## R11
+
+- `OutApp` (`Outbound.cs`): báo sản lượng rồi tiêu hao khi WO Complete (subscriber ở worker tuần tự), lịch chặn theo giờ miền Đông (đầu tháng; lần thứ n hoặc lần cuối của một thứ), hàng đợi và timer mỗi giờ gửi tối đa 20 tin; file scrap ngày, tháng (mã do nhà cung cấp), dòng thiếu scrap tag hoặc nhà cung cấp thành ERROR, mã part cha đổi theo material class; tin đặt bù theo genealogy, chỉ class `Component-Domestic`.
+- `Nvm.Integration`, `Nvm.Gateway`: gateway với adapter ra Web API, file, Kafka, SMTP; adapter vào Web API có khóa, Kafka, file; workflow theo message type gọi command qua API của MOM; Ack. Cấu hình `deploy/gateway/gateway.json`. Hệ ngoài giả lập trong cùng tiến trình (`make external`): ERP, cổng nhà cung cấp, hệ của khách, hệ chất lượng, WMS, dịch vụ đặt bù.
+- Tin vào đã nối: đơn bán, lịch xe, dữ liệu đơn của khách, containment, đơn đặt thẳng, phản hồi ASN, trạng thái picklist (`UpdateTaskFromWms`, đóng `N-R10-1` phần WMS); `RefreshKanbans` hỏi cổng nhà cung cấp. Host: khai `NVM_GATEWAY_URL` thì mọi tin trừ nhãn đi qua gateway, không khai thì ra file outbox như cũ.
+- DoD, test `GatewayTests` (gateway và hệ giả lập chạy thật trên cổng cục bộ, Kafka bằng Redpanda container), `OutboundTests`: khứ hồi từng đường, hệ của khách chết khi gửi đồng bộ thì pallet giữ Staged, delivery chưa có số, gửi lại được; lab L21 (ngày chặn vào hàng đợi, timer không gửi, hết chặn thì đi); biên múi giờ, giới hạn 20 tin, không nhân đôi tin chờ, dòng ERROR đi khi dữ liệu sửa xong.
+- Kiểm 2026-10-31 trên máy cá nhân: clean-room, format, build Release sạch, 325/325 test xanh không gồm benchmark (12 phút, vượt mức 10 phút của scope, xem `N-R11-1`). Trên stack local với gateway thật: Web API có khóa, file, Kafka tới Redpanda của compose có Ack, `RefreshKanbans` tới hệ giả lập.
+- Web: "Tin ra ngoài" (`/admin/outbound`).
+- Test bắt được: lambda async một biểu thức khớp `RequestDelegate`, kết quả bị bỏ nên hệ của khách trả rỗng; `Content-Type` có charset làm `StringContent` lỗi.
+
 ## Nợ mở
 
 | Mã | Nợ | Mốc xử lý |
@@ -278,13 +288,12 @@ test và số đo tương ứng (AGENTS.md §1.3). Agent làm theo lô lớn, kh
 | N-R5-2 | Đường relay chưa đo tải; tải R5 chỉ đo đường poll | R12 |
 | N-R5-3 | Trạng thái dòng LineDB chưa có trên web: cần một read model phía MOM hoặc API riêng của xưởng | R12 |
 | N-R7-2 | Timer đầu ca chạy bù lúc host khởi động tranh ghi với WO dự phòng do tin máy mở cùng lúc: commit của timer hỏng, lần chạy đó mất, không thử lại (thấy trên stack local 2026-10-29, khu Module line 3) | R12 |
-| N-R8-1 | Stack local không có hệ của khách: chất xe họ B dừng ở Confirm như trên máy ảo, trừ khi trỏ `NVM_GATEWAY_URL` tới hệ giả | R11 |
-| N-R8-2 | Email (danh sách pallet, phản hồi ASN) ra file outbox, chưa qua SMTP | R11 |
 | N-R8-3 | Ngoại lệ mức kiện khi một chuyến gồm nhiều nhóm đơn chưa dựng: một chuyến là một nhóm | R12 |
 | N-R8-4 | Xe của khách rỗng đang gắn chuyến xuất hàng không có lệnh rời đi (nguồn không nói hệ thật làm gì); lab họ B để xe lại cửa dock, stack local phải dọn tay | R12 |
 | N-R9-1 | Chưa có lịch sử di chuyển trailer, ghi chú nhiều dòng (chỉ `LastComment`), màn in placard, Components Unload Dashboard | R13 |
-| N-R10-1 | Trạng thái picklist từ `WMS` về chưa xử lý (tự hoàn tất chặng); xe và lô nguyên liệu dạng ống chưa có nhánh riêng | R11 |
+| N-R10-1 | Xe và lô nguyên liệu dạng ống chưa có nhánh riêng | Chưa xếp mốc |
+| N-R11-1 | Toàn bộ test 12 phút trên máy cá nhân, scope đòi dưới 10 phút; mỗi test nạp lại toàn bộ master data bằng suite (khoảng 25 giây) | R12 |
 | N-R10-2 | Màn sửa part address chưa có (`SavePartAddress` đã có, màn hiện chỉ đọc); in nhãn địa chỉ chưa làm | R13 |
-| N-R9-2 | Nhà cung cấp tại chỗ tự nhận: material thiếu địa chỉ kho thì để skid chưa nhận; hệ thật có thể báo lỗi cả đơn (chưa xác minh) | R11 |
+| N-R9-2 | Nhà cung cấp tại chỗ tự nhận: material thiếu địa chỉ kho thì để skid chưa nhận; hệ thật có thể báo lỗi cả đơn (chưa xác minh, cần VM) | Chờ quan sát |
 | N-R8-5 | Lab `line-messages.spec` tìm dòng `ca010` trong 50 dòng mới nhất: chạy simulator có đóng gói ngay trước thì dòng đó bị đẩy ra, spec hỏng dù màn đúng | R12 |
 | N-R7-3 | Đo cuối dựng bằng tin LineDB; màn phiên đo của hệ thật (kit không quét thành NC) chưa dựng | R13 |

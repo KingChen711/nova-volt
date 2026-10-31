@@ -166,6 +166,12 @@ keycloak-users:
 mom:
 	dotnet run --project src/Solution/Nvm.Mom.Host --no-launch-profile
 
+gateway:
+	dotnet run --project src/Integration/Nvm.Gateway
+
+external:
+	dotnet run --project src/Integration/Nvm.Gateway -- external
+
 web:
 	npm run --prefix web dev
 

@@ -21,7 +21,7 @@ public sealed class MasterDataSuiteTests
             "Production_008_FinishedGoodsProcesses", "Production_009_MaterialProperties", "Production_010_EquipmentProperties",
             "Production_011_ShippingEquipment", "Production_012_ShippingEquipmentProperties", "Production_013_RouteGroups",
             "Production_014_InboundEquipment", "Production_015_InboundEquipmentProperties",
-            "Production_016_PullEquipment", "Production_017_PullEquipmentProperties", "Production_018_PullBuffers", "Production_019_PullBufferWhitelist",
+            "Production_016_PullEquipment", "Production_017_PullEquipmentProperties", "Production_018_PullBuffers", "Production_019_PullBufferWhitelist", "Production_020_ReorderMaterials",
             "MapApp_001_LineCodes", "MapApp_002_LineFailureCodes", "MapApp_003_PackingLineCodes", "MapApp_004_PartAddresses", "MapApp_005_InboundPartAddresses",
             "MapApp_006_Kanbans", "MapApp_007_PullPartAddresses", "MapApp_008_UomConversions",
             "NvProductionExt_001_WorkOrderLifecycle", "NvProductionExt_002_ProcessSchedules", "NvProductionExt_003_ProductionSchedules",
@@ -29,7 +29,7 @@ public sealed class MasterDataSuiteTests
             "NvProductionExt_007_MaterialSuppliers", "NvProductionExt_008_DisassemblyParts", "NvProductionExt_009_ContainerStates",
             "NvProductionExt_010_PackingOperations", "NvProductionExt_011_FinishedGoods", "NvProductionExt_012_FinishedGoodsSchedules",
             "NvProductionExt_013_CustomerTrailerStates", "NvProductionExt_014_InboundTrailerStates", "ShipApp_001_ShipTo", "ShipApp_002_LoadingExceptionCodes",
-            "YardApp_001_TransferReasons", "YardApp_002_LocalSuppliers", "PullApp_001_Routes", "PullApp_002_RouteMaterials",
+            "YardApp_001_TransferReasons", "YardApp_002_LocalSuppliers", "PullApp_001_Routes", "PullApp_002_RouteMaterials", "OutApp_001_MessageBlocks", "OutApp_002_OutboundSchedules",
         ]);
 
         h.Read<Equipment>().Count.ShouldBe(154);

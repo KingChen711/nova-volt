@@ -15,6 +15,7 @@
     <PackageReference Include="Shouldly" />
     <PackageReference Include="Testcontainers.MsSql" />
     <PackageReference Include="Testcontainers.PostgreSql" />
+    <PackageReference Include="Testcontainers.Redpanda" />
     <PackageReference Include="Npgsql" />
     <PackageReference Include="Microsoft.Data.SqlClient" />
     <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
@@ -26,6 +27,7 @@
     <ProjectReference Include="../../../src/Project/Nvm.Project/Nvm.Project.csproj" />
     <ProjectReference Include="../../../src/Solution/Nvm.Solution/Nvm.Solution.csproj" />
     <ProjectReference Include="../../../src/Shopfloor/Nvm.Shopfloor/Nvm.Shopfloor.csproj" />
+    <ProjectReference Include="../../../src/Integration/Nvm.Integration/Nvm.Integration.csproj" />
   </ItemGroup>
 
   <ItemGroup>

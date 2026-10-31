@@ -27,7 +27,7 @@ public sealed class PullApp : AppDefinition
         .Entity<LogisticRequest>().Entity<TransportOperation>().Entity<Mtu>()
         .Command<SetDeliveryRoute>().Command<SetRouteMaterial>().Command<CallMaterial>().Command<AcceptPullTask>().Command<RecordLot>()
         .Command<CompletePullTask>().Command<CancelPullTask>().Command<ReceiveDirectDelivery>().Command<ReceiveDirectMaterial>().Command<LoadLot>()
-        .Command<UnloadLot>()
+        .Command<UnloadLot>().Command<UpdateTaskFromWms>()
         .ReadingFunction<LinkedMaterials>().ReadingFunction<PullTasks>().ReadingFunction<AreaRequests>().ReadingFunction<ScanLot>()
         .ReadingFunction<AndonRoutes>().ReadingFunction<AndonDetail>().ReadingFunction<LoadedLots>().ReadingFunction<SearchLots>();
 }
@@ -834,6 +834,57 @@ internal sealed class UnloadLotHandler : ICommandHandler<UnloadLot, PullResponse
     {
         var detached = platform.CallCommand<DetachMtuFromBuffer, ProductResponse>(new DetachMtuFromBuffer { MtuNId = command.MtuNId });
         return detached.Succeeded ? new PullResponse { NId = command.MtuNId } : PullResponse.From(detached);
+    }
+}
+
+/// <summary>
+/// Trạng thái picklist từ WMS, tìm việc chở theo số yêu cầu đã gửi đi. <c>Picked</c>: WMS đã chọn lô, ghi lô (không xét FEFO, WMS tự chọn) và bắt đầu việc.
+/// <c>Delivered</c>: hoàn tất chặng. Trạng thái khác bỏ qua.
+/// </summary>
+[Command<PullOperationBlock>]
+public sealed class UpdateTaskFromWms : ICommand<PullResponse>
+{
+    [Mandatory]
+    public string? WorkOrder { get; init; }
+
+    [Mandatory]
+    public string? Status { get; init; }
+
+    public string? LotId { get; init; }
+}
+
+internal sealed class UpdateTaskFromWmsHandler : ICommandHandler<UpdateTaskFromWms, PullResponse>
+{
+    public PullResponse Handle(UpdateTaskFromWms command, IPlatform platform)
+    {
+        var task = platform.Query<TransportOperation>().SingleOrDefault(t => t.LogisticRequestNId == command.WorkOrder);
+        if (task is null)
+        {
+            return PullResponse.Fail(NvErrors.UnknownPullTask, $"No transport task for {command.WorkOrder}.");
+        }
+
+        if (command.Status == "Picked" && task.Status == TransportStatus.Released)
+        {
+            if (string.IsNullOrEmpty(command.LotId) || !platform.Query<Mtu>().Any(m => m.NId == command.LotId))
+            {
+                return PullResponse.Fail(ProductErrors.UnknownMtu, $"Lot {command.LotId} does not exist.");
+            }
+
+            var lot = platform.Create<PullTaskLot>();
+            lot.NId = task.NId;
+            lot.MtuNId = command.LotId;
+            platform.Submit(lot);
+            var started = platform.CallCommand<StartTransportOperation, ProductResponse>(new StartTransportOperation { NId = task.NId });
+            return started.Succeeded ? new PullResponse { NId = task.NId, Status = TransportStatus.Active } : PullResponse.From(started);
+        }
+
+        if (command.Status == "Delivered" && task.Status == TransportStatus.Active)
+        {
+            return platform.CallCommand<CompletePullTask, PullResponse>(new CompletePullTask { TaskNId = task.NId });
+        }
+
+        platform.Tracer.Write(TraceLevel.Information, $"WMS status {command.Status} ignored for {task.NId} ({task.Status}).");
+        return new PullResponse { NId = task.NId, Status = task.Status };
     }
 }
 

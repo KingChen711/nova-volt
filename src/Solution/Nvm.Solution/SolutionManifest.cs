@@ -46,6 +46,9 @@ public static class SolutionManifest
         // Tin từ xưởng xử lý tuần tự: hai lô tin của cùng một serial không chạy chồng nhau.
         solution.WorkerRoles[LineMessageHandler.WorkerRoleName] = new WorkerRoleConfiguration { Sequential = true };
 
+        // Tin báo ra ngoài xử lý tuần tự: hai WO Complete cùng lúc không tranh nhau bản ghi lần gửi.
+        solution.WorkerRoles[WorkOrderReporter.WorkerRoleName] = new WorkerRoleConfiguration { Sequential = true };
+
         var production = new AppConfiguration(ProductionApp.Name) { RestrictCommands = true };
         production.EnabledPreChecks.UnionWith(ProductionPreChecks);
 
@@ -129,6 +132,9 @@ public static class SolutionManifest
         pull.Allow([nameof(AcceptPullTask), nameof(RecordLot), nameof(CompletePullTask)], Logistics);
         pull.Allow([nameof(ReceiveDirectMaterial)], Logistics, Yard);
         solution.Apps.Add(pull);
+
+        // Tin báo ra ngoài: do event và timer gọi; gọi tay chỉ quản trị.
+        solution.Apps.Add(new AppConfiguration(OutApp.Name) { RestrictCommands = true });
         return solution;
     }
 }

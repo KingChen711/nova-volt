@@ -99,6 +99,7 @@ export const areas: Area[] = [
       { href: "/admin/configuration-keys", label: "Configuration key" },
       { href: "/admin/state-machines", label: "State machine" },
       { href: "/admin/signal-rules", label: "Signal rule và timer" },
+      { href: "/admin/outbound", label: "Tin ra ngoài" },
     ],
   },
 ];
